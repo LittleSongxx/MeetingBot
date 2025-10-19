@@ -1,0 +1,42 @@
+# --- Python ---
+**/__pycache__/
+*.pyc
+**/.venv/
+**/.venv*/
+.pytest_cache/
+.ruff_cache/
+
+# --- Node / 前端构建产物 ---
+**/node_modules/
+ai_meeting/vue/.npm-cache/
+ai_meeting/vue/dist/
+
+# --- 密钥与环境（样例 .env.example 保留）---
+.env
+ai_meeting/fastapi-app/.env
+
+# --- 本地运行数据 ---
+storage/
+ai_meeting/fastapi-app/files/
+output/
+
+# --- 个人资料与架构图目录（不入库）---
+.zcode/
+architecture/
+架构图/
+AI应用_*面试*.md
+
+# --- 评测大文件：音频与语料（可由脚本按清单复得）---
+evaluation/asr/first_test/audio/
+*.mp3
+*.wav
+evaluation/benchmarks/source/
+
+# --- 评测运行时产物（项目自身决定不入库）---
+evaluation/benchmarks/results/
+evaluation/benchmarks/preflight*/
+evaluation/results/tmp/
+evaluation/results/metrics.json
+evaluation/results/METRICS_REPORT.md
+
+.DS_Store
