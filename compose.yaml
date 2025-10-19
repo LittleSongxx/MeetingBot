@@ -1,0 +1,124 @@
+name: aimeeting-local
+
+services:
+  db:
+    image: mysql:8.4.11
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ai_meeting}
+      MYSQL_USER: ${MYSQL_USER:-aimeeting}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      TZ: Asia/Shanghai
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./ai_meeting.sql:/docker-entrypoint-initdb.d/01-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h 127.0.0.1 -u $$MYSQL_USER -D $$MYSQL_DATABASE -Nse 'SELECT 1 FROM prompt_template LIMIT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  backend:
+    build: ./ai_meeting/fastapi-app
+    restart: unless-stopped
+    env_file: ./ai_meeting/fastapi-app/.env
+    environment:
+      MYSQL_HOST: db
+      MYSQL_PORT: "3306"
+      SQL_ECHO: "false"
+      TZ: Asia/Shanghai
+      # JWT 密钥必须显式提供（settings.py 已 fail-fast，这里再拦一道部署层）
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (openssl rand -hex 32)}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-*}
+      REGISTER_ENABLED: ${REGISTER_ENABLED:-true}
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-19091}:9090"
+    volumes:
+      - ./ai_meeting/fastapi-app/files:/app/files
+      - ./evaluation:/evaluation
+    depends_on:
+      db:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+    # 让容器能用 host.docker.internal 访问宿主机上的本地 ASR 侧车
+    #（TRANSCRIPTION_ENGINE=http 时才需要；默认 dashscope 不受影响）
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9090/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  web:
+    build: ./ai_meeting/vue
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${WEB_PORT:-18082}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  temporal:
+    image: temporalio/auto-setup:1.28.1
+    restart: unless-stopped
+    environment:
+      DB: mysql8
+      DB_PORT: "3306"
+      DBNAME: temporal
+      VISIBILITY_DBNAME: temporal_visibility
+      MYSQL_SEEDS: db
+      MYSQL_USER: root
+      MYSQL_PWD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      DISABLE_ES: "true"
+      # auto-setup 默认绑容器自身 IP（BIND_ON_IP）；显式绑全网卡，
+      # 健康检查（127.0.0.1）与跨容器访问（temporal:7233）都通
+      BIND_ON_IP: 0.0.0.0
+      TEMPORAL_ADDRESS: 0.0.0.0:7233
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${TEMPORAL_UI_PORT:-17233}:7233"
+    healthcheck:
+      test: ["CMD-SHELL", "temporal operator cluster describe --address 127.0.0.1:7233 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  temporal-worker:
+    build: ./ai_meeting/fastapi-app
+    restart: unless-stopped
+    command: ["python", "temporal_worker.py"]
+    env_file: ./ai_meeting/fastapi-app/.env
+    environment:
+      MYSQL_HOST: db
+      MYSQL_PORT: "3306"
+      SQL_ECHO: "false"
+      TZ: Asia/Shanghai
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (openssl rand -hex 32)}
+      TEMPORAL_ADDRESS: temporal:7233
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-*}
+    volumes:
+      - ./ai_meeting/fastapi-app/files:/app/files
+      - ./evaluation:/evaluation
+    depends_on:
+      db:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+
+
+volumes:
+  mysql_data:
