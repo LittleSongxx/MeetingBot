@@ -1,0 +1,41 @@
+{
+  "R8003_M8001": {
+    "error_rate": 0.27670426679744975,
+    "errors": 2821,
+    "length": 10195,
+    "insertions": 307,
+    "deletions": 2061,
+    "substitutions": 453,
+    "reference_self_overlap": {
+      "overlap_rate": 0,
+      "overlap_time": 0,
+      "total_time": 4
+    },
+    "hypothesis_self_overlap": {
+      "overlap_rate": 0,
+      "overlap_time": 0,
+      "total_time": 4
+    },
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "SPK8001",
+        "3"
+      ],
+      [
+        "SPK8002",
+        "2"
+      ],
+      [
+        "SPK8003",
+        "0"
+      ],
+      [
+        "SPK8004",
+        "1"
+      ]
+    ]
+  }
+}

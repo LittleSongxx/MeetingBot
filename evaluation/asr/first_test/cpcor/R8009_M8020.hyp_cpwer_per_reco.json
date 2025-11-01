@@ -1,0 +1,33 @@
+{
+  "R8009_M8020": {
+    "error_rate": 0.11796435272045028,
+    "errors": 1006,
+    "length": 8528,
+    "insertions": 150,
+    "deletions": 541,
+    "substitutions": 315,
+    "reference_self_overlap": {
+      "overlap_rate": 0,
+      "overlap_time": 0,
+      "total_time": 2
+    },
+    "hypothesis_self_overlap": {
+      "overlap_rate": 0,
+      "overlap_time": 0,
+      "total_time": 2
+    },
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "SPK8025",
+        "1"
+      ],
+      [
+        "SPK8026",
+        "0"
+      ]
+    ]
+  }
+}

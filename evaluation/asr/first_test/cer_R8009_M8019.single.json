@@ -1,0 +1,13 @@
+{
+  "meeting": "R8009_M8019",
+  "condition": ".single",
+  "reference_chars": 9814,
+  "hypothesis_chars": 8543,
+  "segments": 347,
+  "cer": {
+    "raw": 0.2382,
+    "no_punct": 0.1497,
+    "normalized": 0.1489
+  },
+  "note": "金标=近讲话戴 TextGrid；假设=产品远场单声道链路；CER 三口径"
+}

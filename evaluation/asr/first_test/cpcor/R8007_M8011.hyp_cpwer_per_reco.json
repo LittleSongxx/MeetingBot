@@ -1,0 +1,41 @@
+{
+  "R8007_M8011": {
+    "error_rate": 0.32934078608819095,
+    "errors": 3712,
+    "length": 11271,
+    "insertions": 425,
+    "deletions": 2582,
+    "substitutions": 705,
+    "reference_self_overlap": {
+      "overlap_rate": 0,
+      "overlap_time": 0,
+      "total_time": 4
+    },
+    "hypothesis_self_overlap": {
+      "overlap_rate": 0,
+      "overlap_time": 0,
+      "total_time": 4
+    },
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 4,
+    "assignment": [
+      [
+        "SPK8066",
+        "0"
+      ],
+      [
+        "SPK8067",
+        "2"
+      ],
+      [
+        "SPK8068",
+        "1"
+      ],
+      [
+        "SPK8069",
+        "3"
+      ]
+    ]
+  }
+}

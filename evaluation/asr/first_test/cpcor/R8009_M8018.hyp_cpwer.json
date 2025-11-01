@@ -1,0 +1,31 @@
+{
+  "error_rate": 0.16694570676871562,
+  "errors": 1396,
+  "length": 8362,
+  "insertions": 260,
+  "deletions": 739,
+  "substitutions": 397,
+  "reference_self_overlap": {
+    "overlap_rate": 0,
+    "overlap_time": 0,
+    "total_time": 2
+  },
+  "hypothesis_self_overlap": {
+    "overlap_rate": 0,
+    "overlap_time": 0,
+    "total_time": 2
+  },
+  "missed_speaker": 0,
+  "falarm_speaker": 0,
+  "scored_speaker": 2,
+  "assignment": [
+    [
+      "SPK8021",
+      "0"
+    ],
+    [
+      "SPK8022",
+      "1"
+    ]
+  ]
+}
