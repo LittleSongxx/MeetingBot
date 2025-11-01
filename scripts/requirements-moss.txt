@@ -1,0 +1,9 @@
+# MOSS ASR 侧车依赖（独立 venv，与产品/评测环境隔离）
+# RTX 5070 Ti（Blackwell, sm_120）需要 cu128 轮子的 torch
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch>=2.7.0
+torchaudio>=2.7.0
+funasr>=1.4.12
+fastapi>=0.110
+uvicorn>=0.29
+python-multipart
