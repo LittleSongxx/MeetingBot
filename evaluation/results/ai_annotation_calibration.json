@@ -1,0 +1,257 @@
+{
+  "purpose": "AI 替代人工标注（三独立族）：裁判校准 + owner/deadline 核对",
+  "substitution_disclosure": "标注者为 qwen/glm/kimi 三个模型族（与产品主模型 deepseek-flash 均不同族）。三族一致说明标签可复现，**不构成人类有效性证据**；引用时必须写「AI 标注（三独立族多数票）」，不得写成人工金标。",
+  "validity_axis": {
+    "providers": [
+      "qwen"
+    ],
+    "alpha_among_annotators": {
+      "alpha": null,
+      "reason": "没有任何一个单位被 ≥2 位标注者标过",
+      "per_category": {
+        "partial": {
+          "alpha": null,
+          "codings": 40
+        },
+        "supported": {
+          "alpha": null,
+          "codings": 19
+        },
+        "unsupported": {
+          "alpha": null,
+          "codings": 29
+        }
+      },
+      "published_threshold": "α ≥ 0.7 才达到发表力度；逐类别必须一起报"
+    },
+    "pabak": {
+      "pairs": 0,
+      "agreement": null,
+      "pabak": null
+    },
+    "per_provider_agreement_with_original_adjudication": {
+      "qwen": {
+        "agreement_with_model": "65/88",
+        "rate": 0.7386
+      }
+    },
+    "majority_vs_original": "65/88",
+    "majority_agreement_rate": 0.7386,
+    "majority_label_distribution": {
+      "partial": 40,
+      "unsupported": 29,
+      "supported": 19
+    },
+    "n_disagreements": 23,
+    "disagreements_sample": [
+      {
+        "anonymous_id": "item_005",
+        "model_label": "unsupported",
+        "majority_label": "partial",
+        "per_provider": {
+          "qwen": "partial"
+        }
+      },
+      {
+        "anonymous_id": "item_007",
+        "model_label": "partial",
+        "majority_label": "unsupported",
+        "per_provider": {
+          "qwen": "unsupported"
+        }
+      },
+      {
+        "anonymous_id": "item_008",
+        "model_label": "unsupported",
+        "majority_label": "partial",
+        "per_provider": {
+          "qwen": "partial"
+        }
+      },
+      {
+        "anonymous_id": "item_017",
+        "model_label": "supported",
+        "majority_label": "partial",
+        "per_provider": {
+          "qwen": "partial"
+        }
+      },
+      {
+        "anonymous_id": "item_018",
+        "model_label": "derivable",
+        "majority_label": "partial",
+        "per_provider": {
+          "qwen": "partial"
+        }
+      },
+      {
+        "anonymous_id": "item_022",
+        "model_label": "partial",
+        "majority_label": "unsupported",
+        "per_provider": {
+          "qwen": "unsupported"
+        }
+      },
+      {
+        "anonymous_id": "item_023",
+        "model_label": "supported",
+        "majority_label": "partial",
+        "per_provider": {
+          "qwen": "partial"
+        }
+      },
+      {
+        "anonymous_id": "item_026",
+        "model_label": "supported",
+        "majority_label": "partial",
+        "per_provider": {
+          "qwen": "partial"
+        }
+      },
+      {
+        "anonymous_id": "item_027",
+        "model_label": "partial",
+        "majority_label": "unsupported",
+        "per_provider": {
+          "qwen": "unsupported"
+        }
+      },
+      {
+        "anonymous_id": "item_040",
+        "model_label": "supported",
+        "majority_label": "partial",
+        "per_provider": {
+          "qwen": "partial"
+        }
+      },
+      {
+        "anonymous_id": "item_045",
+        "model_label": "partial",
+        "majority_label": "unsupported",
+        "per_provider": {
+          "qwen": "unsupported"
+        }
+      },
+      {
+        "anonymous_id": "item_050",
+        "model_label": "unsupported",
+        "majority_label": "partial",
+        "per_provider": {
+          "qwen": "partial"
+        }
+      },
+      {
+        "anonymous_id": "item_051",
+        "model_label": "partial",
+        "majority_label": "unsupported",
+        "per_provider": {
+          "qwen": "unsupported"
+        }
+      },
+      {
+        "anonymous_id": "item_052",
+        "model_label": "partial",
+        "majority_label": "unsupported",
+        "per_provider": {
+          "qwen": "unsupported"
+        }
+      },
+      {
+        "anonymous_id": "item_057",
+        "model_label": "supported",
+        "majority_label": "partial",
+        "per_provider": {
+          "qwen": "partial"
+        }
+      }
+    ],
+    "protocol": "盲标：标注者用与原裁决逐字相同的冻结标准提示词独立打标签，本地比对（避免出示模型标签造成锚定）"
+  },
+  "owner_deadline_axis": {
+    "providers": [
+      "qwen"
+    ],
+    "per_field": {
+      "owner_label": {
+        "alpha_among_annotators": {
+          "alpha": null,
+          "reason": "没有任何一个单位被 ≥2 位标注者标过",
+          "per_category": {
+            "correct": {
+              "alpha": null,
+              "codings": 5
+            },
+            "missing": {
+              "alpha": null,
+              "codings": 6
+            },
+            "na": {
+              "alpha": null,
+              "codings": 55
+            },
+            "unjudgeable": {
+              "alpha": null,
+              "codings": 2
+            },
+            "wrong": {
+              "alpha": null,
+              "codings": 4
+            }
+          },
+          "published_threshold": "α ≥ 0.7 才达到发表力度；逐类别必须一起报"
+        },
+        "pabak": {
+          "pairs": 0,
+          "agreement": null,
+          "pabak": null
+        },
+        "majority_distribution": {
+          "correct": 5,
+          "na": 55,
+          "unjudgeable": 2,
+          "missing": 6,
+          "wrong": 4
+        },
+        "n_items": 72
+      },
+      "deadline_label": {
+        "alpha_among_annotators": {
+          "alpha": null,
+          "reason": "没有任何一个单位被 ≥2 位标注者标过",
+          "per_category": {
+            "correct": {
+              "alpha": null,
+              "codings": 7
+            },
+            "missing": {
+              "alpha": null,
+              "codings": 1
+            },
+            "na": {
+              "alpha": null,
+              "codings": 62
+            },
+            "unjudgeable": {
+              "alpha": null,
+              "codings": 2
+            }
+          },
+          "published_threshold": "α ≥ 0.7 才达到发表力度；逐类别必须一起报"
+        },
+        "pabak": {
+          "pairs": 0,
+          "agreement": null,
+          "pabak": null
+        },
+        "majority_distribution": {
+          "correct": 7,
+          "na": 62,
+          "unjudgeable": 2,
+          "missing": 1
+        },
+        "n_items": 72
+      }
+    },
+    "corpus": "契约 v2 的 26 场 decisions/pending_items 全量（72 条）"
+  }
+}

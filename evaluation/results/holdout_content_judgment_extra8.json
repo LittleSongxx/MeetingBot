@@ -1,0 +1,657 @@
+{
+  "purpose": "Holdout 双臂的**内容级**判定：词法代理饱和后唯一能分辨优化轮效果的仪器。\n\n## 预注册（看数据之前写死）\n\n- 抽样：每场每臂固定种子抽 5 个列表条目（topics/viewpoints/decisions/\n  pending_items/risks），同一场的两臂分别独立抽取（条目不同——比的是分布不是配对条目）；\n- 判定：qwen 盲态四分类（与 ai_adjudicate.SYSTEM_PROMPT 逐字相同，含 D1–D5），\n  窗口 = 条目在产品格式转写中的定位段；\n- 主读数：条目级 grounded 率（supported+derivable 占比），两臂各 n≈30；\n  逐场配对（n=6）Wilcoxon（wilcox+pratt 并报）；\n- 次读数：partial/unsupported 分布（无依据内容的形态）。\n\n边界：单裁判（qwen）+ n=6 场——与既有全部内容级读数同样的限制；\n结论口径是\"方向把关\"，不是效果宣称。\n\n运行：PYTHONPATH=evaluation python evaluation/metrics/holdout_content_judgment.py           --authorized-llm-calls 65\n",
+  "labels": {
+    "hc_vcsum_104_baseline_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写中陈总已经开始回答并阐述公司定位与文化做法，纪要却称问题尚未得到回答且为待讨论事项，核心断言与窗口不符。",
+      "arm": "baseline",
+      "case_id": "vcsum_104"
+    },
+    "hc_vcsum_104_baseline_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及企业转型升级与5G新经济相关内容",
+      "arm": "baseline",
+      "case_id": "vcsum_104"
+    },
+    "hc_vcsum_104_baseline_03": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写中德国同事明确提到导轨升降时若互相扭不在一起会导致很多人退货，并被视为开发中的风险。",
+      "arm": "baseline",
+      "case_id": "vcsum_104"
+    },
+    "hc_vcsum_104_baseline_04": {
+      "label": "supported",
+      "operation": "",
+      "reason": "纪要条目直接引用了转写中的原话，并准确概括了升级转型过程中的竞争与失败风险。",
+      "arm": "baseline",
+      "case_id": "vcsum_104"
+    },
+    "hc_vcsum_104_baseline_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口仅提到匠心精神、高质量发展、品牌打造等议题，未出现“坚守匠心与品质服务是品牌根本”的结论性断言。",
+      "arm": "baseline",
+      "case_id": "vcsum_104"
+    },
+    "hc_vcsum_104_treated_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "窗口仅提到深圳市仪泰康生物科技有限公司董事长叶晋荣被请上论坛，未提及仪泰康益生菌研发与专利。",
+      "arm": "treated",
+      "case_id": "vcsum_104"
+    },
+    "hc_vcsum_104_treated_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写仅提到西姆斯工艺制品深圳有限公司董事长贾淑娇被请上台，未提及高端车模或诚信经营。",
+      "arm": "treated",
+      "case_id": "vcsum_104"
+    },
+    "hc_vcsum_104_treated_03": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及发言人10、益生菌产品、产能、生产周期、微生物繁殖、设备报废等内容",
+      "arm": "treated",
+      "case_id": "vcsum_104"
+    },
+    "hc_vcsum_104_treated_04": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口仅提到四川济昌酒业有限责任公司董事长陈丽被请上台，未涉及其定位、八字文化或无添加剂承诺。",
+      "arm": "treated",
+      "case_id": "vcsum_104"
+    },
+    "hc_vcsum_104_treated_05": {
+      "label": "supported",
+      "operation": "",
+      "reason": "窗口直接陈述了民营企业平均寿命从7.3年降到五点几年、大批中小企业倒闭死亡，并提出其心理是捞一票就走。",
+      "arm": "treated",
+      "case_id": "vcsum_104"
+    },
+    "hc_vcsum_113_baseline_01": {
+      "label": "supported",
+      "operation": "",
+      "reason": "窗口中明确提到低费率指数基金和smart beta两类基金，并讨论二者对比。",
+      "arm": "baseline",
+      "case_id": "vcsum_113"
+    },
+    "hc_vcsum_113_baseline_02": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写中明确提到对白酒、科技等连续多年涨幅高的行业要保持谨慎，并提到恐高症。",
+      "arm": "baseline",
+      "case_id": "vcsum_113"
+    },
+    "hc_vcsum_113_baseline_03": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及行业指数配置的风险控制相关内容",
+      "arm": "baseline",
+      "case_id": "vcsum_113"
+    },
+    "hc_vcsum_113_baseline_04": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "纪要条目只是主题概括，窗口未直接陈述该标题或可推出该固定表述的核心断言。",
+      "arm": "baseline",
+      "case_id": "vcsum_113"
+    },
+    "hc_vcsum_113_baseline_05": {
+      "label": "partial",
+      "operation": "",
+      "reason": "条目仅提到“2020年最看好的指数”，但窗口中主持人只是提出该问题，尚未给出具体指数答案，核心断言不完整。",
+      "arm": "baseline",
+      "case_id": "vcsum_113"
+    },
+    "hc_vcsum_113_treated_01": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写中明确表达了单纯选择某个行业指数风险很大且某种程度上是赌博",
+      "arm": "treated",
+      "case_id": "vcsum_113"
+    },
+    "hc_vcsum_113_treated_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写只提到核心资产涨幅大、部分指数低估与否及投资方法，未提及抱团、个别标的估值泡沫或是否蔓延至整个指数。",
+      "arm": "treated",
+      "case_id": "vcsum_113"
+    },
+    "hc_vcsum_113_treated_03": {
+      "label": "partial",
+      "operation": "",
+      "reason": "标题概括了2019年指数与核心资产表现及低估指数探讨，但转写仅提到2019年整体指数涨得不多、核心资产涨得很多，并提出探讨低估指数，未直接形成完整标题式断言。",
+      "arm": "treated",
+      "case_id": "vcsum_113"
+    },
+    "hc_vcsum_113_treated_04": {
+      "label": "supported",
+      "operation": "",
+      "reason": "纪要条目概括了转写中提到的低费率指数基金与smart beta两类基金的讨论话题",
+      "arm": "treated",
+      "case_id": "vcsum_113"
+    },
+    "hc_vcsum_113_treated_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "纪要条目只是话题标题，窗口中未给出任何具体被推荐的2020年最看好指数断言。",
+      "arm": "treated",
+      "case_id": "vcsum_113"
+    },
+    "hc_vcsum_121_baseline_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及62岁重症心衰患者或温阳治疗病例",
+      "arm": "baseline",
+      "case_id": "vcsum_121"
+    },
+    "hc_vcsum_121_baseline_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及单体成分研发路线、前人已尝试并抛弃或中药研究走单体药路线的争议。",
+      "arm": "baseline",
+      "case_id": "vcsum_121"
+    },
+    "hc_vcsum_121_baseline_03": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及任何病例、住院期间停用中药、患者死亡或中西医用药冲突。",
+      "arm": "baseline",
+      "case_id": "vcsum_121"
+    },
+    "hc_vcsum_121_baseline_04": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写中明确提到英国有一个用针灸治疗房颤的科研/研究项目正在招募参与。",
+      "arm": "baseline",
+      "case_id": "vcsum_121"
+    },
+    "hc_vcsum_121_baseline_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写只提到中医/中药在心血管方面的研究与应用，未提及针灸穴位及其应用",
+      "arm": "baseline",
+      "case_id": "vcsum_121"
+    },
+    "hc_vcsum_121_treated_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及国内当代心血管研究现状，仅讨论心血管病常见性、中医历史及部分可治疗范围。",
+      "arm": "treated",
+      "case_id": "vcsum_121"
+    },
+    "hc_vcsum_121_treated_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口中未提及四逆汤、通心络、温胆汤或其他团队研究这些内容。",
+      "arm": "treated",
+      "case_id": "vcsum_121"
+    },
+    "hc_vcsum_121_treated_03": {
+      "label": "supported",
+      "operation": "",
+      "reason": "纪要条目中的两个核心断言“心血管病为全球第一杀手”和“中医认知模糊”均可在转写窗口中找到直接依据。",
+      "arm": "treated",
+      "case_id": "vcsum_121"
+    },
+    "hc_vcsum_121_treated_04": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及62岁、全心衰或病例分享相关内容。",
+      "arm": "treated",
+      "case_id": "vcsum_121"
+    },
+    "hc_vcsum_121_treated_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "条目仅为主题概括，未构成可由窗口直接支撑的具体断言，且‘有创治疗’‘补充空间’未在窗口中明确陈述",
+      "arm": "treated",
+      "case_id": "vcsum_121"
+    },
+    "hc_vcsum_151_baseline_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口中未提及景区、连锁、租赁、共享模式或相关落地方案。",
+      "arm": "baseline",
+      "case_id": "vcsum_151"
+    },
+    "hc_vcsum_151_baseline_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口仅涉及公司介绍、门店数量、电商平台、洛丽塔业务和营销平台等，未提及线下门店的社群运营或粉丝养成。",
+      "arm": "baseline",
+      "case_id": "vcsum_151"
+    },
+    "hc_vcsum_151_baseline_03": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口中未提及线上线下价格差异、用户是否敏感或渠道冲突等内容。",
+      "arm": "baseline",
+      "case_id": "vcsum_151"
+    },
+    "hc_vcsum_151_baseline_04": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "窗口仅提到汉服、汉元素等词，并未出现关于汉服、改良汉服与汉元素区分的内容",
+      "arm": "baseline",
+      "case_id": "vcsum_151"
+    },
+    "hc_vcsum_151_baseline_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及疫情及其对三坑线下店的影响",
+      "arm": "baseline",
+      "case_id": "vcsum_151"
+    },
+    "hc_vcsum_151_treated_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "窗口仅提到十二光年是三坑线下少女生活馆及门店情况，未提及粉丝养成或线下运营相关内容。",
+      "arm": "treated",
+      "case_id": "vcsum_151"
+    },
+    "hc_vcsum_151_treated_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口仅涉及嘉宾介绍公司业务，未提及三坑消费人群跳坑时间线与线下渠道相关内容",
+      "arm": "treated",
+      "case_id": "vcsum_151"
+    },
+    "hc_vcsum_151_treated_03": {
+      "label": "supported",
+      "operation": "",
+      "reason": "窗口中主持人明确请嘉宾介绍公司及产品，随后多位嘉宾分别介绍了各自公司与业务/产品。",
+      "arm": "treated",
+      "case_id": "vcsum_151"
+    },
+    "hc_vcsum_151_treated_04": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写直接说明罗伊服等非标品线上模特穿好看但用户买不一定好看且可能退货，体现线上体验不确定性。",
+      "arm": "treated",
+      "case_id": "vcsum_151"
+    },
+    "hc_vcsum_151_treated_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口中古典玩偶仅介绍业务、营业额和客单价，未提及开千平米大店或2020/2021/2022布局计划。",
+      "arm": "treated",
+      "case_id": "vcsum_151"
+    },
+    "hc_vcsum_164_baseline_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及互联网平台对流通与制造端赋能的相关内容。",
+      "arm": "baseline",
+      "case_id": "vcsum_164"
+    },
+    "hc_vcsum_164_baseline_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写仅提到商用车行业供应商此前以基础零件为主、高端件由外资垄断，未提及纵向一体化极致、供应链柔性低、工业互联网应用最后之一或数字化推进滞后风险。",
+      "arm": "baseline",
+      "case_id": "vcsum_164"
+    },
+    "hc_vcsum_164_baseline_03": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及上海产业电商或工业品在线交易节相关内容",
+      "arm": "baseline",
+      "case_id": "vcsum_164"
+    },
+    "hc_vcsum_164_baseline_04": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "纪要条目只是主题短语，转写窗口未提及工业互联网，也未明确陈述其在汽车与非标行业的应用。",
+      "arm": "baseline",
+      "case_id": "vcsum_164"
+    },
+    "hc_vcsum_164_baseline_05": {
+      "label": "supported",
+      "operation": "",
+      "reason": "窗口中发言人3明确讨论疫情对制造及供应链的影响，条目为概括性主题，可由原文支撑。",
+      "arm": "baseline",
+      "case_id": "vcsum_164"
+    },
+    "hc_vcsum_164_treated_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及互联网平台对工业制造与流通的赋能",
+      "arm": "treated",
+      "case_id": "vcsum_164"
+    },
+    "hc_vcsum_164_treated_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "纪要条目中的‘思路反思与超车先造车’在转写窗口中没有对应表述，无法找到依据。",
+      "arm": "treated",
+      "case_id": "vcsum_164"
+    },
+    "hc_vcsum_164_treated_03": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写仅提到中国制造业不足、发展空间及高端零件长期由外资垄断，并未提及被卡脖子风险、思路未跟上或合格供应商稀缺。",
+      "arm": "treated",
+      "case_id": "vcsum_164"
+    },
+    "hc_vcsum_164_treated_04": {
+      "label": "supported",
+      "operation": "",
+      "reason": "纪要条目概括了转写中关于中国工业发展历程与未来方向的讨论主题",
+      "arm": "treated",
+      "case_id": "vcsum_164"
+    },
+    "hc_vcsum_164_treated_05": {
+      "label": "supported",
+      "operation": "",
+      "reason": "窗口明确提到疫情对在线新经济有促进，且因疫情举办工业品在线交易节以推动复工复产。",
+      "arm": "treated",
+      "case_id": "vcsum_164"
+    },
+    "hc_vcsum_36_baseline_01": {
+      "label": "partial",
+      "operation": "",
+      "reason": "转写中确有主持人向两位嘉宾提问隐私计算落地最大障碍，但纪要补充了“全年落地”和“未见形成结论”等转写未明确的具体范围与状态。",
+      "arm": "baseline",
+      "case_id": "vcsum_36"
+    },
+    "hc_vcsum_36_baseline_02": {
+      "label": "partial",
+      "operation": "",
+      "reason": "核心中公安部查处网络爬虫收集隐私贩卖和隐私发币炒币有依据，但“传统数据分享方式不安全、购买数据存在风险、监管趋严”等概括性断言在窗口中未直接陈述，属于补入或过度概括。",
+      "arm": "baseline",
+      "case_id": "vcsum_36"
+    },
+    "hc_vcsum_36_baseline_03": {
+      "label": "partial",
+      "operation": "",
+      "reason": "窗口提到隐私、零知识证明和密码学突破，但未明确表述密码学技术在区块链隐私保护中的应用这一完整主题。",
+      "arm": "baseline",
+      "case_id": "vcsum_36"
+    },
+    "hc_vcsum_36_baseline_04": {
+      "label": "supported",
+      "operation": "",
+      "reason": "纪要条目直接对应转写中关于隐私商业变现历史探索不足的表述",
+      "arm": "baseline",
+      "case_id": "vcsum_36"
+    },
+    "hc_vcsum_36_baseline_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口只提到隐私重要，并未出现隐私与合规是否矛盾、很多人认为二者矛盾或某些方案不可能合规的断言。",
+      "arm": "baseline",
+      "case_id": "vcsum_36"
+    },
+    "hc_vcsum_36_treated_01": {
+      "label": "supported",
+      "operation": "",
+      "reason": "纪要中关于TPS宣传与实际能力不符、业界公认现有网络做到1000已很好、宣称十万百万属于吹牛等断言均能在转写中找到直接依据。",
+      "arm": "treated",
+      "case_id": "vcsum_36"
+    },
+    "hc_vcsum_36_treated_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "窗口只提到公链分版分化和不同链在可扩展性、隐私、吞吐量等方面差异，未提及多链并行融合难题或共识机制差异导致的融合问题。",
+      "arm": "treated",
+      "case_id": "vcsum_36"
+    },
+    "hc_vcsum_36_treated_03": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写仅提到隐私是金融需求，并未涉及合规关系或用户端痛点。",
+      "arm": "treated",
+      "case_id": "vcsum_36"
+    },
+    "hc_vcsum_36_treated_04": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写中明确提到“我们认为隐私是必须得是一个金融的需求……下一代肯定是需要隐私”，可支撑隐私作为下一代基础设施核心能力的断言。",
+      "arm": "treated",
+      "case_id": "vcsum_36"
+    },
+    "hc_vcsum_36_treated_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写仅强调隐私重要及零知识证明、sonic等，但未断言隐私保护需要多种密码学技术融合。",
+      "arm": "treated",
+      "case_id": "vcsum_36"
+    },
+    "hc_vcsum_6_baseline_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口讨论的是疫情对外贸影响、公司应对和广告预算变化，未提及任何提现规则或利润累积提现。",
+      "arm": "baseline",
+      "case_id": "vcsum_6"
+    },
+    "hc_vcsum_6_baseline_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口讨论疫情对外贸影响、公司应对、谷歌广告与紫外消杀产品，未提及风控流程独立性或合规化价值。",
+      "arm": "baseline",
+      "case_id": "vcsum_6"
+    },
+    "hc_vcsum_6_baseline_03": {
+      "label": "supported",
+      "operation": "",
+      "reason": "纪要条目概括了转写中关于外综平台不接受个人账户汇款及其合规逻辑的内容，与原文直接陈述一致。",
+      "arm": "baseline",
+      "case_id": "vcsum_6"
+    },
+    "hc_vcsum_6_baseline_04": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口中未提及平台方、CTO、功能改善或记录意见等内容",
+      "arm": "baseline",
+      "case_id": "vcsum_6"
+    },
+    "hc_vcsum_6_baseline_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及世茂通及其疫情期间的举措",
+      "arm": "baseline",
+      "case_id": "vcsum_6"
+    },
+    "hc_vcsum_6_treated_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及XTransfer风控流程严格或合规阳光化相关内容",
+      "arm": "treated",
+      "case_id": "vcsum_6"
+    },
+    "hc_vcsum_6_treated_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及XTransfer提现机制或利润累积后一次性提现",
+      "arm": "treated",
+      "case_id": "vcsum_6"
+    },
+    "hc_vcsum_6_treated_03": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写只提到XTransfer专注B2B电商国际贸易及增加投入服务中小企业，未涉及基于产业链信心的扩展",
+      "arm": "treated",
+      "case_id": "vcsum_6"
+    },
+    "hc_vcsum_6_treated_04": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及供应链重塑或中国供应商机会相关内容。",
+      "arm": "treated",
+      "case_id": "vcsum_6"
+    },
+    "hc_vcsum_6_treated_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及XTransfer账户关闭或资金安全保障相关内容",
+      "arm": "treated",
+      "case_id": "vcsum_6"
+    },
+    "hc_vcsum_73_baseline_01": {
+      "label": "supported",
+      "operation": "",
+      "reason": "纪要条目所述内容在转写窗口中均有直接对应依据。",
+      "arm": "baseline",
+      "case_id": "vcsum_73"
+    },
+    "hc_vcsum_73_baseline_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及电子竞技及其是否属于体育的争议。",
+      "arm": "baseline",
+      "case_id": "vcsum_73"
+    },
+    "hc_vcsum_73_baseline_03": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及线上流量供大于求、BAT账号流量不值钱或有效流量获取挑战",
+      "arm": "baseline",
+      "case_id": "vcsum_73"
+    },
+    "hc_vcsum_73_baseline_04": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及媒体业务互联网化、垂直社区付费用户或ToC到ToB逻辑相关内容",
+      "arm": "baseline",
+      "case_id": "vcsum_73"
+    },
+    "hc_vcsum_73_baseline_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及英超版权变化或未来争夺，仅讨论奥运会、欧锦赛及体育内容话题。",
+      "arm": "baseline",
+      "case_id": "vcsum_73"
+    },
+    "hc_vcsum_73_treated_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写只说2020年疫情加速了市场变化，并未提到体育产业长达7个月没有任何业务，也未表述为过去五年高速发展踩下重刹车。",
+      "arm": "treated",
+      "case_id": "vcsum_73"
+    },
+    "hc_vcsum_73_treated_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口讨论的是欧锦赛是否举办及赛制变化，未提及招商形势。",
+      "arm": "treated",
+      "case_id": "vcsum_73"
+    },
+    "hc_vcsum_73_treated_03": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及中超与体奥动力的协议及其执行难度",
+      "arm": "treated",
+      "case_id": "vcsum_73"
+    },
+    "hc_vcsum_73_treated_04": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写中明确提到中超职业联盟近期将正式成立，并会对版权市场进行客观调研和研判，再决定未来版权策略。",
+      "arm": "treated",
+      "case_id": "vcsum_73"
+    },
+    "hc_vcsum_73_treated_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及电子竞技或其是否属于体育的争议",
+      "arm": "treated",
+      "case_id": "vcsum_73"
+    }
+  },
+  "n_sampled": {
+    "vcsum_6.baseline": 5,
+    "vcsum_36.baseline": 5,
+    "vcsum_73.baseline": 5,
+    "vcsum_104.baseline": 5,
+    "vcsum_113.baseline": 5,
+    "vcsum_121.baseline": 5,
+    "vcsum_151.baseline": 5,
+    "vcsum_164.baseline": 5,
+    "vcsum_6.treated": 5,
+    "vcsum_36.treated": 5,
+    "vcsum_73.treated": 5,
+    "vcsum_104.treated": 5,
+    "vcsum_113.treated": 5,
+    "vcsum_121.treated": 5,
+    "vcsum_151.treated": 5,
+    "vcsum_164.treated": 5
+  },
+  "summary": {
+    "per_arm": {
+      "baseline": {
+        "n_items": 40,
+        "mean_grounded_rate": 0.225,
+        "label_distribution": {
+          "unsupported": 27,
+          "supported": 9,
+          "partial": 4
+        }
+      },
+      "treated": {
+        "n_items": 40,
+        "mean_grounded_rate": 0.275,
+        "label_distribution": {
+          "unsupported": 28,
+          "supported": 11,
+          "partial": 1
+        }
+      }
+    },
+    "per_case": {
+      "vcsum_104": {
+        "baseline": 0.4,
+        "treated": 0.2
+      },
+      "vcsum_113": {
+        "baseline": 0.4,
+        "treated": 0.4
+      },
+      "vcsum_121": {
+        "baseline": 0.2,
+        "treated": 0.2
+      },
+      "vcsum_151": {
+        "baseline": 0.0,
+        "treated": 0.4
+      },
+      "vcsum_164": {
+        "baseline": 0.2,
+        "treated": 0.4
+      },
+      "vcsum_36": {
+        "baseline": 0.2,
+        "treated": 0.4
+      },
+      "vcsum_6": {
+        "baseline": 0.2,
+        "treated": 0.0
+      },
+      "vcsum_73": {
+        "baseline": 0.2,
+        "treated": 0.2
+      }
+    },
+    "paired_wilcoxon": {
+      "n_pairs": 8,
+      "n_nonzero": 5,
+      "n_zero": 3,
+      "w_plus": 10.0,
+      "w_minus": 5.0,
+      "statistic": 5.0,
+      "p_value_two_sided": 0.75,
+      "method": "exact enumeration of sign assignments",
+      "pratt": {
+        "w_plus": 19.0,
+        "w_minus": 11.0,
+        "statistic": 11.0,
+        "p_value_two_sided": 0.75,
+        "method": "exact enumeration (pratt ranking)"
+      },
+      "zero_convention_note": "primary p uses the wilcox convention (zeros dropped before ranking); pratt ranks zeros together with nonzeros then drops them -- quote both"
+    }
+  }
+}
