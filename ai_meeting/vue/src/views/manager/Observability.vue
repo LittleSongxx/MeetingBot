@@ -228,8 +228,8 @@ const renderCharts = () => {
       ],
       series: [
         // 调用量和失败量画柱形，默认使用左轴
-        { name: '调用量', type: 'bar', data: trend.map(item => item.call_count), itemStyle: { color: '#409eff' } },
-        { name: '失败量', type: 'bar', data: trend.map(item => item.failed_count), itemStyle: { color: '#f56c6c' } },
+        { name: '调用量', type: 'bar', data: trend.map(item => item.call_count), itemStyle: { color: '#2563eb' } },
+        { name: '失败量', type: 'bar', data: trend.map(item => item.failed_count), itemStyle: { color: '#ef4444' } },
         // Token 画平滑折线，yAxisIndex: 1 使用右轴
         {
           name: 'Token',
@@ -237,7 +237,7 @@ const renderCharts = () => {
           yAxisIndex: 1,
           smooth: true,
           data: trend.map(item => item.total_tokens),
-          itemStyle: { color: '#e6a23c' }
+          itemStyle: { color: '#f59e0b' }
         }
       ]
     },
@@ -281,7 +281,7 @@ const renderCharts = () => {
       tooltip: { trigger: 'item' },
       legend: { bottom: 0 },
       // 扇区颜色按 agent_status 的返回顺序依次取用
-      color: ['#409eff', '#e6a23c', '#67c23a', '#f56c6c', '#909399'],
+      color: ['#2563eb', '#f59e0b', '#10b981', '#ef4444', 'rgba(17, 24, 39, .55)'],
       series: [
         {
           type: 'pie',
@@ -317,14 +317,14 @@ const renderCharts = () => {
           type: 'bar',
           stack: 'step',
           data: steps.map(item => item.succeeded_count),
-          itemStyle: { color: '#67c23a' }
+          itemStyle: { color: '#10b981' }
         },
         {
           name: '失败',
           type: 'bar',
           stack: 'step',
           data: steps.map(item => item.failed_count),
-          itemStyle: { color: '#f56c6c' }
+          itemStyle: { color: '#ef4444' }
         }
       ]
     },
@@ -397,7 +397,7 @@ onUnmounted(() => {
   padding: 17px;
 }
 .summary-label {
-  color: #909399;
+  color: rgba(17, 24, 39, .55);
 }
 .summary-value {
   font-size: 26px;
@@ -407,11 +407,11 @@ onUnmounted(() => {
 .summary-value span {
   font-size: 13px;
   font-weight: normal;
-  color: #909399;
+  color: rgba(17, 24, 39, .55);
   margin-left: 4px;
 }
 .summary-note {
-  color: #909399;
+  color: rgba(17, 24, 39, .55);
   font-size: 12px;
   margin-top: 5px;
 }
@@ -430,7 +430,7 @@ onUnmounted(() => {
   font-weight: bold;
   font-size: 16px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #ebeef5;
+  border-bottom: 1px solid rgba(17, 24, 39, .10);
 }
 .chart {
   height: 315px;

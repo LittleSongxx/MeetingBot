@@ -108,7 +108,7 @@
         <!-- 启用开关，写入 data.form.enabled -->
         <el-form-item label="启用配置">
           <el-switch v-model="data.form.enabled"></el-switch>
-          <span style="margin-left: 10px; color: #909399">同一用途只允许启用一个模型</span>
+          <span style="margin-left: 10px; color: rgba(17, 24, 39, .55)">同一用途只允许启用一个模型</span>
         </el-form-item>
       </el-form>
       <template #footer>

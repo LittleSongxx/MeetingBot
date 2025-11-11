@@ -597,7 +597,7 @@ loadMeetings()
 .minutes-item {
   padding: 10px 14px;
   margin-bottom: 8px;
-  background: #f7f8fa;
+  background: #f8fafc;
   border-radius: 4px;
 }
 .minutes-item p {
@@ -622,15 +622,15 @@ loadMeetings()
   justify-content: space-between;
   padding-bottom: 8px;
   margin-bottom: 10px;
-  border-bottom: 1px solid #ebeef3;
-  color: #1f2d3d;
+  border-bottom: 1px solid rgba(17, 24, 39, .10);
+  color: rgba(17, 24, 39, .95);
 }
 
 :deep(.edit-row) {
   padding: 10px 12px 12px;
   margin-bottom: 10px;
   background: #f8fafc;
-  border: 1px solid #ebeef3;
+  border: 1px solid rgba(17, 24, 39, .10);
   border-radius: 6px;
 }
 
@@ -643,7 +643,7 @@ loadMeetings()
 
 :deep(.edit-index) {
   font-size: 13px;
-  color: #8a94a6;
+  color: rgba(17, 24, 39, .55);
 }
 
 :deep(.edit-remove) {
@@ -667,7 +667,7 @@ loadMeetings()
   display: block;
   margin-bottom: 4px;
   font-size: 12px;
-  color: #8a94a6;
+  color: rgba(17, 24, 39, .55);
 }
 
 </style>

@@ -119,7 +119,7 @@ const update = () => {
 
 .el-icon.avatar-uploader-icon {
   font-size: 28px;
-  color: #8c939d;
+  color: rgba(17, 24, 39, .55);
   width: 120px;
   height: 120px;
   text-align: center;

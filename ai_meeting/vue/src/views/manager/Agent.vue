@@ -474,11 +474,11 @@ onUnmounted(() => {
 
 <style scoped>
 .tip {
-  color: #909399;
+  color: rgba(17, 24, 39, .55);
   line-height: 1.7;
 }
 .issue-count {
-  color: #f56c6c;
+  color: #ef4444;
   font-weight: bold;
 }
 .run-actions {
@@ -489,7 +489,7 @@ onUnmounted(() => {
 }
 .step-card {
   padding: 10px;
-  background: #f7f8fa;
+  background: #f8fafc;
   border-radius: 5px;
 }
 .step-title {
@@ -497,7 +497,7 @@ onUnmounted(() => {
 }
 .elapsed {
   float: right;
-  color: #909399;
+  color: rgba(17, 24, 39, .55);
   font-weight: normal;
 }
 .summary {
@@ -506,20 +506,20 @@ onUnmounted(() => {
 .observation {
   margin-top: 8px;
   white-space: pre-wrap;
-  color: #606266;
+  color: rgba(17, 24, 39, .75);
 }
 .review-body {
   margin-top: 10px;
 }
 .review-head {
-  color: #606266;
+  color: rgba(17, 24, 39, .75);
   margin-bottom: 8px;
 }
 .issue-item {
   padding: 9px 10px;
   margin-bottom: 8px;
   background: white;
-  border: 1px solid #ebeef5;
+  border: 1px solid rgba(17, 24, 39, .10);
   border-radius: 4px;
 }
 .issue-detail {
@@ -527,20 +527,20 @@ onUnmounted(() => {
 }
 .issue-suggestion {
   margin-top: 4px;
-  color: #909399;
+  color: rgba(17, 24, 39, .55);
 }
 .final-result {
   padding: 15px;
-  background: #f0f9eb;
-  border-left: 4px solid #67c23a;
+  background: #ecfdf5;
+  border-left: 4px solid #10b981;
   white-space: pre-wrap;
   line-height: 1.8;
 }
 .revision {
   margin-top: 14px;
   padding: 15px;
-  background: #fafbfc;
-  border: 1px solid #ebeef5;
+  background: #f8fafc;
+  border: 1px solid rgba(17, 24, 39, .10);
   border-radius: 5px;
 }
 .revision h3 {
@@ -550,14 +550,14 @@ onUnmounted(() => {
   margin-bottom: 12px;
   line-height: 1.8;
 }
-.change-summary { margin: 4px 0; color: #606266; }
+.change-summary { margin: 4px 0; color: rgba(17, 24, 39, .75); }
 .change-field { margin: 6px 0 6px 4px; }
 .change-line { margin: 2px 0 2px 8px; font-size: 12px; }
-.change-line.added { color: #67c23a; }
-.change-line.modified { color: #e6a23c; }
-.change-line.removed { color: #f56c6c; text-decoration: line-through; }
+.change-line.added { color: #10b981; }
+.change-line.modified { color: #f59e0b; }
+.change-line.removed { color: #ef4444; text-decoration: line-through; }
 .revision-line {
-  color: #606266;
+  color: rgba(17, 24, 39, .75);
 }
 .revision-title {
   margin-left: 8px;

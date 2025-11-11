@@ -65,7 +65,7 @@
         <!-- 模板名称可改，写入 data.form.name -->
         <el-form-item label="模板名称" prop="name"><el-input v-model="data.form.name"></el-input></el-form-item>
         <!-- 应用场景只读展示，没有输入框；保存时 data.form 里的原值随请求一起提交 -->
-        <el-form-item label="应用场景"><span style="color: #4a5568">{{ sceneText(data.form.scene_type) }}</span></el-form-item>
+        <el-form-item label="应用场景"><span style="color: rgba(17, 24, 39, .75)">{{ sceneText(data.form.scene_type) }}</span></el-form-item>
         <!-- 系统指令文本域，写入 data.form.system_prompt，调模型时作为系统消息发送 -->
         <el-form-item label="系统指令" prop="system_prompt"
           ><el-input v-model="data.form.system_prompt" type="textarea" :rows="7"></el-input
