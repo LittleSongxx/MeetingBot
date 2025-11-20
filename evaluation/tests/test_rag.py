@@ -163,7 +163,15 @@ class BudgetGateTest(unittest.TestCase):
 
 
 class ChatChecksTest(unittest.TestCase):
-    """两条零调用不变量：定位与越权。判据来自产品契约层（登记在案的例外②）。"""
+    """两条零调用不变量：定位与越权。判据来自产品契约层（登记在案的例外②）。
+
+    对照物是**会议的转写全文**（产物里的 `source_texts`），不是检索结果本身——
+    引文本来就是从检索结果拷的，拿它比对等于自己跟自己比。
+    """
+
+    SOURCES = {"2": {"meeting_id": 2, "segment_count": 2,
+                     "text": "张晨本次灰度从 8 月 20 日开始覆盖 10% 的活跃用户\n"
+                             "李月灰度期间登录成功率 99.8%"}}
 
     def _turn(self, **overrides) -> dict:
         turn = {
@@ -173,15 +181,18 @@ class ChatChecksTest(unittest.TestCase):
             "unknown_refs": [],
             "citations": [{
                 "ref": 1, "kind": "chunk", "meeting_id": 2,
-                "quote": "本次灰度从 8 月 20 日开始",
-                "source_text": "张晨本次灰度从 8 月 20 日开始覆盖 10% 的活跃用户",
+                # 切片渲染时会加定位前缀，判定位前先剥掉
+                "quote": "[51s][张晨] 本次灰度从 8 月 20 日开始覆盖 10% 的活跃用户",
             }],
         }
         turn.update(overrides)
         return turn
 
+    def _summarize(self, turns):
+        return chat_checks.summarize(turns, sources=self.SOURCES)
+
     def test_clean_turn_passes_both_invariants(self):
-        summary = chat_checks.summarize([self._turn()])
+        summary = self._summarize([self._turn()])
         self.assertEqual(summary["locatable"]["rate"], 1.0)
         self.assertEqual(summary["authorized"]["rate"], 1.0)
         self.assertEqual(summary["turns_with_violation"], 0)
@@ -189,10 +200,9 @@ class ChatChecksTest(unittest.TestCase):
     def test_unlocatable_quote_is_caught(self):
         turn = self._turn(citations=[{
             "ref": 1, "kind": "chunk", "meeting_id": 2,
-            "quote": "本次灰度从 7 月 1 日开始",  # 引文在切片里找不到
-            "source_text": "张晨本次灰度从 8 月 20 日开始覆盖 10% 的活跃用户",
+            "quote": "本次灰度从 7 月 1 日开始",  # 这句话在转写里不存在（模型编的）
         }])
-        summary = chat_checks.summarize([turn])
+        summary = self._summarize([turn])
         self.assertEqual(summary["locatable"]["rate"], 0.0)
         self.assertEqual(summary["unlocatable_count"], 1)
         self.assertEqual(summary["turns_with_violation"], 1)
@@ -200,31 +210,38 @@ class ChatChecksTest(unittest.TestCase):
     def test_citation_outside_the_visible_scope_is_caught(self):
         turn = self._turn(citations=[{
             "ref": 1, "kind": "chunk", "meeting_id": 99,   # 不在可见范围内
-            "quote": "本次灰度从 8 月 20 日开始",
-            "source_text": "张晨本次灰度从 8 月 20 日开始覆盖 10% 的活跃用户",
+            "quote": "[51s][张晨] 本次灰度从 8 月 20 日开始覆盖 10% 的活跃用户",
         }])
-        summary = chat_checks.summarize([turn])
+        summary = self._summarize([turn])
         self.assertEqual(summary["authorized"]["rate"], 0.0)
         self.assertEqual(summary["out_of_scope_count"], 1)
 
     def test_admin_scope_none_means_no_restriction(self):
-        summary = chat_checks.summarize([self._turn(allowed_meeting_ids=None)])
+        summary = self._summarize([self._turn(allowed_meeting_ids=None)])
         self.assertEqual(summary["authorized"]["rate"], 1.0)
 
-    def test_citation_without_source_text_is_reported_as_unchecked(self):
-        turn = self._turn(citations=[{"ref": 1, "kind": "chunk", "meeting_id": 2, "quote": "x"}])
-        summary = chat_checks.summarize([turn])
+    def test_citation_without_a_transcript_reference_is_reported_as_unchecked(self):
+        """会议转写没抓到（例如来源不是转写）时判不了定位：如实计数，不算通过。"""
+        turn = self._turn(citations=[{"ref": 1, "kind": "chunk", "meeting_id": 999, "quote": "x"}])
+        summary = self._summarize([turn])
         self.assertIsNone(summary["locatable"], "判不了的不算通过，也不进分母")
         self.assertEqual(summary["unchecked_citation_count"], 1)
 
     def test_used_ref_missing_from_the_registry_is_counted(self):
         turn = self._turn(used_refs=[1, 7], unknown_refs=[7])
-        summary = chat_checks.summarize([turn])
+        summary = self._summarize([turn])
         self.assertEqual(summary["missing_ref_count"], 1)
         self.assertEqual(summary["unknown_ref_count"], 1)
 
+    def test_locator_prefixes_are_stripped_before_locating(self):
+        self.assertEqual(
+            chat_checks.strip_locators("[51s][张晨] 第一句\n[74s][李月] 第二句"),
+            "第一句\n第二句")
+        # 普通方括号内容不受影响（只剥行首的定位前缀序列）
+        self.assertEqual(chat_checks.strip_locators("见 [附录] 第三条"), "见 [附录] 第三条")
+
     def test_empty_sample_reports_no_sample_not_zero(self):
-        summary = chat_checks.summarize([])
+        summary = self._summarize([])
         self.assertEqual(summary["turn_count"], 0)
         self.assertIsNone(summary.get("locatable"))
         self.assertIn("无样本", summary["reading"])
@@ -232,7 +249,7 @@ class ChatChecksTest(unittest.TestCase):
     def test_demo_artifact_passes(self):
         artifact = chat_checks.load_artifact(chat_checks.DEMO_ARTIFACT)
         self.assertIsNotNone(artifact, "演示样本必须随仓库提供")
-        summary = chat_checks.summarize(artifact["turns"])
+        summary = chat_checks.summarize(artifact["turns"], sources=artifact.get("source_texts"))
         self.assertEqual(summary["turns_with_violation"], 0)
         self.assertEqual(summary["locatable"]["rate"], 1.0)
         self.assertEqual(summary["out_of_scope_count"], 0)

@@ -104,7 +104,9 @@ class CitationRegistry:
         pairs = extract(result)
         for item, candidate in pairs:
             item["ref"] = self._register(candidate).ref
-        annotated[_ITEMS_KEY[tool_name]] = [item for item, _ in pairs]
+        key = _ITEMS_KEY[tool_name]
+        if key is not None:
+            annotated[key] = [item for item, _ in pairs]
         return annotated
 
     def _register(self, candidate: Citation) -> Citation:
@@ -170,7 +172,14 @@ def strip_refs(text: str) -> str:
 # 按工具形状取条目，并构造它的引用候选：一张表，新增工具只加一行
 # --------------------------------------------------------------------------- #
 
-_ITEMS_KEY = {"search_knowledge": "hits", "list_facts": "facts", "get_transcript_excerpt": "segments"}
+# 工具 → 结果里"条目数组"的键名；None 表示条目嵌在结果内部（get_minutes 的六字段），
+# 由抽取函数原位补 `ref` 而不是整体替换
+_ITEMS_KEY: dict[str, str | None] = {
+    "search_knowledge": "hits",
+    "list_facts": "facts",
+    "get_transcript_excerpt": "segments",
+    "get_minutes": None,
+}
 
 
 def _from_search(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation]]:
@@ -219,10 +228,52 @@ def _from_segments(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citatio
     return pairs
 
 
+def _from_minutes(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation]]:
+    """整份纪要：逐个条目登记（六字段里的条目本身就是可引用的最小单位）。
+
+    为什么要登记它：`get_minutes` 返回的条目原先不带 ref，模型想引用却无从下手——
+    实测它就直接写了个不存在的编号（`[3]`，而当时登记表是空的）。答案里出现查不到的
+    编号，页面上的引用就是死链；这条路径此前一直是这样。
+    """
+    meeting = result.get("meeting") or {}
+    meeting_id = int(meeting.get("id") or 0)
+    title = str(meeting.get("title") or "")
+    minutes_id = result.get("minutes_id")
+    authority = result.get("authority")
+    pairs: list[tuple[dict[str, Any], Citation]] = []
+    fields = result.get("fields") or {}
+    if not isinstance(fields, dict):
+        return pairs
+    for field_name, items in fields.items():
+        if not isinstance(items, list):
+            continue  # summary 是整段文本，不是一个可引用条目
+        for index, item in enumerate(items):
+            if not isinstance(item, dict):
+                continue
+            pairs.append((item, Citation(
+                ref=0, kind=KIND_FACT, meeting_id=meeting_id,
+                quote=_fact_quote(item), meeting_title=title,
+                minutes_id=minutes_id, field=field_name, item_index=index,
+                authority=authority,
+                speaker=_evidence_speaker(item),
+            )))
+    return pairs
+
+
+def _evidence_speaker(item: dict[str, Any]) -> str | None:
+    evidence = item.get("evidence")
+    if isinstance(evidence, list):
+        for entry in evidence:
+            if isinstance(entry, dict) and str(entry.get("speaker") or "").strip():
+                return str(entry["speaker"])
+    return None
+
+
 _EXTRACTORS: dict[str, Callable[[dict[str, Any]], list[tuple[dict[str, Any], Citation]]]] = {
     "search_knowledge": _from_search,
     "list_facts": _from_facts,
     "get_transcript_excerpt": _from_segments,
+    "get_minutes": _from_minutes,
 }
 
 

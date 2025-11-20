@@ -13,9 +13,15 @@
 ## 输入是什么
 
 `results/chat_answers.json`：由一次授权运行从产品抓取的问答记录（抓取脚本
-`judges/rag.py --ask`）。每条引用带 `source_text`（它指向的切片正文），
-这是离线判定的前提——**抓取时补上，而不是让检查器去连数据库**：
-检查器一旦要连库，就不再是"随时可跑的零调用回归"了。
+`judges/rag.py --ask`），里面含两样东西：
+
+- `turns`：每一轮的答案、引用与工具轨迹；
+- `source_texts`：**每场会的转写全文**（转写表里的原始片段拼成），作为对照物。
+
+对照物为什么必须是转写而不是检索结果：引文本来就是从切片里拷出来的，拿切片比对
+等于自己跟自己比。用转写全文比对才真正回答"答案引用的那句话，在这场会里存在吗"——
+它覆盖了切块 → 入库 → 检索 → 登记 → 答案这条完整链路。
+抓取时把转写一并拉进产物，检查器因此不需要连数据库，仍然是"随时可跑的零调用回归"。
 
 ## 没有样本时怎么报
 
@@ -25,6 +31,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -38,6 +45,10 @@ else:
     from lib import stats
 
     from regression import contract_checks
+
+# 引文里的定位前缀（`[123s][张晨] `）在转写原文里并不存在——它是切片渲染时加的。
+# 判"能不能在转写里定位"之前先把这些前缀去掉；去不掉的内容（普通方括号）保持原样。
+_LOCATOR_PREFIX = re.compile(r"^(?:\[[^\]]{0,40}\]\s*)+", re.M)
 
 EVALUATION_DIR = Path(__file__).resolve().parents[1]
 # 真实运行抓取的问答记录（一次授权运行产出，见 judges/rag.py --ask）
@@ -65,7 +76,20 @@ def _contracts():
     return contract_checks.load_contracts()
 
 
-def check_turn(turn: Mapping[str, Any], contracts=None) -> dict[str, Any]:
+def strip_locators(text: str) -> str:
+    """去掉切片渲染时加的定位前缀（`[123s][张晨] `），保留正文。"""
+    return _LOCATOR_PREFIX.sub("", text or "")
+
+
+def _source_text(sources: Mapping[str, Any] | None, meeting_id: Any) -> str:
+    entry = (sources or {}).get(str(meeting_id))
+    if isinstance(entry, Mapping):
+        return str(entry.get("text") or "")
+    return ""
+
+
+def check_turn(turn: Mapping[str, Any], contracts=None,
+               sources: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """检查一轮问答：引用定位 + 引用越权。返回本轮的问题清单。"""
     contracts = contracts if contracts is not None else _contracts()
     if contracts is None:
@@ -78,7 +102,8 @@ def check_turn(turn: Mapping[str, Any], contracts=None) -> dict[str, Any]:
     unlocatable: list[dict[str, Any]] = []
     out_of_scope: list[dict[str, Any]] = []
     missing_ref: list[int] = []
-    unchecked: list[int] = []      # 引用没带 source_text：判不了，单独报，不算通过
+    unchecked: list[int] = []      # 对照物缺失或引文为空：判不了，单独报，不算通过
+    not_applicable: list[int] = []  # 纪要条目：不是逐字引用，这条不变量不适用于它
     checked = 0
 
     for ref in used_refs:
@@ -90,15 +115,24 @@ def check_turn(turn: Mapping[str, Any], contracts=None) -> dict[str, Any]:
         # 越权：允许集合是 None 表示不过滤（管理员）；列表则必须包含该会议
         if allowed is not None and int(meeting_id or 0) not in {int(i) for i in allowed}:
             out_of_scope.append({"ref": ref, "meeting_id": meeting_id})
-        source_text = citation.get("source_text")
-        quote = str(citation.get("quote") or "")
-        if not source_text:
+        # **按权威级分开判**：转写窗口是逐字原文，能在转写里定位是最短的证明；
+        # 而纪要条目是**人确认过的结构化摘要**（模型写的，不是逐字引用），拿它跟转写
+        # 逐字比对是错的口径——实测这一条如果混在一起算，会把 100% 的转写引用与
+        # 0% 的摘要条目平均成 66%，那个数字既不说明问题也不可行动。
+        # 纪要条目的证据定位由轴 2 的引用级判定（judges/citations.py）负责。
+        if str(citation.get("authority") or "").upper() == "CONFIRMED":
+            not_applicable.append(ref)
+            continue
+        source_text = _source_text(sources, meeting_id)
+        quote = strip_locators(str(citation.get("quote") or ""))
+        if not source_text or not quote:
             unchecked.append(ref)
             continue
         checked += 1
         if not contracts.evidence_locatable(quote, contracts.normalize_source(source_text)):
-            unlocatable.append({"ref": ref, "meeting_id": meeting_id,
-                                "quote": quote[:120]})
+            unlocatable.append({"ref": ref, "meeting_id": meeting_id, "quote": quote[:120],
+                                "chunk_id": citation.get("chunk_id"),
+                                "field": citation.get("field")})
 
     return {
         "available": True,
@@ -107,6 +141,7 @@ def check_turn(turn: Mapping[str, Any], contracts=None) -> dict[str, Any]:
         "used_refs": len(used_refs),
         "checked": checked,
         "unchecked": unchecked,
+        "not_applicable": not_applicable,
         "missing_ref": missing_ref,
         "unlocatable": unlocatable,
         "out_of_scope": out_of_scope,
@@ -115,7 +150,8 @@ def check_turn(turn: Mapping[str, Any], contracts=None) -> dict[str, Any]:
     }
 
 
-def summarize(turns: Sequence[Mapping[str, Any]], contracts=None) -> dict[str, Any]:
+def summarize(turns: Sequence[Mapping[str, Any]], contracts=None,
+              sources: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """整份记录的汇总：两条不变量各自的比例与违约明细。"""
     contracts = contracts if contracts is not None else _contracts()
     if contracts is None:
@@ -132,19 +168,23 @@ def summarize(turns: Sequence[Mapping[str, Any]], contracts=None) -> dict[str, A
                        "因此这两条不变量既不报通过也不报失败",
         }
 
-    rows = [check_turn(turn, contracts) for turn in turns]
+    rows = [check_turn(turn, contracts, sources) for turn in turns]
     used_total = sum(row["used_refs"] for row in rows)
     checked_total = sum(row["checked"] for row in rows)
     unlocatable_total = sum(len(row["unlocatable"]) for row in rows)
     out_of_scope_total = sum(len(row["out_of_scope"]) for row in rows)
     unchecked_total = sum(len(row["unchecked"]) for row in rows)
+    not_applicable_total = sum(len(row["not_applicable"]) for row in rows)
     unknown_total = sum(len(row["unknown_refs"]) for row in rows)
     all_citations = [c for turn in turns for c in (turn.get("citations") or [])
                      if isinstance(c, Mapping)]
     by_kind: dict[str, int] = {}
+    by_authority: dict[str, int] = {}
     for citation in all_citations:
         kind = str(citation.get("kind") or "unknown")
         by_kind[kind] = by_kind.get(kind, 0) + 1
+        authority = str(citation.get("authority") or "unknown").upper()
+        by_authority[authority] = by_authority.get(authority, 0) + 1
 
     return {
         "available": True,
@@ -158,6 +198,9 @@ def summarize(turns: Sequence[Mapping[str, Any]], contracts=None) -> dict[str, A
         "unlocatable_count": unlocatable_total,
         "unlocatable_examples": [item for row in rows for item in row["unlocatable"]][:10],
         "unchecked_citation_count": unchecked_total,
+        # 纪要条目的引用不参与"逐字定位"这条（口径不适用，见 check_turn 里的说明）
+        "not_applicable_count": not_applicable_total,
+        "authority_breakdown": by_authority,
         "authorized": stats.proportion_report(used_total - out_of_scope_total, used_total)
         if used_total else None,
         "out_of_scope_count": out_of_scope_total,
@@ -168,8 +211,12 @@ def summarize(turns: Sequence[Mapping[str, Any]], contracts=None) -> dict[str, A
         "turns_with_violation": sum(1 for row in rows if not row["ok"]),
         "per_turn": rows,
         "reading": (
-            "locatable = 判得了的引用里能在**它指向的内容**中逐字定位的比例"
-            "（判据是产品契约层的 evidence_locatable，与纪要证据用同一份定义）；"
+            "locatable = **转写原话类引用**（authority=RAW）里能在该会议转写全文中"
+            "逐字定位的比例（判据是产品契约层的 evidence_locatable；引文先去定位前缀，"
+            "对照物是转写表的原始片段而不是检索结果）。"
+            "纪要条目（CONFIRMED）不参与这条：它是人确认过的结构化摘要而不是逐字引用，"
+            "它的证据定位由轴 2 的引用级判定负责——混在一起算会得到一个既不能说明"
+            "问题、也不可行动的平均数；"
             "authorized = 引用所属会议落在提问者可见范围内的比例（管理员不设限）。"
             "unknown_ref_count 是答案里引用了、但检索从未返回过的编号——它不该非零，"
             "非零说明模型在编编号。"
@@ -192,7 +239,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                           "reading": f"无样本：{args.artifact} 不存在"},
                          ensure_ascii=False, indent=2))
         return 0
-    summary = summarize(artifact.get("turns") or [])
+    summary = summarize(artifact.get("turns") or [], sources=artifact.get("source_texts"))
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0 if summary.get("out_of_scope_count", 0) == 0 else 1
 

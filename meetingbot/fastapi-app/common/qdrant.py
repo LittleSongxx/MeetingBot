@@ -81,23 +81,34 @@ async def ensure_collection(dim: int, *, name: str | None = None) -> None:
 
     **不自动重建**：维度不一致意味着换了嵌入模型，此时旧向量必须重嵌，
     自动删库会把还在用的数据一起抹掉——这种事必须由人显式决定。
+
+    **创建是幂等的**：两个索引任务并发跑到这里时，后到的会收到 409
+    （collection already exists）。那不是错误——目标状态已经达成；实测就撞过一次
+    （两个转写任务同时入队），当时整条索引任务被 409 判失败、切片留在库里没向量。
+    所以 PUT 失败后**重新确认一次存在性**，存在即通过（而不是靠匹配错误文本）。
     """
     if dim <= 0:
         raise QdrantError("嵌入维度必须为正数")
     name = name or collection_name()
     existing = _result(await _call("GET", f"/collections/{name}")) if await _exists(name) else None
-    if existing is not None:
-        vectors = (existing.get("config") or {}).get("params", {}).get("vectors") or {}
-        current = (vectors.get(DENSE_VECTOR) or {}).get("size")
-        if current and int(current) != int(dim):
-            raise QdrantError(
-                f"collection {name} 的向量维度是 {current}，当前嵌入模型是 {dim} 维。"
-                "换嵌入模型需要重建知识库（不要自动重建：旧向量可能还在用）")
-        return
-    await _call("PUT", f"/collections/{name}", json={
-        "vectors": {DENSE_VECTOR: {"size": int(dim), "distance": "Cosine"}},
-        "sparse_vectors": {SPARSE_VECTOR: {}},
-    })
+    if existing is None:
+        try:
+            await _call("PUT", f"/collections/{name}", json={
+                "vectors": {DENSE_VECTOR: {"size": int(dim), "distance": "Cosine"}},
+                "sparse_vectors": {SPARSE_VECTOR: {}},
+            })
+            return
+        except QdrantError:
+            # 并发创建：重新读一次，读到了就说明另一个请求建好了
+            if not await _exists(name):
+                raise
+            existing = _result(await _call("GET", f"/collections/{name}"))
+    vectors = (existing.get("config") or {}).get("params", {}).get("vectors") or {}
+    current = (vectors.get(DENSE_VECTOR) or {}).get("size")
+    if current and int(current) != int(dim):
+        raise QdrantError(
+            f"collection {name} 的向量维度是 {current}，当前嵌入模型是 {dim} 维。"
+            "换嵌入模型需要重建知识库（不要自动重建：旧向量可能还在用）")
 
 
 async def _exists(name: str) -> bool:

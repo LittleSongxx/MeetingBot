@@ -123,12 +123,36 @@ class GraphRunTest(unittest.IsolatedAsyncioTestCase):
             {"messages": messages, **injected},
             config={"recursion_limit": 10})
 
-    async def test_linear_answer_without_tools(self):
-        graph, injected = self._graph([_ai("没有相关问题。")], self.tool)
+    async def test_answer_without_tools_is_nudged_once_then_accepted(self):
+        """直接作答会被提醒一次（提醒后仍直接作答则接受，由上层标为 no_retrieval）。"""
+        graph, injected = self._graph(
+            [_ai("没有相关问题。"), _ai("抱歉，我这边没有相关资料。")], self.tool)
         state = await self._run(graph, injected, [HumanMessage("今天天气如何")])
-        self.assertEqual(chat_graph.final_answer(state), "没有相关问题。")
+        self.assertTrue(state["nudged"], "首轮没调工具必须提醒过")
+        self.assertEqual(state["round_no"], 2, "提醒后应再跑一轮")
+        self.assertEqual(state["tool_calls"], 0)
+        self.assertEqual(chat_graph.final_answer(state), "抱歉，我这边没有相关资料。")
+
+    async def test_nudge_only_happens_once(self):
+        """提醒只发一次：否则会与模型来回拉锯，把预算烧在没有进展的轮次上。"""
+        script = [_ai("第一次直接作答。"), _ai("第二次仍然直接作答。"),
+                  _ai("第三次不该被调用。")]
+        graph, injected = self._graph(script, self.tool)
+        state = await self._run(graph, injected, [HumanMessage("问题")])
+        self.assertEqual(state["round_no"], 2, "提醒后不应再提醒")
         self.assertEqual(state["stop_reason"], chat_graph.STOP_FINISHED)
-        self.assertEqual(state["round_no"], 1)
+
+    async def test_nudged_model_finds_tools_and_uses_them(self):
+        """提醒起作用的路径：第二轮开始调工具，工具结果回到模型，最终给带依据的答案。"""
+        graph, injected = self._graph([
+            _ai("会议里没有这件事。"),
+            _ai("", calls=[_call("search_knowledge", {"query": "上线时间"})]),
+            _ai("上线时间定在十月[1]。"),
+        ], self.tool)
+        state = await self._run(graph, injected, [HumanMessage("上线时间？")])
+        self.assertEqual(self.calls, ["上线时间"], "提醒之后应该真的去检索了")
+        self.assertEqual(state["tool_calls"], 1)
+        self.assertEqual(chat_graph.final_answer(state), "上线时间定在十月[1]。")
 
     async def test_tool_round_trip_then_answer(self):
         graph, injected = self._graph([
@@ -339,3 +363,61 @@ def _plain_tool(coroutine) -> Any:
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MinutesCitationTest(unittest.TestCase):
+    """整份纪要的条目也要能被引用：这条路径原先不登记，模型只能编编号。"""
+
+    def test_minutes_items_get_refs(self):
+        registry = citations.CitationRegistry()
+        result = registry.annotate("get_minutes", {
+            "ok": True, "meeting": {"id": 2, "title": "产品发布评审会议"},
+            "minutes_id": 3, "authority": "CONFIRMED",
+            "fields": {
+                "summary": "一句话摘要",
+                "decisions": [
+                    {"content": {"text": "九月一日发布"}, "origin": "stated",
+                     "evidence": [{"quote": "就定在九月一日", "speaker": "李月"}]},
+                ],
+                "risks": [
+                    {"content": {"text": "导出超时"}, "level": "HIGH", "origin": "stated",
+                     "evidence": []},
+                ],
+            },
+        })
+        decisions = result["fields"]["decisions"]
+        self.assertEqual(decisions[0]["ref"], 1, "条目上必须带 ref，模型才有编号可用")
+        self.assertEqual(result["fields"]["risks"][0]["ref"], 2)
+        citation = registry.get(1)
+        self.assertEqual((citation.kind, citation.minutes_id, citation.field, citation.item_index),
+                         (citations.KIND_FACT, 3, "decisions", 0))
+        # 引用文本优先取证据原句（能落回转写），而不是条目正文
+        self.assertEqual(citation.quote, "就定在九月一日")
+        self.assertEqual(citation.speaker, "李月")
+        self.assertEqual(citation.authority, "CONFIRMED")
+
+    def test_same_item_via_list_facts_and_get_minutes_shares_a_ref(self):
+        """两条工具路径引用同一条目时编号相同：去重身份是"哪条纪要的哪一条"。"""
+        registry = citations.CitationRegistry()
+        registry.annotate("list_facts", {"ok": True, "kind": "decision", "facts": [
+            {"meeting_id": 2, "minutes_id": 3, "field": "decisions", "item_index": 0,
+             "authority": "CONFIRMED", "meeting_title": "产品发布评审会议",
+             "item": {"content": {"text": "九月一日发布"}, "evidence": [{"quote": "就定在九月一日"}]}},
+        ]})
+        result = registry.annotate("get_minutes", {
+            "ok": True, "meeting": {"id": 2, "title": "产品发布评审会议"},
+            "minutes_id": 3, "authority": "CONFIRMED",
+            "fields": {"decisions": [{"content": {"text": "九月一日发布"},
+                                      "evidence": [{"quote": "就定在九月一日"}]}]},
+        })
+        self.assertEqual(result["fields"]["decisions"][0]["ref"], 1, "同一内容不该占两个编号")
+        self.assertEqual(len(registry), 1)
+
+    def test_summary_is_not_registered_as_an_item(self):
+        registry = citations.CitationRegistry()
+        result = registry.annotate("get_minutes", {
+            "ok": True, "meeting": {"id": 2}, "minutes_id": 3, "authority": "CONFIRMED",
+            "fields": {"summary": "整段摘要文本", "decisions": []},
+        })
+        self.assertEqual(result["fields"]["summary"], "整段摘要文本", "摘要保持字符串形态")
+        self.assertEqual(len(registry), 0)

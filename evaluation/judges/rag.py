@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -140,6 +141,31 @@ def _ask(base_url: str, token: str, session_id: int, question: str,
     return rows[-1]
 
 
+def meeting_transcripts(base_url: str, token: str, meeting_id: int) -> dict[str, Any]:
+    """把一场会的全部转写抓成一段文本：**离线判"引用能不能定位"的对照物**。
+
+    为什么不从检索结果里取对照：那等于自己跟自己比（引文本来就是从切片里拷的）。
+    对照物必须是另一个来源——转写表里的原始片段（`/transcription/selectById`），
+    于是这条检查真的在问"答案引用的那句话，在这场会的转写里存在吗"。
+    """
+    page = _http_json(f"{base_url}/transcription/selectPage?page_num=1&page_size=50"
+                      f"&meetingId={meeting_id}", method="GET", token=token)
+    tasks = [row for row in ((page.get("data") or {}).get("list") or [])
+             if row.get("status") == "SUCCEEDED"]
+    segments: list[dict[str, Any]] = []
+    for task in tasks:
+        detail = _http_json(f"{base_url}/transcription/selectById/{task['id']}", method="GET",
+                            token=token)
+        segments.extend((detail.get("data") or {}).get("segments") or [])
+    segments.sort(key=lambda item: (item.get("task_id"), item.get("segment_no")))
+    return {
+        "meeting_id": meeting_id,
+        "task_ids": [task["id"] for task in tasks],
+        "segment_count": len(segments),
+        "text": "\n".join(str(item.get("content") or "") for item in segments),
+    }
+
+
 def capture(qa_set: Mapping[str, Any], *, base_url: str, token: str,
             output_path: Path, meeting_id: int | None = None,
             progress=print) -> dict[str, Any]:
@@ -150,11 +176,16 @@ def capture(qa_set: Mapping[str, Any], *, base_url: str, token: str,
     session_id = (created.get("data") or {}).get("id")
     if not session_id:
         raise CaptureError(f"建会话失败：{created.get('msg') or created}")
+    sources: dict[str, Any] = {}
+    if meeting_id:
+        sources[str(meeting_id)] = meeting_transcripts(base_url, token, meeting_id)
+        progress(f"  转写对照物：{sources[str(meeting_id)]['segment_count']} 个片段")
     turns: list[dict[str, Any]] = []
     for case in qa_set["cases"]:
         message = _ask(base_url, token, session_id, case["question"])
         turns.append({
             "case_id": case["id"],
+            "meeting_id": meeting_id,
             "question": case["question"],
             "answer": message.get("content") or "",
             "message_id": message.get("id"),
@@ -170,7 +201,10 @@ def capture(qa_set: Mapping[str, Any], *, base_url: str, token: str,
         _write(output_path, {
             "artifact_version": 1,
             "captured_from": {"base_url": base_url, "session_id": session_id,
-                              "meeting_id": meeting_id, "captured_at": _now()},
+                              "meeting_id": meeting_id, "captured_at": _now(),
+                              "product_model": os.getenv("RAG_CAPTURE_MODEL", "")},
+            # 每场会的转写全文：零调用检查用它判"引用的那句话真的在会议里吗"
+            "source_texts": sources,
             "turns": turns,
         })
         time.sleep(0.2)
@@ -366,6 +400,8 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument("--qa-set", type=Path, default=DEFAULT_QA_SET)
     parser.add_argument("--answers", type=Path, default=DEFAULT_ANSWERS)
     parser.add_argument("--build", action="store_true", help="组包（零调用）")
+    parser.add_argument("--attach-transcripts", action="store_true",
+                        help="给已有产物补上会议转写对照物（零调用；只读产品的转写接口）")
     parser.add_argument("--ask", action="store_true", help="驱动产品接口抓取问答记录（需授权）")
     parser.add_argument("--judge", action="store_true", help="逐 case 判定（需授权）")
     parser.add_argument("--base-url", default="http://127.0.0.1:19091")
@@ -392,6 +428,22 @@ def main(argv: Iterable[str] | None = None) -> int:
             print(f"抓取失败：{error}", file=sys.stderr)
             return 1
         print(json.dumps(result, ensure_ascii=False))
+        return 0
+    if args.attach_transcripts:
+        if not args.token:
+            print("拒绝执行：--attach-transcripts 需要 --token（登录后的 JWT）", file=sys.stderr)
+            return 2
+        artifact = json.loads(args.answers.read_text(encoding="utf-8"))
+        meetings = {turn.get("meeting_id") for turn in artifact.get("turns") or []}
+        meetings.discard(None)
+        if not meetings and args.meeting_id:
+            meetings = {args.meeting_id}
+        sources = artifact.setdefault("source_texts", {})
+        for meeting_id in sorted(meetings):
+            sources[str(meeting_id)] = meeting_transcripts(args.base_url, args.token, meeting_id)
+            print(f"会议 {meeting_id}：{sources[str(meeting_id)]['segment_count']} 个转写片段")
+        _write(args.answers, artifact)
+        print(f"已写回 {args.answers}")
         return 0
     if args.build:
         answers = json.loads(args.answers.read_text(encoding="utf-8")) if args.answers.is_file() else None
