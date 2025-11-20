@@ -2170,7 +2170,52 @@
           "text": "[177s][系统管理员] 刘颖市场这边呢。\n[180s][系统管理员] 对外通稿的初稿已经写完了，还需要根据最终的功能清单调整报表导出。\n[186s][系统管理员] 既然要隐藏，那通稿里这一段要删掉。\n[190s][系统管理员] 另外我想确认发布当天要不要同步发一条产品公告。\n[195s][系统管理员] 发公告和通告一起都放在发布当天上午十点。\n[201s][系统管理员] 那我需要在发布前一天定稿留出审核时间。\n[205s][系统管理员] 可以通稿，定稿时间就定在发布前一日下午六点前。\n[211s][张晨] 还有个风险我要提一下，异步改造和灰度发布挨得太近，如果改造延期可能会影响到后面的排期。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "明确提到9月1日9:00正式发布。"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "再次明确9月1日9:00正式发布。"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "同时给出正式发布时间和发布前提条件。"
+            },
+            {
+              "index": 4,
+              "useful": false,
+              "why": "只提到阻断任务未完成会触发评审，未给出发布时间或具体前提条件。"
+            },
+            {
+              "index": 5,
+              "useful": false,
+              "why": "讨论通稿和公告安排，与正式发布时间及前提条件无关。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 3
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer_error": "ModelClientError: TimeoutError: The read operation timed out（等待响应头已耗时 180189 ms；这一段时间包含连接与建立，也包含服务端思考到发出响应头，要区分网络与服务端请用 probe_transport）"
+      }
     },
     {
       "case_id": "q16",
@@ -2206,7 +2251,162 @@
           "text": "本次会议完成AI智能会议助手灰度发布复盘，确认核心功能稳定、权限合规、主流程可用；明确9月1日9:00正式发布，覆盖会议全生命周期与AI任务跟踪能力；识别并定义5项关键风险（含4项高风险），落实7项关键任务及责任人与截止时间；设定首周数据复盘框架与运营支持机制；约定阻断任务未完成时的专项评审机制。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "明确说明任务未按时完成时由张晨与王工于8月31日17:00召开专项评审，并决定是否调整发布时间。"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "说明阻断任务未按时完成将触发风险，并按约定由张晨与王工于8月31日17:00召开专项评审。"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "直接说明任意阻断任务没有完成时，由张晨和王工在8月31日下午五点召开专项评审，决定是否调整发布时间。"
+            },
+            {
+              "index": 4,
+              "useful": false,
+              "why": "仅概括提到约定了专项评审机制，未包含回答问题所需的具体评审人员、时间或是否调整发布时间。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 1
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "阻断任务包括移动端附件下载进度任务和发布回归任务。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "移动端附件下载进度任务或发布回归任务任一未按时完成时会触发专项评审。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "专项评审由张晨与王工召开。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "专项评审召开时间为8月31日17:00。",
+              "supported": true
+            },
+            {
+              "index": 5,
+              "text": "专项评审将决定是否调整发布时间。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "原正式发布计划为9月1日09:00。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "相关信息来自“产品发布评审会议”。",
+              "supported": false
+            },
+            {
+              "index": 8,
+              "text": "该会议的 meeting_id=2。",
+              "supported": false
+            },
+            {
+              "index": 9,
+              "text": "人工确认的待办条目明确约定了触发条件与处置方式。",
+              "supported": true
+            },
+            {
+              "index": 10,
+              "text": "待办条目约定当移动端附件下载进度任务或发布回归任务任一未按时完成时触发专项评审。",
+              "supported": true
+            },
+            {
+              "index": 11,
+              "text": "待办条目约定由张晨与王工于8月31日17:00召开专项评审，决定是否调整发布时间。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "回答将待办条目内容标注为来源[2]。",
+              "supported": false
+            },
+            {
+              "index": 13,
+              "text": "人工确认的风险条目将阻断任务未按时完成列为高风险。",
+              "supported": true
+            },
+            {
+              "index": 14,
+              "text": "风险条目重申由张晨与王工于8月31日17:00召开专项评审。",
+              "supported": true
+            },
+            {
+              "index": 15,
+              "text": "回答将风险条目内容标注为来源[1]。",
+              "supported": false
+            },
+            {
+              "index": 16,
+              "text": "张晨在转写中口头确认了阻断任务未完成时的专项评审机制。",
+              "supported": true
+            },
+            {
+              "index": 17,
+              "text": "转写中说明如果任意阻断任务没有完成，由张晨和王工在8月31日下午五点召开专项评审，决定是否调整发布时间。",
+              "supported": true
+            },
+            {
+              "index": 18,
+              "text": "该转写片段的 start_second=879。",
+              "supported": true
+            },
+            {
+              "index": 19,
+              "text": "会议纪要摘要概括了阻断任务未完成时的专项评审机制。",
+              "supported": true
+            },
+            {
+              "index": 20,
+              "text": "给定资料仅说明专项评审将决定是否调整发布时间。",
+              "supported": true
+            },
+            {
+              "index": 21,
+              "text": "给定资料未提供评审后的具体备选方案，如延期时长或降级发布。",
+              "supported": true
+            },
+            {
+              "index": 22,
+              "text": "如需了解评审后续动作细节，当前资料不足。",
+              "supported": true
+            }
+          ],
+          "answered": true,
+          "why": "回答正面说明了阻断任务未完成后的处置机制，核心事实有上下文支撑，但会议名称、meeting_id和部分来源标注无法支撑。"
+        }
+      }
     },
     {
       "case_id": "q17",
@@ -2236,7 +2436,147 @@
           "text": "[570s][张晨] 王工，我补充一个数据风险，删除用户时，如果该账号已经关联会议任务转写纪要知识问答，agent运行或质量评价记录，系统不会执行删除。\n[588s][张晨] 管理员需要先调整业务记录中的负责人、创建人或协作人关系，这样可以保证历史会议和任务记录仍能正确展示人员信息。\n[605s][张晨] 张晨，关于移动端下载进度研发计划今天下午完成接口和前端验证，负责人是王工，协作人是陈琳，截止时间为8月30日18点。\n[621s][张晨] 任务描述是在若网络条件下附件下载时，展示明确的下载状态和失败提示，并验证pdf、word音频和视频四类文件，请记要中记录未发布前阻断事项。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "直接说明删除用户时若关联相关业务记录会阻止删除，并需管理员调整负责人、创建人或协作人关系。"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "包含删除用户时关联会议、任务、转写、纪要、知识问答、Agent运行或质量评价记录不会执行删除，以及管理员需先调整业务记录关系的信息。"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "包含删除用户时关联相关业务记录不会执行删除，以及管理员需先调整业务记录中人员关系的信息。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 1
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "删除用户时，若该账号已关联历史业务记录，系统将阻止删除操作。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "历史业务记录包括会议、任务、转写、纪要、知识问答、Agent运行或质量评价。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "管理员须先调整相关业务记录中的负责人、创建人或协作人关系。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "调整相关业务记录关系的目的是确保人员信息可追溯。",
+              "supported": true
+            },
+            {
+              "index": 5,
+              "text": "完成调整后方可执行删除。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "以上信息均来自“产品发布评审会议”。",
+              "supported": false
+            },
+            {
+              "index": 7,
+              "text": "该会议的 meeting_id=2。",
+              "supported": false
+            },
+            {
+              "index": 8,
+              "text": "风险条目明确说明删除用户时若关联历史业务记录，系统将阻止删除操作。",
+              "supported": true
+            },
+            {
+              "index": 9,
+              "text": "该风险条目是人工确认的。",
+              "supported": false
+            },
+            {
+              "index": 10,
+              "text": "风险条目说明管理员须先调整相关业务记录中的负责人、创建人或协作人关系，确保人员信息可追溯。",
+              "supported": true
+            },
+            {
+              "index": 11,
+              "text": "该风险等级为 HIGH。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "张晨在转写中说，删除用户时如果该账号已经关联会议任务转写纪要知识问答、agent运行或质量评价记录，系统不会执行删除。",
+              "supported": true
+            },
+            {
+              "index": 13,
+              "text": "该发言发生在 start_second=570。",
+              "supported": true
+            },
+            {
+              "index": 14,
+              "text": "同一发言中进一步解释管理员需要先调整业务记录中的负责人、创建人或协作人关系。",
+              "supported": true
+            },
+            {
+              "index": 15,
+              "text": "调整关系可以保证历史会议和任务记录仍能正确展示人员信息。",
+              "supported": true
+            },
+            {
+              "index": 16,
+              "text": "该解释发生在 start_second=588。",
+              "supported": true
+            },
+            {
+              "index": 17,
+              "text": "上下文未提供调整关系的具体操作路径。",
+              "supported": true
+            },
+            {
+              "index": 18,
+              "text": "上下文未提供批量处理工具。",
+              "supported": true
+            },
+            {
+              "index": 19,
+              "text": "上下文未提供异常回滚机制。",
+              "supported": true
+            },
+            {
+              "index": 20,
+              "text": "如需调整关系的具体操作路径、批量处理工具或异常回滚机制，当前资料不足。",
+              "supported": true
+            }
+          ],
+          "answered": true,
+          "why": "回答正面说明了删除用户时若存在关联业务记录会被阻止删除，并需先调整负责人、创建人或协作人关系。"
+        }
+      }
     },
     {
       "case_id": "q18",
@@ -2269,7 +2609,182 @@
           "text": "[decisions] 产品负责人张晨负责发布决策复盘与首周数据汇总，重点分析会议创建数量与总时长、转写任务成功率与平均耗时、已确认纪要/任务草稿/正式任务数量、任务完成率与逾期率、RAG问答调用量/Agent运行次数/工具调用成功率/人工确认次数，并在质量评价页面导出《纪要与Agent结果三维度评分报表》（含准确性、完整性、可执行性单项分及综合分），于9月8日18:00前提交。 张晨（产品负责人） 2023-09-08T18:00:00（2023-09-08）"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "提到首周复盘重点看的前两项数据：会议创建数量和总时长、转写任务成功率和平均耗时。"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "完整列出首周复盘要看的五项数据。"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "决策摘要中完整包含首周复盘要分析的五项数据。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 2
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 2
+            },
+            {
+              "index": 3,
+              "found": true,
+              "in_context": 2
+            },
+            {
+              "index": 4,
+              "found": true,
+              "in_context": 2
+            },
+            {
+              "index": 5,
+              "found": true,
+              "in_context": 2
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "首周复盘需关注会议创建数量和总时长。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "首周复盘需关注转写任务成功率和平均耗时。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "首周复盘需关注已确认纪要数量、任务草稿数量和正式任务数量。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "首周复盘需关注任务完成率和逾期率。",
+              "supported": true
+            },
+            {
+              "index": 5,
+              "text": "首周复盘需关注RAG问答调用量、Agent运行次数、工具调用成功率和人工确认次数。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "首周复盘还需在质量评价页面导出《纪要与Agent结果三维度评分报表》。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "该报表包含准确性单项分。",
+              "supported": true
+            },
+            {
+              "index": 8,
+              "text": "该报表包含完整性单项分。",
+              "supported": true
+            },
+            {
+              "index": 9,
+              "text": "该报表包含可执行性单项分。",
+              "supported": true
+            },
+            {
+              "index": 10,
+              "text": "该报表包含综合分。",
+              "supported": true
+            },
+            {
+              "index": 11,
+              "text": "该评分用于观察模型输出是否满足业务需要。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "以上信息均来自“产品发布评审会议”。",
+              "supported": false
+            },
+            {
+              "index": 13,
+              "text": "该会议的 meeting_id=2。",
+              "supported": false
+            },
+            {
+              "index": 14,
+              "text": "张晨在转写中逐项说明了首周复盘的五项数据。",
+              "supported": true
+            },
+            {
+              "index": 15,
+              "text": "张晨说明五项数据的转写时间为807–831秒。",
+              "supported": true
+            },
+            {
+              "index": 16,
+              "text": "张晨在840秒的发言中补充了质量评价页面收集纪要和Agent结果的综合评分、准确性、完整性和可执行性评分。",
+              "supported": true
+            },
+            {
+              "index": 17,
+              "text": "人工确认的决策条目完整复述了上述五项数据和评分报表要求。",
+              "supported": true
+            },
+            {
+              "index": 18,
+              "text": "决策条目要求于9月8日18:00前提交。",
+              "supported": true
+            },
+            {
+              "index": 19,
+              "text": "产品负责人张晨负责发布决策复盘与首周数据汇总。",
+              "supported": true
+            },
+            {
+              "index": 20,
+              "text": "工具返回内容已完整列出五项数据名称及评分报表要求。",
+              "supported": false
+            },
+            {
+              "index": 21,
+              "text": "上下文未提供各项指标的具体计算口径。",
+              "supported": true
+            },
+            {
+              "index": 22,
+              "text": "上下文未提供数据采集接口。",
+              "supported": true
+            },
+            {
+              "index": 23,
+              "text": "上下文未提供阈值标准。",
+              "supported": true
+            },
+            {
+              "index": 24,
+              "text": "如需这些细节，当前资料不足。",
+              "supported": true
+            }
+          ],
+          "answered": true,
+          "why": "回答正面列出了五项数据且核心内容可由上下文支撑，但会议名称、meeting_id及“工具返回内容”等来源表述缺乏上下文支撑。"
+        }
+      }
     },
     {
       "case_id": "q19",
