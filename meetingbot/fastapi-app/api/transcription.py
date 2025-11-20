@@ -1,4 +1,5 @@
 
+from common import access
 from common.auth import get_current_user
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
@@ -19,7 +20,6 @@ from pydantic import BaseModel
 from services.speaker_service import suggest_speakers
 from services.transcription_service import cancel_transcription, reject_overlong_audio, schedule_transcription
 from tortoise.exceptions import IntegrityError
-from tortoise.expressions import Q
 
 from api.meeting import get_accessible_meeting
 from api.meeting_material import MATERIAL_DIR, get_accessible_material
@@ -340,17 +340,10 @@ async def select_page(
     current_user: User = Depends(get_current_user),
 ):
     query = TranscriptionTask.all()
-    # 员工先把范围收窄到自己能看到的会议，管理员不加这层限制
+    # 员工先把范围收窄到自己能看到的会议，管理员不加这层限制。
+    # 口径统一在 common.access（原来这里有第五份实现）
     if current_user.role != "ADMIN":
-        participant_meeting_ids = await MeetingParticipant.filter(
-            user_id=current_user.id
-        ).values_list("meeting_id", flat=True)
-        # 口径和第 5 章的会议列表一致：自己创建、自己主持或自己参与
-        accessible_ids = await Meeting.filter(
-            Q(creator_id=current_user.id)
-            | Q(host_id=current_user.id)
-            | Q(id__in=participant_meeting_ids)
-        ).values_list("id", flat=True)
+        accessible_ids = await access.visible_meeting_ids(current_user)
         query = query.filter(meeting_id__in=accessible_ids)
     # 指定了会议时再单独校验一次这场会议的访问权限
     if meetingId is not None:

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List
 from uuid import uuid4
 
+from common import access
 from common.auth import get_current_user, require_admin
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
@@ -21,7 +22,6 @@ from models import (
     User,
 )
 from pydantic import BaseModel, ConfigDict, Field
-from tortoise.expressions import Q
 from tortoise.transactions import in_transaction
 
 # 会议资料的存放目录，删除会议时要把这些文件一并从磁盘上清掉
@@ -91,14 +91,8 @@ async def validate_meeting(payload: MeetingPayload):
 
 
 async def has_meeting_access(meeting: Meeting, current_user: User) -> bool:
-    # 管理员能访问任何会议
-    if current_user.role == "ADMIN":
-        return True
-    # 创建人和主持人能访问自己的会议
-    if meeting.creator_id == current_user.id or meeting.host_id == current_user.id:
-        return True
-    # 其余情况看这个人在不在参会名单里
-    return await MeetingParticipant.filter(meeting_id=meeting.id, user_id=current_user.id).exists()
+    # 口径统一在 common.access：这条规则原来有五份实现，可见性漂移等于越权
+    return await access.has_meeting_access(meeting, current_user)
 
 
 async def get_accessible_meeting(meeting_id: int, current_user: User) -> Meeting:
@@ -447,11 +441,7 @@ async def select_options(current_user: User = Depends(get_current_user)):
             user_id=current_user.id
         ).values_list("meeting_id", flat=True)
         # 自己创建、自己主持、自己参会，满足任一条件的会议都放进下拉框
-        query = query.filter(
-            Q(creator_id=current_user.id)
-            | Q(host_id=current_user.id)
-            | Q(id__in=participant_meeting_ids)
-        )
+        query = query.filter(access.visible_meeting_query(current_user, participant_meeting_ids))
     # 开始时间倒序，最近的会议排在下拉框最上面；不分页，一次返回全部
     meetings = await query.order_by("-start_time", "-id")
     return Result.success(
@@ -498,11 +488,7 @@ async def select_page(
     # 员工无论选什么视图，以及管理员主动选“我的会议”，都收窄到与自己相关的会议
     # 管理员选“全部会议”时两个条件都不成立，不加任何范围限制
     elif current_user.role != "ADMIN" or view_type == "MY":
-        query = query.filter(
-            Q(creator_id=current_user.id)
-            | Q(host_id=current_user.id)
-            | Q(id__in=participant_meeting_ids)
-        )
+        query = query.filter(access.visible_meeting_query(current_user, participant_meeting_ids))
     # 状态下拉框有值时追加等值条件
     if status:
         query = query.filter(status=status)
