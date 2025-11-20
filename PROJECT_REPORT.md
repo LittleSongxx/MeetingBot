@@ -1,4 +1,4 @@
-# AIMeeting 项目报告（面向技术评审）
+# MeetingBot 项目报告（面向技术评审）
 
 > 会议纪要 Agent：音视频上传 → 语音转写（说话人归属）→ LLM 生成六字段结构化纪要 →
 > 审查-重写反思环 → 人工确认归档。FastAPI + Vue + MySQL + LangGraph，Docker Compose 部署。

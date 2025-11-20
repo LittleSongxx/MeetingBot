@@ -8,16 +8,16 @@
 
 # --- Node / 前端构建产物 ---
 **/node_modules/
-ai_meeting/vue/.npm-cache/
-ai_meeting/vue/dist/
+meetingbot/vue/.npm-cache/
+meetingbot/vue/dist/
 
 # --- 密钥与环境（样例 .env.example 保留）---
 .env
-ai_meeting/fastapi-app/.env
+meetingbot/fastapi-app/.env
 
 # --- 本地运行数据 ---
 storage/
-ai_meeting/fastapi-app/files/
+meetingbot/fastapi-app/files/
 output/
 
 # --- 个人资料与架构图目录（不入库）---

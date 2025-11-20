@@ -1,6 +1,6 @@
-# AIMeeting 本地 Docker 部署
+# MeetingBot 本地 Docker 部署
 
-配置文件为 `ai_meeting/fastapi-app/.env`。密钥不进入镜像，也不提交到版本控制。
+配置文件为 `meetingbot/fastapi-app/.env`。密钥不进入镜像，也不提交到版本控制。
 
 ## 启动
 
@@ -15,8 +15,8 @@
 登录账号和密码分别查看 `.env` 的 `APP_ADMIN_USERNAME`、`APP_ADMIN_PASSWORD`，本次已生成独立本地密码。
 
 `scripts/compose.sh` 统一从指定位置读取 `.env`，无需把密钥放到项目根目录。
-默认使用单个后端 worker，符合项目进程内任务调度方式。MySQL 仅在 Compose 网络内开放，网页及后端仅绑定宿主机回环地址。
-数据保存在本项目独立的 `aimeeting-local_mysql_data` 卷；SQL 样例只在空卷初始化时导入。上传文件保存在原项目 `fastapi-app/files` 目录。
+默认使用单个后端 worker：登录/注册限流器的失败计数在进程内存里（任务调度已迁 Temporal，与 worker 数无关）。MySQL 仅在 Compose 网络内开放，网页及后端仅绑定宿主机回环地址。
+数据保存在本项目独立的 `meetingbot-local_mysql_data` 卷；SQL 样例只在空卷初始化时导入。上传文件保存在原项目 `fastapi-app/files` 目录。
 
 ## 模型配置
 
@@ -73,14 +73,14 @@
 "Ran N tests, errors"，看起来像测试坏了，实际是环境没装）。已建好隔离虚拟环境：
 
 ```bash
-cd ai_meeting/fastapi-app
+cd meetingbot/fastapi-app
 uv venv --python 3.12 .venv
 uv pip install --python .venv/bin/python -r requirements.txt
 .venv/bin/python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-当前实测：**87 项通过，1 项跳过**（缺 ffmpeg 时的条件跳过）。其中 36 项是契约层测试
-（`tests/test_contracts.py`），只依赖 pydantic、不碰数据库。
+当前实测：**193 项通过，1 项跳过**（缺 ffmpeg 时的条件跳过；pytest 口径 192 项通过）。
+其中 74 项是契约层测试（`tests/test_contracts.py`），只依赖 pydantic、不碰数据库。
 
 离线指标套件有两种跑法：
 
@@ -89,31 +89,33 @@ uv pip install --python .venv/bin/python -r requirements.txt
 python evaluation/regression/run.py --set all
 
 # 需要契约不变量（契约层依赖 pydantic），用产品的 venv
-ai_meeting/fastapi-app/.venv/bin/python evaluation/regression/run.py --set all
+meetingbot/fastapi-app/.venv/bin/python evaluation/regression/run.py --set all
 ```
 
 两者都是**零模型调用**。第二种会多产出"契约不变量"小节；第一种会把该小节标为不可用
 并说明原因，而不是退回一份近似实现——契约判定没有近似版。
 
-`.venv` 不应提交或打进镜像（`ai_meeting/fastapi-app/.dockerignore` 已排除 `.venv`）。
+`.venv` 不应提交或打进镜像（`meetingbot/fastapi-app/.dockerignore` 已排除 `.venv`）。
 
 ## 部署约束与新配置（2026-09-27 修复轮）
 
-**单进程约束**：backend 必须以 `--workers 1` 运行（Dockerfile 已钉住）。转写/纪要/自检的
-防双跑依赖进程内字典（`_running_tasks` 等）与条件更新；多 worker/多副本会双跑双计费。
-分布式部署前需先引入集中式锁或任务队列。
+**单进程约束**：backend 必须以 `--workers 1` 运行（Dockerfile 已钉住）。原因：登录/注册
+限流器的失败计数在进程内存里（`common/ratelimit.py`），多 worker 会让每个进程各自计数，
+爆破阈值被隐性放大。转写/纪要/自检的防双跑已不依赖进程内存——任务调度在 Temporal
+（workflow id 同 id 在跑即拒 + activity 内 DB 条件抢占），backend 与 temporal-worker
+可以各自多副本；需要多副本 backend 时先给限流器换集中式存储。
 
 **必须设置的环境变量**：`JWT_SECRET`（缺失时后端拒绝启动；`openssl rand -hex 32` 生成）。
-样例与全部可选项见 `ai_meeting/fastapi-app/.env.example`（.env 不入库）。
+样例与全部可选项见 `meetingbot/fastapi-app/.env.example`（.env 不入库）。
 
 **新增开关**：`REGISTER_ENABLED=false` 关闭自助注册（对外部署建议）；
 `CORS_ALLOW_ORIGINS` 收紧跨域来源；`LOGIN_RATE_MAX_FAILURES/LOGIN_RATE_WINDOW_SECONDS`
 登录限流参数。
 
-**索引**：存量库执行 `docker exec -i aimeeting-local-db-1 mysql -uaimeeting -p$MYSQL_PASSWORD
-ai_meeting < scripts/indexes.sql`（重复执行报 Duplicate key name 可忽略）。
+**索引**：存量库执行 `docker exec -i meetingbot-local-db-1 mysql -umeetingbot -p$MYSQL_PASSWORD
+meetingbot < scripts/indexes.sql`（重复执行报 Duplicate key name 可忽略）。
 
-**department 表**：`ai_meeting.sql` 已把 `code` 列改为可空并移除其唯一索引（ORM 不使用
+**department 表**：`meetingbot.sql` 已把 `code` 列改为可空并移除其唯一索引（ORM 不使用
 该列，原 NOT NULL 会让新初始化的库在建部门时报错）。只影响空卷初始化；存量库无需处理，
 如需对齐可执行 `ALTER TABLE department MODIFY code varchar(50) NULL DEFAULT NULL, DROP INDEX uk_department_code;`（后者已不存在时会报错，可忽略）。
 

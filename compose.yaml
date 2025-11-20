@@ -1,19 +1,19 @@
-name: aimeeting-local
+name: meetingbot-local
 
 services:
   db:
     image: mysql:8.4.11
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-ai_meeting}
-      MYSQL_USER: ${MYSQL_USER:-aimeeting}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-meetingbot}
+      MYSQL_USER: ${MYSQL_USER:-meetingbot}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
       TZ: Asia/Shanghai
     command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./ai_meeting.sql:/docker-entrypoint-initdb.d/01-seed.sql:ro
+      - ./meetingbot.sql:/docker-entrypoint-initdb.d/01-seed.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h 127.0.0.1 -u $$MYSQL_USER -D $$MYSQL_DATABASE -Nse 'SELECT 1 FROM prompt_template LIMIT 1' >/dev/null 2>&1"]
       interval: 5s
@@ -22,9 +22,9 @@ services:
       start_period: 30s
 
   backend:
-    build: ./ai_meeting/fastapi-app
+    build: ./meetingbot/fastapi-app
     restart: unless-stopped
-    env_file: ./ai_meeting/fastapi-app/.env
+    env_file: ./meetingbot/fastapi-app/.env
     environment:
       MYSQL_HOST: db
       MYSQL_PORT: "3306"
@@ -37,7 +37,7 @@ services:
     ports:
       - "127.0.0.1:${BACKEND_PORT:-19091}:9090"
     volumes:
-      - ./ai_meeting/fastapi-app/files:/app/files
+      - ./meetingbot/fastapi-app/files:/app/files
       - ./evaluation:/evaluation
     depends_on:
       db:
@@ -56,7 +56,7 @@ services:
       start_period: 20s
 
   web:
-    build: ./ai_meeting/vue
+    build: ./meetingbot/vue
     restart: unless-stopped
     ports:
       - "127.0.0.1:${WEB_PORT:-18082}:80"
@@ -98,10 +98,10 @@ services:
       start_period: 60s
 
   temporal-worker:
-    build: ./ai_meeting/fastapi-app
+    build: ./meetingbot/fastapi-app
     restart: unless-stopped
     command: ["python", "temporal_worker.py"]
-    env_file: ./ai_meeting/fastapi-app/.env
+    env_file: ./meetingbot/fastapi-app/.env
     environment:
       MYSQL_HOST: db
       MYSQL_PORT: "3306"
@@ -111,7 +111,7 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-*}
     volumes:
-      - ./ai_meeting/fastapi-app/files:/app/files
+      - ./meetingbot/fastapi-app/files:/app/files
       - ./evaluation:/evaluation
     depends_on:
       db:
