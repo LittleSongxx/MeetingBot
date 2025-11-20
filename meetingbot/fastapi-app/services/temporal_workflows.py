@@ -116,5 +116,22 @@ WORKFLOW_BY_KIND = {
 }
 
 
+# 任务类型 → 该类型要注册的 activity。按类型分队列后，每个 worker 只注册
+# 自己那一类（注册别人的 activity 会让它去抢不该它消费的任务）。
+ACTIVITY_BY_KIND = {
+    task_queue.KIND_TRANSCRIPTION: run_transcription,
+    task_queue.KIND_MINUTES: run_minutes,
+    task_queue.KIND_AGENT_RUN: run_agent,
+    task_queue.KIND_KB_INDEX: run_kb_index,
+}
+
+
+def activities_for(kind: str) -> list:
+    """某一类任务的 activity 列表（未知类型返回空列表，由 Temporal 报任务无处理器）。"""
+    activity = ACTIVITY_BY_KIND.get(kind)
+    return [activity] if activity else []
+
+
 def all_activities() -> list:
+    """全部 activity：兼容 worker 用（它要能消费停在任何队列上的在途任务）。"""
     return [run_transcription, run_minutes, run_agent, run_kb_index]

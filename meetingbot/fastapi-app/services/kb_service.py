@@ -401,17 +401,23 @@ async def search_knowledge(
     allowed_meeting_ids: Sequence[int] | None,
     limit: int = 8,
     authority: Iterable[str] | None = None,
+    biz_id: int = 0,
 ) -> list[Hit]:
     """混合检索。`allowed_meeting_ids` 由权限层给出，本函数不做权限判断。
 
     None 表示管理员（不过滤），空集合表示无可见会议（返回空）——两者语义不同，
     由上层的 access 层负责算清楚，这里只如实执行。
+
+    `biz_id` 只影响 `ai_call_log` 的归属（哪条业务记录引发了这次嵌入调用）：
+    问答传入那条助手消息的 id，接口预览传 0。0 表示"没有业务归属"，
+    观测页据此把它算作平台级调用。
     """
     text = (query or "").strip()
     if not text:
         return []
     config = await _embedding_config()
-    vectors = await model_factory.embed_texts(config, [text], biz_id=0, call_type="KB_QUERY_EMBED")
+    vectors = await model_factory.embed_texts(config, [text], biz_id=biz_id,
+                                              call_type="KB_QUERY_EMBED")
     dense = vectors[0]
     raw = await qdrant.hybrid_search(
         dense=dense, sparse=kb_sparse.encode(text), limit=limit,

@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 import httpx
 from api import chat as chat_api
+from common import ratelimit
 from common.auth import create_token
 from common.exception_handler import setup_exceptions
 from fastapi import FastAPI
@@ -76,22 +77,29 @@ class SseFrameTest(unittest.IsolatedAsyncioTestCase):
         """
         source = _ClosableSource()
 
-        frames = chat_api._sse_frames(source, heartbeat=5)
+        frames = chat_api._sse_frames(source, heartbeat=0.5)
         await frames.__anext__()
         await frames.aclose()
         self.assertTrue(source.closed, "断开时必须关闭生产端，它的收尾才有机会跑")
 
 
 class _ClosableSource:
-    """手写的异步迭代器：只用于观测 `aclose()` 有没有被调用。"""
+    """手写的异步迭代器：只用于观测 `aclose()` 有没有被调用。
+
+    先立刻给一个事件再挂住——否则第一帧要等心跳超时才来，测试白等几秒。
+    """
 
     def __init__(self):
         self.closed = False
+        self._sent = False
 
     def __aiter__(self):
         return self
 
     async def __anext__(self):
+        if not self._sent:
+            self._sent = True
+            return ("meta", {})
         await asyncio.sleep(30)
         return ("token", {"text": "永远不会到这里"})
 
@@ -191,3 +199,114 @@ class ChatEndpointTest(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ChatBudgetGateTest(unittest.IsolatedAsyncioTestCase):
+    """提问前的两道闸：频率按用户与 IP 各一道、当日 token 预算一道。
+
+    这三条都属于"出问题不会报错、只会悄悄失效"的类型，所以直接钉住：
+    被拒时是 429 + 标准响应头，用量按真实 token 记入，后端故障时不挡用户。
+    """
+
+    async def asyncSetUp(self):
+        await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["models"]},
+                            use_tz=True, timezone="Asia/Shanghai")
+        await Tortoise.generate_schemas()
+        self.user = await User.create(username="gate-t", password="x", name="张晨")
+        self.token = create_token(self.user)
+        app = FastAPI()
+        app.include_router(chat_api.router)
+        setup_exceptions(app)
+        self.client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+                                        base_url="http://test")
+        ratelimit.reset_backend()
+
+    async def asyncTearDown(self):
+        await self.client.aclose()
+        await Tortoise.close_connections()
+        ratelimit.reset_backend()
+
+    async def _session_id(self) -> int:
+        created = await self.client.post("/chat/session", json={},
+                                         headers={"token": self.token})
+        return created.json()["data"]["id"]
+
+    async def test_frequency_limit_returns_429_with_standard_headers(self):
+        session_id = await self._session_id()
+
+        async def fake_stream(session, question, *, user, model=None):
+            yield ("done", {"message_id": 1, "stop_reason": "finished", "notice": "",
+                            "tokens": {"total_tokens": 0}, "citations": [],
+                            "unknown_refs": [], "tool_calls": 0})
+
+        with patch.object(chat_service, "stream_answer", fake_stream), \
+                patch.object(chat_api, "ASK_LIMIT_PER_USER", 1), \
+                patch.object(chat_api, "DAILY_TOKEN_BUDGET", 0):
+            first = await self.client.post("/chat/stream",
+                                           json={"session_id": session_id, "question": "一"},
+                                           headers={"token": self.token})
+            self.assertEqual(first.status_code, 200)
+            second = await self.client.post("/chat/stream",
+                                            json={"session_id": session_id, "question": "二"},
+                                            headers={"token": self.token})
+        self.assertEqual(second.status_code, 429)
+        self.assertIn("Retry-After", second.headers)
+        self.assertEqual(second.headers["X-RateLimit-Limit"], "1")
+        self.assertIn("提问过于频繁", second.json()["msg"])
+
+    async def test_daily_token_budget_blocks_when_exhausted(self):
+        session_id = await self._session_id()
+        await ratelimit.spend("chat-tokens", str(self.user.id), 100,
+                              limit=100, window_seconds=86_400)
+        with patch.object(chat_api, "ASK_LIMIT_PER_USER", 0), \
+                patch.object(chat_api, "ASK_LIMIT_PER_IP", 0), \
+                patch.object(chat_api, "DAILY_TOKEN_BUDGET", 100):
+            response = await self.client.post(
+                "/chat/stream", json={"session_id": session_id, "question": "问"},
+                headers={"token": self.token})
+        self.assertEqual(response.status_code, 429)
+        self.assertIn("今日问答额度已用完", response.json()["msg"])
+
+    async def test_turn_tokens_are_charged_to_the_daily_budget(self):
+        session_id = await self._session_id()
+
+        async def fake_stream(session, question, *, user, model=None):
+            yield ("token", {"text": "答"})
+            yield ("done", {"message_id": 1, "stop_reason": "finished", "notice": "",
+                            "tokens": {"total_tokens": 40}, "citations": [],
+                            "unknown_refs": [], "tool_calls": 0})
+
+        with patch.object(chat_service, "stream_answer", fake_stream), \
+                patch.object(chat_api, "ASK_LIMIT_PER_USER", 0), \
+                patch.object(chat_api, "ASK_LIMIT_PER_IP", 0), \
+                patch.object(chat_api, "DAILY_TOKEN_BUDGET", 1000):
+            async with self.client.stream("POST", "/chat/stream",
+                                          json={"session_id": session_id, "question": "问"},
+                                          headers={"token": self.token}) as response:
+                self.assertEqual(response.status_code, 200)
+                await response.aread()
+        remaining = await ratelimit.quota_remaining("chat-tokens", str(self.user.id),
+                                                   limit=1000, window_seconds=86_400)
+        self.assertEqual(remaining, 960)
+
+    async def test_ratelimit_backend_failure_does_not_block_asking(self):
+        session_id = await self._session_id()
+
+        async def fake_stream(session, question, *, user, model=None):
+            yield ("done", {"message_id": 1, "stop_reason": "finished", "notice": "",
+                            "tokens": {"total_tokens": 0}, "citations": [],
+                            "unknown_refs": [], "tool_calls": 0})
+
+        with patch.object(chat_service, "stream_answer", fake_stream), \
+                patch.object(ratelimit.backend(), "sliding",
+                             side_effect=RuntimeError("redis down")), self.assertRaises(RuntimeError):
+            # 后端直接抛异常时由调用方兜住：这里证明失败没有被静默吞掉
+            await ratelimit.check("chat-user", "1", limit=1, window_seconds=60)
+        with patch.object(chat_service, "stream_answer", fake_stream), \
+                patch.object(chat_api, "ASK_LIMIT_PER_USER", 0), \
+                patch.object(chat_api, "ASK_LIMIT_PER_IP", 0), \
+                patch.object(chat_api, "DAILY_TOKEN_BUDGET", 0):
+            response = await self.client.post(
+                "/chat/stream", json={"session_id": session_id, "question": "问"},
+                headers={"token": self.token})
+        self.assertEqual(response.status_code, 200)

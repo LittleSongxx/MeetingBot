@@ -1,6 +1,8 @@
 """P0 安全修复的回归测试：密码哈希、令牌指纹、限流、下载 MIME 加固。"""
 
+import os
 import unittest
+from unittest import mock
 
 from common import ratelimit, security
 
@@ -35,24 +37,41 @@ class PasswordHashingTest(unittest.TestCase):
         self.assertEqual(len(security.password_fingerprint("a")), 16)
 
 
-class RateLimitTest(unittest.TestCase):
-    def setUp(self):
-        ratelimit._counters.clear()
+class RateLimitTest(unittest.IsolatedAsyncioTestCase):
+    """登录防爆破阈值的接线检查。
 
-    def test_blocks_after_threshold_and_clears_on_success(self):
-        for _ in range(8):
-            self.assertFalse(ratelimit.is_blocked("login-user", "u1"))
-            ratelimit.record_failure("login-user", "u1")
-        self.assertTrue(ratelimit.is_blocked("login-user", "u1"))
+    限流器自身的实现细节（滑动窗口、Lua、fail-open）在 `test_ratelimit.py` 里钉；
+    这里只锁 P0 关心的语义：**达到阈值即拦、键之间独立、成功即清零、过期即放行**。
+    （接口从同步改成异步，是因为计数搬到了 Redis——多副本下进程内计数会各算一份。）
+    """
+
+    async def asyncSetUp(self):
+        ratelimit.reset_backend()
+        with mock.patch.dict(os.environ, {"REDIS_URL": ""}):
+            ratelimit.reset_backend()
+            ratelimit.backend()
+
+    async def asyncTearDown(self):
+        ratelimit.reset_backend()
+
+    async def test_blocks_after_threshold_and_clears_on_success(self):
+        for _ in range(ratelimit._LOGIN_MAX_FAILURES):
+            self.assertFalse(await ratelimit.is_blocked("login-user", "u1"))
+            await ratelimit.record_failure("login-user", "u1")
+        self.assertTrue(await ratelimit.is_blocked("login-user", "u1"))
         # 键之间独立
-        self.assertFalse(ratelimit.is_blocked("login-user", "u2"))
-        ratelimit.record_success("login-user", "u1")
-        self.assertFalse(ratelimit.is_blocked("login-user", "u1"))
+        self.assertFalse(await ratelimit.is_blocked("login-user", "u2"))
+        await ratelimit.record_success("login-user", "u1")
+        self.assertFalse(await ratelimit.is_blocked("login-user", "u1"))
 
-    def test_window_expiry(self):
-        entry = [ratelimit.time.monotonic() - ratelimit._LOGIN_WINDOW_SECONDS - 1, 99]
-        ratelimit._counters[("login-ip", "x")] = entry
-        self.assertFalse(ratelimit.is_blocked("login-ip", "x"))
+    async def test_window_expiry(self):
+        clock = {"now": 100.0}
+        with mock.patch("time.monotonic", side_effect=lambda: clock["now"]):
+            for _ in range(ratelimit._LOGIN_MAX_FAILURES):
+                await ratelimit.record_failure("login-ip", "x")
+            self.assertTrue(await ratelimit.is_blocked("login-ip", "x"))
+            clock["now"] = 100.0 + ratelimit._LOGIN_WINDOW_SECONDS + 1
+            self.assertFalse(await ratelimit.is_blocked("login-ip", "x"))
 
 
 class DownloadMimeTest(unittest.TestCase):

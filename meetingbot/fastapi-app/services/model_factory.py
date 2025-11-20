@@ -18,12 +18,43 @@ from typing import Any, AsyncIterator, Awaitable, Callable
 from uuid import uuid4
 
 import openai
-from common import providers
+from common import metrics, providers
 from common.model_json import build_schema_instruction, parse_model_json
+from common.tracing import model_attributes, span, usage_attributes
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.runnables import Runnable
 from langchain_openai import ChatOpenAI
 from models import AiCallLog, AiModelConfig
+
+from services import pricing
+
+
+def _cost_micro(config: AiModelConfig, usage: dict | None) -> int:
+    """这次调用的成本（微元）。单价来自当前配置，所以改价不会重估历史调用。"""
+    return pricing.cost_of_config(config, usage).micro
+
+
+def _observe_call(config: AiModelConfig, *, call_type: str, status: str, elapsed_ms: int,
+                  usage: dict | None) -> None:
+    """一次调用收尾时统一上报指标与 span 属性。
+
+    放在**唯一出口**上：日志（ai_call_log）与指标（/metrics）本来就是同一件事的
+    两种读法，分开埋点必然漂移——那种漂移的表现是"日志里有、面板上没有"，
+    而排查的人会先怀疑面板。
+    """
+    cost = pricing.cost_of_config(config, usage)
+    metrics.record_model_call(
+        model=config.model_name, call_type=call_type, status=status, elapsed_ms=elapsed_ms,
+        input_tokens=cost.input_tokens, output_tokens=cost.output_tokens,
+        cost_micro=cost.micro, priced=cost.priced)
+    # span 用同一组数字：属性写在当前 span 上（没有父 span 时是根 span）
+    with span(f"gen_ai.{call_type.lower()}", model_attributes(
+            call_type=call_type, model=config.model_name, base_url=config.base_url)) as current:
+        for key, value in usage_attributes(
+                input_tokens=cost.input_tokens, output_tokens=cost.output_tokens,
+                cost_micro=cost.micro, cost_priced=cost.priced).items():
+            current.set_attribute(key, value)
+        current.set_attribute("meetingbot.call_status", status)
 
 
 def _max_attempts() -> int:
@@ -197,6 +228,7 @@ async def invoke_json(
             # 纪要生成传入 MinutesResult.model_validate，说话人匹配和自检不传
             if validator is not None:
                 result = validator(result)
+            elapsed_ms = int((perf_counter() - started) * 1000)
             # 成功日志，字段含义见第 17 章 ai_call_log 表结构
             await AiCallLog.create(
                 request_id="AIC" + uuid4().hex.upper(),
@@ -207,10 +239,14 @@ async def invoke_json(
                 request_size=request_size,
                 response_size=response_size,
                 status="SUCCEEDED",
-                elapsed_ms=int((perf_counter() - started) * 1000),
+                elapsed_ms=elapsed_ms,
                 # LangChain 统一整理的 Token 用量，包含 input_tokens、output_tokens、total_tokens
                 usage_json=message.usage_metadata,
+                # 成本按"调用时的单价 × 本次真实用量"当场算出并落库
+                cost_micro=_cost_micro(config, message.usage_metadata),
             )
+            _observe_call(config, call_type=call_type, status="SUCCEEDED",
+                          elapsed_ms=elapsed_ms, usage=message.usage_metadata)
             return result
         except Exception as error:
             # 有些异常 str() 出来是空字符串，这时记类型名，页面上的失败原因不会是空白
@@ -240,6 +276,7 @@ async def invoke_json(
             if attempts > 1:
                 # 重试开启时标明这是第几次尝试，观测页能看出哪些失败行后面跟了重试
                 detail = f"[尝试 {attempt}/{attempts}] {detail}"[:2000]
+            elapsed_ms = int((perf_counter() - started) * 1000)
             # 失败也留一条日志，第 17 章的观测页据此统计失败率
             await AiCallLog.create(
                 request_id="AIC" + uuid4().hex.upper(),
@@ -250,9 +287,11 @@ async def invoke_json(
                 request_size=request_size,
                 response_size=response_size,
                 status="FAILED",
-                elapsed_ms=int((perf_counter() - started) * 1000),
+                elapsed_ms=elapsed_ms,
                 error_message=detail,
             )
+            _observe_call(config, call_type=call_type, status="FAILED",
+                          elapsed_ms=elapsed_ms, usage=None)
             if attempt < attempts:
                 if is_transient(error):
                     # 指数退避加抖动：429/5xx 通常是共享的拥塞，多路同时立刻重试会加重它
@@ -349,6 +388,7 @@ async def stream_chat(
                 accumulated = chunk if accumulated is None else accumulated + chunk
             message = accumulated if accumulated is not None else AIMessage(content="")
             usage = usage_or_estimate(message, prompt_chars)
+            elapsed_ms = int((perf_counter() - started) * 1000)
             await AiCallLog.create(
                 request_id="AIC" + uuid4().hex.upper(),
                 call_type=call_type, biz_id=biz_id,
@@ -356,20 +396,24 @@ async def stream_chat(
                 request_size=request_size,
                 response_size=len(str(getattr(message, "content", "") or "").encode("utf-8")),
                 status="SUCCEEDED",
-                elapsed_ms=int((perf_counter() - started) * 1000),
+                elapsed_ms=elapsed_ms,
                 usage_json=usage,
+                cost_micro=_cost_micro(config, usage),
             )
+            _observe_call(config, call_type=call_type, status="SUCCEEDED",
+                          elapsed_ms=elapsed_ms, usage=usage)
             yield ("message", message)
             return
         except Exception as error:  # noqa: BLE001 - 逐类分流后再抛，与 invoke_json 同款
             detail = (str(error) or type(error).__name__)[:2000]
+            elapsed_ms = int((perf_counter() - started) * 1000)
             await AiCallLog.create(
                 request_id="AIC" + uuid4().hex.upper(),
                 call_type=call_type, biz_id=biz_id,
                 model_config_id=config.id, model_name=config.model_name,
                 request_size=request_size, response_size=answer_chars,
                 status="FAILED",
-                elapsed_ms=int((perf_counter() - started) * 1000),
+                elapsed_ms=elapsed_ms,
                 error_message=f"[尝试 {attempt}/{attempts}] {detail}",
             )
             if attempt < attempts and not emitted and is_transient(error):
@@ -377,16 +421,30 @@ async def stream_chat(
                 continue
             raise RuntimeError(f"{label}调用失败：{detail[:1000]}") from error
         except BaseException as error:  # noqa: BLE001 - 客户端中断（GeneratorExit 等）
+            elapsed_ms = int((perf_counter() - started) * 1000)
             await AiCallLog.create(
                 request_id="AIC" + uuid4().hex.upper(),
                 call_type=call_type, biz_id=biz_id,
                 model_config_id=config.id, model_name=config.model_name,
                 request_size=request_size, response_size=answer_chars,
                 status="FAILED",
-                elapsed_ms=int((perf_counter() - started) * 1000),
+                elapsed_ms=elapsed_ms,
                 error_message=f"客户端中断，本次调用未产出完整回答（{type(error).__name__}）",
             )
+            _observe_call(config, call_type=call_type, status="FAILED",
+                          elapsed_ms=elapsed_ms, usage=None)
             raise
+
+
+def _embedding_usage(response: Any) -> dict | None:
+    """嵌入响应的用量转成 dict（不同网关给的对象/字典两种形态都接）。"""
+    usage = getattr(response, "usage", None)
+    if usage is None:
+        return None
+    if isinstance(usage, dict):
+        return usage
+    return {key: getattr(usage, key, None) for key in
+            ("prompt_tokens", "total_tokens", "input_tokens", "output_tokens")}
 
 
 def _chunk_text(chunk: Any) -> str:
@@ -479,11 +537,13 @@ async def embed_texts(
                     )
                     data = sorted(response.data, key=lambda item: item.index)
                     batch_vectors = [list(item.vector) for item in data]
+                    usage = _embedding_usage(response)
                     if len(batch_vectors) != len(batch):
                         raise RuntimeError(f"嵌入返回条数不符：请求 {len(batch)} 条，返回 {len(batch_vectors)} 条")
                     for vector in batch_vectors:
                         if len(vector) != dimension:
                             raise RuntimeError(f"嵌入维度不符：期望 {dimension}，实际 {len(vector)}")
+                    elapsed_ms = int((perf_counter() - started) * 1000)
                     await AiCallLog.create(
                         request_id="AIC" + uuid4().hex.upper(),
                         call_type=call_type,
@@ -493,14 +553,18 @@ async def embed_texts(
                         request_size=request_size,
                         response_size=sum(len(v) for v in batch_vectors) * 4,
                         status="SUCCEEDED",
-                        elapsed_ms=int((perf_counter() - started) * 1000),
-                        usage_json=getattr(response, "usage", None),
+                        elapsed_ms=elapsed_ms,
+                        usage_json=usage,
+                        cost_micro=_cost_micro(config, usage),
                     )
+                    _observe_call(config, call_type=call_type, status="SUCCEEDED",
+                                  elapsed_ms=elapsed_ms, usage=usage)
                     vectors.extend(batch_vectors)
                     break
                 except Exception as error:  # noqa: BLE001 - 逐类分流后再抛，与 invoke_json 同款处理
                     last_error = error
                     detail = (str(error) or type(error).__name__)[:2000]
+                    elapsed_ms = int((perf_counter() - started) * 1000)
                     await AiCallLog.create(
                         request_id="AIC" + uuid4().hex.upper(),
                         call_type=call_type,
@@ -510,9 +574,11 @@ async def embed_texts(
                         request_size=request_size,
                         response_size=0,
                         status="FAILED",
-                        elapsed_ms=int((perf_counter() - started) * 1000),
+                        elapsed_ms=elapsed_ms,
                         error_message=f"[尝试 {attempt}/{attempts}] {detail}",
                     )
+                    _observe_call(config, call_type=call_type, status="FAILED",
+                                  elapsed_ms=elapsed_ms, usage=None)
                     # 瞬态错误退避重试（与对话调用同一套判定与退避公式）
                     if attempt < attempts and is_transient(error):
                         await asyncio.sleep(0.5 * (2 ** (attempt - 1)) + random.uniform(0, 0.3))

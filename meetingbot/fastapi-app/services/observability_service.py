@@ -13,6 +13,8 @@ from models import (
     User,
 )
 
+from services import pricing
+
 
 def parse_date_range(date_from: str | None, date_to: str | None) -> tuple[date, date, datetime, datetime]:
     """把页面传来的日期范围转成东八区的起止时刻，不传就默认最近三十天。"""
@@ -54,14 +56,29 @@ def token_usage(usage: dict | None) -> tuple[int, int, int]:
 
 
 async def employee_ai_log_ids(user_id: int) -> dict[str, set[int]]:
-    """查出员工名下的三类业务记录 ID，日志的 biz_id 落在这些集合里才算他的调用。"""
+    """查出员工名下的业务记录 ID，日志的 biz_id 落在这些集合里才算他的调用。
+
+    **注意 biz_id 的 ID 空间**：不同 call_type 的 biz_id 指向不同的表，
+    因此键也分得开（CHAT 是助手消息 id，CHAT_SESSION 是会话 id——它们数值上可能
+    撞车，混进同一个集合就成了张冠李戴的可见性）。
+    """
+    from models import ChatMessage, ChatSession, KbIndexTask
+
+    session_ids = set(await ChatSession.filter(user_id=user_id).values_list("id", flat=True))
     return {
-        # 第 8 章的转写任务，转写日志的 biz_id 存的是转写任务ID
+        # 转写任务：转写日志的 biz_id 存的是转写任务ID
         "TRANSCRIPTION": set(await TranscriptionTask.filter(initiator_id=user_id).values_list("id", flat=True)),
-        # 第 11 章的纪要，分段和合并两类日志的 biz_id 存的都是纪要ID
+        # 会议纪要：分段和合并两类日志的 biz_id 存的都是纪要ID
         "MINUTES": set(await MeetingMinutes.filter(created_by=user_id).values_list("id", flat=True)),
-        # 第 13 章的自检运行，审查和重写两类日志的 biz_id 存的都是运行ID
+        # 自检运行：审查和重写两类日志的 biz_id 存的都是运行ID
         "AGENT": set(await AgentRun.filter(user_id=user_id).values_list("id", flat=True)),
+        # 问答：模型调用与检索嵌入的 biz_id 存的是**助手消息 id**
+        "CHAT": set(await ChatMessage.filter(session_id__in=list(session_ids) or [-1])
+                    .values_list("id", flat=True)),
+        # 会话滚动摘要：biz_id 存的是**会话 id**（与上面是两个不同的 ID 空间）
+        "CHAT_SESSION": session_ids,
+        # 知识库索引：嵌入批次的 biz_id 存的是索引任务ID
+        "KB": set(await KbIndexTask.filter(initiator_id=user_id).values_list("id", flat=True)),
     }
 
 
@@ -73,6 +90,13 @@ CALL_TYPE_OWNERSHIP: dict[str, str] = {
     "AGENT_REVIEW": "AGENT",
     "AGENT_REFINE": "AGENT",
     "AGENT_REVIEW_SUPPORT": "AGENT",
+    # 问答与知识库：新调用类型必须在这里登记，否则员工看不到自己的调用
+    #（登记表漏一行的表现是"观测页少一块"，而不是报错，很容易漏）
+    "CHAT": "CHAT",
+    "CHAT_SUMMARY": "CHAT_SESSION",
+    "KB_EMBEDDING": "KB",
+    # 检索用的查询嵌入：biz_id 是发起它的那条助手消息（接口预览时为 0，归平台级）
+    "KB_QUERY_EMBED": "CHAT",
 }
 
 
@@ -96,6 +120,14 @@ async def build_observability(current_user: User, date_from: str | None, date_to
     log_query = AiCallLog.filter(create_time__gte=start_time, create_time__lt=end_time)
     if model_config_id is not None:
         log_query = log_query.filter(model_config_id=model_config_id)
+    # 单价表：判定"未定价"以及给页面显示单位用。一次查出，不逐行查库
+    config_ids = {log.model_config_id for log in await log_query.order_by("create_time", "id")}
+    price_map = {
+        row["id"]: (int(row["input_price_micro_per_1k"] or 0),
+                    int(row["output_price_micro_per_1k"] or 0))
+        for row in await AiModelConfig.filter(id__in=list(config_ids) or [-1]).values(
+            "id", "input_price_micro_per_1k", "output_price_micro_per_1k")
+    }
     # 按时间正序取出，后面取最近失败记录时再倒过来
     logs = await log_query.order_by("create_time", "id")
     if current_user.role != "ADMIN":
@@ -118,9 +150,16 @@ async def build_observability(current_user: User, date_from: str | None, date_to
     total_input_tokens = 0
     total_output_tokens = 0
     total_tokens = 0
+    total_cost_micro = 0
+    unpriced_count = 0
     # 先给日期范围内每一天放一个零值，没有调用的日期在趋势图上也显示
     daily = {
-        (start_date + timedelta(days=offset)).isoformat(): {"call_count": 0, "failed_count": 0, "total_tokens": 0}
+        (start_date + timedelta(days=offset)).isoformat(): {
+            "call_count": 0, "failed_count": 0, "total_tokens": 0, "cost_micro": 0,
+            # 未定价的调用单独计数：成本为 0 与"根本不知道多少钱"是两件事，
+            # 页面要能把"这个数只是有价调用之和"如实标出来
+            "unpriced_count": 0,
+        }
         for offset in range((end_date - start_date).days + 1)
     }
     # 两个分组字典：键分别是 call_type 和 model_config_id
@@ -131,27 +170,38 @@ async def build_observability(current_user: User, date_from: str | None, date_to
         total_input_tokens += input_tokens
         total_output_tokens += output_tokens
         total_tokens += current_total
+        cost_micro = int(log.cost_micro or 0)
+        total_cost_micro += cost_micro
+        # "未定价"按模型配置判定：单价两列都为 0 说明这套配置没填价
+        priced = any(price_map.get(log.model_config_id, (0, 0)))
+        if not priced:
+            unpriced_count += 1
         # 日期按东八区自然日归档，数据库里存的是 UTC，直接取 date() 会把凌晨的调用算到前一天
         day = daily.get(to_local(log.create_time).date().isoformat())
         if day is not None:
             day["call_count"] += 1
             day["total_tokens"] += current_total
+            day["cost_micro"] += cost_micro
+            if not priced:
+                day["unpriced_count"] += 1
             if log.status == "FAILED":
                 day["failed_count"] += 1
 
         # 按调用类型累计次数、耗时、Token 和失败数，调用类型分布图用
-        call_type = call_type_map.setdefault(log.call_type, {"call_type": log.call_type, "call_count": 0, "failed_count": 0, "elapsed_ms": 0, "total_tokens": 0})
+        call_type = call_type_map.setdefault(log.call_type, {"call_type": log.call_type, "call_count": 0, "failed_count": 0, "elapsed_ms": 0, "total_tokens": 0, "cost_micro": 0})
         call_type["call_count"] += 1
         call_type["elapsed_ms"] += log.elapsed_ms
         call_type["total_tokens"] += current_total
+        call_type["cost_micro"] += cost_micro
         if log.status == "FAILED":
             call_type["failed_count"] += 1
 
         # 按模型配置主键累计，两个配置用同一个模型名也分开统计，模型排行表用
-        model = model_map.setdefault(log.model_config_id, {"model_config_id": log.model_config_id, "model_name": log.model_name, "call_count": 0, "failed_count": 0, "elapsed_ms": 0, "total_tokens": 0})
+        model = model_map.setdefault(log.model_config_id, {"model_config_id": log.model_config_id, "model_name": log.model_name, "call_count": 0, "failed_count": 0, "elapsed_ms": 0, "total_tokens": 0, "cost_micro": 0})
         model["call_count"] += 1
         model["elapsed_ms"] += log.elapsed_ms
         model["total_tokens"] += current_total
+        model["cost_micro"] += cost_micro
         if log.status == "FAILED":
             model["failed_count"] += 1
 
@@ -237,6 +287,10 @@ async def build_observability(current_user: User, date_from: str | None, date_to
             "input_tokens": total_input_tokens,
             "output_tokens": total_output_tokens,
             "total_tokens": total_tokens,
+            # 成本单位是微元（1e-6 元）；未定价调用数一并给出，避免把 0 读成免费
+            "cost_micro": total_cost_micro,
+            "cost_text": pricing.format_micro(total_cost_micro),
+            "unpriced_call_count": unpriced_count,
             "agent_run_count": len(runs),
             "agent_success_rate": round(succeeded_runs * 100 / len(runs), 2) if runs else 0,
             "average_agent_elapsed_ms": round(sum(finished_run_durations) / len(finished_run_durations), 2) if finished_run_durations else 0,

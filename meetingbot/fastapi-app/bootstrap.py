@@ -35,20 +35,28 @@ async def main():
         asr_key = os.getenv("ASR_API_KEY", "").strip() or shared_key
         llm_url = os.getenv("LLM_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1").rstrip("/")
         llm_model = os.getenv("LLM_MODEL", "qwen3.8-max-0902")
+        # 单价（微元/千 token）从环境读：填了才参与成本核算，否则整条配置是"未定价"。
+        # 不在代码里内置任何价格——价格是采购事实，写死在代码里必然过期，
+        # 而过期的价格比没有价格更糟（报表看起来有数，实际是错的）。
+        llm_price_in = int(os.getenv("LLM_INPUT_PRICE_MICRO_PER_1K", "0"))
+        llm_price_out = int(os.getenv("LLM_OUTPUT_PRICE_MICRO_PER_1K", "0"))
+        embed_price_in = int(os.getenv("EMBEDDING_INPUT_PRICE_MICRO_PER_1K", "0"))
         specs = [
-            ("TRANSCRIPTION", asr_key, "DASHSCOPE", os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/api/v1").rstrip("/"), os.getenv("ASR_MODEL", "qwen-audio-3.1-asr-flash-filetrans"), int(os.getenv("ASR_TIMEOUT_SECONDS", "600"))),
-            *[(kind, llm_key, "OPENAI_COMPATIBLE", llm_url, os.getenv(kind + "_MODEL") or llm_model, int(os.getenv("LLM_TIMEOUT_SECONDS", "300"))) for kind in ("MINUTES", "AGENT", "SPEAKER")],
+            ("TRANSCRIPTION", asr_key, "DASHSCOPE", os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/api/v1").rstrip("/"), os.getenv("ASR_MODEL", "qwen-audio-3.1-asr-flash-filetrans"), int(os.getenv("ASR_TIMEOUT_SECONDS", "600")), 0, 0),
+            *[(kind, llm_key, "OPENAI_COMPATIBLE", llm_url, os.getenv(kind + "_MODEL") or llm_model, int(os.getenv("LLM_TIMEOUT_SECONDS", "300")), llm_price_in, llm_price_out) for kind in ("MINUTES", "AGENT", "SPEAKER")],
             # 嵌入走同一套 OpenAI 兼容端点（百炼 compatible-mode 提供 /embeddings）。
             # 单独一条配置：换嵌入模型要重建知识库，所以它必须能独立于对话模型切换。
             ("EMBEDDING", llm_key, "OPENAI_COMPATIBLE", llm_url,
-             os.getenv("EMBEDDING_MODEL", "text-embedding-v4"), int(os.getenv("EMBEDDING_TIMEOUT_SECONDS", "120"))),
+             os.getenv("EMBEDDING_MODEL", "text-embedding-v4"), int(os.getenv("EMBEDDING_TIMEOUT_SECONDS", "120")),
+             embed_price_in, 0),
         ]
         configured = []
-        for kind, key, provider, base_url, model, timeout in specs:
+        for kind, key, provider, base_url, model, timeout, price_in, price_out in specs:
             if not key:
                 continue
             config = await AiModelConfig.filter(model_type=kind).order_by("-id").first()
-            values = {"provider": provider, "base_url": base_url, "api_key": key, "model_name": model, "timeout_seconds": timeout, "enabled": True}
+            values = {"provider": provider, "base_url": base_url, "api_key": key, "model_name": model, "timeout_seconds": timeout, "enabled": True,
+                      "input_price_micro_per_1k": price_in, "output_price_micro_per_1k": price_out}
             await AiModelConfig.filter(model_type=kind).update(enabled=False)
             if config:
                 await AiModelConfig.filter(id=config.id).update(**values)

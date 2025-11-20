@@ -41,7 +41,7 @@ from langgraph.prebuilt import ToolNode
 from models import AiCallLog, AiModelConfig, ChatMessage, ChatSession, Meeting, PromptTemplate, User
 from tortoise.expressions import F
 
-from services import chat_graph, citations, kb_tools, model_factory
+from services import chat_graph, citations, kb_tools, model_factory, moderation
 
 logger = logging.getLogger("meetingbot.chat")
 
@@ -141,7 +141,8 @@ async def get_system_prompt() -> str:
     """
     template = await PromptTemplate.filter(code="CHAT_ANSWER", enabled=True).first()
     body = (template.system_prompt if template else "") or DEFAULT_SYSTEM_PROMPT
-    return body.strip() + CITATION_PROTOCOL
+    # 内容审核的第二层：生成约束。未配置词表时它返回空串（不留一句空话）
+    return body.strip() + CITATION_PROTOCOL + moderation.prompt_constraints()
 
 
 async def question_message(question: str) -> HumanMessage:
@@ -332,21 +333,29 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     if not text:
         yield ("error", {"message": "问题不能为空"})
         return
+    # 内容审核第一层（输入）：违规内容不进模型——送进去就已经产生了一次生成
+    input_verdict = moderation.check_input(text)
+    if input_verdict.action == moderation.ACTION_BLOCK and input_verdict.matched:
+        yield ("error", {"message": moderation.BLOCKED_MESSAGE})
+        return
 
     config = await get_model_config()
     await maybe_summarize(session, model=None)
 
-    actor = await kb_tools.Actor.resolve(user, requested=list(session.scope_meeting_ids or []) or None)
+    # 助手行**先建后用**：它的 id 就是本轮所有模型调用的 biz_id（ai_call_log），
+    # 于是"这轮花了多少 token"是一次聚合查询，而不是靠时间窗猜；
+    # 工具层发起的检索调用也带同一个 biz_id，所以那一部分也归到这条回答上。
+    user_row = await ChatMessage.create(session_id=session.id, role=MESSAGE_USER, content=text)
+    assistant_row = await ChatMessage.create(session_id=session.id, role=MESSAGE_ASSISTANT, content="")
+
+    actor = await kb_tools.Actor.resolve(
+        user, requested=list(session.scope_meeting_ids or []) or None,
+        biz_id=assistant_row.id)
     registry = citations.CitationRegistry()
     tools = build_tools(actor, registry)
     graph = chat_graph.build_chat_graph()
     budget = chat_graph.budget_from_env()
     recursion_limit = chat_graph.recursion_limit(budget)
-
-    user_row = await ChatMessage.create(session_id=session.id, role=MESSAGE_USER, content=text)
-    # 助手行**先建后用**：它的 id 就是本轮所有模型调用的 biz_id（ai_call_log），
-    # 于是"这轮花了多少 token"是一次聚合查询，而不是靠时间窗猜。
-    assistant_row = await ChatMessage.create(session_id=session.id, role=MESSAGE_ASSISTANT, content="")
     values: dict[str, Any] = {"message_count": F("message_count") + 2, "last_active_time": now()}
     if session.title == "新对话":
         # 首次提问的前若干字当标题（列表页要能认出来这是哪次对话）
@@ -415,11 +424,20 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         logger.exception("会话 %s 的问答失败", session.id)
 
     answer = "".join(chunks)
+    # 内容审核第三层（输出复检）：输入干净不代表输出干净——检索到的会议原文本身
+    # 就可能含违规表述。这一层才是门，处置动作（flag/redact/block）由配置决定
+    output_verdict = moderation.check_output(answer)
+    blocked_by_moderation = False
+    if output_verdict.matched:
+        answer, blocked_by_moderation = moderation.apply_output(answer, output_verdict)
+        if blocked_by_moderation:
+            # 拦下整段回答：正文不返回，改由下面的 error 事件给提示
+            failure = moderation.BLOCKED_MESSAGE
     stop_reason = str(final_state.get("stop_reason") or "")
     tokens = await _turn_tokens(assistant_row.id)
     stored = await _persist_turn(assistant_row, answer=answer, stop_reason=stop_reason,
                                  registry=registry, state=final_state, failure=failure,
-                                 tokens=tokens)
+                                 tokens=tokens, moderation_verdict=output_verdict)
     if interrupted is not None:
         raise interrupted
     if failure:
@@ -486,7 +504,8 @@ async def _turn_tokens(message_id: int) -> dict[str, int]:
 
 async def _persist_turn(assistant_row: ChatMessage, *, answer: str, stop_reason: str,
                         registry: citations.CitationRegistry, state: dict[str, Any],
-                        failure: str | None, tokens: dict[str, int]) -> dict[str, Any]:
+                        failure: str | None, tokens: dict[str, int],
+                        moderation_verdict: Any = None) -> dict[str, Any]:
     """把这一轮的结果落库：正文、停止原因、引用快照、工具轨迹、用量。"""
     used = citations.used_citations(answer, registry)
     stored = {
@@ -503,6 +522,10 @@ async def _persist_turn(assistant_row: ChatMessage, *, answer: str, stop_reason:
     await ChatMessage.filter(id=assistant_row.id).update(
         content=answer, stop_reason=stop_reason or None,
         citations_json=stored["citations"], tools_json=stored["tools"],
+        # 审核留痕：没命中时也写一行（enabled/matched=false），
+        # 这样"这次扫过了没命中"与"这次根本没扫"在库里能分开
+        moderation_json=(moderation_verdict.as_dict() if moderation_verdict is not None
+                         else None),
         token_count=tokens["total_tokens"],
         error_message=failure,
     )

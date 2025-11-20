@@ -28,6 +28,10 @@ class AiModelPayload(BaseModel):
     model_name: str | None = None
     # 弹窗超时秒数数字框
     timeout_seconds: int = 600
+    # 弹窗单价输入框：每 1000 token 的微元数（1e-6 元）。0 表示未定价，
+    # 此时成本记 0 并在观测页标注"未定价"——不是免费
+    input_price_micro_per_1k: int = 0
+    output_price_micro_per_1k: int = 0
     # 弹窗启用开关，不传时按不启用处理
     enabled: bool = False
 
@@ -61,6 +65,9 @@ def model_dict(config: AiModelConfig) -> dict:
         "model_name": config.model_name,
         # 列表“超时秒数”列
         "timeout_seconds": config.timeout_seconds,
+        # 列表“单价”列（微元/千 token），成本核算按它算
+        "input_price_micro_per_1k": config.input_price_micro_per_1k,
+        "output_price_micro_per_1k": config.output_price_micro_per_1k,
         # 列表“状态”列，页面按它显示“已启用”或“未启用”
         "enabled": config.enabled,
         "create_time": format_datetime(config.create_time),
@@ -81,6 +88,9 @@ async def validate_payload(payload: AiModelPayload, old_config: AiModelConfig | 
     # 超时范围和页面数字框的 min、max 保持一致
     if payload.timeout_seconds < 30 or payload.timeout_seconds > 3600:
         raise CustomException("请求超时时间必须在30至3600秒之间")
+    # 单价不允许负数（会算出负成本，把报表与预算闸同时带偏）
+    if payload.input_price_micro_per_1k < 0 or payload.output_price_micro_per_1k < 0:
+        raise CustomException("单价不能为负数")
     # 编辑时如果这次没提交新 Key，用数据库里的旧 Key 参与判断
     api_key = payload.api_key or (old_config.api_key if old_config else "")
     # 没有 Key 的配置一旦被启用，后面各章调用模型时必然失败，所以在这里就拦住
@@ -104,6 +114,8 @@ async def add(payload: AiModelPayload, _: User = Depends(require_admin)):
         api_key=payload.api_key or "",
         model_name=payload.model_name,
         timeout_seconds=payload.timeout_seconds,
+        input_price_micro_per_1k=max(0, payload.input_price_micro_per_1k),
+        output_price_micro_per_1k=max(0, payload.output_price_micro_per_1k),
         enabled=payload.enabled,
     )
     return Result.success()
@@ -151,6 +163,8 @@ async def update(payload: AiModelPayload, _: User = Depends(require_admin)):
         api_key=new_api_key,
         model_name=payload.model_name,
         timeout_seconds=payload.timeout_seconds,
+        input_price_micro_per_1k=max(0, payload.input_price_micro_per_1k),
+        output_price_micro_per_1k=max(0, payload.output_price_micro_per_1k),
         enabled=payload.enabled,
     )
     return Result.success()

@@ -60,15 +60,15 @@ async def login(account: Account, request: Request):
     # 限流：按用户名与来源 IP 各自累计失败次数，任一超阈值即临时拒绝（防在线爆破）
     client_ip = request.client.host if request.client else "unknown"
     for kind, key in (("login-user", account.username or ""), ("login-ip", client_ip)):
-        if ratelimit.is_blocked(kind, key):
+        if await ratelimit.is_blocked(kind, key):
             raise CustomException(
-                f"尝试过于频繁，请约 {ratelimit.seconds_left(kind, key) // 60} 分钟后再试")
+                f"尝试过于频繁，请约 {await ratelimit.seconds_left(kind, key) // 60} 分钟后再试")
     # 按页面输入的账号查询 user 表，账号不存在时 user 为 None
     user = await User.get_or_none(username=account.username)
     # 账号不存在或密码不匹配时返回同一句提示，页面上看不出是账号错还是密码错
     if user is None or not security.verify_password(account.password, user.password):
         for kind, key in (("login-user", account.username or ""), ("login-ip", client_ip)):
-            ratelimit.record_failure(kind, key)
+            await ratelimit.record_failure(kind, key)
         raise CustomException("账号或密码错误")
     # 迁移期：库中还是遗留明文时，登录成功即原位升级为 bcrypt 哈希
     if security.migrate_if_plaintext(user):
@@ -77,7 +77,7 @@ async def login(account: Account, request: Request):
     if user.status != "NORMAL":
         raise CustomException("账号已被停用")
     for kind, key in (("login-user", account.username or ""), ("login-ip", client_ip)):
-        ratelimit.record_success(kind, key)
+        await ratelimit.record_success(kind, key)
     # 校验通过后签发 Token（含密码指纹 pv），并把用户信息和 Token 一起返回给前端
     return Result.success(await account_dict(user, create_token(user)))
 
@@ -89,9 +89,9 @@ async def register(account: Account, request: Request):
     if (os.getenv("REGISTER_ENABLED", "true").strip().lower()) not in {"1", "true", "yes"}:
         raise CustomException("当前未开放自助注册，请联系管理员开通账号")
     client_ip = request.client.host if request.client else "unknown"
-    if ratelimit.is_blocked("register-ip", client_ip):
+    if await ratelimit.is_blocked("register-ip", client_ip):
         raise CustomException("注册尝试过于频繁，请稍后再试")
-    ratelimit.record_failure("register-ip", client_ip)
+    await ratelimit.record_failure("register-ip", client_ip)
     # 账号或密码为空时不建账号。前端虽然有非空校验，后端仍然独立校验一次
     if not account.username or not account.password:
         raise CustomException("账号和密码不能为空")
@@ -116,7 +116,7 @@ async def register(account: Account, request: Request):
         # 新账号直接可用，登录时的状态校验会放行
         status="NORMAL",
     )
-    ratelimit.record_success("register-ip", client_ip)
+    await ratelimit.record_success("register-ip", client_ip)
     # 注册不返回数据，前端只根据 code 判断成功与否
     return Result.success()
 

@@ -80,6 +80,10 @@
           <el-table-column prop="total_tokens" label="Token" width="110">
             <template #default="scope">{{ formatNumber(scope.row.total_tokens) }}</template>
           </el-table-column>
+          <!-- 成本按微元换算成元显示，0 表示这套配置未定价（不是免费） -->
+          <el-table-column prop="cost_micro" label="成本元" width="110">
+            <template #default="scope">{{ formatMicro(scope.row.cost_micro) }}</template>
+          </el-table-column>
         </el-table>
       </div>
     </div>
@@ -170,6 +174,11 @@ interface ObservabilitySummary {
   revision_count?: number
   rejection_count?: number
   average_rounds?: number
+  /** 已定价调用的成本合计（微元，1e-6 元）与它的可读形式 */
+  cost_micro?: number
+  cost_text?: string
+  /** 未定价的调用次数：成本为 0 与"不知道多少钱"是两件事 */
+  unpriced_call_count?: number
 }
 
 // 趋势图的横轴日期和三条系列（调用量、失败量、Token）
@@ -178,6 +187,8 @@ interface DailyTrendItem {
   call_count: number
   failed_count: number
   total_tokens: number
+  cost_micro: number
+  unpriced_count: number
 }
 
 // 调用类型分布（环形图）的扇区
@@ -194,6 +205,7 @@ interface ModelRankingItem {
   success_rate: number
   average_elapsed_ms: number
   total_tokens: number
+  cost_micro: number
 }
 
 // 自检运行状态分布（环形图）的扇区，后端固定返回六种状态
@@ -269,6 +281,13 @@ const data = reactive<ObservabilityPageState>({
 
 // Token 数加千分位
 const formatNumber = (value) => Number(value || 0).toLocaleString('zh-CN')
+// 成本存的是微元整数（避免浮点累加误差），展示时才换算成元
+const formatMicro = (value) => {
+  const micro = Number(value || 0)
+  if (!micro) return '0'
+  const text = (micro / 1_000_000).toFixed(6)
+  return text.replace(/0+$/, '').replace(/\.$/, '')
+}
 // 把 summary 里的字段组装成八张卡片的标题、数值、单位和说明
 const summaryCards = computed(() => {
   const summary = data.result.summary || {}
@@ -290,6 +309,16 @@ const summaryCards = computed(() => {
       value: formatNumber(summary.total_tokens),
       unit: '',
       note: `输入 ${formatNumber(summary.input_tokens)} / 输出 ${formatNumber(summary.output_tokens)}`,
+    },
+    // 成本合计（微元换算成元）。未定价调用单独说明：那些调用的花销不在这个数里
+    {
+      key: 'cost',
+      label: 'AI调用成本',
+      value: summary.cost_text || '0',
+      unit: '元',
+      note: summary.unpriced_call_count
+        ? `另有 ${summary.unpriced_call_count} 次未定价调用（未计入）`
+        : '全部调用均已定价',
     },
     // 全部调用的平均耗时
     { key: 'elapsed', label: 'AI平均耗时', value: summary.average_elapsed_ms || 0, unit: 'ms' },
@@ -353,6 +382,8 @@ const renderCharts = () => {
       yAxis: [
         { type: 'value', name: '次' },
         { type: 'value', name: 'Token' },
+        // 成本单独一根轴：它的量级与 token 差着数量级，共用一根轴会被压成一条直线
+        { type: 'value', name: '成本(元)', offset: 60 },
       ],
       series: [
         // 调用量和失败量画柱形，默认使用左轴
@@ -377,6 +408,15 @@ const renderCharts = () => {
           data: trend.map((item) => item.total_tokens),
           itemStyle: { color: '#f59e0b' },
         },
+        // 成本趋势用第三根轴（右侧再偏移 60px），单位换算成元便于阅读
+        {
+          name: '成本(元)',
+          type: 'line',
+          yAxisIndex: 2,
+          smooth: true,
+          data: trend.map((item) => Number((item.cost_micro || 0) / 1_000_000)),
+          itemStyle: { color: '#10b981' },
+        },
       ],
     },
     true,
@@ -385,11 +425,18 @@ const renderCharts = () => {
   // 调用类型分布：环形图，调用类型编码翻成中文
   const typeText = {
     TRANSCRIPTION: '音视频转写',
-    MINUTES_CHUNK: '纪要分段',
-    MINUTES_MERGE: '纪要合并',
+    // 分段/合并是单遍改造前的调用类型：新数据不再产生，历史记录仍要显示得出来
+    MINUTES_CHUNK: '纪要分段（旧）',
+    MINUTES_MERGE: '纪要合并（旧）',
+    MINUTES: '纪要生成',
     AGENT_REVIEW: '自检审查',
     AGENT_REFINE: '自检重写',
+    AGENT_REVIEW_SUPPORT: '自检复核',
     SPEAKER_MATCH: '说话人匹配',
+    CHAT: '知识问答',
+    CHAT_SUMMARY: '会话摘要',
+    KB_EMBEDDING: '知识库嵌入',
+    KB_QUERY_EMBED: '检索查询嵌入',
   }
   const callTypes = data.result.call_types || []
   chart(callTypeRef.value).setOption(
