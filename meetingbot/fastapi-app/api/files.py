@@ -69,8 +69,15 @@ async def download_file(filename: str):
     extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     image_types = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
                    "gif": "image/gif", "webp": "image/webp"}
+    path = UPLOAD_DIR / filename
+    # 文件不在时回 404，而不是让 FileResponse 抛 FileNotFoundError。
+    # 实测：种子里有条目的头像文件名在部署里并不存在（头像是用户上传的数据，
+    # 不随仓库分发），前端 <img> 一加载就 500——把"资源缺失"记成"服务端故障"
+    # 会污染失败率、告警与排查方向（404 才是这件事的准确说法）。
+    if not path.is_file():
+        raise CustomException("文件不存在", "404")
     response = FileResponse(
-        path=UPLOAD_DIR / filename,
+        path=path,
         filename=filename,
         media_type=image_types.get(extension, "application/octet-stream"),
     )

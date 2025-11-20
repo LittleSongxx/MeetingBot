@@ -924,7 +924,117 @@
           "text": "[503s][张晨] 主持人，李月，现在讨论风险？\n[507s][张晨] 陈琳，第一项风险是模型服务延迟波动。\n[512s][张晨] 虽然调用失败可以重试，但在会议纪要生成和agent运行中，用户会看到等待时间，建议在发布首周每天查看运行观测中心的调用量、失败率、平均耗时和token使用量。\n[533s][张晨] 第二项风险是会议资料频繁更新。\n[538s][张晨] 如果用户在知识索引构建过程中上传新附件或修订转写文本，索引状态会保持需要重建，建议资料整理完成后再发起构建。\n[554s][张晨] 第三项风险是任务负责人分配不合理。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "明确说明两次失败来自外部模型服务短暂超时，并说明系统保存失败原因和耗时且用户可重试。"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "包含两次失败原因和用户可从失败状态重试的信息。"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "摘要中说明两次失败源于外部模型服务短暂超时，系统保存失败原因并支持用户重试。"
+            },
+            {
+              "index": 4,
+              "useful": false,
+              "why": "只谈模型服务延迟波动风险和观测指标，未说明两次失败原因或用户可执行操作。"
+            },
+            {
+              "index": 5,
+              "useful": true,
+              "why": "提到调用失败可以重试，与用户能做什么相关。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 1
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "两次模型调用失败的原因是外部模型服务短暂超时。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "用户可以从失败状态发起重试。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "系统已保存失败原因和耗时。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "以上信息来自“产品发布评审会议”。",
+              "supported": false
+            },
+            {
+              "index": 5,
+              "text": "该会议的 meeting_id=2。",
+              "supported": false
+            },
+            {
+              "index": 6,
+              "text": "张晨在转写中明确说明两次失败来自外部模型服务短暂超时、系统已保存失败原因和耗时、用户可以从失败状态发起重试。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "该转写发生在 start_second=193。",
+              "supported": true
+            },
+            {
+              "index": 8,
+              "text": "观点条目记录两次失败源于外部模型服务短暂超时。",
+              "supported": true
+            },
+            {
+              "index": 9,
+              "text": "观点条目记录系统已保存失败原因并支持用户重试。",
+              "supported": true
+            },
+            {
+              "index": 10,
+              "text": "风险条目提到模型服务延迟波动导致纪要生成与Agent运行等待时间延长。",
+              "supported": true
+            },
+            {
+              "index": 11,
+              "text": "风险条目建议发布首周每日查看观测中心的失败率等指标。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "上下文未给出除“重试”之外的其他用户侧操作。",
+              "supported": true
+            }
+          ],
+          "answered": true,
+          "why": "回答正面说明了失败原因和用户可执行的重试操作，但额外声称的会议名称与meeting_id未被上下文支撑。"
+        }
+      }
     },
     {
       "case_id": "q08",
@@ -978,7 +1088,182 @@
           "text": "[risks] 会议资料频繁更新导致知识索引长期处于‘需要重建’状态，影响检索时效性与一致性。 风险等级 MEDIUM 建议资料整理完成后统一发起知识索引构建。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "直接说明资料更新时知识索引会标记为需要重建，且旧版本仍可检索直到新版本切换完成"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "包含资料更新时知识索引标记重建和旧版本保持可检索的关键信息"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "提到知识索引更新时旧版本仍可检索，直至新版本切换完成"
+            },
+            {
+              "index": 4,
+              "useful": true,
+              "why": "说明资料更新后需要由资料维护人整理完成后统一发起索引重建流程"
+            },
+            {
+              "index": 5,
+              "useful": true,
+              "why": "说明在资料更新或修订时索引状态会保持需要重建"
+            },
+            {
+              "index": 6,
+              "useful": true,
+              "why": "包含资料更新导致知识索引保持需要重建状态的信息"
+            },
+            {
+              "index": 7,
+              "useful": true,
+              "why": "说明资料频繁更新会使知识索引处于需要重建状态"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 1
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "资料更新时，知识索引会被标记为“需要重建”。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "资料更新时，旧版本知识索引仍保持可检索。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "旧版本知识索引会保持可检索直到新版本完成切换。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "若知识索引构建期间发生资料更新，须由资料维护人完成全部整理后统一发起重建流程。",
+              "supported": true
+            },
+            {
+              "index": 5,
+              "text": "统一发起重建流程是为了确保索引一致性。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "在知识索引构建过程中上传新附件会使索引状态保持“需要重建”。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "在知识索引构建过程中修订转写文本会使索引状态保持“需要重建”。",
+              "supported": true
+            },
+            {
+              "index": 8,
+              "text": "建议资料整理完成后再发起知识索引构建。",
+              "supported": true
+            },
+            {
+              "index": 9,
+              "text": "以上信息均来自“产品发布评审会议”。",
+              "supported": false
+            },
+            {
+              "index": 10,
+              "text": "该会议的 meeting_id=2。",
+              "supported": false
+            },
+            {
+              "index": 11,
+              "text": "张晨在转写中说明资料更新时知识索引会被标记为需要重建。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "张晨在转写中说明旧版本仍保持可检索直到新版本完成切换。",
+              "supported": true
+            },
+            {
+              "index": 13,
+              "text": "张晨该说明发生在 start_second=249。",
+              "supported": true
+            },
+            {
+              "index": 14,
+              "text": "观点条目记录了知识索引更新时旧版本仍可检索，直至新版本切换完成。",
+              "supported": true
+            },
+            {
+              "index": 15,
+              "text": "该观点条目是人工确认的条目。",
+              "supported": false
+            },
+            {
+              "index": 16,
+              "text": "决策条目明确了知识索引构建期间若发生资料更新须由资料维护人完成全部整理后统一发起重建流程。",
+              "supported": true
+            },
+            {
+              "index": 17,
+              "text": "该决策条目是人工确认的条目。",
+              "supported": false
+            },
+            {
+              "index": 18,
+              "text": "张晨在风险讨论中说明构建过程中上传新附件或修订转写文本时索引状态会保持需要重建。",
+              "supported": true
+            },
+            {
+              "index": 19,
+              "text": "张晨在风险讨论中建议资料整理完成后再发起构建。",
+              "supported": true
+            },
+            {
+              "index": 20,
+              "text": "张晨该风险讨论发生在 start_second=538。",
+              "supported": true
+            },
+            {
+              "index": 21,
+              "text": "风险条目提示会议资料频繁更新会导致知识索引长期处于“需要重建”状态。",
+              "supported": true
+            },
+            {
+              "index": 22,
+              "text": "风险条目提示这会影响检索时效性与一致性。",
+              "supported": true
+            },
+            {
+              "index": 23,
+              "text": "风险条目建议资料整理完成后统一发起知识索引构建。",
+              "supported": true
+            }
+          ],
+          "answered": true,
+          "why": "回答正面说明了资料更新时知识索引会标记重建且旧版本仍可检索，并补充了构建期间统一重建的处理要求，主要事实有上下文支撑。"
+        }
+      }
     },
     {
       "case_id": "q09",
@@ -1039,7 +1324,177 @@
           "text": "[decisions] 发布前须完成两组补充验收：①至少30分钟真实会议录音，验证长音频切分、异步进度与整场转写的单遍纪要生成；②含多个角色发言的会议内容，验证说话人标签与员工身份匹配效果。 陈琳（测试负责人） 2023-08-31T12:00:00（2023-08-31）"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "直接说明转写和纪要生成流程，包含音频切分、时间轴片段、整场生成纪要及agent自检。"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "重复包含转写和纪要生成流程的关键信息。"
+            },
+            {
+              "index": 3,
+              "useful": false,
+              "why": "只涉及质量验证和边界场景，未说明转写与纪要生成流程。"
+            },
+            {
+              "index": 4,
+              "useful": false,
+              "why": "概述测试完成情况和验收安排，未提供具体生成流程。"
+            },
+            {
+              "index": 5,
+              "useful": false,
+              "why": "讲的是调用日志、成功率、失败重试和数据库存储，与流程无关。"
+            },
+            {
+              "index": 6,
+              "useful": true,
+              "why": "提到长音频切分和整场转写的单遍纪要生成，能部分支持流程信息。"
+            },
+            {
+              "index": 7,
+              "useful": true,
+              "why": "提到长音频切分和整场转写的单遍纪要生成，与流程相关。"
+            },
+            {
+              "index": 8,
+              "useful": true,
+              "why": "决策中要求验证长音频切分和整场转写的单遍纪要生成，涉及流程要点。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 3,
+              "found": true,
+              "in_context": 1
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "回答依据的资料来自“产品发布评审会议”（id=2）。",
+              "supported": false
+            },
+            {
+              "index": 2,
+              "text": "长会议音频会按时长进行切分。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "转写完成后会生成带时间轴的片段。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "纪要由整场转写结果一次性生成。",
+              "supported": true
+            },
+            {
+              "index": 5,
+              "text": "纪要不再采用分段总结再合并的方式。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "纪要生成后由 Agent 对着原文进行一遍自检。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "人工确认主流程包含说话人匹配。",
+              "supported": true
+            },
+            {
+              "index": 8,
+              "text": "人工确认主流程包含纪要修订。",
+              "supported": true
+            },
+            {
+              "index": 9,
+              "text": "人工确认主流程包含确认任务草稿。",
+              "supported": true
+            },
+            {
+              "index": 10,
+              "text": "外部模型服务短暂超时可能导致失败。",
+              "supported": true
+            },
+            {
+              "index": 11,
+              "text": "系统会保存失败原因。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "系统会保存失败耗时。",
+              "supported": true
+            },
+            {
+              "index": 13,
+              "text": "用户可以从失败状态发起重试。",
+              "supported": true
+            },
+            {
+              "index": 14,
+              "text": "张晨在224秒的转写中描述了音频切分、生成带时间轴片段、整场转写一次生成纪要以及Agent自检。",
+              "supported": true
+            },
+            {
+              "index": 15,
+              "text": "张晨在193秒的转写中说明了外部模型服务短暂超时、保存失败原因和耗时、用户可重试。",
+              "supported": true
+            },
+            {
+              "index": 16,
+              "text": "陈琳在269秒的转写中汇报了已完成录音和视频资料上传转写、发起说话人匹配、纪要修订、确认任务草稿等主流程验证。",
+              "supported": true
+            },
+            {
+              "index": 17,
+              "text": "观点条目记录了陈琳完成上述主流程验证。",
+              "supported": true
+            },
+            {
+              "index": 18,
+              "text": "补充验收要求至少30分钟真实会议录音，用于验证长音频切分、异步进度和整场转写的单遍纪要生成。",
+              "supported": true
+            },
+            {
+              "index": 19,
+              "text": "该补充验收要求出现在320秒的转写中。",
+              "supported": true
+            },
+            {
+              "index": 20,
+              "text": "决策条目确认了该验收标准。",
+              "supported": true
+            }
+          ],
+          "answered": true,
+          "why": "回答正面给出转写与纪要生成流程，核心流程断言均有上下文支撑，仅会议名称和id未被上下文支撑。"
+        }
+      }
     },
     {
       "case_id": "q10",
@@ -1075,7 +1530,47 @@
           "text": "[viewpoints] 陈琳 已完成会议创建、参会人维护、音视频上传转写、说话人匹配、纪要修订、任务草稿确认、延期转交、RE问答、Agent人工确认及运行中断恢复等主流程验证；三类边界场景验证通过：①无权限访问返回明确提示；②仅草稿与已确认版本可导出；③已完成任务不可修改进度或发送提醒；需补充两组验收数据：①≥30分钟真实会议录音；②多角色发言会议用于验证说话人标签匹配效果；测试团队将于8月31日12:00前完成回归并提交凭证。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "直接说明了正式发布前需要补充的两组验收数据及其用途。"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "包含正式发布前需要补充的两组验收数据及具体验证目的。"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "以结论形式明确列出了发布前须完成的两组补充验收内容。"
+            },
+            {
+              "index": 4,
+              "useful": true,
+              "why": "提到需补充两组验收数据，包括30分钟真实会议录音和多角色发言会议内容。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 1
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer_error": "ModelClientError: TimeoutError: The read operation timed out（等待响应头已耗时 180191 ms；这一段时间包含连接与建立，也包含服务端思考到发出响应头，要区分网络与服务端请用 probe_transport）"
+      }
     },
     {
       "case_id": "q11",
@@ -1105,7 +1600,122 @@
           "text": "[viewpoints] 陈琳 已完成会议创建、参会人维护、音视频上传转写、说话人匹配、纪要修订、任务草稿确认、延期转交、RE问答、Agent人工确认及运行中断恢复等主流程验证；三类边界场景验证通过：①无权限访问返回明确提示；②仅草稿与已确认版本可导出；③已完成任务不可修改进度或发送提醒；需补充两组验收数据：①≥30分钟真实会议录音；②多角色发言会议用于验证说话人标签匹配效果；测试团队将于8月31日12:00前完成回归并提交凭证。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "明确说明纪要处于生成中或失败状态不能导出，只有草稿和已确认版本可以导出word或pdf。"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "同样明确说明只有草稿和已确认版本可以导出，且生成中或失败状态不能导出。"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "提到仅草稿与已确认版本可导出，能回答问题所需的可导出状态。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 1
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "会议纪要在“草稿”状态下可以导出。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "会议纪要在“已确认”状态下可以导出。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "会议纪要可以导出为 Word。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "会议纪要可以导出为 PDF。",
+              "supported": true
+            },
+            {
+              "index": 5,
+              "text": "会议纪要处于“生成中”状态时不能导出。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "会议纪要处于“失败”状态时不能导出。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "以上信息均来自“产品发布评审会议”。",
+              "supported": false
+            },
+            {
+              "index": 8,
+              "text": "该会议的 meeting_id=2。",
+              "supported": false
+            },
+            {
+              "index": 9,
+              "text": "张晨在转写中明确说明边界场景验证结果。",
+              "supported": true
+            },
+            {
+              "index": 10,
+              "text": "张晨说明“纪要处于生成中或失败状态时不能导出”。",
+              "supported": true
+            },
+            {
+              "index": 11,
+              "text": "张晨说明“只有草稿和已确认版本可以导出word或pdf”。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "该转写发生在 start_second=308。",
+              "supported": true
+            },
+            {
+              "index": 13,
+              "text": "回答引用上下文 [1][2] 支撑张晨的说明。",
+              "supported": true
+            },
+            {
+              "index": 14,
+              "text": "观点条目记录了“仅草稿与已确认版本可导出”。",
+              "supported": true
+            },
+            {
+              "index": 15,
+              "text": "回答将该观点条目标注为 [5]。",
+              "supported": false
+            }
+          ],
+          "answered": true,
+          "why": "回答直接给出了可导出和不可导出的状态，核心结论可由上下文明确支撑。"
+        }
+      }
     },
     {
       "case_id": "q12",
@@ -1154,7 +1764,147 @@
           "text": "[763s][张晨] 主持人李月请各负责人确认任务和期限。\n[769s][张晨] 王工确认移动端附件下载进度任务8月30日18点完成。\n[777s][张晨] 陈琳确认发布回归任务，8月31日中午12点完成。\n[784s][张晨] 赵敏确认发布公告和部门通知任务9月1日九点完成。\n[791s][张晨] 周宁确认常见问题知识库任务9月1日十点完成。\n[798s][张晨] 张晨负责发布决策复盘与首周数据汇总，截止时间为9月8日18点。\n[807s][张晨] 张晨首周复盘将重点看五项数据，第一，会议创建数量和总时长。\n[816s][张晨] 第二，转写任务成功率和平均耗时。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "明确提到移动端附件下载相关任务的负责人、协作人和截止时间。"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "重复包含移动端附件下载相关任务的负责人、协作人和截止时间。"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "提到移动端附件下载进度任务的负责人和截止时间。"
+            },
+            {
+              "index": 4,
+              "useful": true,
+              "why": "提到移动端附件下载进度问题由王工负责及8月30日18点截止时间。"
+            },
+            {
+              "index": 5,
+              "useful": true,
+              "why": "提到王工确认移动端附件下载进度任务在8月30日18点完成。"
+            },
+            {
+              "index": 6,
+              "useful": true,
+              "why": "提到王工确认移动端附件下载进度任务在8月30日18点完成。"
+            },
+            {
+              "index": 7,
+              "useful": true,
+              "why": "提到王工确认移动端附件下载进度任务在8月30日18点完成。"
+            },
+            {
+              "index": 8,
+              "useful": true,
+              "why": "提到王工确认移动端附件下载进度任务在8月30日18点完成。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 3,
+              "found": true,
+              "in_context": 1
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "移动端附件下载任务的负责人是王工。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "移动端附件下载任务的协作人是陈琳。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "移动端附件下载任务的截止时间是8月30日18:00。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）。",
+              "supported": false
+            },
+            {
+              "index": 5,
+              "text": "张晨在转写中说明了移动端下载进度研发计划的负责人是王工、协作人是陈琳、截止时间为8月30日18点。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "张晨该说明出现在 start_second=605。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "待办条目记录了移动端附件下载进度任务负责人为王工、截止时间为8月30日18:00。",
+              "supported": true
+            },
+            {
+              "index": 8,
+              "text": "该待办条目是人工确认的。",
+              "supported": false
+            },
+            {
+              "index": 9,
+              "text": "决策条目写明移动端附件下载进度问题须在发布前修复。",
+              "supported": true
+            },
+            {
+              "index": 10,
+              "text": "决策条目写明王工是后端负责人。",
+              "supported": true
+            },
+            {
+              "index": 11,
+              "text": "决策条目写明时间为2023-08-30T18:00:00。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "该决策条目是人工确认的。",
+              "supported": false
+            },
+            {
+              "index": 13,
+              "text": "王工在会上确认移动端附件下载进度任务8月30日18点完成。",
+              "supported": true
+            },
+            {
+              "index": 14,
+              "text": "王工该确认出现在 start_second=769。",
+              "supported": true
+            }
+          ],
+          "answered": true,
+          "why": "回答直接给出了负责人、协作人和截止时间，核心事实可由上下文支撑；但会议名称/meeting_id及“人工确认”等附加说明未被上下文支撑。"
+        }
+      }
     },
     {
       "case_id": "q13",
@@ -1196,7 +1946,102 @@
           "text": "[763s][张晨] 主持人李月请各负责人确认任务和期限。\n[769s][张晨] 王工确认移动端附件下载进度任务8月30日18点完成。\n[777s][张晨] 陈琳确认发布回归任务，8月31日中午12点完成。\n[784s][张晨] 赵敏确认发布公告和部门通知任务9月1日九点完成。\n[791s][张晨] 周宁确认常见问题知识库任务9月1日十点完成。\n[798s][张晨] 张晨负责发布决策复盘与首周数据汇总，截止时间为9月8日18点。\n[807s][张晨] 张晨首周复盘将重点看五项数据，第一，会议创建数量和总时长。\n[816s][张晨] 第二，转写任务成功率和平均耗时。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "明确提到发布回归任务负责人为陈琳，截止时间为8月31日12:00。"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "提到测试团队将在8月31日中午12点前完成回归。"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "提到测试团队将在8月31日中午12点前完成回归。"
+            },
+            {
+              "index": 4,
+              "useful": true,
+              "why": "提到测试团队将在8月31日中午12点前完成回归。"
+            },
+            {
+              "index": 5,
+              "useful": true,
+              "why": "明确提到陈琳确认发布回归任务，并在8月31日中午12点完成。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 2
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 5
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "发布回归测试的完成时间是8月31日12:00（中午）。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "发布回归测试由陈琳负责。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "待办条目记录了发布回归任务负责人为陈琳，截止8月31日12:00。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "该待办条目是人工确认的。",
+              "supported": false
+            },
+            {
+              "index": 5,
+              "text": "张晨在转写中确认测试团队将在8月31日中午12点前完成回归。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "该转写内容对应start_second=642。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "各负责人确认环节中陈琳确认发布回归任务8月31日中午12点完成。",
+              "supported": true
+            },
+            {
+              "index": 8,
+              "text": "该确认内容对应start_second=777。",
+              "supported": true
+            },
+            {
+              "index": 9,
+              "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）。",
+              "supported": false
+            }
+          ],
+          "answered": true,
+          "why": "回答明确给出了完成时间和负责人，核心事实有上下文支撑。"
+        }
+      }
     },
     {
       "case_id": "q14",
@@ -1238,7 +2083,52 @@
           "text": "[763s][张晨] 主持人李月请各负责人确认任务和期限。\n[769s][张晨] 王工确认移动端附件下载进度任务8月30日18点完成。\n[777s][张晨] 陈琳确认发布回归任务，8月31日中午12点完成。\n[784s][张晨] 赵敏确认发布公告和部门通知任务9月1日九点完成。\n[791s][张晨] 周宁确认常见问题知识库任务9月1日十点完成。\n[798s][张晨] 张晨负责发布决策复盘与首周数据汇总，截止时间为9月8日18点。\n[807s][张晨] 张晨首周复盘将重点看五项数据，第一，会议创建数量和总时长。\n[816s][张晨] 第二，转写任务成功率和平均耗时。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "明确提到发布公告任务包含的五个入口，以及负责人赵敏、协作人周宁和截止时间9月1日九点。"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "重复包含发布公告任务的入口、负责人、协作人和截止时间信息。"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "同样包含发布公告任务的入口、负责人、协作人和截止时间信息。"
+            },
+            {
+              "index": 4,
+              "useful": true,
+              "why": "提供了发布公告任务的负责人赵敏、协作人周宁和9月1日9点前完成的信息。"
+            },
+            {
+              "index": 5,
+              "useful": true,
+              "why": "确认了赵敏负责发布公告和部门通知任务，并提到9月1日九点完成。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 1
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer_error": "ModelClientError: TimeoutError: The read operation timed out（等待响应头已耗时 180177 ms；这一段时间包含连接与建立，也包含服务端思考到发出响应头，要区分网络与服务端请用 probe_transport）"
+      }
     },
     {
       "case_id": "q15",

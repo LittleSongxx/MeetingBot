@@ -90,3 +90,32 @@ class MeetingMaterialTest(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AvatarDownloadTest(unittest.IsolatedAsyncioTestCase):
+    """头像文件不存在时必须是 404，不能是 500。
+
+    实测：种子里有条目的头像名在部署里并不存在（头像是用户上传的数据，不随仓库
+    分发），前端 <img> 一加载，FileResponse 就抛 FileNotFoundError → 500。
+    "资源缺失"被记成"服务端故障"会污染失败率与告警，排查方向也会被带偏。
+    """
+
+    async def asyncSetUp(self):
+        await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["models"]},
+                            use_tz=True, timezone="Asia/Shanghai")
+        await Tortoise.generate_schemas()
+
+    async def asyncTearDown(self):
+        await Tortoise.close_connections()
+
+    async def test_missing_avatar_is_a_404_with_a_readable_message(self):
+        from api import files as files_api
+        with self.assertRaises(CustomException) as ctx:
+            await files_api.download_file("一定不存在-abc123.png")
+        self.assertEqual(ctx.exception.code, "404")
+        self.assertIn("文件不存在", ctx.exception.message)
+
+    async def test_path_traversal_is_still_refused(self):
+        from api import files as files_api
+        with self.assertRaises(CustomException):
+            await files_api.download_file("../.env")

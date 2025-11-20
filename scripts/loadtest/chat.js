@@ -8,8 +8,13 @@
 //          -e SESSION_ID=<会话id> -e VUS=10 -e DURATION=60s scripts/loadtest/chat.js
 //
 // 判据两条，都在 k6 的阈值里写死（不达标时退出码非 0，可直接进流水线）：
-//   - 首字延迟 p95 < 5s（SSE 的 meta 事件到第一个 token 之间）
-//   - 无 5xx、无 429 之外的错误响应
+//   - 一轮问答端到端 p95 < 60s
+//   - 失败率 < 1%（429 是设计内的限流结果，脚本单独放行）
+//
+// **量的是端到端而不是首字延迟**：k6 的内置 HTTP 客户端会把响应体缓冲完再交出来，
+// 拿不到"第一个字节到达"的时刻。首字延迟要看产品侧（`ai_call_log.elapsed_ms`
+// 加上前端记录的 SSE 时间戳），或者用能逐帧读流的客户端——这一条写在这里，
+// 免得后人看到指标名叫 chat_first_token 就以为它真的是首字延迟。
 import http from 'k6/http'
 import { check, sleep } from 'k6'
 import { Trend } from 'k6/metrics'
@@ -19,7 +24,7 @@ const TOKEN = __ENV.TOKEN || ''
 const SESSION_ID = __ENV.SESSION_ID || ''
 const QUESTION = __ENV.QUESTION || '上周评审会定了什么？'
 
-const firstTokenMs = new Trend('chat_first_token_ms', true)
+const turnDuration = new Trend('chat_turn_duration_ms', true)
 
 export const options = {
   scenarios: {
@@ -30,8 +35,8 @@ export const options = {
     },
   },
   thresholds: {
-    // 首字延迟：用户感知的"卡不卡"就是它
-    'chat_first_token_ms': ['p(95)<5000'],
+    // 一轮问答端到端：用户感知的"等多久"
+    'chat_turn_duration_ms': ['p(95)<60000'],
     // 429 是设计内的限流结果，不算故障；但 5xx 与网络错误必须为 0
     'http_req_failed': ['rate<0.01'],
   },
@@ -56,11 +61,10 @@ export default function () {
   })
 
   if (response.status === 200 && response.body) {
-    // 用 meta 事件到第一个 token 的字节位置估算首字延迟（k6 不逐帧回调 SSE）
     const body = String(response.body)
-    const firstToken = body.indexOf('event: token')
-    if (firstToken >= 0) {
-      firstTokenMs.add(Date.now() - started)
+    // 只统计真的跑完一轮的请求（有 done 事件）；半截的流不该混进延时分布
+    if (body.includes('event: done')) {
+      turnDuration.add(Date.now() - started)
     }
   }
   sleep(Number(__ENV.THINK_TIME || 1))
