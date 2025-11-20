@@ -174,6 +174,94 @@ class SummarizeTest(unittest.TestCase):
         self.assertEqual(summary["context_precision"]["total"], 1)
 
 
+class JudgeShapeTest(unittest.TestCase):
+    """判定响应的形状校验：截断的响应必须算**判定失败**，不能静默缩小分母。
+
+    实测事故（2026-10-16）：判定模型在 JSON 模式下遇到带引号的句子会中途停住并补上
+    闭合括号，返回的对象 JSON 可解析但内容被截断——最后一条断言少了 supported、
+    answered 整字段消失。不查的话断言总数从 495 掉到 125，报告上看不出任何异常。
+    """
+
+    def test_a_complete_answer_response_passes(self):
+        self.assertEqual(rag._answer_shape_problem(
+            {"claims": [{"index": 1, "text": "x", "supported": True, "meta": False}],
+             "answered": True, "why": "一句话"}), "")
+
+    def test_empty_claims_are_legal(self):
+        self.assertEqual(rag._answer_shape_problem({"claims": [], "answered": False}), "")
+
+    def test_missing_answered_is_a_problem(self):
+        self.assertIn("answered", rag._answer_shape_problem({"claims": []}))
+
+    def test_truncated_claim_is_a_problem(self):
+        problem = rag._answer_shape_problem(
+            {"claims": [{"index": 1, "text": "以上信息均来自"}], "answered": True})
+        self.assertIn("supported", problem)
+
+    def test_context_shape_checks_both_lists(self):
+        self.assertEqual(rag._context_shape_problem(
+            {"contexts": [{"index": 1, "useful": True}], "facts": [{"index": 1, "found": True}]}), "")
+        self.assertIn("useful", rag._context_shape_problem({"contexts": [{"index": 1}]}))
+        self.assertIn("found", rag._context_shape_problem({"facts": [{"index": 1}]}))
+
+    def test_a_truncated_judgement_is_retried_once_then_recorded(self):
+        """截断的响应先重试一次（附 re-ask 说明），两次都不行才记失败。
+
+        "记失败"是必须的：样本不进分母，且 `_needs_judging` 会认它，下次运行补判。
+        """
+        packet = rag.build_packet(_qa_set(), _answers())
+        replies = [{"parsed": {"contexts": [{"index": 1, "useful": True}], "facts": []}},
+                   {"parsed": {"claims": []}},          # answer 第 1 次：缺 answered
+                   {"parsed": {"claims": []}}]          # 重试后仍然缺
+        with mock.patch.object(rag.model_client, "endpoint", return_value=("http://x", "m", "k")), \
+                mock.patch.object(rag.model_client, "call_json",
+                                  side_effect=replies) as call_json, \
+                mock.patch.object(rag.time, "sleep", return_value=None), \
+                tempfile.TemporaryDirectory() as folder:
+            result = rag.judge_packet(packet, output_path=Path(folder) / "p.json",
+                                      authorized_calls=3, progress=lambda *_: None)
+        judgement = packet["cases"][0]["judgement"]
+        self.assertIn("context", judgement)
+        self.assertNotIn("answer", judgement)
+        self.assertIn("形状不合格", judgement["answer_error"])
+        self.assertEqual(result["calls_made"], 3, "重试的调用也要记账")
+        self.assertIn("上一次输出不合格", call_json.call_args_list[-1].args[4],
+                      "重试必须带上 re-ask 说明")
+        self.assertTrue(rag._needs_judging(packet["cases"][0], "a"), "有失败的一半就必须能重判")
+        summary = rag.summarize(packet)
+        self.assertIsNone(summary["answer_relevancy"], "判不了的不进分母，也不填 0")
+
+    def test_a_truncated_judgement_recovers_on_the_retry(self):
+        packet = rag.build_packet(_qa_set(), _answers())
+        replies = [{"parsed": {"contexts": [{"index": 1, "useful": True}], "facts": []}},
+                   {"parsed": {"claims": [{"index": 1, "text": "x"}]}},   # 截断
+                   {"parsed": {"claims": [{"index": 1, "text": "x", "supported": True}],
+                               "answered": True}}]                        # 重试成功
+        with mock.patch.object(rag.model_client, "endpoint", return_value=("http://x", "m", "k")), \
+                mock.patch.object(rag.model_client, "call_json", side_effect=replies), \
+                mock.patch.object(rag.time, "sleep", return_value=None), \
+                tempfile.TemporaryDirectory() as folder:
+            rag.judge_packet(packet, output_path=Path(folder) / "p.json",
+                             authorized_calls=3, progress=lambda *_: None)
+        self.assertEqual(packet["cases"][0]["judgement"]["answer"]["answered"], True)
+
+    def test_the_retry_never_breaks_the_authorized_budget(self):
+        """授权 2 次时，重试没有额度可用 → 记"额度用完"而不是多打一次调用。"""
+        packet = rag.build_packet(_qa_set(), _answers())
+        replies = [{"parsed": {"contexts": [{"index": 1, "useful": True}], "facts": []}},
+                   {"parsed": {"claims": []}}]
+        with mock.patch.object(rag.model_client, "endpoint", return_value=("http://x", "m", "k")), \
+                mock.patch.object(rag.model_client, "call_json",
+                                  side_effect=replies) as call_json, \
+                mock.patch.object(rag.time, "sleep", return_value=None), \
+                tempfile.TemporaryDirectory() as folder:
+            result = rag.judge_packet(packet, output_path=Path(folder) / "p.json",
+                                      authorized_calls=2, progress=lambda *_: None)
+        self.assertEqual(result["calls_made"], 2)
+        self.assertEqual(call_json.call_count, 2)
+        self.assertIn("调用已用完", packet["cases"][0]["judgement"]["answer_error"])
+
+
 class BudgetGateTest(unittest.TestCase):
     def test_judge_requires_an_explicit_budget(self):
         with tempfile.TemporaryDirectory() as folder:
