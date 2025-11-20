@@ -228,7 +228,8 @@ class KbToolsDbTest(unittest.IsolatedAsyncioTestCase):
             result = await kb_tools.execute_tool(actor, "search_knowledge", {
                 "query": "灰度", "meeting_ids": [meeting.id], "date_from": "2026-09-10",
                 "date_to": "2026-09-11", "chunk_type": ["TRANSCRIPT_WINDOW"]})
-        kwargs = search.await_args.kwargs
+        # 时间限定空结果会**自动放宽重试一次**，所以第一次调用才是带限定的那次
+        kwargs = search.await_args_list[0].kwargs
         self.assertEqual(kwargs["allowed_meeting_ids"], [meeting.id])
         self.assertEqual(kwargs["chunk_type"], ["TRANSCRIPT_WINDOW"])
         # 2026-09-10 00:00:00 与 2026-09-11 23:59:59（本地），日期按**整天**解释
@@ -253,10 +254,41 @@ class KbToolsDbTest(unittest.IsolatedAsyncioTestCase):
         actor = await kb_tools.Actor.resolve(self.owner)
         with patch.object(kb_service, "search_knowledge", AsyncMock(return_value=[])):
             result = await kb_tools.execute_tool(actor, "search_knowledge", {
-                "query": "灰度", "date_from": "2026-09-10"})
+                "query": "灰度", "chunk_type": ["MINUTES_ITEM"]})
         self.assertIn("没有命中", result["notice"])
-        self.assertIn("2026-09-10", result["notice"])
+        self.assertIn("MINUTES_ITEM", result["notice"])
         self.assertIn("放宽", result["notice"])
+
+    async def test_time_filter_miss_retries_without_the_time_limit(self):
+        """时间限定是**模型猜的**：实测它把 2026 年的会猜成 2024 年，一次猜错就把
+        正确内容全挡在外面（那一轮的 3 条金标事实一条没检索到）。
+
+        所以空结果时不只提示"你可以放宽"——自动去掉时间限定再检索一次，
+        把结果与说明一起交出去。结论仍由模型下，它只是不再因为一次猜错而盲。
+        """
+        meeting = await self._meeting("MTG-F3", self.owner)
+        actor = await kb_tools.Actor.resolve(self.owner)
+        hit = kb_service.Hit(chunk_id=11, score=0.5, text="最近的调用成功率 98.6%", meeting_id=meeting.id,
+                             authority="RAW", chunk_type="TRANSCRIPT_WINDOW", field=None,
+                             item_index=None, speaker="张晨", start_ms=170_000, end_ms=180_000,
+                             document_id=1, origin=None)
+        calls: list[dict] = []
+
+        async def fake_search(query, **kwargs):
+            calls.append(kwargs)
+            if kwargs.get("meeting_time_from") or kwargs.get("meeting_time_to"):
+                return []
+            return [hit]
+
+        with patch.object(kb_service, "search_knowledge", AsyncMock(side_effect=fake_search)):
+            result = await kb_tools.execute_tool(actor, "search_knowledge", {
+                "query": "最近的调用成功率", "date_from": "2024-08-20", "date_to": "2024-08-26"})
+        self.assertEqual(len(calls), 2, "带时间限定一次 + 放宽后一次")
+        self.assertIsNone(calls[1]["meeting_time_from"], "放宽时不再传时间限定")
+        self.assertTrue(result["relaxed_time_filter"])
+        self.assertEqual(len(result["hits"]), 1)
+        self.assertIn("已去掉时间限定重试", result["notice"])
+        self.assertIn("会议日期与你的限定不符", result["notice"])
 
     async def test_search_rejects_a_bad_date_and_an_inverted_range(self):
         actor = await kb_tools.Actor.resolve(self.owner)

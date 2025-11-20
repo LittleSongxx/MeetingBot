@@ -167,10 +167,14 @@ class SearchKnowledgeArgs(BaseModel):
     date_from: str | None = Field(
         default=None,
         description="按**会议日期**限定起始（含当天），格式 YYYY-MM-DD。"
-                    "用于「最近七天」「上周」这类时间限定；注意它不是录音里的秒数",
+                    "**只在你知道确切会议日期时才传**（先 list_facts(kind=meeting) 看日期）；"
+                    "不确定就留空——猜错的日期会把正确内容挡在过滤器外面。"
+                    "注意它不是录音里的秒数",
     )
     date_to: str | None = Field(
-        default=None, description="按会议日期限定截止（含当天），格式 YYYY-MM-DD")
+        default=None,
+        description="按会议日期限定截止（含当天），格式 YYYY-MM-DD；"
+                    "**不确定就留空**（同 date_from）")
     chunk_type: list[Literal["TRANSCRIPT_WINDOW", "MINUTES_ITEM"]] | None = Field(
         default=None,
         description="限定切片类型：TRANSCRIPT_WINDOW 是转写窗口（原话），"
@@ -314,13 +318,32 @@ async def _search_knowledge(actor: Actor, args: SearchKnowledgeArgs) -> dict[str
     applied = _applied_filters(args, None if allowed is None else list(allowed))
     if applied:
         result["applied_filters"] = applied
-        if not hits:
-            # 空结果必须说明"为什么空"：不解释的话，模型会把"过滤后没命中"
-            # 讲成"知识库里没有这件事"——那是两件完全不同的事（实测的 q26/q27 教训）
-            result["notice"] = (
-                "在给定的限定（" + "；".join(applied) + "）下没有命中任何切片。"
-                "可以去掉其中一项再检索一次；如果放宽后仍没有，就如实告诉用户"
-                "这个范围内没有相关记录，不要凭印象补内容。")
+    if not hits and (time_from is not None or time_to is not None):
+        # **时间限定是模型猜出来的**（实测：它把 2026 年的会猜成 2024 年，
+        # 于是过滤把正确内容全挡在外面，那一轮的 3 条金标事实一条都没检索到）。
+        # 只靠一句"你可以放宽"不够——模型不会自己回头。这里自动去掉时间限定重试一次，
+        # 并把"放宽后有什么"如实交出去：**结论仍由模型下**，它只是不再因为一次猜错而盲。
+        relaxed = await kb_service.search_knowledge(
+            args.query, allowed_meeting_ids=allowed, limit=args.limit,
+            authority=args.authority, chunk_type=args.chunk_type, biz_id=actor.biz_id)
+        titles.update(await _meeting_titles([hit.meeting_id for hit in relaxed]))
+        result["hits"] = [
+            {**hit.as_citation(), "meeting_title": titles.get(hit.meeting_id, ""),
+             "score": round(hit.score, 6)}
+            for hit in relaxed
+        ]
+        result["relaxed_time_filter"] = True
+        result["notice"] = (
+            "在给定的时间限定（" + "；".join(applied) + "）下没有命中任何切片；"
+            f"**已去掉时间限定重试，下面是 {len(relaxed)} 条结果**。"
+            "如果这些内容其实谈的正是你问的事，说明会议日期与你的限定不符——"
+            "请按会议实际日期回答，并说明时间限定没有命中；"
+            "若放宽后仍为空，才可以说这个范围内没有相关记录。")
+    elif applied and not hits:
+        result["notice"] = (
+            "在给定的限定（" + "；".join(applied) + "）下没有命中任何切片。"
+            "可以去掉其中一项再检索一次；如果放宽后仍没有，就如实告诉用户"
+            "这个范围内没有相关记录，不要凭印象补内容。")
     return result
 
 

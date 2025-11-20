@@ -11,8 +11,9 @@
 
 ## 口径（与 judge 的那些不同，必须连口径一起报）
 
-- **相关切片**：与某个金标片段有时间重叠的切片（`start_second ≤ 片段起点 ≤ end_second`）。
-  切片是转写窗口（几句一段），金标是句子级，所以"重叠"是这里唯一可判定的关系。
+- **相关切片**：片段的起点落进切片的时间范围（`start_second ≤ 片段起点 ≤ end_second`，
+  没有精确窗时用引文里的定位前缀 `[224s]` 的区间近似）。切片是转写窗口（几句一段），
+  金标是句子级，所以"起点落进范围"是这里唯一可判定的关系。
 - `recall@k`：金标片段里**被 top-k 覆盖**的比例（覆盖 = 至少一条相关切片进了前 k）。
   这里 k 取"这一次实际检索到的条数"（模型自选 limit，实测 1–10），因此它是
   "这次检索有没有盖住金标"，不是"固定 k 下的召回"——**报数时必须连 k 一起报**。
@@ -30,10 +31,14 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from pathlib import Path
 from typing import Any, Mapping
 
 EVALUATION_DIR = Path(__file__).resolve().parents[1]
+# 切片正文里的定位前缀（`[224s][张晨] …`）：它既是页面上"点回原句"的锚点，
+# 也是这里判"这条切片盖住了哪几秒"的对照物
+_LOCATOR = re.compile(r"\[(\d{1,6})s\]")
 DEFAULT_ARTIFACT = EVALUATION_DIR / "results" / "chat_answers.json"
 DEFAULT_QA_SET = EVALUATION_DIR / "gold" / "qa_seed.json"
 
@@ -64,16 +69,29 @@ def segment_starts(sources: Mapping[str, Any], task_id: int) -> dict[int, int]:
     return starts
 
 
-def _covers(item: Mapping[str, Any], start_second: int) -> bool:
-    """这条检索切片覆盖这个片段吗（时间窗重叠）。
+def _window(item: Mapping[str, Any]) -> tuple[int, int] | None:
+    """这条切片覆盖的时间范围（秒）。判不了返回 None。
 
-    切片没有时间窗（例如纪要条目切片）时无从判定 → **不算覆盖**，也不假装算过。
+    两条来源，优先精确的那条：
+    1. 引用自带的时间窗（`start_second` / `end_second`，新产物有）；
+    2. **引文正文里的定位前缀**（`[224s][张晨]`）——切片每一行都带它，所以
+       "这条盖住了哪几秒"从引文本身就能读出来（老产物只有这一条路）。
+
+    两者都没有（纪要条目切片没有时间轴）→ 判不了，**不算覆盖，也不假装算过**。
     """
-    start = item.get("start_second")
-    end = item.get("end_second")
-    if start is None or end is None:
-        return False
-    return int(start) <= int(start_second) <= int(end)
+    start, end = item.get("start_second"), item.get("end_second")
+    if start is not None and end is not None:
+        return int(start), int(end)
+    markers = [int(m) for m in _LOCATOR.findall(str(item.get("quote") or ""))]
+    if markers:
+        return min(markers), max(markers)
+    return None
+
+
+def _covers(item: Mapping[str, Any], start_second: int) -> bool:
+    """这条检索切片覆盖这个片段吗（片段的起点落进切片的时间范围）。"""
+    window = _window(item)
+    return bool(window and window[0] <= int(start_second) <= window[1])
 
 
 def evaluate_turn(turn: Mapping[str, Any], case: Mapping[str, Any],
