@@ -14,11 +14,15 @@
   并在 `needs_retrieval=false` 时明确标注。实测的教训：让模型自己猜日期会猜错
   （把 2026 年的会猜成 2024 年，一轮 3 条金标事实一条没检索到）。
 
-## 触发门
+## 触发门管的是**改写**，不是"做不做规划"
 
-不是每轮都值得多花一次调用：只有问题里出现**相对时间或指代**（最近/上周/今天/下午/
-这场/那场/上次…）才规划。没有这些词的问题，改写空间很小，直接跳过——省一次调用，
-也让"规划到底改写了什么"这件事只落在真正需要它的那些轮次上。
+它一度被写成"没问题里没有相对时间/指代就跳过整次规划"——那是错的：**意图与建议工具
+对每一道实质问题都有用**（枚举类问题往往一个时间词都没有，而它正是路由最该提醒的那类：
+"首周复盘要看哪五项数据"没有触发词，但模型很容易只走一次检索）。实测也因此暴露：
+按旧口径跑 100 题只有 12 题拿到决策，F1 根本量不了。
+
+现在的分工：开关打开时**每轮一次规划调用**；触发门只决定**改写**那一句要不要带上
+（没有相对时间/指代时没有改写空间，带上只是噪声）。开关默认关，成本口径见文档。
 """
 
 from __future__ import annotations
@@ -130,10 +134,14 @@ def normalize(parsed: Mapping[str, Any] | None, question: str) -> dict[str, Any]
 
 
 def plan_hint(plan: Mapping[str, Any]) -> str:
-    """把规划渲染成一条给模型的提示。**不替换问题**，只是放在问题前面的一句话。"""
+    """把规划渲染成一条给模型的提示。**不替换问题**，只是放在问题前面的一句话。
+
+    改写那一句只在触发门命中时才带上（`rewrite_in_scope`）——没有相对时间/指代的问题
+    本来就没有改写空间，带上它只是噪声。
+    """
     parts = [f"查询规划：这个问题属于「{_intent_label(str(plan.get('intent')))}」"]
     rewritten = str(plan.get("rewritten") or "").strip()
-    if rewritten:
+    if rewritten and (plan.get("rewrite_in_scope") or rewritten != str(plan.get("question") or "").strip()):
         parts.append(f"（把相对时间与指代落到事实后是：{rewritten}）")
     tools = plan.get("suggested_tools") or []
     if tools:
@@ -190,10 +198,12 @@ async def plan_query(question: str, *, scope: str, biz_id: int,
     """
     question = (question or "").strip()
     triggers = trigger_terms(question)
-    base: dict[str, Any] = {"enabled": True, "used": False, "triggers": triggers}
-    if not triggers:
-        return {**base, "reason": "没有相对时间或指代，跳过规划"}
-    user = f"{scope}\n\n【用户问题】\n{question}\n\n请按格式输出 JSON。"
+    base: dict[str, Any] = {"enabled": True, "used": False, "triggers": triggers,
+                            "rewrite_in_scope": bool(triggers)}
+    user = (f"{scope}\n\n【用户问题】\n{question}\n\n"
+            + ("问题里出现了相对时间/指代，请把改写落到上方已知事实上；"
+               if triggers else "问题里没有相对时间或指代，改写请原样返回问题；")
+            + "请按格式输出 JSON。")
     try:
         config = await _chat_config()
         parsed = await model_factory.invoke_json(
