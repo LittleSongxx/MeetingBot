@@ -357,16 +357,18 @@ async def _list_facts(actor: Actor, args: ListFactsArgs) -> dict[str, Any]:
         "notice": "这些条目来自人工确认过的纪要（authority=CONFIRMED），"
                   "引用时带上 meeting_id / minutes_id / item_index。",
     }
-    if not facts:
-        drafts = await _draft_minutes_summary(allowed)
-        if drafts:
-            # "为什么没有"必须是模型可行动的信息（实测 q26/q27：模型在这里查不到东西，
-            # 又不知道回退到转写检索，于是空手而归）——草稿不算事实，但转写里有原话
-            result["notice"] = (
-                f"该范围内没有已确认的纪要（另有 {drafts} 份草稿：草稿未经人确认，"
-                "按规矩不算事实）。可改用 search_knowledge 检索该会议的转写原话，"
-                "并在回答里说明依据来自转写而非确认纪要。")
-            result["draft_minutes_count"] = drafts
+    # 资料覆盖与"查不到时怎么办"：这两件事必须是模型能读到的信息。
+    # 实测（P1 复测的 q26）：事实类问题只读已确认纪要，而"下午那场会"往往还没确认
+    # ——模型不知道还有草稿与转写可查时，会把"确认纪要里没有"讲成"没有"。
+    coverage = await _source_coverage(allowed)
+    result["source_coverage"] = coverage
+    if coverage["draft_minutes"] or coverage["recordings"] > coverage["confirmed_minutes"]:
+        result["notice"] = (
+            f"资料覆盖：已确认纪要 {coverage['confirmed_minutes']} 份、"
+            f"未确认纪要 {coverage['draft_minutes']} 份、转写录音 {coverage['recordings']} 段。"
+            "未确认的纪要**不算事实**（这里的 facts 只来自已确认纪要）；"
+            "所以「这里没有」不等于「没发生过」——可以 search_knowledge 到转写原话里核实，"
+            "并说清依据来自转写而不是确认纪要。")
     return result
 
 
@@ -615,10 +617,20 @@ async def _list_recordings(allowed: list[int] | None, limit: int) -> dict[str, A
     }
 
 
-async def _draft_minutes_summary(allowed: list[int] | None) -> int:
-    """范围内未确认的纪要份数。用来把"查不到"的原因说清楚（草稿不算事实）。"""
-    query = MeetingMinutes.filter(status__not="CONFIRMED")
-    return await _filter_meetings(query, allowed).count()
+async def _source_coverage(allowed: list[int] | None) -> dict[str, int]:
+    """范围内"资料覆盖"的三个数：已确认纪要、未确认纪要、转写录音。
+
+    它是"查不到时该怎么办"的判据：事实只来自已确认纪要，而待办/决策往往先出现在
+    录音里。模型看不到这三个数就只能猜（实测 q26 把"确认纪要里只有 1 条"讲成了全部）。
+    """
+    confirmed = await _filter_meetings(
+        MeetingMinutes.filter(status="CONFIRMED"), allowed).count()
+    drafts = await _filter_meetings(
+        MeetingMinutes.filter(status__not="CONFIRMED"), allowed).count()
+    recordings = await _filter_meetings(
+        TranscriptionTask.filter(status="SUCCEEDED"), allowed).count()
+    return {"confirmed_minutes": confirmed, "draft_minutes": drafts,
+            "recordings": recordings}
 
 
 def _owner_matches(item: Any, owner: str) -> bool:
