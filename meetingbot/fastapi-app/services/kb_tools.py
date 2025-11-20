@@ -51,7 +51,7 @@ from models import (
     TranscriptSegment,
     User,
 )
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from services import contracts, kb_service
 
@@ -125,6 +125,31 @@ def _narrow(allowed: list[int] | None, requested: list[int] | None) -> list[int]
 # --------------------------------------------------------------------------- #
 
 
+def _loose(value: Any, expected: type | tuple[type, ...]) -> Any:
+    """把被写成 JSON 字符串的参数还原成真值。**宽松解析只做这一件事**。
+
+    实测背景（2026-10-16，q26/q27 两轮）：模型把数组参数写成字符串
+    （`meeting_ids="[2]"`），`StructuredTool` 用 args_schema 校验直接拒，而回给
+    模型的错误文本不是 JSON（是一段 pydantic 报错），模型看不懂，用**同样的参数**
+    重试到停滞闸掐断——整轮零引用、零字答案。27 轮里 2 轮如此，
+    context recall 缺的 5 条金标事实全部来自这两轮。
+
+    规则只有一条：**字符串先按 JSON 解析，成功且类型对得上就采用，否则原样交回
+    pydantic 报常规错误**。不猜意图、不做字符串切分——边界必须清晰，否则"宽松"
+    会变成"参数怎么错都能过"，而那比报错危险（静默的畸形参数会一路走到检索层）。
+    """
+    if not isinstance(value, str):
+        return value
+    try:
+        parsed = json.loads(value.strip())
+    except ValueError:
+        return value
+    # bool 是 int 的子类：`"true"` 不该被当成数字 1 混进数值参数
+    if isinstance(parsed, bool):
+        return value
+    return parsed if isinstance(parsed, expected) else value
+
+
 class SearchKnowledgeArgs(BaseModel):
     query: str = Field(description="自然语言检索词。例如「上次会上定的上线时间是什么」")
     limit: int = Field(default=8, ge=1, le=20, description="返回的切片条数上限")
@@ -133,6 +158,16 @@ class SearchKnowledgeArgs(BaseModel):
         description="限定来源权威级：CONFIRMED 是人工确认过的纪要条目，"
                     "RAW 是转写原话；留空表示两者都搜",
     )
+
+    @field_validator("limit", mode="before")
+    @classmethod
+    def _loose_limit(cls, value: Any) -> Any:
+        return _loose(value, int)
+
+    @field_validator("authority", mode="before")
+    @classmethod
+    def _loose_authority(cls, value: Any) -> Any:
+        return _loose(value, (list, type(None)))
 
 
 class ListFactsArgs(BaseModel):
@@ -148,16 +183,38 @@ class ListFactsArgs(BaseModel):
     )
     limit: int = Field(default=20, ge=1, le=50, description="返回条数上限")
 
+    @field_validator("meeting_ids", mode="before")
+    @classmethod
+    def _loose_meeting_ids(cls, value: Any) -> Any:
+        # 这一条就是 q26/q27 的现场：模型发的是字符串 "[2]"
+        return _loose(value, (list, type(None)))
+
+    @field_validator("limit", mode="before")
+    @classmethod
+    def _loose_limit(cls, value: Any) -> Any:
+        return _loose(value, int)
+
 
 class GetMinutesArgs(BaseModel):
     minutes_id: int | None = Field(default=None, description="纪要 id，与 meeting_id 二选一")
     meeting_id: int | None = Field(default=None, description="会议 id，与 minutes_id 二选一")
+
+    @field_validator("minutes_id", "meeting_id", mode="before")
+    @classmethod
+    def _loose_ids(cls, value: Any) -> Any:
+        return _loose(value, (int, type(None)))
 
 
 class TranscriptExcerptArgs(BaseModel):
     task_id: int = Field(description="转写任务 id（检索结果里的 task 字段会给到）")
     start_ms: int = Field(default=0, ge=0, description="起始毫秒（含）")
     end_ms: int | None = Field(default=None, ge=0, description="结束毫秒（含），留空取到末尾")
+
+    @field_validator("task_id", "start_ms", "end_ms", mode="before")
+    @classmethod
+    def _loose_ms(cls, value: Any) -> Any:
+        # `"null"` 会被还原成 None（模型确实会把"不填"写成字符串 null）
+        return _loose(value, (int, type(None)))
 
 
 # --------------------------------------------------------------------------- #
