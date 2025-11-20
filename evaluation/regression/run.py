@@ -31,6 +31,7 @@ if __package__ in (None, ""):  # allow direct script execution
         chat_checks,
         contract_checks,
         grounding,
+        intent_metrics,
         reliability,
         retrieval_metrics,
     )
@@ -38,7 +39,15 @@ else:
     from judges import actions as amc_aid
     from lib import corpora, stats
 
-    from regression import analysis, chat_checks, contract_checks, grounding, reliability, retrieval_metrics
+    from regression import (
+        analysis,
+        chat_checks,
+        contract_checks,
+        grounding,
+        intent_metrics,
+        reliability,
+        retrieval_metrics,
+    )
 
 # 兼容再导出：历史代码与测试通过本模块访问装载器
 PUBLIC_RESULTS = corpora.PUBLIC_RESULTS
@@ -326,6 +335,10 @@ def build_report(
         (artifact or {}).get("turns") or [], sources=(artifact or {}).get("source_texts"))
     # 检索侧指标（recall@k / MRR / nDCG）：同样零调用，但需要产物里带"检索到的全部切片"
     # 与"片段→时间"映射。缺这两样时报无样本——**不拿被引用的切片冒充检索集**。
+    # 意图层（零调用）：逐类 F1 + 混淆矩阵。金标是 qa_seed 的 intent 字段（代理起草、
+    # 待人工确认），产品决策来自 `judges/intent.py` 抓的 /chat/plan 产物。
+    intent_decisions, intent_gold = intent_metrics.load_inputs()
+    report["intent_metrics"] = intent_metrics.summarize(intent_decisions, intent_gold)
     report["retrieval_metrics"] = retrieval_metrics.summarize(
         artifact, json.loads((EVALUATION_DIR / "gold" / "qa_seed.json").read_text(encoding="utf-8"))
         if (EVALUATION_DIR / "gold" / "qa_seed.json").exists() else None)
@@ -608,6 +621,40 @@ def _render_retrieval_metrics(block: Mapping[str, Any]) -> list[str]:
         block.get("not_measured") or "",
         "",
     ]
+    return lines
+
+
+def _render_intent_metrics(block: Mapping[str, Any]) -> list[str]:
+    """意图层：逐类 F1 + 混淆矩阵（零调用）。逐类分列，不报加权总分。"""
+    lines = ["## 意图识别（零调用：逐类 F1 + 混淆矩阵）", ""]
+    if not block:
+        return lines + ["缺产物。", ""]
+    if not block.get("sample"):
+        lines += [block.get("reading") or "无样本", ""]
+        skipped = block.get("skipped") or []
+        if skipped:
+            lines += [f"- 判不了：{len(skipped)} 条", ""]
+        return lines
+    lines += [
+        f"样本：{block['sample']} 题（人工已确认 {block.get('sample_verified', 0)} / "
+        f"代理起草 {block.get('sample_draft', 0)}）。逐类分列，**没有加权总分**；"
+        f"宏平均 {_pct(block.get('macro_f1'), 3)} 只是「类等权的平均」。",
+        "",
+        "| 意图 | 支持数 | 判成该类 | 命中 | precision | recall | F1 |",
+        "|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    for label, row in (block.get("per_class") or {}).items():
+        lines.append(
+            f"| {label} | {row.get('support', 0)} | {row.get('predicted', 0)} | "
+            f"{row.get('true_positive', 0)} | {_pct(row.get('precision'), 3)} | "
+            f"{_pct(row.get('recall'), 3)} | {_pct(row.get('f1'), 3)} |")
+    lines += ["", "混淆矩阵（真实 → 预测，只列非零项）：", ""]
+    for actual, row in (block.get("confusion") or {}).items():
+        counts = {predicted: count for predicted, count in row.items() if count}
+        if counts:
+            lines.append(f"- {actual} → "
+                         + "、".join(f"{predicted}:{count}" for predicted, count in counts.items()))
+    lines += ["", block.get("reading") or "", block.get("not_measured") or "", ""]
     return lines
 
 
@@ -1061,6 +1108,7 @@ def format_markdown(report: Mapping[str, Any]) -> str:
     lines += _render_citation_level(report.get("citation_level") or {})
     lines += _render_chat_citations(report.get("chat_citations") or {})
     lines += _render_retrieval_metrics(report.get("retrieval_metrics") or {})
+    lines += _render_intent_metrics(report.get("intent_metrics") or {})
     lines += _render_reliability(report.get("reliability") or {})
 
     lines += [
