@@ -328,6 +328,33 @@ class RerankTest(_KbBase):
         self.assertEqual(search.await_args.kwargs["limit"], 3, "关掉时召回条数不变")
         self.assertEqual(rerank_call.await_count, 0, "关掉时不该发生重排调用")
 
+    async def test_only_the_head_window_is_sent_to_the_model(self):
+        """LLM 重排的可靠区间是小候选集：只把前 `RERANK_WINDOW` 条交给模型。"""
+        candidates = [{"chunk_id": index, "score": 0.5,
+                       "payload": {"meeting_id": 1, "authority": "RAW", "text": f"第{index}片",
+                                   "start_ms": index * 1000, "end_ms": index * 1000 + 500,
+                                   "chunk_type": "TRANSCRIPT_WINDOW"}}
+                      for index in range(1, kb_service.RERANK_CANDIDATES + 1)]
+        captured: dict = {}
+
+        async def fake_invoke(config, system, user, schema, call_type, biz_id, label, validator=None):
+            captured["prompt"] = user
+            return {"ranking": list(range(kb_service.RERANK_WINDOW, 0, -1))}
+
+        with patch.dict(os.environ, {"KB_RERANK_ENABLED": "1"}), \
+             patch.object(kb_service.model_factory, "embed_texts",
+                          AsyncMock(return_value=[[0.1] * 8])), \
+             patch.object(kb_service.qdrant, "hybrid_search", AsyncMock(return_value=candidates)), \
+             patch.object(kb_service, "_chat_config", AsyncMock(return_value=self.config)), \
+             patch.object(kb_service.model_factory, "invoke_json", AsyncMock(side_effect=fake_invoke)):
+            hits = await kb_service.search_knowledge("灰度", allowed_meeting_ids=None, limit=3)
+        self.assertIn(f"共 {kb_service.RERANK_WINDOW} 条", captured["prompt"])
+        self.assertNotIn(f"[{kb_service.RERANK_WINDOW + 1}]", captured["prompt"],
+                         "窗口之外的候选不该进提示词")
+        self.assertEqual([hit.chunk_id for hit in hits],
+                         [kb_service.RERANK_WINDOW, kb_service.RERANK_WINDOW - 1,
+                          kb_service.RERANK_WINDOW - 2])
+
     async def test_enabled_fetches_more_candidates_then_cuts_to_limit(self):
         candidates = [{"chunk_id": index, "score": 0.5,
                        "payload": {"meeting_id": 1, "authority": "RAW", "text": f"第{index}片",
@@ -347,11 +374,10 @@ class RerankTest(_KbBase):
         self.assertEqual(search.await_args.kwargs["limit"], kb_service.RERANK_CANDIDATES)
         self.assertEqual(rerank_call.await_args.args[4], kb_service.RERANK_CALL_TYPE)
         self.assertEqual(len(hits), 3)
-        # 模型给的是**倒序**（最后一片最强）：取前 3 条应当是原来的第 24/23/22 片
+        # 模型给的是**窗口内倒序**：窗口是前 10 条，倒过来最强的是第 10 片
         self.assertEqual([hit.chunk_id for hit in hits],
-                         [kb_service.RERANK_CANDIDATES,
-                          kb_service.RERANK_CANDIDATES - 1,
-                          kb_service.RERANK_CANDIDATES - 2])
+                         [kb_service.RERANK_WINDOW, kb_service.RERANK_WINDOW - 1,
+                          kb_service.RERANK_WINDOW - 2])
 
     async def test_rerank_failure_falls_back_to_the_original_order(self):
         candidates = [{"chunk_id": index, "score": 0.5,
