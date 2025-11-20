@@ -182,18 +182,29 @@ async def _charged_stream(session: ChatSession, question: str,
                           current_user: User) -> AsyncIterator[tuple[str, dict[str, Any]]]:
     """跑一轮问答，并把这一轮真实用掉的 token 记进当日额度。
 
-    记账放在 `finally`：无论是正常结束、模型失败还是客户端断开，用量都发生过
-    （`ai_call_log` 里有真实记录），不记就等于预算闸可以被"反复断开"绕过。
-    读不到用量时按 0 记（限流后端故障时 fail-open，见 common/ratelimit.py）。
+    两条口径：
+    - **按账本记账，不按 done 事件记账**：客户端在答案生成完之前断开时拿不到
+      done，若按它记账，"提问→立刻断开"就能无限绕开预算；`ai_call_log` 里的行
+      是每次调用当场写的，与客户端在不在无关（拿不到 meta 时按 0 记）。
+    - 记账放在 `finally`，且**尽力而为**：正常结束、模型失败、客户端断开都会尝试
+      记一次；应用关停的极窄窗口里可能记不上（那时日志里查得到账本行，
+      预算少算这一次不会累积放大）。限流后端故障时 fail-open。
     """
-    used = 0
-    async for kind, payload in chat_service.stream_answer(session, question, user=current_user):
-        if kind == "done":
-            used = int((payload.get("tokens") or {}).get("total_tokens") or 0)
-        yield (kind, payload)
-    if DAILY_TOKEN_BUDGET > 0 and used:
-        await ratelimit.spend("chat-tokens", str(current_user.id), used,
-                              limit=DAILY_TOKEN_BUDGET, window_seconds=86_400)
+    message_id: int | None = None
+    try:
+        async for kind, payload in chat_service.stream_answer(session, question, user=current_user):
+            if kind == "meta":
+                message_id = int(payload.get("message_id") or 0) or None
+            yield (kind, payload)
+    finally:
+        if DAILY_TOKEN_BUDGET > 0:
+            with contextlib.suppress(BaseException):
+                used = 0
+                if message_id:
+                    used = int((await chat_service.turn_tokens(message_id)).get("total_tokens") or 0)
+                if used:
+                    await ratelimit.spend("chat-tokens", str(current_user.id), used,
+                                          limit=DAILY_TOKEN_BUDGET, window_seconds=86_400)
 
 
 async def _sse_frames(source: AsyncIterator[tuple[str, dict[str, Any]]],

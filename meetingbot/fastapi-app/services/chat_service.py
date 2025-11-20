@@ -434,7 +434,7 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
             # 拦下整段回答：正文不返回，改由下面的 error 事件给提示
             failure = moderation.BLOCKED_MESSAGE
     stop_reason = str(final_state.get("stop_reason") or "")
-    tokens = await _turn_tokens(assistant_row.id)
+    tokens = await turn_tokens(assistant_row.id)
     stored = await _persist_turn(assistant_row, answer=answer, stop_reason=stop_reason,
                                  registry=registry, state=final_state, failure=failure,
                                  tokens=tokens, moderation_verdict=output_verdict)
@@ -490,8 +490,13 @@ def _tool_output_text(event: dict[str, Any]) -> str:
     return str(output or "")
 
 
-async def _turn_tokens(message_id: int) -> dict[str, int]:
-    """本轮 token 用量：直接聚合 ai_call_log（记账的唯一真源，不再另记一份）。"""
+async def turn_tokens(message_id: int) -> dict[str, int]:
+    """本轮 token 用量：直接聚合 ai_call_log（记账的唯一真源，不再另记一份）。
+
+    接口层也用它——**按账本记账而不是按 done 事件记账**：客户端在答案生成完之前
+    断开时拿不到 done 事件，若按它记账，反复"提问→立刻断开"就能绕开每日预算。
+    账本里的行是每次调用当场写的，与客户端在不在无关。
+    """
     totals = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
     rows = await AiCallLog.filter(biz_id=message_id, call_type=CHAT_CALL_TYPE)
     for row in rows:
@@ -540,6 +545,6 @@ __all__ = [
     "ChatError", "CHAT_CALL_TYPE", "SUMMARY_CALL_TYPE", "DEFAULT_SYSTEM_PROMPT",
     "CITATION_PROTOCOL", "create_session", "get_session", "list_sessions",
     "delete_session", "list_messages", "build_memory", "maybe_summarize", "question_message",
-    "build_tools", "stream_answer", "get_model_config", "get_system_prompt",
+    "build_tools", "stream_answer", "get_model_config", "get_system_prompt", "turn_tokens",
     "history_window", "summary_threshold", "MESSAGE_USER", "MESSAGE_ASSISTANT",
 ]

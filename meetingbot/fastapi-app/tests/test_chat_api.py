@@ -17,7 +17,7 @@ from common import ratelimit
 from common.auth import create_token
 from common.exception_handler import setup_exceptions
 from fastapi import FastAPI
-from models import User
+from models import AiCallLog, User
 from services import chat_service
 from tortoise import Tortoise
 
@@ -268,9 +268,15 @@ class ChatBudgetGateTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("今日问答额度已用完", response.json()["msg"])
 
     async def test_turn_tokens_are_charged_to_the_daily_budget(self):
+        """额度按账本记：账本里有 40 token，这一轮就扣 40。"""
         session_id = await self._session_id()
+        await AiCallLog.create(request_id="AIC-CHARGE-1", call_type="CHAT", biz_id=1,
+                               model_config_id=1, model_name="m", status="SUCCEEDED",
+                               usage_json={"input_tokens": 25, "output_tokens": 15,
+                                           "total_tokens": 40})
 
         async def fake_stream(session, question, *, user, model=None):
+            yield ("meta", {"session_id": session.id, "message_id": 1})
             yield ("token", {"text": "答"})
             yield ("done", {"message_id": 1, "stop_reason": "finished", "notice": "",
                             "tokens": {"total_tokens": 40}, "citations": [],
@@ -288,6 +294,41 @@ class ChatBudgetGateTest(unittest.IsolatedAsyncioTestCase):
         remaining = await ratelimit.quota_remaining("chat-tokens", str(self.user.id),
                                                    limit=1000, window_seconds=86_400)
         self.assertEqual(remaining, 960)
+
+    async def test_disconnect_still_charges_the_budget(self):
+        """客户端提前断开也要记账：按账本（ai_call_log）记，不按 done 事件记。
+
+        否则"提问 → 看到答案开头就断开"可以无限绕开每日预算——那正是这条闸门
+        存在的理由。
+        """
+        session_id = await self._session_id()
+        message_id = 4242
+        await AiCallLog.create(request_id="AIC-DISCONNECT-1", call_type="CHAT",
+                               biz_id=message_id, model_config_id=1, model_name="m",
+                               status="SUCCEEDED",
+                               usage_json={"input_tokens": 60, "output_tokens": 40,
+                                           "total_tokens": 100})
+
+        async def fake_stream(session, question, *, user, model=None):
+            yield ("meta", {"session_id": session.id, "message_id": message_id})
+            yield ("token", {"text": "开"})
+            await asyncio.sleep(30)   # 模拟"答案还在生成，客户端走了"
+
+        with patch.object(chat_service, "stream_answer", fake_stream), \
+                patch.object(chat_api, "ASK_LIMIT_PER_USER", 0), \
+                patch.object(chat_api, "ASK_LIMIT_PER_IP", 0), \
+                patch.object(chat_api, "DAILY_TOKEN_BUDGET", 10_000):
+            frames = chat_api._sse_frames(
+                chat_api._charged_stream(
+                    await chat_service.get_session(session_id, self.user), "问", self.user),
+                heartbeat=5)
+            first = await frames.__anext__()
+            self.assertTrue(first.startswith("event: meta"))
+            await frames.aclose()   # 断开
+
+        remaining = await ratelimit.quota_remaining("chat-tokens", str(self.user.id),
+                                                   limit=10_000, window_seconds=86_400)
+        self.assertEqual(remaining, 9_900, "断开后仍未记账：预算闸可被绕过")
 
     async def test_ratelimit_backend_failure_does_not_block_asking(self):
         session_id = await self._session_id()
