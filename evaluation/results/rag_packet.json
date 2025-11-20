@@ -1569,7 +1569,127 @@
           ],
           "missing_facts": []
         },
-        "answer_error": "ModelClientError: TimeoutError: The read operation timed out（等待响应头已耗时 180191 ms；这一段时间包含连接与建立，也包含服务端思考到发出响应头，要区分网络与服务端请用 probe_transport）"
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "正式发布前还需补充两组验收数据。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "第一组验收数据是至少30分钟的真实会议录音。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "第一组验收数据用于验证长音频切分。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "第一组验收数据用于验证异步进度。",
+              "supported": true
+            },
+            {
+              "index": 5,
+              "text": "第一组验收数据用于验证整场转写的单遍纪要生成。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "第二组验收数据是包含多个角色发言的会议内容。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "第二组验收数据用于检查说话人标签与员工身份的匹配效果。",
+              "supported": true
+            },
+            {
+              "index": 8,
+              "text": "以上信息均来自“产品发布评审会议”。",
+              "supported": false
+            },
+            {
+              "index": 9,
+              "text": "该会议的 meeting_id 为 2。",
+              "supported": false
+            },
+            {
+              "index": 10,
+              "text": "张晨在转写中说明还需要在正式发布前补充两组验收数据。",
+              "supported": true
+            },
+            {
+              "index": 11,
+              "text": "张晨说明第一组是至少30分钟的真实会议录音，用于验证长音频切分、异步进度和整场转写的单遍纪要生成。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "张晨关于第一组验收数据的说明开始于 320 秒。",
+              "supported": true
+            },
+            {
+              "index": 13,
+              "text": "张晨说明第二组是包含多个角色发言的会议内容，用于检查说话人标签与员工身份的匹配效果。",
+              "supported": true
+            },
+            {
+              "index": 14,
+              "text": "张晨关于第二组验收数据的说明开始于 346 秒。",
+              "supported": true
+            },
+            {
+              "index": 15,
+              "text": "存在决策条目记录了发布前须完成两组补充验收。",
+              "supported": true
+            },
+            {
+              "index": 16,
+              "text": "决策条目记录了第一组为至少30分钟真实会议录音，验证长音频切分、异步进度与整场转写的单遍纪要生成。",
+              "supported": true
+            },
+            {
+              "index": 17,
+              "text": "决策条目记录了第二组为含多个角色发言的会议内容，验证说话人标签与员工身份匹配效果。",
+              "supported": true
+            },
+            {
+              "index": 18,
+              "text": "该决策条目被描述为人工确认的条目。",
+              "supported": false
+            },
+            {
+              "index": 19,
+              "text": "观点条目佐证该待办事项归属陈琳。",
+              "supported": true
+            },
+            {
+              "index": 20,
+              "text": "陈琳是测试负责人。",
+              "supported": true
+            },
+            {
+              "index": 21,
+              "text": "观点条目重申了同样的两组验收数据内容。",
+              "supported": true
+            },
+            {
+              "index": 22,
+              "text": "该观点条目被描述为人工确认的条目。",
+              "supported": false
+            },
+            {
+              "index": 23,
+              "text": "回答引用了来源 [7] 作为观点条目依据。",
+              "supported": false
+            }
+          ],
+          "answered": true,
+          "why": "回答直接列出了正式发布前需要补充的两组验收数据，核心事实有上下文支撑。"
+        }
       }
     },
     {
@@ -2127,7 +2247,117 @@
           ],
           "missing_facts": []
         },
-        "answer_error": "ModelClientError: TimeoutError: The read operation timed out（等待响应头已耗时 180177 ms；这一段时间包含连接与建立，也包含服务端思考到发出响应头，要区分网络与服务端请用 probe_transport）"
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "发布公告任务包含会议创建入口。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "发布公告任务包含录音上传入口。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "发布公告任务包含纪要确认入口。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "发布公告任务包含任务跟踪入口。",
+              "supported": true
+            },
+            {
+              "index": 5,
+              "text": "发布公告任务包含知识库问答入口。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "发布公告任务包含的入口共5个。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "发布公告任务负责人是赵敏。",
+              "supported": true
+            },
+            {
+              "index": 8,
+              "text": "发布公告任务协作人是周宁。",
+              "supported": true
+            },
+            {
+              "index": 9,
+              "text": "发布公告任务截止时间是9月1日09:00。",
+              "supported": true
+            },
+            {
+              "index": 10,
+              "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）。",
+              "supported": false
+            },
+            {
+              "index": 11,
+              "text": "张晨在转写中说明赵敏运营团队在9月1日九点前完成发布公告使用指引和部门通知。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "该转写对应 start_second=681。",
+              "supported": true
+            },
+            {
+              "index": 13,
+              "text": "该转写引用上下文[2][3][4]。",
+              "supported": false
+            },
+            {
+              "index": 14,
+              "text": "人工确认的决策条目记录运营负责人赵敏牵头，协作人周宁，于9月1日9:00前完成发布公告与部门通知。",
+              "supported": true
+            },
+            {
+              "index": 15,
+              "text": "该决策条目记录引用上下文[1]。",
+              "supported": false
+            },
+            {
+              "index": 16,
+              "text": "各负责人确认环节再次核实赵敏确认发布公告和部门通知任务9月1日九点完成。",
+              "supported": true
+            },
+            {
+              "index": 17,
+              "text": "该确认对应 start_second=784。",
+              "supported": true
+            },
+            {
+              "index": 18,
+              "text": "该确认引用上下文[7]。",
+              "supported": false
+            },
+            {
+              "index": 19,
+              "text": "此前对话摘要中提到李婷、8月31日17:00、产品内弹窗/官网公告/邮件通知等信息。",
+              "supported": false
+            },
+            {
+              "index": 20,
+              "text": "这些信息在本次针对 meeting_id=2 的工具检索结果中未找到对应记录。",
+              "supported": false
+            },
+            {
+              "index": 21,
+              "text": "本次回答严格以工具返回内容为准。",
+              "supported": false
+            }
+          ],
+          "answered": true,
+          "why": "回答直接给出了发布公告任务的入口、负责人和截止时间，核心问题被正面回答。"
+        }
       }
     },
     {
@@ -2214,7 +2444,152 @@
           ],
           "missing_facts": []
         },
-        "answer_error": "ModelClientError: TimeoutError: The read operation timed out（等待响应头已耗时 180189 ms；这一段时间包含连接与建立，也包含服务端思考到发出响应头，要区分网络与服务端请用 probe_transport）"
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "正式发布时间为9月1日09:00。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "决策确认了正式发布时间。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "会议纪要确认了正式发布时间。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "转写中提及上午十点作为对外公告同步时间点。",
+              "supported": true
+            },
+            {
+              "index": 5,
+              "text": "会议最终决策以09:00为准。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "前提条件包括移动端附件下载进度任务按时完成。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "前提条件包括发布回归任务按时完成。",
+              "supported": true
+            },
+            {
+              "index": 8,
+              "text": "若任一阻断任务未完成，由张晨和王工于8月31日17:00召开专项评审。",
+              "supported": true
+            },
+            {
+              "index": 9,
+              "text": "专项评审决定是否调整发布时间。",
+              "supported": true
+            },
+            {
+              "index": 10,
+              "text": "以上信息均来自产品发布评审会议（meeting_id=2）。",
+              "supported": false
+            },
+            {
+              "index": 11,
+              "text": "人工确认的决策条目明确写道：同意于9月1日9:00正式发布AI智能会议助手与任务跟踪系统，并有全体负责人和2023-09-01T09:00:00。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "该决策条目对应上下文编号[5]。",
+              "supported": false
+            },
+            {
+              "index": 13,
+              "text": "会议纪要摘要确认明确9月1日9:00正式发布。",
+              "supported": true
+            },
+            {
+              "index": 14,
+              "text": "会议纪要摘要确认约定阻断任务未完成时的专项评审机制。",
+              "supported": true
+            },
+            {
+              "index": 15,
+              "text": "该会议纪要摘要对应上下文编号[6]。",
+              "supported": false
+            },
+            {
+              "index": 16,
+              "text": "张晨在863秒转写中说明产品研发、测试、运营和客户支持均同意在9月1日九点按计划发布。",
+              "supported": true
+            },
+            {
+              "index": 17,
+              "text": "张晨在863秒转写中说明前提是移动端附件下载进度任务和发布回归任务按时完成。",
+              "supported": true
+            },
+            {
+              "index": 18,
+              "text": "该863秒转写对应上下文编号[1]。",
+              "supported": false
+            },
+            {
+              "index": 19,
+              "text": "张晨在879秒转写中说明如果任意阻断任务没有完成，由张晨和王工在8月31日下午五点召开专项评审。",
+              "supported": true
+            },
+            {
+              "index": 20,
+              "text": "该专项评审决定是否调整发布时间。",
+              "supported": true
+            },
+            {
+              "index": 21,
+              "text": "该879秒转写对应上下文编号[1]。",
+              "supported": false
+            },
+            {
+              "index": 22,
+              "text": "风险条目说明阻断任务未按时完成将触发发布时间调整风险。",
+              "supported": true
+            },
+            {
+              "index": 23,
+              "text": "风险条目说明由张晨与王工于8月31日17:00召开专项评审。",
+              "supported": true
+            },
+            {
+              "index": 24,
+              "text": "该风险条目对应上下文编号[7]。",
+              "supported": false
+            },
+            {
+              "index": 25,
+              "text": "系统管理员在195秒转写中说发公告和通告一起都放在发布当天上午十点。",
+              "supported": true
+            },
+            {
+              "index": 26,
+              "text": "该195秒转写对应上下文编号[3]。",
+              "supported": false
+            },
+            {
+              "index": 27,
+              "text": "上午十点仅指对外公告同步时间，并非正式发布决策时间。",
+              "supported": true
+            },
+            {
+              "index": 28,
+              "text": "正式发布以决策条目确认的9:00为准。",
+              "supported": true
+            }
+          ],
+          "answered": true,
+          "why": "回答正面给出了正式发布时间和前提条件，核心事实有上下文支撑，但会议标识及部分引用编号未被上下文支撑。"
+        }
       }
     },
     {
@@ -2820,7 +3195,187 @@
           "text": "[viewpoints] 王工 灰度期间后端接口无500错误；会议纪要模型调用成功率为98.6%（平均耗时7.8秒），Agent工具调用成功率为97.9%；两次失败源于外部模型服务短暂超时，系统已保存失败原因并支持用户重试；所有会议相关数据（转写、纪要、知识索引、Agent运行记录）均存于MySQL；知识索引更新时旧版本仍可检索，直至新版本切换完成；当前RE返回结构已包含引用会议名称、来源类型、时间点和原文片段。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "包含跨会议问答希望展示的引用字段，以及前端引用卡片可点开查看会议、说话人和时间点。"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "重复包含跨会议问答希望展示的引用字段和前端引用卡片信息。"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "提到知识问答引用需包含会议名称、来源类型、时间点和原文片段。"
+            },
+            {
+              "index": 4,
+              "useful": true,
+              "why": "提到当前RE返回结构已包含引用会议名称、来源类型、时间点和原文片段。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 1
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "跨会议问答希望用户看到引用的会议名称。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "跨会议问答希望用户看到引用的来源类型。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "跨会议问答希望用户看到引用的时间点。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "跨会议问答希望用户看到引用的原文片段。",
+              "supported": true
+            },
+            {
+              "index": 5,
+              "text": "前端会在回答下方展示带出处的引用卡片。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "引用卡片点击后能看到是哪场会。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "引用卡片点击后能看到是谁说的。",
+              "supported": true
+            },
+            {
+              "index": 8,
+              "text": "引用卡片点击后能看到是第几秒。",
+              "supported": true
+            },
+            {
+              "index": 9,
+              "text": "纪要和附件来源会显示文件或纪要版本名称。",
+              "supported": true
+            },
+            {
+              "index": 10,
+              "text": "以上信息均来自“产品发布评审会议”。",
+              "supported": false
+            },
+            {
+              "index": 11,
+              "text": "该会议的 meeting_id 为 2。",
+              "supported": false
+            },
+            {
+              "index": 12,
+              "text": "张晨在转写中说明用户提问跨会议问题后不仅应看到答案，还应看到引用信息。",
+              "supported": true
+            },
+            {
+              "index": 13,
+              "text": "张晨说明该期望展示字段的时间点为 start_second=462。",
+              "supported": true
+            },
+            {
+              "index": 14,
+              "text": "张晨说明当前 RE 返回结构已经包含这些引用信息。",
+              "supported": true
+            },
+            {
+              "index": 15,
+              "text": "张晨说明转写来源会显示时间点。",
+              "supported": true
+            },
+            {
+              "index": 16,
+              "text": "张晨说明纪要和附件来源会显示文件或纪要版本名称。",
+              "supported": true
+            },
+            {
+              "index": 17,
+              "text": "张晨说明前端会在回答下面展示带出处的引用卡片，点开能看到出处详情。",
+              "supported": true
+            },
+            {
+              "index": 18,
+              "text": "张晨说明前端交互与细分来源展示规则的时间点为 start_second=482。",
+              "supported": true
+            },
+            {
+              "index": 19,
+              "text": "观点条目将会议名称、来源类型、时间点、原文片段列为客服侧关注引用清晰度的要点。",
+              "supported": true
+            },
+            {
+              "index": 20,
+              "text": "王工在观点中确认当前 RE 返回结构已包含引用会议名称、来源类型、时间点和原文片段。",
+              "supported": true
+            },
+            {
+              "index": 21,
+              "text": "工具返回内容已明确引用信息的字段组成。",
+              "supported": true
+            },
+            {
+              "index": 22,
+              "text": "工具返回内容已明确前端引用卡片交互。",
+              "supported": true
+            },
+            {
+              "index": 23,
+              "text": "工具返回内容已明确不同来源类型的差异化展示。",
+              "supported": true
+            },
+            {
+              "index": 24,
+              "text": "工具返回内容未提供引用卡片的 UI 样式规范。",
+              "supported": true
+            },
+            {
+              "index": 25,
+              "text": "工具返回内容未提供字段截断长度。",
+              "supported": true
+            },
+            {
+              "index": 26,
+              "text": "工具返回内容未提供缺失字段时的降级策略。",
+              "supported": true
+            },
+            {
+              "index": 27,
+              "text": "如需 UI 样式、字段截断长度、缺失字段降级策略等细节，当前资料不足。",
+              "supported": true
+            }
+          ],
+          "answered": true,
+          "why": "回答直接给出了四项引用信息并补充了展示方式，主要事实有上下文支撑，但会议名称和meeting_id无上下文依据。"
+        }
+      }
     },
     {
       "case_id": "q20",
@@ -2861,7 +3416,192 @@
           "text": "[193s][张晨] 两次失败都来自外部模型服务短暂超时，系统已保存失败原因和耗时，用户可以从失败状态发起重试。\n[206s][张晨] 王工继续数据库方面，会议转写、纪要任务、知识索引和agent运行记录都保存在my sql知识库，切片保存在知识库切片表里，向量存进独立的向量库。\n[224s][张晨] 我们检查了长会议的转写和纪要生成流程，音频会按时长切分，转写完成后生成带时间轴的片段，纪要由整场转写一次生成，不再分段总结再合并；生成后由 agent 对着原文自检一遍。\n[249s][张晨] 对于资料更新，知识索引会标记为需要重建，旧版本仍保持可检索，直到新版本完成切换。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "明确说明知识索引构建期间资料更新时须由资料维护人整理后统一重建。"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "会议决策总结中直接给出资料变化时由资料维护人完成整理后重新构建。"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "提到构建期间资料变化后建议资料整理完成后再发起构建，与处理方式相关。"
+            },
+            {
+              "index": 4,
+              "useful": true,
+              "why": "提出资料整理完成后统一发起知识索引构建，与问题相关。"
+            },
+            {
+              "index": 5,
+              "useful": false,
+              "why": "只说明资料更新会标记需要重建及旧版本可检索，未给出会议决策的处理方式。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 2
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "按会议决策，知识索引构建期间若发生资料更新，必须由资料维护人完成全部资料整理后，再统一发起重建流程。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "该处理方式用于确保索引一致性。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "不允许在构建过程中穿插增量更新。",
+              "supported": false
+            },
+            {
+              "index": 4,
+              "text": "以上信息均来自“产品发布评审会议”。",
+              "supported": false
+            },
+            {
+              "index": 5,
+              "text": "以上信息来自 meeting_id=2。",
+              "supported": false
+            },
+            {
+              "index": 6,
+              "text": "存在决策条目写明：“知识索引构建期间若发生资料更新，须由资料维护人完成全部整理后，统一发起重建流程，确保索引一致性”。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "该决策条目是人工确认的决策条目。",
+              "supported": false
+            },
+            {
+              "index": 8,
+              "text": "张晨在会议总结中确认第三项决策为“知识索引构建期间资料变化时，由资料维护人完成整理后重新构建”。",
+              "supported": true
+            },
+            {
+              "index": 9,
+              "text": "张晨该会议总结第三项决策发生在 926 秒。",
+              "supported": true
+            },
+            {
+              "index": 10,
+              "text": "回答将 926 秒决策内容标注为上下文 [5]。",
+              "supported": false
+            },
+            {
+              "index": 11,
+              "text": "张晨说明如果用户在知识索引构建过程中上传新附件或修订转写文本，索引状态会保持需要重建。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "张晨建议资料整理完成后再发起构建。",
+              "supported": true
+            },
+            {
+              "index": 13,
+              "text": "张晨该说明发生在 538 秒。",
+              "supported": true
+            },
+            {
+              "index": 14,
+              "text": "回答将 538 秒说明标注为上下文 [3]。",
+              "supported": true
+            },
+            {
+              "index": 15,
+              "text": "存在风险条目写明会议资料频繁更新导致知识索引长期处于“需要重建”状态，影响检索时效性与一致性，并建议资料整理完成后统一发起知识索引构建。",
+              "supported": true
+            },
+            {
+              "index": 16,
+              "text": "该风险条目风险等级为 MEDIUM。",
+              "supported": true
+            },
+            {
+              "index": 17,
+              "text": "该风险条目是人工确认的风险条目。",
+              "supported": false
+            },
+            {
+              "index": 18,
+              "text": "回答将该风险条目标注为上下文 [2]。",
+              "supported": false
+            },
+            {
+              "index": 19,
+              "text": "张晨说明对于资料更新，知识索引会标记为需要重建。",
+              "supported": true
+            },
+            {
+              "index": 20,
+              "text": "张晨说明旧版本仍保持可检索，直到新版本完成切换。",
+              "supported": true
+            },
+            {
+              "index": 21,
+              "text": "张晨该说明发生在 249 秒。",
+              "supported": true
+            },
+            {
+              "index": 22,
+              "text": "回答将 249 秒说明标注为上下文 [4]。",
+              "supported": false
+            },
+            {
+              "index": 23,
+              "text": "这说明重建期间服务不中断。",
+              "supported": true
+            },
+            {
+              "index": 24,
+              "text": "当前资料未提供资料维护人的具体身份。",
+              "supported": true
+            },
+            {
+              "index": 25,
+              "text": "当前资料未提供重建流程的操作入口。",
+              "supported": true
+            },
+            {
+              "index": 26,
+              "text": "当前资料未提供预计耗时。",
+              "supported": true
+            },
+            {
+              "index": 27,
+              "text": "当前资料未提供重建流程的失败重试机制。",
+              "supported": true
+            },
+            {
+              "index": 28,
+              "text": "如需此类执行细节，当前资料不足。",
+              "supported": true
+            }
+          ],
+          "answered": true,
+          "why": "回答正面给出了会议决策要求的处理方式，核心结论有上下文支撑，但包含会议名称、meeting_id、人工确认、引用编号及“不允许增量更新”等未被上下文支撑的内容。"
+        }
+      }
     },
     {
       "case_id": "q21",
@@ -2892,7 +3632,167 @@
           "text": "[205s][系统管理员] 可以通稿，定稿时间就定在发布前一日下午六点前。\n[211s][张晨] 还有个风险我要提一下，异步改造和灰度发布挨得太近，如果改造延期可能会影响到后面的排期。\n[220s][系统管理员] 这个风险记下来。\n[222s][系统管理员] 张涛，你这周三给我一个中期进度，如果到周三还没完成联调，我们就把报表导出推到下个版本。\n[230s][张晨] 行，周三给进度。\n[232s][张晨] 那今天的结。\n[233s][系统管理员] 论我复述一遍，第一，V2.0按期发布，报表导出入口先隐藏。\n[240s][系统管理员] 第二，灰度按10%、50%全量分三天走。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "直接说明了V2.0计划内需求验收通过数量、剩余需求以及消息推送已修完并回归通过。"
+            },
+            {
+              "index": 2,
+              "useful": false,
+              "why": "主要讲发布结论、灰度计划和行动项，未提供验收情况本身。"
+            },
+            {
+              "index": 3,
+              "useful": false,
+              "why": "主要讲通稿定稿、风险和报表导出排期，不回答需求验收情况。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 3,
+              "found": true,
+              "in_context": 1
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "V2.0 计划内共17个需求。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "V2.0 计划内已有15个需求验收通过。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "剩余2个未完成需求为报表导出和消息推送免打扰设置。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "消息推送免打扰设置已修复。",
+              "supported": true
+            },
+            {
+              "index": 5,
+              "text": "消息推送免打扰设置已于昨日回归通过。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "报表导出功能在压测中暴露问题。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "报表导出功能尚未完成验收。",
+              "supported": true
+            },
+            {
+              "index": 8,
+              "text": "会议决策将报表导出入口先隐藏。",
+              "supported": true
+            },
+            {
+              "index": 9,
+              "text": "会议决策将报表导出异步化改造推迟处理。",
+              "supported": false
+            },
+            {
+              "index": 10,
+              "text": "V2.0 计划内需求并未全部通过验收。",
+              "supported": true
+            },
+            {
+              "index": 11,
+              "text": "上述信息来自产品发布评审会议。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "该会议的 meeting_id=2。",
+              "supported": false
+            },
+            {
+              "index": 13,
+              "text": "张晨在 start_second=15 说明了V2.0计划内17个需求已验收通过15个，剩下报表导出和消息推送免打扰设置。",
+              "supported": true
+            },
+            {
+              "index": 14,
+              "text": "张晨在 start_second=26 说明消息推送已修完且昨天回归通过。",
+              "supported": true
+            },
+            {
+              "index": 15,
+              "text": "张晨在 start_second=35 说明报表导出的问题在压测里暴露出来。",
+              "supported": true
+            },
+            {
+              "index": 16,
+              "text": "系统管理员在 start_second=233 宣布 V2.0 按期发布。",
+              "supported": true
+            },
+            {
+              "index": 17,
+              "text": "系统管理员在 start_second=233 宣布报表导出入口先隐藏。",
+              "supported": true
+            },
+            {
+              "index": 18,
+              "text": "系统管理员在 start_second=245 明确张涛负责报表导出异步化改造。",
+              "supported": true
+            },
+            {
+              "index": 19,
+              "text": "张涛需在本周五前完成报表导出异步化改造。",
+              "supported": true
+            },
+            {
+              "index": 20,
+              "text": "上下文未提供已通过验收的15项需求清单。",
+              "supported": true
+            },
+            {
+              "index": 21,
+              "text": "上下文未提供报表导出压测问题的具体现象。",
+              "supported": true
+            },
+            {
+              "index": 22,
+              "text": "上下文未提供消息推送免打扰设置的验收凭证。",
+              "supported": true
+            },
+            {
+              "index": 23,
+              "text": "当前资料不足以提供上述细节。",
+              "supported": true
+            }
+          ],
+          "answered": true,
+          "why": "回答正面说明了V2.0计划内需求的验收数量、剩余项和进展，但存在未支撑的meeting_id=2及“异步化改造推迟处理”表述。"
+        }
+      }
     },
     {
       "case_id": "q22",
@@ -2922,7 +3822,187 @@
           "text": "[58s][张晨] 有两个方案，一是加缓存，把常用的时间范围预生成，但覆盖不全，用户选个冷门区间还是慢。\n[67s][张晨] 二是改成异步任务，用户点导出之后先返回一个任务号，后台跑完了再通知他下载这个方案彻底一些。\n[77s][张晨] 从用户体验看，异步方案更好导出本来就是个低频操作，等一会儿可以接受卡在那转圈40秒反而更差。\n[87s][系统管理员] 异步方案要改多久？\n[89s][张晨] 涉及三个服务，导出服务、任务调度，还有消息通知。\n[94s][张晨] 开发两天，连调一天，测试两天，加起来一周。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "直接说明压测暴露的报表导出接口超时和500并发失败率问题。"
+            },
+            {
+              "index": 2,
+              "useful": false,
+              "why": "只涉及发布安排和行动项，未说明压测暴露的具体问题。"
+            },
+            {
+              "index": 3,
+              "useful": false,
+              "why": "只讨论解决方案和工期，未说明压测暴露的具体问题。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 1
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "报表导出在压测里暴露了问题。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "单个用户导出三个月的数据接口要跑四十多秒。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "该接口耗时超过了网关30秒的超时限制。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "压测并发数为500。",
+              "supported": true
+            },
+            {
+              "index": 5,
+              "text": "该接口失败率到了12%。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "其他接口都是正常的。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）。",
+              "supported": false
+            },
+            {
+              "index": 8,
+              "text": "张晨说“单个用户导出三个月的数据接口要跑四十多秒，超过了网关30秒的超时限制”。",
+              "supported": true
+            },
+            {
+              "index": 9,
+              "text": "该发言对应 start_second=38。",
+              "supported": true
+            },
+            {
+              "index": 10,
+              "text": "张晨说“我们压了500并发，这个接口的失败率到了12%，其他接口都是正常的”。",
+              "supported": true
+            },
+            {
+              "index": 11,
+              "text": "该发言对应 start_second=46。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "系统管理员说“四十多秒确实不能接受”。",
+              "supported": true
+            },
+            {
+              "index": 13,
+              "text": "该发言对应 start_second=52。",
+              "supported": true
+            },
+            {
+              "index": 14,
+              "text": "系统管理员决策“V2.0按期发布，报表导出入口先隐藏”。",
+              "supported": true
+            },
+            {
+              "index": 15,
+              "text": "该决策对应 start_second=233。",
+              "supported": true
+            },
+            {
+              "index": 16,
+              "text": "张晨提出改成异步任务：用户点导出后先返回任务号，后台跑完再通知下载。",
+              "supported": true
+            },
+            {
+              "index": 17,
+              "text": "张晨认为异步方案更彻底。",
+              "supported": true
+            },
+            {
+              "index": 18,
+              "text": "张晨评估异步方案工期为一周。",
+              "supported": true
+            },
+            {
+              "index": 19,
+              "text": "异步方案提出与工期评估对应 start_second=67–94。",
+              "supported": true
+            },
+            {
+              "index": 20,
+              "text": "异步化改造方案与前述报表导出性能问题直接对应。",
+              "supported": true
+            },
+            {
+              "index": 21,
+              "text": "上下文提供了响应时长指标。",
+              "supported": true
+            },
+            {
+              "index": 22,
+              "text": "上下文提供了超时阈值指标。",
+              "supported": true
+            },
+            {
+              "index": 23,
+              "text": "上下文提供了并发数指标。",
+              "supported": true
+            },
+            {
+              "index": 24,
+              "text": "上下文提供了失败率指标。",
+              "supported": true
+            },
+            {
+              "index": 25,
+              "text": "上下文未包含错误日志。",
+              "supported": true
+            },
+            {
+              "index": 26,
+              "text": "上下文未包含资源监控数据。",
+              "supported": true
+            },
+            {
+              "index": 27,
+              "text": "上下文未包含根因代码级分析。",
+              "supported": true
+            },
+            {
+              "index": 28,
+              "text": "如需底层诊断信息，当前资料不足。",
+              "supported": true
+            }
+          ],
+          "answered": true,
+          "why": "回答直接指出了压测暴露的接口超时和高并发失败率问题，核心内容由上下文支撑。"
+        }
+      }
     },
     {
       "case_id": "q23",
@@ -2953,7 +4033,177 @@
           "text": "[205s][系统管理员] 可以通稿，定稿时间就定在发布前一日下午六点前。\n[211s][张晨] 还有个风险我要提一下，异步改造和灰度发布挨得太近，如果改造延期可能会影响到后面的排期。\n[220s][系统管理员] 这个风险记下来。\n[222s][系统管理员] 张涛，你这周三给我一个中期进度，如果到周三还没完成联调，我们就把报表导出推到下个版本。\n[230s][张晨] 行，周三给进度。\n[232s][张晨] 那今天的结。\n[233s][系统管理员] 论我复述一遍，第一，V2.0按期发布，报表导出入口先隐藏。\n[240s][系统管理员] 第二，灰度按10%、50%全量分三天走。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "明确说明发布时间不变、报表导出入口先隐藏、等改造完成再单独放出。"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "复述了V2.0按期发布和报表导出入口先隐藏的决定，并提到异步化改造负责人。"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "再次提到V2.0按期发布和报表导出入口先隐藏，与最终处理方式相关。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 3,
+              "found": true,
+              "in_context": 1
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "会议最终决策对报表导出问题采取“短期规避+长期修复”双轨处理。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "V2.0 按期发布。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "报表导出入口在发布时暂时隐藏。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "报表导出功能将在改造完成后单独放出来。",
+              "supported": true
+            },
+            {
+              "index": 5,
+              "text": "张涛负责报表导出异步化改造。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "报表导出异步化改造要求在本周五前完成。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "系统管理员设置了周三中期检查点。",
+              "supported": true
+            },
+            {
+              "index": 8,
+              "text": "张涛需要在周三给出中期进度。",
+              "supported": true
+            },
+            {
+              "index": 9,
+              "text": "如果周三还没完成联调，报表导出功能将推迟到下个版本。",
+              "supported": true
+            },
+            {
+              "index": 10,
+              "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）。",
+              "supported": false
+            },
+            {
+              "index": 11,
+              "text": "系统管理员在会议总结中明确宣布“V2.0按期发布，报表导出入口先隐藏”。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "该宣布发生在 start_second=233。",
+              "supported": true
+            },
+            {
+              "index": 13,
+              "text": "会议总结中指定“张涛负责报表导出异步化改造，本周五前完成”。",
+              "supported": true
+            },
+            {
+              "index": 14,
+              "text": "该指定发生在 start_second=245。",
+              "supported": true
+            },
+            {
+              "index": 15,
+              "text": "系统管理员在前文拍板“发布时间不变，报表导出功能在发布时先隐藏入口，等改造完成再单独放出来”。",
+              "supported": true
+            },
+            {
+              "index": 16,
+              "text": "该拍板发生在 start_second=99。",
+              "supported": true
+            },
+            {
+              "index": 17,
+              "text": "系统管理员提出“张涛，你这周三给我一个中期进度，如果到周三还没完成联调，我们就把报表导出推到下个版本”。",
+              "supported": true
+            },
+            {
+              "index": 18,
+              "text": "该风险管控节点发生在 start_second=222。",
+              "supported": true
+            },
+            {
+              "index": 19,
+              "text": "张晨确认“明白，我这边今天就拆任务”。",
+              "supported": true
+            },
+            {
+              "index": 20,
+              "text": "该确认发生在 start_second=109。",
+              "supported": true
+            },
+            {
+              "index": 21,
+              "text": "张晨承诺“周三给进度”。",
+              "supported": true
+            },
+            {
+              "index": 22,
+              "text": "该承诺发生在 start_second=230。",
+              "supported": true
+            },
+            {
+              "index": 23,
+              "text": "当前资料未提供“本周五”和“周三”的具体日历日期。",
+              "supported": true
+            },
+            {
+              "index": 24,
+              "text": "当前资料未提供隐藏入口的前端实现方式。",
+              "supported": true
+            },
+            {
+              "index": 25,
+              "text": "当前资料未提供异步化改造的技术方案细节或验收标准。",
+              "supported": true
+            }
+          ],
+          "answered": true,
+          "why": "回答直接说明了报表导出问题的最终处理方式，关键决策和兜底机制基本可由上下文支撑，仅会议名称/ID无依据。"
+        }
+      }
     },
     {
       "case_id": "q24",
@@ -2989,7 +4239,162 @@
           "text": "[topics] 上一轮产品灰度发布的数据复盘 复盘8月20日至26日灰度发布数据，覆盖10%-30%活跃用户，评估登录成功率、核心下单链路成功率、新功能访问与转化提升、用户反馈高频问题、权限控制验证及数据安全性。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "明确说明灰度分三步及回滚预案和五分钟切回旧版本。"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "提到灰度按10%、50%、全量分三天走，能回答分几步走。"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "再次提到灰度按10%、50%、全量分三天走。"
+            },
+            {
+              "index": 4,
+              "useful": false,
+              "why": "只讲上一轮灰度数据复盘，不涉及本次灰度步骤和回滚能力。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 1
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "灰度发布计划分三步走。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "第一天放10%用户观察一天。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "第二天扩至50%。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "第三天全量发布。",
+              "supported": true
+            },
+            {
+              "index": 5,
+              "text": "回滚预案已准备就绪。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "数据库改动采用加字段方式。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "数据库改动向后兼容。",
+              "supported": true
+            },
+            {
+              "index": 8,
+              "text": "回滚无需动数据。",
+              "supported": true
+            },
+            {
+              "index": 9,
+              "text": "最快5分钟可切回旧版本。",
+              "supported": true
+            },
+            {
+              "index": 10,
+              "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）。",
+              "supported": false
+            },
+            {
+              "index": 11,
+              "text": "李悦在转写中说明了灰度节奏与回滚能力。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "李悦相关转写发生在124秒。",
+              "supported": true
+            },
+            {
+              "index": 13,
+              "text": "系统管理员在会议总结中确认灰度按10%、50%、全量分三天走。",
+              "supported": true
+            },
+            {
+              "index": 14,
+              "text": "系统管理员相关总结发生在240秒。",
+              "supported": true
+            },
+            {
+              "index": 15,
+              "text": "上一轮灰度发布数据复盘提及覆盖10%-30%活跃用户。",
+              "supported": true
+            },
+            {
+              "index": 16,
+              "text": "该“10%-30%活跃用户”信息被描述为人工确认的纪要条目。",
+              "supported": false
+            },
+            {
+              "index": 17,
+              "text": "“10%-30%活跃用户”的描述属于上一轮灰度复盘数据。",
+              "supported": true
+            },
+            {
+              "index": 18,
+              "text": "该描述与本次会议决策的新一轮三步灰度方案属于不同阶段。",
+              "supported": true
+            },
+            {
+              "index": 19,
+              "text": "本轮灰度步骤以转写原话及会议总结为准。",
+              "supported": false
+            },
+            {
+              "index": 20,
+              "text": "上下文提供了灰度三步节奏、回滚预案状态、数据库兼容策略及回滚耗时。",
+              "supported": true
+            },
+            {
+              "index": 21,
+              "text": "上下文未说明回滚触发条件、具体操作人、监控阈值或回滚后的数据一致性验证方式。",
+              "supported": true
+            },
+            {
+              "index": 22,
+              "text": "如需这些执行细节，当前资料不足。",
+              "supported": true
+            }
+          ],
+          "answered": true,
+          "why": "回答明确给出了灰度三步和回滚能力，核心事实可由上下文支撑，但包含会议ID、人工确认纪要及“为准”等未被上下文支撑的来源性表述。"
+        }
+      }
     },
     {
       "case_id": "q25",
@@ -3013,7 +4418,222 @@
           "text": "[151s][张晨] 一会儿旧版。\n[153s][张晨] 灰度期间我们需要盯哪些指标？\n[156s][李悦] 主要看接口错误率、平均响应时间，还有核心链路的转化率。\n[161s][李悦] 这三个我配了告警，超过阈值会。\n[164s][系统管理员] 直接发到群里。\n[165s][系统管理员] 灰度这三天需要有人值班盯盘，这个排班定了吗？\n[170s][李悦] 还没排，我明天下班前把排班表发到群里。\n[175s][系统管理员] 好，这是一个行动项。\n[177s][系统管理员] 刘颖市场这边呢。\n[180s][系统管理员] 对外通稿的初稿已经写完了，还需要根据最终的功能清单调整报表导出。"
         }
       ],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "说明了按用户 ID 取模是为了保证同一个用户每次都落在同一边。"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "说明了灰度期间主要盯接口错误率、平均响应时间和核心链路转化率。"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 1
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 2
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "灰度按用户 ID 取模的目的是保证同一个用户每次都落在同一边。",
+              "supported": true
+            },
+            {
+              "index": 2,
+              "text": "取模可以保证同一个用户始终命中同一版本。",
+              "supported": true
+            },
+            {
+              "index": 3,
+              "text": "取模可以避免用户体验在新旧版本间跳变。",
+              "supported": true
+            },
+            {
+              "index": 4,
+              "text": "灰度期间需重点盯接口错误率。",
+              "supported": true
+            },
+            {
+              "index": 5,
+              "text": "灰度期间需重点盯平均响应时间。",
+              "supported": true
+            },
+            {
+              "index": 6,
+              "text": "灰度期间需重点盯核心链路转化率。",
+              "supported": true
+            },
+            {
+              "index": 7,
+              "text": "这三个指标已配置告警。",
+              "supported": true
+            },
+            {
+              "index": 8,
+              "text": "超过阈值会自动发到群里。",
+              "supported": true
+            },
+            {
+              "index": 9,
+              "text": "以上信息均来自“产品发布评审会议”。",
+              "supported": false
+            },
+            {
+              "index": 10,
+              "text": "该会议的 meeting_id=2。",
+              "supported": false
+            },
+            {
+              "index": 11,
+              "text": "李悦在转写中解释了按用户 ID 取模的目的。",
+              "supported": true
+            },
+            {
+              "index": 12,
+              "text": "李悦说“挨用户ID取魔，保证同一个用户每次都落在同一边，不会一会儿新版”。",
+              "supported": true
+            },
+            {
+              "index": 13,
+              "text": "李悦关于取模目的的发言对应 start_second=145。",
+              "supported": true
+            },
+            {
+              "index": 14,
+              "text": "张晨补充了“一会儿旧版”。",
+              "supported": true
+            },
+            {
+              "index": 15,
+              "text": "张晨补充“一会儿旧版”的发言对应 start_second=151。",
+              "supported": true
+            },
+            {
+              "index": 16,
+              "text": "李悦和张晨的对话共同说明取模是为避免版本跳变。",
+              "supported": true
+            },
+            {
+              "index": 17,
+              "text": "李悦回答了灰度期间需要盯哪些指标的问题。",
+              "supported": true
+            },
+            {
+              "index": 18,
+              "text": "李悦说主要看接口错误率、平均响应时间，还有核心链路的转化率。",
+              "supported": true
+            },
+            {
+              "index": 19,
+              "text": "李悦关于监控指标的发言对应 start_second=156。",
+              "supported": true
+            },
+            {
+              "index": 20,
+              "text": "李悦说这三个指标配了告警。",
+              "supported": true
+            },
+            {
+              "index": 21,
+              "text": "李悦说超过阈值会有后续通知。",
+              "supported": true
+            },
+            {
+              "index": 22,
+              "text": "系统管理员说会直接发到群里。",
+              "supported": true
+            },
+            {
+              "index": 23,
+              "text": "告警相关发言对应 start_second=161–164。",
+              "supported": true
+            },
+            {
+              "index": 24,
+              "text": "系统管理员提出灰度这三天需要有人值班盯盘。",
+              "supported": true
+            },
+            {
+              "index": 25,
+              "text": "系统管理员关于值班盯盘的发言对应 start_second=165。",
+              "supported": true
+            },
+            {
+              "index": 26,
+              "text": "李悦承诺明天下班前把排班表发到群里。",
+              "supported": true
+            },
+            {
+              "index": 27,
+              "text": "李悦关于排班表的承诺对应 start_second=170。",
+              "supported": true
+            },
+            {
+              "index": 28,
+              "text": "值班安排表明监控机制已纳入执行计划。",
+              "supported": true
+            },
+            {
+              "index": 29,
+              "text": "工具返回内容已明确取模目的。",
+              "supported": true
+            },
+            {
+              "index": 30,
+              "text": "工具返回内容已明确三项核心监控指标。",
+              "supported": true
+            },
+            {
+              "index": 31,
+              "text": "工具返回内容已明确告警通知方式。",
+              "supported": true
+            },
+            {
+              "index": 32,
+              "text": "工具返回内容未提供各项指标的具体阈值数值。",
+              "supported": true
+            },
+            {
+              "index": 33,
+              "text": "工具返回内容未提供基线计算方法。",
+              "supported": true
+            },
+            {
+              "index": 34,
+              "text": "工具返回内容未提供对照组设置。",
+              "supported": true
+            },
+            {
+              "index": 35,
+              "text": "工具返回内容未提供数据采集频率。",
+              "supported": true
+            },
+            {
+              "index": 36,
+              "text": "如需量化执行细节，当前资料不足。",
+              "supported": true
+            }
+          ],
+          "answered": true,
+          "why": "回答直接覆盖了取模目的和灰度期间关注指标，核心事实可由上下文支撑，仅会议名称和 meeting_id 等元信息缺乏上下文依据。"
+        }
+      }
     },
     {
       "case_id": "q26",
@@ -3025,7 +4645,39 @@
       ],
       "answer": "",
       "contexts": [],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [],
+          "facts": [
+            {
+              "index": 1,
+              "found": false,
+              "in_context": null
+            },
+            {
+              "index": 2,
+              "found": false,
+              "in_context": null
+            },
+            {
+              "index": 3,
+              "found": false,
+              "in_context": null
+            }
+          ],
+          "missing_facts": [
+            1,
+            2,
+            3
+          ]
+        },
+        "answer": {
+          "claims": [],
+          "answered": false,
+          "why": "回答为空，没有提供任何行动项和负责人信息。"
+        }
+      }
     },
     {
       "case_id": "q27",
@@ -3036,7 +4688,33 @@
       ],
       "answer": "",
       "contexts": [],
-      "has_answer": true
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [],
+          "facts": [
+            {
+              "index": 1,
+              "found": false,
+              "in_context": null
+            },
+            {
+              "index": 2,
+              "found": false,
+              "in_context": null
+            }
+          ],
+          "missing_facts": [
+            1,
+            2
+          ]
+        },
+        "answer": {
+          "claims": [],
+          "answered": false,
+          "why": "产品回答为空，没有正面回答问题。"
+        }
+      }
     }
   ],
   "adjudicator_disclosure": {
@@ -3044,5 +4722,259 @@
     "provider": "qwen",
     "definition": "逐段上下文有用性 + 逐条事实覆盖 + 逐断言支撑 + 是否正面回答；answer_relevancy 与 RAGAS 的嵌入版口径不同，见模块文档",
     "not_gold": "这是模型判定，不是人类金标"
+  },
+  "summary": {
+    "cases_judged": 27,
+    "cases_total": 27,
+    "cases_step_without_gold": 0,
+    "context_precision": {
+      "successes": 93,
+      "total": 109,
+      "rate": 0.8532110091743119,
+      "wilson_95": [
+        0.7747924198076281,
+        0.9075808923129953
+      ],
+      "clopper_pearson_95": [
+        0.7725948820094497,
+        0.9137067135454222
+      ],
+      "note": "exact interval is primary; Wilson shown for comparison"
+    },
+    "context_recall": {
+      "successes": 57,
+      "total": 62,
+      "rate": 0.9193548387096774,
+      "wilson_95": [
+        0.8247142865138739,
+        0.9650616530140073
+      ],
+      "clopper_pearson_95": [
+        0.8217474068677582,
+        0.9732953832041642
+      ],
+      "note": "exact interval is primary; Wilson shown for comparison"
+    },
+    "faithfulness": {
+      "successes": 414,
+      "total": 495,
+      "rate": 0.8363636363636363,
+      "wilson_95": [
+        0.8012060386500345,
+        0.8663407221730169
+      ],
+      "clopper_pearson_95": [
+        0.8007738338447614,
+        0.8678731744169939
+      ],
+      "note": "exact interval is primary; Wilson shown for comparison"
+    },
+    "answer_relevancy": {
+      "successes": 25,
+      "total": 27,
+      "rate": 0.9259259259259259,
+      "wilson_95": [
+        0.7663040731697686,
+        0.9794453459390113
+      ],
+      "clopper_pearson_95": [
+        0.7571016531543817,
+        0.9908999270576937
+      ],
+      "note": "exact interval is primary; Wilson shown for comparison"
+    },
+    "per_case": [
+      {
+        "case_id": "q01",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.7692307692307693,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q02",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.6666666666666666,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q03",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.6363636363636364,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q04",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.8333333333333334,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q05",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.8421052631578947,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q06",
+        "context_precision": 0.5,
+        "context_recall": 1.0,
+        "faithfulness": 0.7142857142857143,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q07",
+        "context_precision": 0.8,
+        "context_recall": 1.0,
+        "faithfulness": 0.8333333333333334,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q08",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.8260869565217391,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q09",
+        "context_precision": 0.625,
+        "context_recall": 1.0,
+        "faithfulness": 0.95,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q10",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.782608695652174,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q11",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.8,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q12",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.7857142857142857,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q13",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.7777777777777778,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q14",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.6666666666666666,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q15",
+        "context_precision": 0.6,
+        "context_recall": 1.0,
+        "faithfulness": 0.75,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q16",
+        "context_precision": 0.75,
+        "context_recall": 1.0,
+        "faithfulness": 0.8181818181818182,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q17",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.85,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q18",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.875,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q19",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.9259259259259259,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q20",
+        "context_precision": 0.8,
+        "context_recall": 1.0,
+        "faithfulness": 0.7142857142857143,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q21",
+        "context_precision": 0.3333333333333333,
+        "context_recall": 1.0,
+        "faithfulness": 0.9130434782608695,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q22",
+        "context_precision": 0.3333333333333333,
+        "context_recall": 1.0,
+        "faithfulness": 0.9642857142857143,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q23",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.96,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q24",
+        "context_precision": 0.75,
+        "context_recall": 1.0,
+        "faithfulness": 0.8636363636363636,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q25",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.9444444444444444,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q26",
+        "context_precision": null,
+        "context_recall": 0.0,
+        "faithfulness": null,
+        "answer_relevancy": 0.0
+      },
+      {
+        "case_id": "q27",
+        "context_precision": null,
+        "context_recall": 0.0,
+        "faithfulness": null,
+        "answer_relevancy": 0.0
+      }
+    ],
+    "reading": "context_precision = 检索到的上下文里被判『有用』的比例；context_recall = 标注事实里能在上下文中找到的比例（只有带金标的 case 计入）；faithfulness = 答案断言里被上下文支撑的比例；answer_relevancy = 正面回答了问题的 case 比例（与 RAGAS 的嵌入口径不同）。四个指标各自独立报出，**没有加权总分**。",
+    "not_measured": "本次未测：产品在真实模型下的答案质量（需要一次授权运行）；本文件里的数字若是空值，说明对应样本没有判定，而不是 0 分。"
   }
 }
