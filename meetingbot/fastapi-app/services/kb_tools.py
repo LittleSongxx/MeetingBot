@@ -40,10 +40,11 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Awaitable, Callable, Literal
 
 from common import access, qdrant
-from common.times import format_datetime
+from common.times import LOCAL_TZ, format_datetime
 from models import (
     Meeting,
     MeetingMinutes,
@@ -158,6 +159,23 @@ class SearchKnowledgeArgs(BaseModel):
         description="限定来源权威级：CONFIRMED 是人工确认过的纪要条目，"
                     "RAW 是转写原话；留空表示两者都搜",
     )
+    meeting_ids: list[int] | None = Field(
+        default=None,
+        description="限定在这些会议里搜（会议 id 见 list_facts(kind=meeting)）；"
+                    "超过权限范围的会被忽略",
+    )
+    date_from: str | None = Field(
+        default=None,
+        description="按**会议日期**限定起始（含当天），格式 YYYY-MM-DD。"
+                    "用于「最近七天」「上周」这类时间限定；注意它不是录音里的秒数",
+    )
+    date_to: str | None = Field(
+        default=None, description="按会议日期限定截止（含当天），格式 YYYY-MM-DD")
+    chunk_type: list[Literal["TRANSCRIPT_WINDOW", "MINUTES_ITEM"]] | None = Field(
+        default=None,
+        description="限定切片类型：TRANSCRIPT_WINDOW 是转写窗口（原话），"
+                    "MINUTES_ITEM 是纪要条目（人工确认的归纳）；留空表示都搜",
+    )
 
     @field_validator("limit", mode="before")
     @classmethod
@@ -169,11 +187,17 @@ class SearchKnowledgeArgs(BaseModel):
     def _loose_authority(cls, value: Any) -> Any:
         return _loose(value, (list, type(None)))
 
+    @field_validator("meeting_ids", "chunk_type", mode="before")
+    @classmethod
+    def _loose_containers(cls, value: Any) -> Any:
+        return _loose(value, (list, type(None)))
+
 
 class ListFactsArgs(BaseModel):
-    kind: Literal["decision", "pending_item", "risk", "meeting"] = Field(
+    kind: Literal["decision", "pending_item", "risk", "meeting", "recording"] = Field(
         description="要查的事实类别：decision 决策 / pending_item 待办 / "
-                    "risk 风险 / meeting 会议清单")
+                    "risk 风险 / meeting 会议清单 / recording 录音清单"
+                    "（哪几段录音、分别是什么时候的，用于「下午那场会」这类指代）")
     meeting_ids: list[int] | None = Field(
         default=None, description="限定在这些会议里查；超过权限范围的会被忽略")
     owner: str | None = Field(
@@ -222,19 +246,61 @@ class TranscriptExcerptArgs(BaseModel):
 # --------------------------------------------------------------------------- #
 
 
+def _epoch_of(value: str, *, end_of_day: bool) -> int:
+    """把模型给的时间解析成本地时区的 epoch 秒。
+
+    接受 `YYYY-MM-DD` 与 ISO 时间两种写法。**只给日期时按整天解释**
+    （起点 00:00:00、终点 23:59:59）：模型说"9月10日"指的是那一天，
+    把终点当成 00:00:00 会把当天下午的会排除掉——这是最容易悄悄出错的一处。
+    """
+    text = (value or "").strip()
+    date_only = len(text) == 10 and text[4] == "-" and text[7] == "-"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError as error:
+        raise ToolError(f"时间格式不认：{text}（要 YYYY-MM-DD 或 ISO 时间）") from error
+    if date_only and end_of_day:
+        parsed = parsed.replace(hour=23, minute=59, second=59)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=LOCAL_TZ)
+    return int(parsed.timestamp())
+
+
+def _applied_filters(args: SearchKnowledgeArgs, meeting_scope: list[int] | None) -> list[str]:
+    """这次检索真正生效的限定，用于告诉模型（与用户）"结果是在什么范围内得到的"。"""
+    applied: list[str] = []
+    if meeting_scope is not None:
+        applied.append(f"会议 {meeting_scope}")
+    if args.date_from:
+        applied.append(f"会议日期 ≥ {args.date_from}")
+    if args.date_to:
+        applied.append(f"会议日期 ≤ {args.date_to}")
+    if args.chunk_type:
+        applied.append(f"切片类型 {args.chunk_type}")
+    if args.authority:
+        applied.append(f"权威级 {args.authority}")
+    return applied
+
+
 async def _search_knowledge(actor: Actor, args: SearchKnowledgeArgs) -> dict[str, Any]:
-    allowed = _narrow(actor.allowed_meeting_ids, None)
+    # 会议范围走与其余工具同一条收窄路径：参数只能缩小可见集合，绝不能扩大
+    allowed = _narrow(actor.allowed_meeting_ids, args.meeting_ids)
+    time_from = _epoch_of(args.date_from, end_of_day=False) if args.date_from else None
+    time_to = _epoch_of(args.date_to, end_of_day=True) if args.date_to else None
+    if time_from is not None and time_to is not None and time_to < time_from:
+        raise ToolError("date_to 不能早于 date_from")
     try:
         hits = await kb_service.search_knowledge(
             args.query, allowed_meeting_ids=allowed, limit=args.limit,
-            authority=args.authority, biz_id=actor.biz_id)
+            authority=args.authority, chunk_type=args.chunk_type,
+            meeting_time_from=time_from, meeting_time_to=time_to, biz_id=actor.biz_id)
     except kb_service.KbError as error:
         raise ToolError(str(error)) from error
     except qdrant.QdrantError as error:
         raise ToolError(f"检索失败：{error}") from error
 
     titles = await _meeting_titles([hit.meeting_id for hit in hits])
-    return {
+    result: dict[str, Any] = {
         "query": args.query,
         "scope_meeting_count": None if allowed is None else len(allowed),
         "hits": [
@@ -245,12 +311,25 @@ async def _search_knowledge(actor: Actor, args: SearchKnowledgeArgs) -> dict[str
         "notice": "引用时请用 meeting_id + start_second 指回原句；"
                   "所有条目都必须来自上面的 hits，不要凭记忆补充。",
     }
+    applied = _applied_filters(args, None if allowed is None else list(allowed))
+    if applied:
+        result["applied_filters"] = applied
+        if not hits:
+            # 空结果必须说明"为什么空"：不解释的话，模型会把"过滤后没命中"
+            # 讲成"知识库里没有这件事"——那是两件完全不同的事（实测的 q26/q27 教训）
+            result["notice"] = (
+                "在给定的限定（" + "；".join(applied) + "）下没有命中任何切片。"
+                "可以去掉其中一项再检索一次；如果放宽后仍没有，就如实告诉用户"
+                "这个范围内没有相关记录，不要凭印象补内容。")
+    return result
 
 
 async def _list_facts(actor: Actor, args: ListFactsArgs) -> dict[str, Any]:
     allowed = _narrow(actor.allowed_meeting_ids, args.meeting_ids)
     if args.kind == "meeting":
         return await _list_meetings(allowed, args.limit)
+    if args.kind == "recording":
+        return await _list_recordings(allowed, args.limit)
 
     field = {"decision": "decisions", "pending_item": "pending_items",
              "risk": "risks"}[args.kind]
@@ -271,13 +350,24 @@ async def _list_facts(actor: Actor, args: ListFactsArgs) -> dict[str, Any]:
                 break
         if len(facts) >= args.limit:
             break
-    return {
+    result: dict[str, Any] = {
         "kind": args.kind,
         "scope_meeting_count": None if allowed is None else len(allowed),
         "facts": facts,
         "notice": "这些条目来自人工确认过的纪要（authority=CONFIRMED），"
                   "引用时带上 meeting_id / minutes_id / item_index。",
     }
+    if not facts:
+        drafts = await _draft_minutes_summary(allowed)
+        if drafts:
+            # "为什么没有"必须是模型可行动的信息（实测 q26/q27：模型在这里查不到东西，
+            # 又不知道回退到转写检索，于是空手而归）——草稿不算事实，但转写里有原话
+            result["notice"] = (
+                f"该范围内没有已确认的纪要（另有 {drafts} 份草稿：草稿未经人确认，"
+                "按规矩不算事实）。可改用 search_knowledge 检索该会议的转写原话，"
+                "并在回答里说明依据来自转写而非确认纪要。")
+            result["draft_minutes_count"] = drafts
+    return result
 
 
 async def _get_minutes(actor: Actor, args: GetMinutesArgs) -> dict[str, Any]:
@@ -498,6 +588,37 @@ async def _list_meetings(allowed: list[int] | None, limit: int) -> dict[str, Any
         } for row in rows],
         "notice": "只列当前用户可见的会议。",
     }
+
+
+async def _list_recordings(allowed: list[int] | None, limit: int) -> dict[str, Any]:
+    """录音清单：一场会可能有多段录音（上午一段、下午一段），而待办与决策是按
+    **会议**存的。所以"下午这场会"没法用会议 id 表达——先看这里，再决定查哪段转写。
+
+    只列转写成功的任务：没转写完的录音搜不到任何东西，列出来只会误导模型。
+    """
+    query = TranscriptionTask.filter(status="SUCCEEDED")
+    query = _filter_meetings(query, allowed)
+    rows = await query.order_by("-create_time").limit(limit)
+    titles = await _meeting_titles([row.meeting_id for row in rows])
+    return {
+        "kind": "recording",
+        "scope_meeting_count": None if allowed is None else len(allowed),
+        "facts": [{
+            "task_id": row.id, "meeting_id": row.meeting_id,
+            "meeting_title": titles.get(row.meeting_id, ""),
+            "create_time": _fmt(row.create_time),
+            "transcribed_at": _fmt(row.finished_at) or _fmt(row.started_at),
+            "duration_minutes": round((row.total_duration_ms or 0) / 60_000, 1) or None,
+        } for row in rows],
+        "notice": "task_id 用于 get_transcript_excerpt（取这段录音的原话）。"
+                  "引用时用 meeting_id + start_second，并说清是哪段录音。",
+    }
+
+
+async def _draft_minutes_summary(allowed: list[int] | None) -> int:
+    """范围内未确认的纪要份数。用来把"查不到"的原因说清楚（草稿不算事实）。"""
+    query = MeetingMinutes.filter(status__not="CONFIRMED")
+    return await _filter_meetings(query, allowed).count()
 
 
 def _owner_matches(item: Any, owner: str) -> bool:

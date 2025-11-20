@@ -11,8 +11,10 @@
 from __future__ import annotations
 
 import unittest
+from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
+from common.times import LOCAL_TZ
 from models import (
     AiModelConfig,
     Meeting,
@@ -213,6 +215,61 @@ class KbToolsDbTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["scope_meeting_count"], 0)
 
     # ------------------------------------------------------------------ #
+    # search_knowledge 的限定额（P1-5）
+    # ------------------------------------------------------------------ #
+
+    async def test_search_filters_reach_the_retrieval_layer(self):
+        """会议/日期/类型限定要真的传到检索层：它们解决"下午这场会""最近七天"
+        这类语义相似度碰不到的限定。"""
+        meeting = await self._meeting("MTG-F1", self.owner)
+        actor = await kb_tools.Actor.resolve(self.owner)
+        search = AsyncMock(return_value=[])
+        with patch.object(kb_service, "search_knowledge", search):
+            result = await kb_tools.execute_tool(actor, "search_knowledge", {
+                "query": "灰度", "meeting_ids": [meeting.id], "date_from": "2026-09-10",
+                "date_to": "2026-09-11", "chunk_type": ["TRANSCRIPT_WINDOW"]})
+        kwargs = search.await_args.kwargs
+        self.assertEqual(kwargs["allowed_meeting_ids"], [meeting.id])
+        self.assertEqual(kwargs["chunk_type"], ["TRANSCRIPT_WINDOW"])
+        # 2026-09-10 00:00:00 与 2026-09-11 23:59:59（本地），日期按**整天**解释
+        self.assertEqual(kwargs["meeting_time_from"],
+                         int(datetime(2026, 9, 10, 0, 0, tzinfo=LOCAL_TZ).timestamp()))
+        self.assertEqual(kwargs["meeting_time_to"],
+                         int(datetime(2026, 9, 11, 23, 59, 59, tzinfo=LOCAL_TZ).timestamp()))
+        self.assertTrue(result["ok"])
+        self.assertIn("会议", "、".join(result["applied_filters"]))
+
+    async def test_search_meeting_ids_only_narrow_the_visible_scope(self):
+        theirs = await self._meeting("MTG-F2", self.other)
+        actor = await kb_tools.Actor.resolve(self.owner)
+        search = AsyncMock(return_value=[])
+        with patch.object(kb_service, "search_knowledge", search):
+            await kb_tools.execute_tool(actor, "search_knowledge",
+                                        {"query": "x", "meeting_ids": [theirs.id]})
+        self.assertEqual(search.await_args.kwargs["allowed_meeting_ids"], [])
+
+    async def test_empty_result_explains_the_applied_filters(self):
+        """过滤后空结果必须说明"为什么空"：否则模型会把它讲成"知识库里没有这件事"。"""
+        actor = await kb_tools.Actor.resolve(self.owner)
+        with patch.object(kb_service, "search_knowledge", AsyncMock(return_value=[])):
+            result = await kb_tools.execute_tool(actor, "search_knowledge", {
+                "query": "灰度", "date_from": "2026-09-10"})
+        self.assertIn("没有命中", result["notice"])
+        self.assertIn("2026-09-10", result["notice"])
+        self.assertIn("放宽", result["notice"])
+
+    async def test_search_rejects_a_bad_date_and_an_inverted_range(self):
+        actor = await kb_tools.Actor.resolve(self.owner)
+        bad = await kb_tools.execute_tool(actor, "search_knowledge",
+                                          {"query": "x", "date_from": "上周"})
+        self.assertFalse(bad["ok"])
+        self.assertIn("时间格式", bad["error"])
+        inverted = await kb_tools.execute_tool(actor, "search_knowledge", {
+            "query": "x", "date_from": "2026-09-11", "date_to": "2026-09-10"})
+        self.assertFalse(inverted["ok"])
+        self.assertIn("date_to", inverted["error"])
+
+    # ------------------------------------------------------------------ #
     # list_facts
     # ------------------------------------------------------------------ #
 
@@ -282,6 +339,35 @@ class KbToolsDbTest(unittest.IsolatedAsyncioTestCase):
         actor = await kb_tools.Actor.resolve(self.owner)
         result = await kb_tools.execute_tool(actor, "list_facts", {"kind": "decision"})
         self.assertEqual(len(result["facts"]), 1)
+
+    async def test_list_facts_says_why_nothing_was_found_when_only_drafts_exist(self):
+        """查不到东西时要说明原因与下一步（q26/q27 的根因：模型不知道可以回退到转写）。
+
+        草稿不算事实是**正确**的产品行为；缺陷是"空结果不解释"。
+        """
+        meeting = await self._meeting("MTG-8B", self.owner)
+        await self._minutes(meeting, self.owner, status="DRAFT",
+                            pending=[self._decision("下午定的待办")])
+        actor = await kb_tools.Actor.resolve(self.owner)
+        result = await kb_tools.execute_tool(
+            actor, "list_facts", {"kind": "pending_item", "meeting_ids": [meeting.id]})
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["facts"], [])
+        self.assertEqual(result["draft_minutes_count"], 1)
+        self.assertIn("草稿", result["notice"])
+        self.assertIn("search_knowledge", result["notice"])
+
+    async def test_list_facts_recording_lists_succeeded_transcriptions(self):
+        meeting = await self._meeting("MTG-8C", self.owner)
+        task = await TranscriptionTask.create(
+            meeting_id=meeting.id, material_id=88_001, model_config_id=self.config.id,
+            initiator_id=self.owner.id, status="SUCCEEDED", total_duration_ms=3_600_000)
+        actor = await kb_tools.Actor.resolve(self.owner)
+        result = await kb_tools.execute_tool(actor, "list_facts", {"kind": "recording"})
+        self.assertTrue(result["ok"])
+        self.assertEqual([fact["task_id"] for fact in result["facts"]], [task.id])
+        self.assertEqual(result["facts"][0]["duration_minutes"], 60.0)
+        self.assertIn("task_id", result["notice"])
 
     # ------------------------------------------------------------------ #
     # get_minutes

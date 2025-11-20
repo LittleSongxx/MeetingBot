@@ -29,6 +29,11 @@ DEFAULT_COLLECTION = "meeting_kb"
 PREFETCH_LIMIT = 24
 DEFAULT_TIMEOUT = 20.0
 
+# 会议开始时间在 payload 里的键名（epoch 秒）。过滤"最近七天""上周那场会"用的就是它——
+# 注意它与切片里的 `start_ms` **不是同一条时间轴**：`start_ms` 是录音内部的偏移量
+# （"第 51 秒说了什么"），而这个键回答"这场会是什么时候开的"。
+MEETING_START_KEY = "meeting_start_epoch"
+
 
 class QdrantError(RuntimeError):
     """与向量库交互失败。调用方按"可重试"处理（Temporal activity 会重试）。"""
@@ -160,6 +165,18 @@ def _acl_filter(allowed_meeting_ids: Sequence[int] | None) -> dict[str, Any] | N
     return {"must": [{"key": "meeting_id", "match": {"any": ids}}]}
 
 
+def _time_range(meeting_time_from: int | None, meeting_time_to: int | None) -> dict[str, Any] | None:
+    """按会议开始时间过滤（epoch 秒，闭区间）。两个端点都不给则不加条件。"""
+    bounds: dict[str, int] = {}
+    if meeting_time_from is not None:
+        bounds["gte"] = int(meeting_time_from)
+    if meeting_time_to is not None:
+        bounds["lte"] = int(meeting_time_to)
+    if not bounds:
+        return None
+    return {"key": MEETING_START_KEY, "range": bounds}
+
+
 async def hybrid_search(
     *,
     dense: Sequence[float],
@@ -167,12 +184,19 @@ async def hybrid_search(
     limit: int = 8,
     allowed_meeting_ids: Sequence[int] | None = None,
     authority: Iterable[str] | None = None,
+    chunk_type: Iterable[str] | None = None,
+    meeting_time_from: int | None = None,
+    meeting_time_to: int | None = None,
     name: str | None = None,
 ) -> list[dict[str, Any]]:
     """混合检索：稠密与稀疏各召回一批，由 Qdrant 在服务端做 RRF 融合。
 
     为什么用 RRF 而不是加权分数：余弦分数有界、稀疏分数无界，直接线性加权必须
     先各自归一化（归一化方式又是个新参数）；RRF 只看排名，天然规避两路分数量纲不同。
+
+    过滤条件全部落在 `must` 上（与权限过滤同一个位置）：权限是"必须满足"的硬条件，
+    业务过滤（权威级/切片类型/会议时间）同样是硬条件——把它们写成 `should` 会让
+    不满足条件的点照样被召回，那是最难发现的一类错误（结果看着有，其实不该有）。
     """
     name = name or collection_name()
     prefetch: list[dict[str, Any]] = [
@@ -189,6 +213,11 @@ async def hybrid_search(
         must.extend(acl["must"])
     if authority:
         must.append({"key": "authority", "match": {"any": [str(a) for a in authority]}})
+    if chunk_type:
+        must.append({"key": "chunk_type", "match": {"any": [str(t) for t in chunk_type]}})
+    time_range = _time_range(meeting_time_from, meeting_time_to)
+    if time_range:
+        must.append(time_range)
 
     body: dict[str, Any] = {
         "prefetch": prefetch,

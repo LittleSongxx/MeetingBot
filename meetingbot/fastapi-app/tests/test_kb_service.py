@@ -9,8 +9,10 @@
 from __future__ import annotations
 
 import unittest
+from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
+from common.times import LOCAL_TZ
 from models import (
     AiModelConfig,
     KbChunk,
@@ -185,6 +187,15 @@ class IndexTranscriptTest(_KbBase):
         self.assertGreaterEqual(before, 1)
 
 
+    async def test_payload_carries_the_meeting_start_epoch(self):
+        """会议开始时间进 payload：时间过滤（"最近七天"）靠它，靠录音内偏移做不到。"""
+        task = await self._transcript()
+        _, _, upsert, _ = await self._run_index(task.id)
+        payload = upsert.await_args.args[0][0]["payload"]
+        # 2026-09-10 10:40:00 本地（UTC+8）→ epoch 秒
+        self.assertEqual(payload["meeting_start_epoch"],
+                         int(datetime(2026, 9, 10, 10, 40, tzinfo=LOCAL_TZ).timestamp()))
+
 class IndexMinutesTest(_KbBase):
     async def _minutes(self, *, status: str) -> MeetingMinutes:
         task = await self._transcript()
@@ -263,6 +274,26 @@ class SearchKnowledgeTest(_KbBase):
         with self.assertRaises(kb_service.KbError) as caught:
             await kb_service.search_knowledge("任意问题", allowed_meeting_ids=None)
         self.assertIn("嵌入模型配置", str(caught.exception))
+
+    async def test_filters_are_passed_down_to_the_vector_store(self):
+        with patch.object(kb_service.model_factory, "embed_texts", AsyncMock(return_value=[[0.1] * 8])), \
+             patch.object(kb_service.qdrant, "hybrid_search", AsyncMock(return_value=[])) as search:
+            await kb_service.search_knowledge(
+                "灰度", allowed_meeting_ids=[self.meeting.id], chunk_type=["TRANSCRIPT_WINDOW"],
+                meeting_time_from=1_700_000_000, meeting_time_to=1_700_900_000)
+        kwargs = search.await_args.kwargs
+        self.assertEqual(kwargs["chunk_type"], ["TRANSCRIPT_WINDOW"])
+        self.assertEqual(kwargs["meeting_time_from"], 1_700_000_000)
+        self.assertEqual(kwargs["meeting_time_to"], 1_700_900_000)
+
+    def test_payload_schema_version_is_part_of_the_fingerprint(self):
+        """载荷结构版本进指纹：否则"给 payload 加字段"不会触发重建，
+        旧 point 缺字段 → 按它过滤时静默漏数据（这是本仓踩过的坑）。"""
+        texts = ["第一片", "第二片"]
+        same = kb_service.content_fingerprint(texts)
+        self.assertEqual(same, kb_service.content_fingerprint(list(texts)))
+        self.assertNotEqual(same, kb_service.content_fingerprint(texts, payload_schema=1))
+        self.assertNotEqual(same, kb_service.content_fingerprint(texts, payload_schema=3))
 
 
 if __name__ == "__main__":
