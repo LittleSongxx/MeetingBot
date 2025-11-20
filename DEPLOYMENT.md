@@ -67,6 +67,41 @@
 
 停止容器保留数据。不要使用 `down -v`，除非确实要删除本项目数据库。
 
+## 表结构变更（迁移）
+
+**结构真源是 `meetingbot/fastapi-app/models.py`**；空库初始化走的是一份 SQL 快照
+（`db/01-schema.sql`），两者必须一致——有零调用的漂移测试兜底
+（`tests/test_schema_sync.py`，逐表比对列名、可空性、类型口径与时间默认值精度）。
+
+改表的流程：
+
+```bash
+cd meetingbot/fastapi-app
+
+# 1. 改 models.py
+# 2. 生成迁移（连的是目标库，只读它的当前结构）
+MYSQL_HOST=127.0.0.1 MYSQL_PORT=13306 MYSQL_USER=root MYSQL_PASSWORD=*** \
+MYSQL_DATABASE=meetingbot JWT_SECRET=x .venv/bin/python -m aerich migrate --name 加了什么
+# 3. 应用
+…同上环境变量… .venv/bin/python -m aerich upgrade
+# 4. **把这次变更同步进 db/01-schema.sql**（保证空库一次初始化就是最新结构）
+# 5. 跑一次测试，漂移测试会检查第 4 步有没有漏
+python -m unittest discover -s tests -p 'test_*.py'
+```
+
+几条要点：
+
+- **基线迁移是幂等的**：`migrations/models/0_*_init.py` 用 `CREATE TABLE IF NOT EXISTS`，
+  所以对"已经由 initdb SQL 建好结构的库"跑 `aerich upgrade` 不会报错，
+  只在库里补一张 `aerich` 版本表。新环境和存量环境因此走同一条升级路径。
+- **两条建库路径的取舍**：initdb 的 `db/01-schema.sql` 是**权威结构**（带列注释、
+  显式字符集与排序规则）；aerich 从模型生成的 DDL 没有那些注释。所以
+  **空库统一走 initdb**，aerich 只负责增量变更。别反过来用 aerich 建空库——
+  能建，但会丢掉列注释这层文档。
+- **`generate_schemas` 只在测试里用**（内存 sqlite）。产品运行时不允许它建表。
+- 改结构时记得同步三处：模型、`db/01-schema.sql`、迁移文件。漏了第一处或第二处
+  会被测试拦下，漏了第三处会在别的环境上表现为"结构没跟上"。
+
 ## 本地测试环境（不依赖 Docker）
 
 产品测试此前需要 `tortoise` 等依赖，缺依赖时测试模块在**导入阶段**就失败（表现为
@@ -116,9 +151,21 @@ meetingbot/fastapi-app/.venv/bin/python evaluation/regression/run.py --set all
 **索引**：存量库执行 `docker exec -i meetingbot-local-db-1 mysql -umeetingbot -p$MYSQL_PASSWORD
 meetingbot < scripts/indexes.sql`（重复执行报 Duplicate key name 可忽略）。
 
-**department 表**：`meetingbot.sql` 已把 `code` 列改为可空并移除其唯一索引（ORM 不使用
-该列，原 NOT NULL 会让新初始化的库在建部门时报错）。只影响空卷初始化；存量库无需处理，
-如需对齐可执行 `ALTER TABLE department MODIFY code varchar(50) NULL DEFAULT NULL, DROP INDEX uk_department_code;`（后者已不存在时会报错，可忽略）。
+**department 表的遗留列已清掉**：原结构里有 `code`、`parent_id`、`leader_id`、`sort`
+四列，全仓（后端 / 前端 / 评测 / 脚本）没有任何读写的代码，`code` 一列自己的注释
+还写着"ORM 不使用，仅历史数据保留"。已从 `db/01-schema.sql` 与种子数据里移除，
+让表结构与 `models.py` 严格一致（漂移测试会强制这一点）。
+
+存量库如果也想清掉：
+
+```sql
+ALTER TABLE department
+  DROP INDEX idx_department_parent_id,
+  DROP INDEX idx_department_status_sort,
+  DROP COLUMN code, DROP COLUMN parent_id, DROP COLUMN leader_id, DROP COLUMN sort,
+  ADD INDEX idx_department_status (status);
+-- 索引不存在时会报错，可忽略；不清也不影响功能，只是结构比模型多四列
+```
 
 **纪要调用缓存目录**：`files/minutes_cache/` 为重试去重缓存（派生数据，
 可随时清空，代价是下次重试多付一次调用）。

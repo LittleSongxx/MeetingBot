@@ -79,7 +79,7 @@ contracts.ISSUE_EVIDENCE_POLICY              ← 唯一真源
 - 存储是**类型化且带版本**的（`contract_version = 2`）；展示是字符串的。
 - `upgrade_output()` 读侧收敛：把 v1 的裸字符串槽位升级为类型化槽位，**幂等**。
 - `present_output()` 写侧适配：产出消费方需要的 `owner_suggestion` / `deadline_suggestion` 字符串。
-- **不新增数据库列、不做迁移**：表结构来自 `meetingbot.sql`，而契约违规是**从已存 JSON 派生的诊断**，按需求算而不是存起来（存了就是会漂移的缓存）。
+- **不新增数据库列、不做迁移**：表结构来自 `db/01-schema.sql`（真源是 `models.py`），而契约违规是**从已存 JSON 派生的诊断**，按需求算而不是存起来（存了就是会漂移的缓存）。
 - 表现适配只有**一个出口**（`present_minutes_fields`），详情、导出（DOCX/PDF）、写回共用它。实测：导出与前端代码**一行未改**。
 
 旧数据里的"动作写进时间槽"值**不被静默丢弃**：升级时如实保留文本并标 `basis=stated`，由校验器报 `slot_type_mismatch`。有测试守着。
@@ -234,7 +234,7 @@ meetingbot/fastapi-app/.venv/bin/python evaluation/metrics/run_metrics.py --set 
 ### 失败处理的首要怀疑对象
 
 契约变更后的首次运行**最可能暴露的是提示词与 schema 不同步**，而不是模型能力问题：
-`meetingbot.sql` 里种子化的提示词正文仍写着 `deadline_suggestion` 等旧字段名（72 处），
+`db/02-seed.sql` 里种子化的提示词正文仍写着 `deadline_suggestion` 等旧字段名（72 处），
 而 `build_schema_instruction` 会把新 schema 追加在正文之后。两者冲突时模型行为不确定。
 因此**阶段 1 若失败，第一件要查的是提示词正文与 schema 是否互相矛盾**，而不是调 schema。
 

@@ -1,86 +1,16 @@
-/*
- Navicat Premium Dump SQL
+-- MeetingBot 演示数据（产品发布评审会议那场会）
+--
+-- 职责：**只插数据，不建表**——表结构在 01-schema.sql。
+-- 内容：组织与用户、一场完整的演示会议（7 份资料 / 2 段录音 / 128 个转写片段 /
+-- 2 份纪要 / 2 次自检运行 / 32 条模型调用日志），以及 4 类模型配置与 4 条提示词模板。
+-- 说明：只在 MySQL 数据卷为空时由 docker-entrypoint-initdb.d 执行一次。
 
- Source Server         : localhost
- Source Server Type    : MySQL
- Source Server Version : 80040 (8.0.40)
- Source Host           : localhost:3306
- Source Schema         : meetingbot
-
- Target Server Type    : MySQL
- Target Server Version : 80040 (8.0.40)
- File Encoding         : 65001
-
- Date: 16/09/2026 17:26:26
-*/
-
-SET NAMES utf8mb4;
-SET FOREIGN_KEY_CHECKS = 0;
-
--- ----------------------------
--- Table structure for agent_run
--- ----------------------------
-DROP TABLE IF EXISTS `agent_run`;
-CREATE TABLE `agent_run`  (
-  `id` int NOT NULL AUTO_INCREMENT COMMENT '自检运行ID',
-  `run_no` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '自检运行唯一编号',
-  `minutes_id` int NOT NULL COMMENT '被自检的会议纪要ID',
-  `meeting_id` int NOT NULL COMMENT '所属会议ID',
-  `user_id` int NOT NULL COMMENT '发起人用户ID',
-  `model_config_id` int NOT NULL COMMENT '自检模型配置ID',
-  `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'RUNNING' COMMENT 'RUNNING、WAITING_CONFIRMATION、SUCCEEDED、REJECTED、FAILED、INTERRUPTED',
-  `stage` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '等待执行' COMMENT '当前执行阶段',
-  `progress` int NOT NULL DEFAULT 0 COMMENT '自检进度百分比',
-  `current_round` int NOT NULL DEFAULT 0 COMMENT '已完成的反思轮次',
-  `max_rounds` int NOT NULL DEFAULT 2 COMMENT '反思轮次上限，一轮等于审查一次加改一版',
-  `passed` tinyint(1) NOT NULL DEFAULT 0 COMMENT '最后一轮模型是否判定通过',
-  `score` int NOT NULL DEFAULT 0 COMMENT '最后一轮的自检得分',
-  `issue_count` int NOT NULL DEFAULT 0 COMMENT '最后一轮剩余的问题条数',
-  `review_json` json NOT NULL COMMENT '最后一轮的问题清单',
-  `revised_json` json NULL COMMENT '待人工确认的修订稿，为空表示纪要一个字都没改',
-  `applied_by` int NULL DEFAULT NULL COMMENT '确认人用户ID',
-  `applied_time` datetime NULL DEFAULT NULL COMMENT '确认时间',
-  `reject_reason` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '人工放弃修订的原因',
-  `final_result` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '自检结论',
-  `error_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '运行失败原因',
-  `started_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '开始时间',
-  `finished_at` datetime NULL DEFAULT NULL COMMENT '结束时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_agent_run_no`(`run_no` ASC) USING BTREE,
-  INDEX `idx_agent_run_user_time`(`user_id` ASC, `started_at` ASC) USING BTREE,
-  INDEX `idx_agent_run_status`(`status` ASC) USING BTREE,
-  INDEX `idx_agent_run_minutes_status`(`minutes_id` ASC, `status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会议纪要自检运行表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of agent_run
 -- ----------------------------
 INSERT INTO `agent_run` VALUES (3, 'AGRD8DDDB538CB148DFBFAC9ADF0FE14332', 3, 2, 1, 5, 'SUCCEEDED', '等待人工确认', 100, 2, 2, 0, 60, 5, '[{\"field\": \"decisions\", \"index\": -1, \"detail\": \"原文明确‘知识索引构建期间资料变化时，由资料维护人完成整理后重新构建’，该操作规则未在topics、decisions或risks中任何位置体现，属于会议达成的明确行动共识，应记入decisions或topics。\", \"issue_type\": \"MISSING_ITEM\", \"suggestion\": \"新增决策项：\'知识索引构建期间若发生资料更新，须由资料维护人完成全部整理后，统一发起重建流程，确保索引一致性。\'\"}, {\"field\": \"decisions\", \"index\": -1, \"detail\": \"原文明确‘发布首周，每天查看运行观测和质量评价数据，发现任务逾期、模型调用失败率升高或员工反馈集中时，及时形成跟进报告’，该动作性要求未进入decisions或pending_items，仅在summary中模糊提及‘设定...机制’，无具体执行主体和交付物。\", \"issue_type\": \"MISSING_ITEM\", \"suggestion\": \"新增决策项：\'发布首周每日17:00前，由王工牵头汇总运行观测中心与质量评价数据，形成《AI会议助手首周运行日报》，重点标注任务逾期率突增、模型失败率>2%、员工集中反馈TOP3问题，并同步至张晨、赵敏、周宁。\'\"}, {\"field\": \"risks\", \"index\": 2, \"detail\": \"risks中第三项‘任务负责人分配不合理风险’的suggestion为空，但原文明确‘Agent可以结合员工当前任务负载提出负责人建议，但创建正式任务前仍由用户确认’，应补充可操作建议。\", \"issue_type\": \"MISSING_ITEM\", \"suggestion\": \"补充suggestion：\'前端在任务创建页增加‘负责人负载提示’，展示建议人选当前待办任务数及平均处理时长，辅助用户决策。\'\"}, {\"field\": \"decisions\", \"index\": 5, \"detail\": \"decisions中张晨负责的首周复盘任务，content仅笼统写‘用于观察模型输出是否满足业务需要’，未落实原文‘质量评价页面还会收集纪要和agent结果的综合评分，准确性、完整性和可执行性评分’这一具体交付要求，无法验证是否完成。\", \"issue_type\": \"NOT_ACTIONABLE\", \"suggestion\": \"将content中‘以及纪要与Agent结果的准确性、完整性、可执行性评分’改为‘并在质量评价页面导出《纪要与Agent结果三维度评分报表》（含准确性、完整性、可执行性单项分及综合分），于9月8日18:00前提交。\'\"}, {\"field\": \"summary\", \"index\": -1, \"detail\": \"summary称‘识别并定义4项关键风险（含2项高风险）’，但risks列表含3项HIGH（模型延迟、负责人分配、删除用户）和1项MEDIUM（资料更新），与原文‘阻断任务未完成时的专项评审机制’被明确定义为‘风险等级为高’不符，且该机制未作为独立风险项列出，导致风险数量与等级描述错误。\", \"issue_type\": \"UNSUPPORTED\", \"suggestion\": \"修改summary为‘识别并定义5项关键风险（含4项高风险）’，并在risks中新增第5项：\'阻断任务未按时完成将触发发布时间调整风险\'，level: HIGH，suggestion: \'按pending_items约定，由张晨与王工于8月31日17:00召开专项评审。\'\"}]', '{\"risks\": [{\"level\": \"HIGH\", \"content\": \"模型服务延迟波动导致纪要生成与Agent运行等待时间延长，影响用户体验。\", \"suggestion\": \"发布首周每日查看运行观测中心的调用量、失败率、平均耗时和token使用量。\"}, {\"level\": \"MEDIUM\", \"content\": \"会议资料频繁更新导致知识索引长期处于‘需要重建’状态，影响检索时效性与一致性。\", \"suggestion\": \"建议资料整理完成后统一发起知识索引构建。\"}, {\"level\": \"HIGH\", \"content\": \"任务负责人分配不合理风险：Agent仅提供建议，最终由用户确认，存在人为误配可能；无技术强制校验机制。\", \"suggestion\": \"前端在任务创建页增加‘负责人负载提示’，展示建议人选当前待办任务数及平均处理时长，辅助用户决策。\"}, {\"level\": \"HIGH\", \"content\": \"删除用户时若关联历史业务记录（会议、任务、转写、纪要、问答、Agent运行、质量评价），系统将阻止删除操作，影响账号生命周期管理。\", \"suggestion\": \"管理员须先调整相关业务记录中的负责人、创建人或协作人关系，确保人员信息可追溯。\"}, {\"level\": \"HIGH\", \"content\": \"阻断任务未按时完成将触发发布时间调整风险\", \"suggestion\": \"按pending_items约定，由张晨与王工于8月31日17:00召开专项评审。\"}], \"topics\": [{\"title\": \"上一轮产品灰度发布的数据复盘\", \"summary\": \"复盘8月20日至26日灰度发布数据，覆盖10%-30%活跃用户，评估登录成功率、核心下单链路成功率、新功能访问与转化提升、用户反馈高频问题、权限控制验证及数据安全性。\"}, {\"title\": \"9月1日正式发布的功能范围和风险\", \"summary\": \"明确9月1日正式发布功能范围，包括会议创建与状态流转、资料管理、音视频转写、AI纪要、任务跟踪、知识库、React Agent分析、运行观测与质量评价；同步确认移动端附件下载问题须修复并写入发布说明。\"}, {\"title\": \"明确发布前后的任务负责人、协作人和完成期限\", \"summary\": \"确定发布前后各项任务的责任人、协作人与完成期限，涵盖移动端修复、回归测试、运营公告、客服知识库建设、首周数据复盘等五类关键事项。\"}], \"summary\": \"本次会议完成AI智能会议助手灰度发布复盘，确认核心功能稳定、权限合规、主流程可用；明确9月1日9:00正式发布，覆盖会议全生命周期与AI任务跟踪能力；识别并定义5项关键风险（含4项高风险），落实7项关键任务及责任人与截止时间；设定首周数据复盘框架与运营支持机制；约定阻断任务未完成时的专项评审机制。\", \"decisions\": [{\"basis\": \"灰度发布数据显示核心链路成功率高（登录99.8%，下单99.2%），无数据丢失、权限越界或重复提交问题；权限控制与预期一致；模型调用成功率97.9%-98.6%，失败可重试；主流程和边界场景已验证通过。\", \"content\": \"同意于9月1日9:00正式发布AI智能会议助手与任务跟踪系统，发布范围包括会议创建和状态流转、会议资料管理、音视频转写、AI纪要、任务跟踪、会议知识库、React Agent数据分析、运行观测和质量评价。\", \"owner_suggestion\": \"全体负责人\", \"deadline_suggestion\": \"2023-09-01T09:00:00\"}, {\"basis\": \"移动端附件下载进度未刷新问题影响发布当天支持成本，且已在灰度中被用户集中反馈；研发计划今日完成接口与前端验证。\", \"content\": \"移动端附件下载进度问题须在发布前修复，并在发布说明中写明处理结果。\", \"owner_suggestion\": \"王工（后端负责人）\", \"deadline_suggestion\": \"2023-08-30T18:00:00\"}, {\"basis\": \"测试团队已完成主流程及三类边界场景验证，但需补充两组验收数据以覆盖长音频与多角色说话人匹配场景。\", \"content\": \"发布前须完成两组补充验收：①至少30分钟真实会议录音，验证长音频切分、异步进度与长文本纪要合并；②含多个角色发言的会议内容，验证说话人标签与员工身份匹配效果。\", \"owner_suggestion\": \"陈琳（测试负责人）\", \"deadline_suggestion\": \"2023-08-31T12:00:00\"}, {\"basis\": \"运营需支撑上线后数据观察与用户引导，客服需快速定位问答来源以提升响应质量。\", \"content\": \"运营负责人赵敏牵头，协作人周宁，于9月1日9:00前完成发布公告与部门通知。\", \"owner_suggestion\": \"赵敏（运营负责人）\", \"deadline_suggestion\": \"2023-09-01T09:00:00\"}, {\"basis\": \"运营需支撑上线后数据观察与用户引导，客服需快速定位问答来源以提升响应质量。\", \"content\": \"客户支持负责人周宁牵头，协作人赵敏，于9月1日10:00前完成常见问题知识库建设。\", \"owner_suggestion\": \"周宁（客户支持负责人）\", \"deadline_suggestion\": \"2023-09-01T10:00:00\"}, {\"basis\": \"张晨提出首周复盘需结构化追踪五类核心数据，质量评价页面已支持综合评分采集。\", \"content\": \"产品负责人张晨负责发布决策复盘与首周数据汇总，重点分析会议创建数量与总时长、转写任务成功率与平均耗时、已确认纪要/任务草稿/正式任务数量、任务完成率与逾期率、RAG问答调用量/Agent运行次数/工具调用成功率/人工确认次数，并在质量评价页面导出《纪要与Agent结果三维度评分报表》（含准确性、完整性、可执行性单项分及综合分），于9月8日18:00前提交。\", \"owner_suggestion\": \"张晨（产品负责人）\", \"deadline_suggestion\": \"2023-09-08T18:00:00\"}, {\"basis\": \"知识索引构建期间资料变化时，由资料维护人完成整理后重新构建，该操作规则为会议明确达成的行动共识。\", \"content\": \"知识索引构建期间若发生资料更新，须由资料维护人完成全部整理后，统一发起重建流程，确保索引一致性。\", \"owner_suggestion\": \"资料维护人\", \"deadline_suggestion\": \"2023-09-01T09:00:00\"}, {\"basis\": \"发布首周每日查看运行观测和质量评价数据，发现任务逾期、模型调用失败率升高或员工反馈集中时，及时形成跟进报告，该动作性要求为会议明确共识。\", \"content\": \"发布首周每日17:00前，由王工牵头汇总运行观测中心与质量评价数据，形成《AI会议助手首周运行日报》，重点标注任务逾期率突增、模型失败率>2%、员工集中反馈TOP3问题，并同步至张晨、赵敏、周宁。\", \"owner_suggestion\": \"王工（后端负责人）\", \"deadline_suggestion\": \"2023-09-01T17:00:00\"}], \"viewpoints\": [{\"speaker\": \"张晨\", \"viewpoint\": \"灰度期间整体登录成功率为99.8%，核心下单链路成功率为99.2%；会议任务看板访问量提升24%，任务完成凭证上传率提升18%；用户集中反馈两个问题：①部分用户不知如何从会议纪要进入任务草稿；②移动端弱网下附件下载进度未及时刷新；已确认无数据丢失、权限越界或订单重复提交；四类账号权限控制符合预期；移动端附件下载体验问题需在正式发布前完成处理。\"}, {\"speaker\": \"王工\", \"viewpoint\": \"灰度期间后端接口无500错误；会议纪要模型调用成功率为98.6%（平均耗时7.8秒），Agent工具调用成功率为97.9%；两次失败源于外部模型服务短暂超时，系统已保存失败原因并支持用户重试；所有会议相关数据（转写、纪要、知识索引、Agent运行记录）均存于MySQL；知识索引更新时旧版本仍可检索，直至新版本切换完成；当前RE返回结构已包含引用会议名称、来源类型、时间点和原文片段。\"}, {\"speaker\": \"陈琳\", \"viewpoint\": \"已完成会议创建、参会人维护、音视频上传转写、说话人匹配、纪要修订、任务草稿确认、延期转交、RE问答、Agent人工确认及运行中断恢复等主流程验证；三类边界场景验证通过：①无权限访问返回明确提示；②仅草稿与已确认版本可导出；③已完成任务不可修改进度或发送提醒；需补充两组验收数据：①≥30分钟真实会议录音；②多角色发言会议用于验证说话人标签匹配效果；测试团队将于8月31日12:00前完成回归并提交凭证。\"}, {\"speaker\": \"赵敏\", \"viewpoint\": \"建议增加两项发布后观察指标：①员工从会议纪要创建正式任务的转化率；②任务逾期率；上线后一周内按部门统计会议数量、时长、任务完成率、逾期率及高频问题；逾期任务详情页展示提醒记录；每日16:00汇总高风险任务并同步至部门负责人与客服负责人；客服关注知识问答引用是否清晰（需含会议名称、来源类型、时间点、原文片段）。\"}, {\"speaker\": \"周宁\", \"viewpoint\": \"客服侧需在常见问题知识库中覆盖账号登录、会议权限、资料上传、格式转写失败、重试、纪要导出、任务负责人调整、知识索引状态、Agent人工确认等内容；对无法复现问题，需记录会议编号、任务编号或Agent运行编号以便研发追踪。\"}], \"pending_items\": [{\"content\": \"当移动端附件下载进度任务（负责人王工，截止8月30日18:00）或发布回归任务（负责人陈琳，截止8月31日12:00）任一未按时完成时，触发专项评审：由张晨与王工于8月31日17:00召开专项评审，决定是否调整发布时间。\", \"owner_suggestion\": \"张晨、王工\", \"deadline_suggestion\": \"2023-08-31T17:00:00\"}]}', 1, '2026-09-16 10:40:29', NULL, '已按审查发现的 5 条问题重写纪要，得分 60，达到 2 轮上限后没有再复审，请人工判断是否采用修订稿。', NULL, '2026-09-16 02:35:48', '2026-09-16 10:38:18', '2026-09-16 10:40:29');
 INSERT INTO `agent_run` VALUES (4, 'AGRE1FF10D55F9047DFBF5562655A0EEDD9', 4, 2, 1, 5, 'SUCCEEDED', '等待人工确认', 100, 2, 2, 0, 40, 8, '[{\"field\": \"summary\", \"index\": -1, \"detail\": \"summary未提及会议结尾明确复述的三项结论（V2.0按期发布+灰度三步走+通稿定稿时间）及\'行动项有三个\'的量化表述，也未体现会议闭环特征（\'我复述一遍\'、\'今天就到这里散会\'）\", \"issue_type\": \"MISSING_ITEM\", \"suggestion\": \"补充：\'会议最终形成三项结论：V2.0按期发布（报表导出入口隐藏）、灰度分三阶段实施（10%→50%→100%）、对外通稿与产品公告于发布前一日18:00前定稿；明确三项行动项及责任人。\'\"}, {\"field\": \"topics\", \"index\": 0, \"detail\": \"topics中\'V2.0能否按期发布\'议题摘要未包含\'消息推送免打扰设置已修复并昨日回归通过\'这一关键验收进展，该信息直接影响\'能否按期发布\'的判断依据\", \"issue_type\": \"MISSING_ITEM\", \"suggestion\": \"在该议题summary中补充：\'消息推送免打扰设置已修复并通过回归测试，仅报表导出存在性能瓶颈需延迟上线。\'\"}, {\"field\": \"viewpoints\", \"index\": 1, \"detail\": \"viewpoints中张涛的发言未记录\'缓存方案被否决\'这一关键决策过程，原文明确\'缓存覆盖不全，用户选冷门区间还是慢\'，该信息是选择异步方案的核心依据\", \"issue_type\": \"MISSING_ITEM\", \"suggestion\": \"在张涛viewpoint中补充：\'缓存方案因无法覆盖冷门时间区间被否决，异步方案为唯一可行解。\'\"}, {\"field\": \"decisions\", \"index\": 3, \"detail\": \"decisions第四条将\'张涛周三给进度\'这一风险监控动作错误列为正式决策，原文中这是主持人提出的风险应对措施（\'这个风险记下来\'），且决策主体是会议共识而非张涛单方承诺\", \"issue_type\": \"MISSING_ITEM\", \"suggestion\": \"删除该条decision，相关内容应归入risks模块，并明确标注为\'主持人提出的风险应对机制\'。\"}, {\"field\": \"pending_items\", \"index\": 2, \"detail\": \"pending_items中\'报表导出异步化改造完成并上线验证\'的deadline写为\'本周五下班前\'，但原文明确\'开发两天，连调一天，测试两天，加起来一周\'，且主持人说\'本周五前完成\'，未限定\'下班前\'；\'上线验证\'在原文中无对应表述，属UNSUPPORTED添加\", \"issue_type\": \"UNSUPPORTED\", \"suggestion\": \"修正为：\'报表导出异步化改造（含开发、联调、测试）于本周五前完成\'，删除\'上线验证\'。\"}, {\"field\": \"pending_items\", \"index\": 0, \"detail\": \"pending_items中所有条目owner_suggestion字段使用\'suggestion\'后缀，不符合\'必须明确指定负责人\'的可落实要求，原文中均为直接指派（\'张涛负责\'、\'陈磊明天下班前提交\'、\'刘颖负责通稿定稿\'）\", \"issue_type\": \"NOT_ACTIONABLE\", \"suggestion\": \"将\'owner_suggestion\'统一改为\'owner\'，值为\'张涛\'、\'陈磊\'、\'刘颖\'。\"}, {\"field\": \"pending_items\", \"index\": 0, \"detail\": \"pending_items中\'灰度期间值班排班表制定与发布\'的deadline写为\'会议次日18:00前\'，但原文明确\'明天下班前\'，\'下班前\'是弹性时间点，\'18:00前\'属过度精确且无依据\", \"issue_type\": \"VAGUE\", \"suggestion\": \"修正为\'明天下班前\'，与原文完全一致。\"}, {\"field\": \"risks\", \"index\": 0, \"detail\": \"risks中未记录原文明确提出的\'异步改造和灰度发布挨得太近\'这一原话风险描述，仅泛化为\'排期过近\'，丢失关键语境\", \"issue_type\": \"MISSING_ITEM\", \"suggestion\": \"在risks content中补充原话：\'异步改造和灰度发布挨得太近\'。\"}]', '{\"risks\": [{\"level\": \"MEDIUM\", \"content\": \"报表导出异步化改造与灰度发布排期过近，若改造延期可能影响整体发布节奏或迫使功能延至下一版本。异步改造和灰度发布挨得太近。\", \"suggestion\": \"张涛须周三反馈中期进度；若未完成联调，则报表导出推至下个版本。主持人提出的风险应对机制。\"}], \"topics\": [{\"title\": \"V2.0能否按期发布\", \"summary\": \"评估V2.0版本是否具备按期发布条件，重点聚焦17个计划需求的验收状态及剩余两个未闭环问题（报表导出、消息推送免打扰）的解决进展。消息推送免打扰设置已修复并通过回归测试，仅报表导出存在性能瓶颈需延迟上线。\"}, {\"title\": \"灰度发布策略\", \"summary\": \"确定灰度发布的范围、节奏、技术实现方式（分流维度）、监控指标及回滚能力，确保平稳过渡。\"}, {\"title\": \"对外通稿与产品公告安排\", \"summary\": \"明确对外传播材料（通稿、产品公告）的内容边界、发布时间、协同节奏及定稿节点，确保信息与实际功能一致。\"}], \"summary\": \"本次会议围绕V2.0产品发布评审展开，确认核心功能验收基本完成，但报表导出存在性能瓶颈（40+秒超时、高失败率），决定发布时隐藏该功能入口；灰度采用分三阶段（10%→50%→100%）、用户ID取模分流、完备回滚方案；对外通稿须删减报表导出内容，并于发布前一日18:00前定稿；对外通稿与产品公告将于发布当天上午10:00同步发布；会议最终形成三项结论：V2.0按期发布（报表导出入口隐藏）、灰度分三阶段实施（10%→50%→100%）、对外通稿与产品公告于发布前一日18:00前定稿；明确三项行动项及责任人。\", \"decisions\": [{\"basis\": \"报表导出接口在压测中单用户导出三个月数据耗时40+秒，超网关30秒限制，500并发下失败率达12%，当前方案无法满足发布质量要求；异步改造需一周，无法在发布前完成。\", \"content\": \"V2.0按原计划时间发布，报表导出功能入口在发布时隐藏，待异步改造完成后单独上线。\", \"owner_suggestion\": \"张涛\", \"deadline_suggestion\": \"发布当日\"}, {\"basis\": \"灰度需兼顾稳定性与可观测性，且数据库改动均向后兼容，回滚成本低、速度快（5分钟）。\", \"content\": \"灰度分三阶段执行：首日10%流量、次日50%、第三日全量；按用户ID取模分流，确保用户一致性；回滚预案已就绪。\", \"owner_suggestion\": \"陈磊\", \"deadline_suggestion\": \"发布起连续三天\"}, {\"basis\": \"对外通稿需与实际发布功能严格一致，报表导出功能将被隐藏，故相关内容须删除；产品公告与通稿同步于发布当天上午10点发出，需预留审核时间。\", \"content\": \"对外通稿及产品公告定稿时间为发布前一日下午6点前，通稿中删除报表导出相关描述。对外通稿与产品公告均于发布当天上午10:00同步发布。\", \"owner_suggestion\": \"刘颖\", \"deadline_suggestion\": \"发布前一日下午6点前\"}], \"viewpoints\": [{\"speaker\": \"王敏\", \"viewpoint\": \"V2.0计划内17个需求已验收通过15个，剩余报表导出和消息推送免打扰设置两项；后者已修复并昨日回归通过\"}, {\"speaker\": \"张涛\", \"viewpoint\": \"报表导出压测暴露单用户导出三个月数据耗时40+秒、超网关30秒限制，500并发失败率12%；提出异步任务方案（导出返回任务号、后台生成、通知下载），需开发2天+联调1天+测试2天共5个工作日；用户体验优于缓存方案；缓存方案因无法覆盖冷门时间区间被否决，异步方案为唯一可行解。\"}, {\"speaker\": \"陈磊\", \"viewpoint\": \"系统容量充足（可支撑8万DAU，预估发布后5万）；灰度建议分三步（10%→50%→100%），按用户ID取模分流；监控核心指标为接口错误率、平均响应时间、核心链路转化率；回滚预案完备，数据库改动向后兼容，5分钟内可切回旧版；灰度期间需安排值班盯盘，排班表将于明天下班前发出；已配置三项核心指标告警，超阈值直接发至工作群\"}, {\"speaker\": \"刘颖\", \"viewpoint\": \"对外通稿初稿已完成，需根据最终功能清单调整；因报表导出将隐藏，通稿中对应段落需删除；建议发布当天上午10点同步发布通稿与产品公告。\"}], \"pending_items\": [{\"content\": \"灰度期间值班排班表制定与发布\", \"owner_suggestion\": \"陈磊\", \"deadline_suggestion\": \"明天下班前\"}, {\"content\": \"报表导出异步化改造中期进度同步（周三反馈联调是否完成）\", \"owner_suggestion\": \"张涛\", \"deadline_suggestion\": \"本周三\"}, {\"content\": \"报表导出异步化改造（含开发、联调、测试）于本周五前完成\", \"owner_suggestion\": \"张涛\", \"deadline_suggestion\": \"本周五前\"}]}', 1, '2026-09-16 10:40:23', NULL, '已按审查发现的 8 条问题重写纪要，得分 40，达到 2 轮上限后没有再复审，请人工判断是否采用修订稿。', NULL, '2026-09-16 02:37:02', '2026-09-16 10:39:10', '2026-09-16 10:40:23');
-
--- ----------------------------
--- Table structure for agent_step
--- ----------------------------
-DROP TABLE IF EXISTS `agent_step`;
-CREATE TABLE `agent_step`  (
-  `id` int NOT NULL AUTO_INCREMENT COMMENT '自检步骤ID',
-  `run_id` int NOT NULL COMMENT '自检运行ID',
-  `step_no` int NOT NULL COMMENT '运行内步骤号',
-  `round_no` int NOT NULL DEFAULT 0 COMMENT '所属反思轮次',
-  `step_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'REVIEW、REFINE、FINAL',
-  `decision_summary` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '这一步要做什么',
-  `observation_summary` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '这一步的结论，审查步里是问题清单',
-  `payload_json` json NULL COMMENT '这一步的结构化产物，审查步是打分和问题，重写步是新纪要',
-  `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'RUNNING' COMMENT 'RUNNING、SUCCEEDED、FAILED',
-  `elapsed_ms` bigint NOT NULL DEFAULT 0 COMMENT '步骤耗时毫秒',
-  `error_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '步骤失败原因',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `finish_time` datetime NULL DEFAULT NULL COMMENT '完成时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_agent_run_step`(`run_id` ASC, `step_no` ASC) USING BTREE,
-  INDEX `idx_agent_step_run_status`(`run_id` ASC, `status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 21 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会议纪要自检步骤表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of agent_step
@@ -95,31 +25,6 @@ INSERT INTO `agent_step` VALUES (17, 4, 3, 2, 'REVIEW', '第2轮：审查是否�
 INSERT INTO `agent_step` VALUES (18, 3, 5, 2, 'FINAL', '汇总自检结论', '已按审查发现的 5 条问题重写纪要，得分 60，达到 2 轮上限后没有再复审，请人工判断是否采用修订稿。', NULL, 'SUCCEEDED', 0, NULL, '2026-09-16 02:38:18', '2026-09-16 10:38:18');
 INSERT INTO `agent_step` VALUES (19, 4, 4, 2, 'REFINE', '第2轮：按 8 条问题重写', '已按 8 条问题重写', '{\"risks\": [{\"level\": \"MEDIUM\", \"content\": \"报表导出异步化改造与灰度发布排期过近，若改造延期可能影响整体发布节奏或迫使功能延至下一版本。异步改造和灰度发布挨得太近。\", \"suggestion\": \"张涛须周三反馈中期进度；若未完成联调，则报表导出推至下个版本。主持人提出的风险应对机制。\"}], \"topics\": [{\"title\": \"V2.0能否按期发布\", \"summary\": \"评估V2.0版本是否具备按期发布条件，重点聚焦17个计划需求的验收状态及剩余两个未闭环问题（报表导出、消息推送免打扰）的解决进展。消息推送免打扰设置已修复并通过回归测试，仅报表导出存在性能瓶颈需延迟上线。\"}, {\"title\": \"灰度发布策略\", \"summary\": \"确定灰度发布的范围、节奏、技术实现方式（分流维度）、监控指标及回滚能力，确保平稳过渡。\"}, {\"title\": \"对外通稿与产品公告安排\", \"summary\": \"明确对外传播材料（通稿、产品公告）的内容边界、发布时间、协同节奏及定稿节点，确保信息与实际功能一致。\"}], \"summary\": \"本次会议围绕V2.0产品发布评审展开，确认核心功能验收基本完成，但报表导出存在性能瓶颈（40+秒超时、高失败率），决定发布时隐藏该功能入口；灰度采用分三阶段（10%→50%→100%）、用户ID取模分流、完备回滚方案；对外通稿须删减报表导出内容，并于发布前一日18:00前定稿；对外通稿与产品公告将于发布当天上午10:00同步发布；会议最终形成三项结论：V2.0按期发布（报表导出入口隐藏）、灰度分三阶段实施（10%→50%→100%）、对外通稿与产品公告于发布前一日18:00前定稿；明确三项行动项及责任人。\", \"decisions\": [{\"basis\": \"报表导出接口在压测中单用户导出三个月数据耗时40+秒，超网关30秒限制，500并发下失败率达12%，当前方案无法满足发布质量要求；异步改造需一周，无法在发布前完成。\", \"content\": \"V2.0按原计划时间发布，报表导出功能入口在发布时隐藏，待异步改造完成后单独上线。\", \"owner_suggestion\": \"张涛\", \"deadline_suggestion\": \"发布当日\"}, {\"basis\": \"灰度需兼顾稳定性与可观测性，且数据库改动均向后兼容，回滚成本低、速度快（5分钟）。\", \"content\": \"灰度分三阶段执行：首日10%流量、次日50%、第三日全量；按用户ID取模分流，确保用户一致性；回滚预案已就绪。\", \"owner_suggestion\": \"陈磊\", \"deadline_suggestion\": \"发布起连续三天\"}, {\"basis\": \"对外通稿需与实际发布功能严格一致，报表导出功能将被隐藏，故相关内容须删除；产品公告与通稿同步于发布当天上午10点发出，需预留审核时间。\", \"content\": \"对外通稿及产品公告定稿时间为发布前一日下午6点前，通稿中删除报表导出相关描述。对外通稿与产品公告均于发布当天上午10:00同步发布。\", \"owner_suggestion\": \"刘颖\", \"deadline_suggestion\": \"发布前一日下午6点前\"}], \"viewpoints\": [{\"speaker\": \"王敏\", \"viewpoint\": \"V2.0计划内17个需求已验收通过15个，剩余报表导出和消息推送免打扰设置两项；后者已修复并昨日回归通过\"}, {\"speaker\": \"张涛\", \"viewpoint\": \"报表导出压测暴露单用户导出三个月数据耗时40+秒、超网关30秒限制，500并发失败率12%；提出异步任务方案（导出返回任务号、后台生成、通知下载），需开发2天+联调1天+测试2天共5个工作日；用户体验优于缓存方案；缓存方案因无法覆盖冷门时间区间被否决，异步方案为唯一可行解。\"}, {\"speaker\": \"陈磊\", \"viewpoint\": \"系统容量充足（可支撑8万DAU，预估发布后5万）；灰度建议分三步（10%→50%→100%），按用户ID取模分流；监控核心指标为接口错误率、平均响应时间、核心链路转化率；回滚预案完备，数据库改动向后兼容，5分钟内可切回旧版；灰度期间需安排值班盯盘，排班表将于明天下班前发出；已配置三项核心指标告警，超阈值直接发至工作群\"}, {\"speaker\": \"刘颖\", \"viewpoint\": \"对外通稿初稿已完成，需根据最终功能清单调整；因报表导出将隐藏，通稿中对应段落需删除；建议发布当天上午10点同步发布通稿与产品公告。\"}], \"pending_items\": [{\"content\": \"灰度期间值班排班表制定与发布\", \"owner_suggestion\": \"陈磊\", \"deadline_suggestion\": \"明天下班前\"}, {\"content\": \"报表导出异步化改造中期进度同步（周三反馈联调是否完成）\", \"owner_suggestion\": \"张涛\", \"deadline_suggestion\": \"本周三\"}, {\"content\": \"报表导出异步化改造（含开发、联调、测试）于本周五前完成\", \"owner_suggestion\": \"张涛\", \"deadline_suggestion\": \"本周五前\"}]}', 'SUCCEEDED', 31055, NULL, '2026-09-16 02:38:39', '2026-09-16 10:39:10');
 INSERT INTO `agent_step` VALUES (20, 4, 5, 2, 'FINAL', '汇总自检结论', '已按审查发现的 8 条问题重写纪要，得分 40，达到 2 轮上限后没有再复审，请人工判断是否采用修订稿。', NULL, 'SUCCEEDED', 0, NULL, '2026-09-16 02:39:10', '2026-09-16 10:39:10');
-
--- ----------------------------
--- Table structure for ai_call_log
--- ----------------------------
-DROP TABLE IF EXISTS `ai_call_log`;
-CREATE TABLE `ai_call_log`  (
-  `id` int NOT NULL AUTO_INCREMENT COMMENT 'AI调用日志ID',
-  `request_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '单次模型请求唯一编号',
-  `call_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '转写、纪要、纪要自检或说话人匹配的调用类型',
-  `biz_id` int NOT NULL COMMENT '关联转写、纪要、索引、问答、Agent运行或发起用户ID',
-  `model_config_id` int NOT NULL COMMENT '模型配置ID',
-  `model_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '调用的模型名称',
-  `request_size` bigint NOT NULL DEFAULT 0 COMMENT '本次请求内容字节数',
-  `response_size` bigint NOT NULL DEFAULT 0 COMMENT '模型返回JSON字节数',
-  `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '调用状态：SUCCEEDED、FAILED',
-  `elapsed_ms` bigint NOT NULL DEFAULT 0 COMMENT '调用耗时毫秒',
-  `usage_json` json NULL COMMENT '模型返回的usage统计',
-  `error_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '调用失败原因',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '调用时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_ai_call_request_id`(`request_id` ASC) USING BTREE,
-  INDEX `idx_ai_call_type_time`(`call_type` ASC, `create_time` ASC) USING BTREE,
-  INDEX `idx_ai_call_biz_id`(`biz_id` ASC) USING BTREE,
-  INDEX `idx_ai_call_model_time_status`(`model_config_id` ASC, `create_time` ASC, `status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 33 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'AI模型调用日志表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of ai_call_log
@@ -158,26 +63,6 @@ INSERT INTO `ai_call_log` VALUES (31, 'AIC3D8A47E1B5C2906AF42E0D7B3C81529', 'MIN
 INSERT INTO `ai_call_log` VALUES (32, 'AIC9E1C6B3A7D48025CF60B1E4D9A2F738', 'AGENT_REVIEW', 4, 5, 'qwen-plus', 5197, 1483, 'FAILED', 8140, '{\"input_tokens\": 2445, \"output_tokens\": 1024, \"total_tokens\": 3469}', '模型输出未通过校验：pending_items[1] 的 deadline 缺少 basis 标注，已要求模型重出', '2026-09-16 02:29:30');
 
 -- ----------------------------
--- Table structure for ai_model_config
--- ----------------------------
-DROP TABLE IF EXISTS `ai_model_config`;
-CREATE TABLE `ai_model_config`  (
-  `id` int NOT NULL AUTO_INCREMENT COMMENT 'AI模型配置ID',
-  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '配置名称',
-  `model_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'TRANSCRIPTION' COMMENT 'TRANSCRIPTION、MINUTES、AGENT、SPEAKER',
-  `provider` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'OPENAI_COMPATIBLE' COMMENT '服务商类型：OPENAI_COMPATIBLE',
-  `base_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '兼容OpenAI协议的API基础地址',
-  `api_key` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '模型服务API Key',
-  `model_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '模型服务中的模型名称',
-  `timeout_seconds` int NOT NULL DEFAULT 600 COMMENT '单个分段请求超时秒数',
-  `enabled` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否启用：0否、1是',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_ai_model_type_enabled`(`model_type` ASC, `enabled` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'AI模型配置表' ROW_FORMAT = Dynamic;
-
--- ----------------------------
 -- Records of ai_model_config
 -- ----------------------------
 INSERT INTO `ai_model_config` VALUES (1, '百炼说话人分离转写', 'TRANSCRIPTION', 'DASHSCOPE', 'https://dashscope.aliyuncs.com/api/v1', '', 'paraformer-v2', 600, 1, '2026-09-08 23:57:07', '2026-09-10 03:16:07');
@@ -186,84 +71,15 @@ INSERT INTO `ai_model_config` VALUES (5, '百炼纪要自检模型', 'AGENT', 'O
 INSERT INTO `ai_model_config` VALUES (6, '百炼说话人匹配模型', 'SPEAKER', 'OPENAI_COMPATIBLE', 'https://dashscope.aliyuncs.com/compatible-mode/v1', '', 'qwen-plus', 180, 1, '2026-09-11 09:51:56', '2026-09-11 09:51:56');
 
 -- ----------------------------
--- Table structure for department
--- ----------------------------
-DROP TABLE IF EXISTS `department`;
-CREATE TABLE `department`  (
-  `id` int NOT NULL AUTO_INCREMENT COMMENT '部门ID',
-  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '部门名称',
-  `code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '部门编码（ORM 不使用，仅历史数据保留；可空以免新库建部门撞 NOT NULL）',
-  `parent_id` int NULL DEFAULT NULL COMMENT '上级部门ID',
-  `leader_id` int NULL DEFAULT NULL COMMENT '部门负责人用户ID',
-  `description` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '部门说明',
-  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'NORMAL' COMMENT '状态：NORMAL正常、DISABLED停用',
-  `sort` int NOT NULL DEFAULT 0 COMMENT '显示顺序',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_department_parent_id`(`parent_id` ASC) USING BTREE,
-  INDEX `idx_department_status_sort`(`status` ASC, `sort` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '部门表' ROW_FORMAT = Dynamic;
-
--- ----------------------------
 -- Records of department
 -- ----------------------------
-INSERT INTO `department` VALUES (1, '产品研发部', 'PRODUCT_RD', NULL, NULL, '负责产品设计、研发和技术评审', 'NORMAL', 1, '2026-09-08 23:57:06', '2026-09-08 23:57:06');
-INSERT INTO `department` VALUES (2, '市场运营部', 'MARKETING', NULL, NULL, '负责市场活动和运营增长', 'NORMAL', 2, '2026-09-08 23:57:06', '2026-09-08 23:57:06');
-
--- ----------------------------
--- Table structure for meeting
--- ----------------------------
-DROP TABLE IF EXISTS `meeting`;
-CREATE TABLE `meeting`  (
-  `id` int NOT NULL AUTO_INCREMENT COMMENT '会议ID',
-  `meeting_no` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '会议编号',
-  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '会议主题',
-  `start_time` datetime NOT NULL COMMENT '开始时间',
-  `end_time` datetime NOT NULL COMMENT '结束时间',
-  `location` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '会议地点或线上会议地址',
-  `agenda` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '会议议程',
-  `creator_id` int NOT NULL COMMENT '创建人用户ID',
-  `host_id` int NOT NULL COMMENT '主持人用户ID',
-  `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'SCHEDULED' COMMENT '状态：SCHEDULED待开始、IN_PROGRESS进行中、FINISHED已结束、CANCELLED已取消',
-  `cancel_reason` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '取消原因',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_meeting_no`(`meeting_no` ASC) USING BTREE,
-  INDEX `idx_meeting_creator_id`(`creator_id` ASC) USING BTREE,
-  INDEX `idx_meeting_host_id`(`host_id` ASC) USING BTREE,
-  INDEX `idx_meeting_status_start_time`(`status` ASC, `start_time` ASC) USING BTREE,
-  INDEX `idx_meeting_start_creator_status`(`start_time` ASC, `creator_id` ASC, `status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会议表' ROW_FORMAT = Dynamic;
+INSERT INTO `department` VALUES (1, '产品研发部', '负责产品设计、研发和技术评审', 'NORMAL', '2026-09-08 23:57:06', '2026-09-08 23:57:06');
+INSERT INTO `department` VALUES (2, '市场运营部', '负责市场活动和运营增长', 'NORMAL', '2026-09-08 23:57:06', '2026-09-08 23:57:06');
 
 -- ----------------------------
 -- Records of meeting
 -- ----------------------------
 INSERT INTO `meeting` VALUES (2, 'MTG2026091010370115A0AF', '产品发布评审会议', '2026-09-10 10:40:00', '2026-09-10 13:00:00', '线上会议', '暂无', 1, 1, 'IN_PROGRESS', NULL, '2026-09-10 02:37:02', '2026-09-10 02:37:53');
-
--- ----------------------------
--- Table structure for meeting_material
--- ----------------------------
-DROP TABLE IF EXISTS `meeting_material`;
-CREATE TABLE `meeting_material`  (
-  `id` int NOT NULL AUTO_INCREMENT COMMENT '会议资料ID',
-  `meeting_id` int NOT NULL COMMENT '所属会议ID',
-  `file_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '用户上传时的原始文件名',
-  `storage_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '服务端唯一存储文件名',
-  `file_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '资料类型：AUDIO录音、VIDEO视频、ATTACHMENT附件',
-  `content_type` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '文件MIME类型',
-  `file_ext` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '小写文件扩展名',
-  `file_size` bigint NOT NULL DEFAULT 0 COMMENT '文件字节数',
-  `file_hash` char(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '文件SHA-256摘要，用于会议内重复上传判断',
-  `uploader_id` int NOT NULL COMMENT '上传人用户ID',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '上传时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_meeting_material_storage_name`(`storage_name` ASC) USING BTREE,
-  UNIQUE INDEX `uk_meeting_material_hash`(`meeting_id` ASC, `file_hash` ASC) USING BTREE,
-  INDEX `idx_meeting_material_type_time`(`meeting_id` ASC, `file_type` ASC, `create_time` ASC) USING BTREE,
-  INDEX `idx_meeting_material_uploader_id`(`uploader_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会议录音、视频和附件表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of meeting_material
@@ -277,56 +93,10 @@ INSERT INTO `meeting_material` VALUES (6, 2, '产品发布评审会议片段.mp4
 INSERT INTO `meeting_material` VALUES (7, 2, '会议录音-单人朗读版.mp3', 'dd9fe4ec07414d15b4149529a8c40840.mp3', 'AUDIO', 'audio/mpeg', 'mp3', 7654756, '71ac4dcfeb05111b98c5766bb69fccbe39608f221e7865780652643de9948afd', 1, '2026-09-10 02:38:19');
 
 -- ----------------------------
--- Table structure for meeting_minutes
--- ----------------------------
-DROP TABLE IF EXISTS `meeting_minutes`;
-CREATE TABLE `meeting_minutes`  (
-  `id` int NOT NULL AUTO_INCREMENT COMMENT '会议纪要ID',
-  `meeting_id` int NOT NULL COMMENT '会议ID',
-  `source_task_id` int NOT NULL COMMENT '来源转写任务ID',
-  `model_config_id` int NOT NULL COMMENT '纪要生成模型配置ID',
-  `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'GENERATING' COMMENT '状态：GENERATING、DRAFT、CONFIRMED、FAILED',
-  `stage` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '等待生成' COMMENT '当前生成阶段',
-  `progress` int NOT NULL DEFAULT 0 COMMENT '生成进度0至100',
-  `summary` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '会议摘要',
-  `topics_json` json NOT NULL COMMENT '议题总结数组',
-  `viewpoints_json` json NOT NULL COMMENT '发言观点数组',
-  `decisions_json` json NOT NULL COMMENT '会议决策数组',
-  `pending_items_json` json NOT NULL COMMENT '待确认事项数组',
-  `risks_json` json NOT NULL COMMENT '风险与争议点数组',
-  `created_by` int NOT NULL COMMENT '生成发起人ID',
-  `confirmed_by` int NULL DEFAULT NULL COMMENT '确认人ID',
-  `confirmed_time` datetime NULL DEFAULT NULL COMMENT '确认时间',
-  `error_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '生成失败原因',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_minutes_source_task`(`source_task_id` ASC) USING BTREE,
-  INDEX `idx_minutes_meeting_status`(`meeting_id` ASC, `status` ASC) USING BTREE,
-  INDEX `idx_minutes_source_task_id`(`source_task_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'AI会议纪要版本表' ROW_FORMAT = Dynamic;
-
--- ----------------------------
 -- Records of meeting_minutes
 -- ----------------------------
 INSERT INTO `meeting_minutes` VALUES (3, 2, 6, 2, 'CONFIRMED', '纪要已生成', 100, '本次会议完成AI智能会议助手灰度发布复盘，确认核心功能稳定、权限合规、主流程可用；明确9月1日9:00正式发布，覆盖会议全生命周期与AI任务跟踪能力；识别并定义5项关键风险（含4项高风险），落实7项关键任务及责任人与截止时间；设定首周数据复盘框架与运营支持机制；约定阻断任务未完成时的专项评审机制。', '[{\"title\": \"上一轮产品灰度发布的数据复盘\", \"summary\": \"复盘8月20日至26日灰度发布数据，覆盖10%-30%活跃用户，评估登录成功率、核心下单链路成功率、新功能访问与转化提升、用户反馈高频问题、权限控制验证及数据安全性。\"}, {\"title\": \"9月1日正式发布的功能范围和风险\", \"summary\": \"明确9月1日正式发布功能范围，包括会议创建与状态流转、资料管理、音视频转写、AI纪要、任务跟踪、知识库、React Agent分析、运行观测与质量评价；同步确认移动端附件下载问题须修复并写入发布说明。\"}, {\"title\": \"明确发布前后的任务负责人、协作人和完成期限\", \"summary\": \"确定发布前后各项任务的责任人、协作人与完成期限，涵盖移动端修复、回归测试、运营公告、客服知识库建设、首周数据复盘等五类关键事项。\"}]', '[{\"speaker\": \"张晨\", \"viewpoint\": \"灰度期间整体登录成功率为99.8%，核心下单链路成功率为99.2%；会议任务看板访问量提升24%，任务完成凭证上传率提升18%；用户集中反馈两个问题：①部分用户不知如何从会议纪要进入任务草稿；②移动端弱网下附件下载进度未及时刷新；已确认无数据丢失、权限越界或订单重复提交；四类账号权限控制符合预期；移动端附件下载体验问题需在正式发布前完成处理。\"}, {\"speaker\": \"王工\", \"viewpoint\": \"灰度期间后端接口无500错误；会议纪要模型调用成功率为98.6%（平均耗时7.8秒），Agent工具调用成功率为97.9%；两次失败源于外部模型服务短暂超时，系统已保存失败原因并支持用户重试；所有会议相关数据（转写、纪要、知识索引、Agent运行记录）均存于MySQL；知识索引更新时旧版本仍可检索，直至新版本切换完成；当前RE返回结构已包含引用会议名称、来源类型、时间点和原文片段。\"}, {\"speaker\": \"陈琳\", \"viewpoint\": \"已完成会议创建、参会人维护、音视频上传转写、说话人匹配、纪要修订、任务草稿确认、延期转交、RE问答、Agent人工确认及运行中断恢复等主流程验证；三类边界场景验证通过：①无权限访问返回明确提示；②仅草稿与已确认版本可导出；③已完成任务不可修改进度或发送提醒；需补充两组验收数据：①≥30分钟真实会议录音；②多角色发言会议用于验证说话人标签匹配效果；测试团队将于8月31日12:00前完成回归并提交凭证。\"}, {\"speaker\": \"赵敏\", \"viewpoint\": \"建议增加两项发布后观察指标：①员工从会议纪要创建正式任务的转化率；②任务逾期率；上线后一周内按部门统计会议数量、时长、任务完成率、逾期率及高频问题；逾期任务详情页展示提醒记录；每日16:00汇总高风险任务并同步至部门负责人与客服负责人；客服关注知识问答引用是否清晰（需含会议名称、来源类型、时间点、原文片段）。\"}, {\"speaker\": \"周宁\", \"viewpoint\": \"客服侧需在常见问题知识库中覆盖账号登录、会议权限、资料上传、格式转写失败、重试、纪要导出、任务负责人调整、知识索引状态、Agent人工确认等内容；对无法复现问题，需记录会议编号、任务编号或Agent运行编号以便研发追踪。\"}]', '[{\"basis\": \"灰度发布数据显示核心链路成功率高（登录99.8%，下单99.2%），无数据丢失、权限越界或重复提交问题；权限控制与预期一致；模型调用成功率97.9%-98.6%，失败可重试；主流程和边界场景已验证通过。\", \"content\": \"同意于9月1日9:00正式发布AI智能会议助手与任务跟踪系统，发布范围包括会议创建和状态流转、会议资料管理、音视频转写、AI纪要、任务跟踪、会议知识库、React Agent数据分析、运行观测和质量评价。\", \"owner_suggestion\": \"全体负责人\", \"deadline_suggestion\": \"2023-09-01T09:00:00\"}, {\"basis\": \"移动端附件下载进度未刷新问题影响发布当天支持成本，且已在灰度中被用户集中反馈；研发计划今日完成接口与前端验证。\", \"content\": \"移动端附件下载进度问题须在发布前修复，并在发布说明中写明处理结果。\", \"owner_suggestion\": \"王工（后端负责人）\", \"deadline_suggestion\": \"2023-08-30T18:00:00\"}, {\"basis\": \"测试团队已完成主流程及三类边界场景验证，但需补充两组验收数据以覆盖长音频与多角色说话人匹配场景。\", \"content\": \"发布前须完成两组补充验收：①至少30分钟真实会议录音，验证长音频切分、异步进度与长文本纪要合并；②含多个角色发言的会议内容，验证说话人标签与员工身份匹配效果。\", \"owner_suggestion\": \"陈琳（测试负责人）\", \"deadline_suggestion\": \"2023-08-31T12:00:00\"}, {\"basis\": \"运营需支撑上线后数据观察与用户引导，客服需快速定位问答来源以提升响应质量。\", \"content\": \"运营负责人赵敏牵头，协作人周宁，于9月1日9:00前完成发布公告与部门通知。\", \"owner_suggestion\": \"赵敏（运营负责人）\", \"deadline_suggestion\": \"2023-09-01T09:00:00\"}, {\"basis\": \"运营需支撑上线后数据观察与用户引导，客服需快速定位问答来源以提升响应质量。\", \"content\": \"客户支持负责人周宁牵头，协作人赵敏，于9月1日10:00前完成常见问题知识库建设。\", \"owner_suggestion\": \"周宁（客户支持负责人）\", \"deadline_suggestion\": \"2023-09-01T10:00:00\"}, {\"basis\": \"张晨提出首周复盘需结构化追踪五类核心数据，质量评价页面已支持综合评分采集。\", \"content\": \"产品负责人张晨负责发布决策复盘与首周数据汇总，重点分析会议创建数量与总时长、转写任务成功率与平均耗时、已确认纪要/任务草稿/正式任务数量、任务完成率与逾期率、RAG问答调用量/Agent运行次数/工具调用成功率/人工确认次数，并在质量评价页面导出《纪要与Agent结果三维度评分报表》（含准确性、完整性、可执行性单项分及综合分），于9月8日18:00前提交。\", \"owner_suggestion\": \"张晨（产品负责人）\", \"deadline_suggestion\": \"2023-09-08T18:00:00\"}, {\"basis\": \"知识索引构建期间资料变化时，由资料维护人完成整理后重新构建，该操作规则为会议明确达成的行动共识。\", \"content\": \"知识索引构建期间若发生资料更新，须由资料维护人完成全部整理后，统一发起重建流程，确保索引一致性。\", \"owner_suggestion\": \"资料维护人\", \"deadline_suggestion\": \"2023-09-01T09:00:00\"}, {\"basis\": \"发布首周每日查看运行观测和质量评价数据，发现任务逾期、模型调用失败率升高或员工反馈集中时，及时形成跟进报告，该动作性要求为会议明确共识。\", \"content\": \"发布首周每日17:00前，由王工牵头汇总运行观测中心与质量评价数据，形成《AI会议助手首周运行日报》，重点标注任务逾期率突增、模型失败率>2%、员工集中反馈TOP3问题，并同步至张晨、赵敏、周宁。\", \"owner_suggestion\": \"王工（后端负责人）\", \"deadline_suggestion\": \"2023-09-01T17:00:00\"}]', '[{\"content\": \"当移动端附件下载进度任务（负责人王工，截止8月30日18:00）或发布回归任务（负责人陈琳，截止8月31日12:00）任一未按时完成时，触发专项评审：由张晨与王工于8月31日17:00召开专项评审，决定是否调整发布时间。\", \"owner_suggestion\": \"张晨、王工\", \"deadline_suggestion\": \"2023-08-31T17:00:00\"}]', '[{\"level\": \"HIGH\", \"content\": \"模型服务延迟波动导致纪要生成与Agent运行等待时间延长，影响用户体验。\", \"suggestion\": \"发布首周每日查看运行观测中心的调用量、失败率、平均耗时和token使用量。\"}, {\"level\": \"MEDIUM\", \"content\": \"会议资料频繁更新导致知识索引长期处于‘需要重建’状态，影响检索时效性与一致性。\", \"suggestion\": \"建议资料整理完成后统一发起知识索引构建。\"}, {\"level\": \"HIGH\", \"content\": \"任务负责人分配不合理风险：Agent仅提供建议，最终由用户确认，存在人为误配可能；无技术强制校验机制。\", \"suggestion\": \"前端在任务创建页增加‘负责人负载提示’，展示建议人选当前待办任务数及平均处理时长，辅助用户决策。\"}, {\"level\": \"HIGH\", \"content\": \"删除用户时若关联历史业务记录（会议、任务、转写、纪要、问答、Agent运行、质量评价），系统将阻止删除操作，影响账号生命周期管理。\", \"suggestion\": \"管理员须先调整相关业务记录中的负责人、创建人或协作人关系，确保人员信息可追溯。\"}, {\"level\": \"HIGH\", \"content\": \"阻断任务未按时完成将触发发布时间调整风险\", \"suggestion\": \"按pending_items约定，由张晨与王工于8月31日17:00召开专项评审。\"}]', 1, 1, '2026-09-16 10:40:52', NULL, '2026-09-16 02:31:51', '2026-09-16 10:40:51');
 INSERT INTO `meeting_minutes` VALUES (4, 2, 7, 2, 'DRAFT', '纪要已生成', 100, '本次会议围绕V2.0产品发布评审展开，确认核心功能验收基本完成，但报表导出存在性能瓶颈（40+秒超时、高失败率），决定发布时隐藏该功能入口；灰度采用分三阶段（10%→50%→100%）、用户ID取模分流、完备回滚方案；对外通稿须删减报表导出内容，并于发布前一日18:00前定稿；对外通稿与产品公告将于发布当天上午10:00同步发布；会议最终形成三项结论：V2.0按期发布（报表导出入口隐藏）、灰度分三阶段实施（10%→50%→100%）、对外通稿与产品公告于发布前一日18:00前定稿；明确三项行动项及责任人。', '[{\"title\": \"V2.0能否按期发布\", \"summary\": \"评估V2.0版本是否具备按期发布条件，重点聚焦17个计划需求的验收状态及剩余两个未闭环问题（报表导出、消息推送免打扰）的解决进展。消息推送免打扰设置已修复并通过回归测试，仅报表导出存在性能瓶颈需延迟上线。\"}, {\"title\": \"灰度发布策略\", \"summary\": \"确定灰度发布的范围、节奏、技术实现方式（分流维度）、监控指标及回滚能力，确保平稳过渡。\"}, {\"title\": \"对外通稿与产品公告安排\", \"summary\": \"明确对外传播材料（通稿、产品公告）的内容边界、发布时间、协同节奏及定稿节点，确保信息与实际功能一致。\"}]', '[{\"speaker\": \"王敏\", \"viewpoint\": \"V2.0计划内17个需求已验收通过15个，剩余报表导出和消息推送免打扰设置两项；后者已修复并昨日回归通过\"}, {\"speaker\": \"张涛\", \"viewpoint\": \"报表导出压测暴露单用户导出三个月数据耗时40+秒、超网关30秒限制，500并发失败率12%；提出异步任务方案（导出返回任务号、后台生成、通知下载），需开发2天+联调1天+测试2天共5个工作日；用户体验优于缓存方案；缓存方案因无法覆盖冷门时间区间被否决，异步方案为唯一可行解。\"}, {\"speaker\": \"陈磊\", \"viewpoint\": \"系统容量充足（可支撑8万DAU，预估发布后5万）；灰度建议分三步（10%→50%→100%），按用户ID取模分流；监控核心指标为接口错误率、平均响应时间、核心链路转化率；回滚预案完备，数据库改动向后兼容，5分钟内可切回旧版；灰度期间需安排值班盯盘，排班表将于明天下班前发出；已配置三项核心指标告警，超阈值直接发至工作群\"}, {\"speaker\": \"刘颖\", \"viewpoint\": \"对外通稿初稿已完成，需根据最终功能清单调整；因报表导出将隐藏，通稿中对应段落需删除；建议发布当天上午10点同步发布通稿与产品公告。\"}]', '[{\"basis\": \"报表导出接口在压测中单用户导出三个月数据耗时40+秒，超网关30秒限制，500并发下失败率达12%，当前方案无法满足发布质量要求；异步改造需一周，无法在发布前完成。\", \"content\": \"V2.0按原计划时间发布，报表导出功能入口在发布时隐藏，待异步改造完成后单独上线。\", \"owner_suggestion\": \"张涛\", \"deadline_suggestion\": \"发布当日\"}, {\"basis\": \"灰度需兼顾稳定性与可观测性，且数据库改动均向后兼容，回滚成本低、速度快（5分钟）。\", \"content\": \"灰度分三阶段执行：首日10%流量、次日50%、第三日全量；按用户ID取模分流，确保用户一致性；回滚预案已就绪。\", \"owner_suggestion\": \"陈磊\", \"deadline_suggestion\": \"发布起连续三天\"}, {\"basis\": \"对外通稿需与实际发布功能严格一致，报表导出功能将被隐藏，故相关内容须删除；产品公告与通稿同步于发布当天上午10点发出，需预留审核时间。\", \"content\": \"对外通稿及产品公告定稿时间为发布前一日下午6点前，通稿中删除报表导出相关描述。对外通稿与产品公告均于发布当天上午10:00同步发布。\", \"owner_suggestion\": \"刘颖\", \"deadline_suggestion\": \"发布前一日下午6点前\"}]', '[{\"content\": \"灰度期间值班排班表制定与发布\", \"owner_suggestion\": \"陈磊\", \"deadline_suggestion\": \"明天下班前\"}, {\"content\": \"报表导出异步化改造中期进度同步（周三反馈联调是否完成）\", \"owner_suggestion\": \"张涛\", \"deadline_suggestion\": \"本周三\"}, {\"content\": \"报表导出异步化改造（含开发、联调、测试）于本周五前完成\", \"owner_suggestion\": \"张涛\", \"deadline_suggestion\": \"本周五前\"}]', '[{\"level\": \"MEDIUM\", \"content\": \"报表导出异步化改造与灰度发布排期过近，若改造延期可能影响整体发布节奏或迫使功能延至下一版本。异步改造和灰度发布挨得太近。\", \"suggestion\": \"张涛须周三反馈中期进度；若未完成联调，则报表导出推至下个版本。主持人提出的风险应对机制。\"}]', 1, NULL, NULL, NULL, '2026-09-16 02:33:55', '2026-09-16 02:40:23');
-
--- ----------------------------
--- Table structure for meeting_participant
--- ----------------------------
-DROP TABLE IF EXISTS `meeting_participant`;
-CREATE TABLE `meeting_participant`  (
-  `id` int NOT NULL AUTO_INCREMENT COMMENT '参会记录ID',
-  `meeting_id` int NOT NULL COMMENT '会议ID',
-  `user_id` int NOT NULL COMMENT '参会员工用户ID',
-  `participant_role` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PARTICIPANT' COMMENT '会议角色：CREATOR创建人、HOST主持人、PARTICIPANT参会人',
-  `response_status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PENDING' COMMENT '参会状态：PENDING待确认、ACCEPTED参加、DECLINED不参加',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_meeting_participant`(`meeting_id` ASC, `user_id` ASC) USING BTREE,
-  INDEX `idx_meeting_participant_user_id`(`user_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会议参会人员表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of meeting_participant
@@ -345,56 +115,12 @@ INSERT INTO `meeting_participant` VALUES (13, 2, 11, 'PARTICIPANT', 'ACCEPTED', 
 INSERT INTO `meeting_participant` VALUES (14, 2, 12, 'PARTICIPANT', 'ACCEPTED', '2026-09-10 02:37:02');
 
 -- ----------------------------
--- Table structure for prompt_template
--- ----------------------------
-DROP TABLE IF EXISTS `prompt_template`;
-CREATE TABLE `prompt_template`  (
-  `id` int NOT NULL AUTO_INCREMENT COMMENT 'Prompt模板ID',
-  `code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '模板唯一编码',
-  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '模板名称',
-  `scene_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'MEETING_MINUTES' COMMENT '使用场景',
-  `system_prompt` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '系统指令',
-  `user_prompt` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '包含变量占位符的用户模板',
-  `enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否启用',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_prompt_code`(`code` ASC) USING BTREE,
-  INDEX `idx_prompt_scene_enabled`(`scene_type` ASC, `enabled` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'Prompt模板表' ROW_FORMAT = Dynamic;
-
--- ----------------------------
 -- Records of prompt_template
 -- ----------------------------
 INSERT INTO `prompt_template` VALUES (5, 'MEETING_MINUTES', '会议纪要生成', 'MEETING_MINUTES', '你是企业会议纪要信息抽取员。只根据输入的整场会议转写记录事实，区分已确定的决议、明确承诺执行的行动、会议明确留下的未决事项、泛泛建议、可选方案和假设性讨论。不得把讨论或建议提升为已决事项或任务，不得把推测写成会议已确定的负责人或期限。', '会议主题：{meeting_title}\n整场会议转写：\n{transcript}\n请生成完整、去重的结构化会议纪要（摘要、议题、发言观点、决策、待确认事项、风险与争议点）。只有原文明示已确定的决议或明确承诺执行的行动才放入 decisions；会议明确留下待讨论、待确认或需跟进的未决事项（含待决建议）放入 pending_items，保留其未承诺状态；未留下后续处理安排的泛泛建议、可选方案和假设归入 topics 或 viewpoints，不强行转成任务。risks 中的风险与争议事实须有原文依据；risks[].suggestion 可提出模型应对建议，但须明确标为模型建议而非会议决定。原文未明确负责人或期限时如实填“未提及”，不要留空、不要猜。', 1, '2026-10-06 00:00:00', '2026-10-06 00:00:00');
 INSERT INTO `prompt_template` VALUES (7, 'MINUTES_REVIEW', '纪要自检审查', 'AGENT', '你是企业会议纪要事实审查员。转写原文是会议事实的唯一依据，当前纪要和已有审核意见都可能有误。严格区分已确定的决议、明确承诺执行的行动、会议明确留下的未决事项、泛泛建议、可选方案和假设性讨论。只提出能由原文核验且值得修订的问题，不得把建议、假设或一般讨论推断为已决事项或任务。', '会议主题：{meeting_title}\n\n转写原文：\n{transcript}\n\n当前纪要：\n{minutes_json}\n\n请核对 summary、topics、viewpoints、decisions、pending_items、risks 六部分，并遵守以下规则：\n1. 只有原文明示已确定的决议或明确承诺执行的行动才能写入 decisions；会议明确留下待讨论、待确认或需跟进的未决事项（含待决建议）写入 pending_items，保留其未承诺状态。未留下后续处理安排的泛泛建议、可选方案、假设和一般讨论可按原文记入 topics 或 viewpoints，不要强行转成决策或待办。risks 中的风险与争议事实须有原文依据；risks[].suggestion 可以是明确标为模型建议的应对建议，不得写成会议已决措施。\n2. 只对原文确有的重要遗漏使用 MISSING_ITEM，对无依据、确定性被夸大或把可选方案写成已决的内容使用 UNSUPPORTED。detail 应说明可核验的原文依据与纪要差异；整块缺失时 index 填 -1。提出修改建议前先核对原文。\n3. 仅当原文明示负责人或期限而纪要漏记、错记时，才使用 MISSING_OWNER 或 MISSING_DEADLINE。原文未说明时，写“待确认”或“未明确”是可接受的，不要求猜测或补造。owner_suggestion、deadline_suggestion 可以保留清楚标识为模型建议的内容，但不得当作会议已确定的人选或期限。VAGUE、NOT_ACTIONABLE 仅用于原文已明确要执行却表述不足的事项，不要求每个讨论点都成为任务。\n4. 无有据可查的问题时，passed=true 且 issues=[]；否则 passed=false，并只列出可由原文核验的问题。', 1, '2026-09-11 02:33:26', '2026-09-14 16:30:13');
 INSERT INTO `prompt_template` VALUES (8, 'MINUTES_REFINE', '纪要自检修订', 'AGENT', '你是企业会议纪要事实修订员。转写原文是唯一会议事实依据；当前纪要和审核意见都不是独立证据，审核意见中的修改建议不是事实或会议决定。每项修改须回查原文，区分已决、明确承诺执行、会议明确留下的未决事项、泛泛建议与可选方案。原文没有给出或证据不足的细节保持不确定，不得编造决策、任务、负责人或期限。', '会议主题：{meeting_title}\n\n转写原文：\n{transcript}\n\n当前纪要：\n{minutes_json}\n\n审核意见：\n{issues}\n\n逐条核对审核意见与转写原文后输出修订后的完整纪要。只修正原文支持的遗漏、错记或确定性夸大；无依据的审核建议应忽略，原文支持且未被指出问题的内容保持原样。只有明确决议或承诺执行的行动写入 decisions；会议明确留下待讨论、待确认或需跟进的未决事项（含待决建议）写入 pending_items，并保留未承诺状态；未留下后续处理安排的泛泛建议、可选方案、假设和一般讨论按原文记入 topics 或 viewpoints，不转成已决事项或任务。risks 中的风险与争议事实须有原文依据；risks[].suggestion 可提出模型应对建议，但须明确标为模型建议而非会议决定。原文未明确负责人或期限时使用“待确认”或“未明确”；如填写 owner_suggestion、deadline_suggestion 中的推测，必须明确写成模型建议而非会议决定。', 1, '2026-09-11 02:33:26', '2026-09-11 02:33:26');
 INSERT INTO `prompt_template` VALUES (9, 'SPEAKER_MATCH', '说话人建议匹配', 'TRANSCRIPTION', '你是会议转写分析助手。你要根据发言内容推断每个说话人标签对应的是哪位参会人员，只能从给定的参会人员名单里选，拿不准就不要选。', '会议主题：{meeting_title}\n\n参会人员名单：\n{participants}\n\n带说话人标签的转写片段：\n{transcript}\n\n请为每个说话人标签给出最可能的参会人员、判断依据和把握程度。点名句是最有力的依据，例如某人说“请王敏说一下”，紧接着开口的那个标签多半就是王敏。没有把握时把 user_id 置为 0。', 1, '2026-09-11 02:33:26', '2026-09-11 02:33:26');
-
--- ----------------------------
--- Table structure for transcript_segment
--- ----------------------------
-DROP TABLE IF EXISTS `transcript_segment`;
-CREATE TABLE `transcript_segment`  (
-  `id` int NOT NULL AUTO_INCREMENT COMMENT '转写片段ID',
-  `task_id` int NOT NULL COMMENT '转写任务ID',
-  `meeting_id` int NOT NULL COMMENT '会议ID',
-  `segment_no` int NOT NULL COMMENT '时间轴顺序号',
-  `start_ms` bigint NOT NULL DEFAULT 0 COMMENT '片段开始毫秒',
-  `end_ms` bigint NOT NULL DEFAULT 0 COMMENT '片段结束毫秒',
-  `speaker_label` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '模型识别的说话人标签',
-  `speaker_user_id` int NULL DEFAULT NULL COMMENT '人工匹配的参会用户ID',
-  `original_text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '模型原始转写文本',
-  `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '页面当前使用的可修订文本',
-  `revised_by` int NULL DEFAULT NULL COMMENT '最后修订人用户ID',
-  `revised_time` datetime NULL DEFAULT NULL COMMENT '最后修订时间',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_transcript_task_segment`(`task_id` ASC, `segment_no` ASC) USING BTREE,
-  INDEX `idx_transcript_meeting_time`(`meeting_id` ASC, `start_ms` ASC) USING BTREE,
-  INDEX `idx_transcript_speaker_user_id`(`speaker_user_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 436 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '带时间轴和说话人的转写片段表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of transcript_segment
@@ -529,64 +255,10 @@ INSERT INTO `transcript_segment` VALUES (434, 7, 2, 51, 262620, 267692, '01-1', 
 INSERT INTO `transcript_segment` VALUES (435, 7, 2, 52, 267692, 270080, '01-0', 1, '今天就到这里散会。', '今天就到这里散会。', NULL, NULL, '2026-09-16 02:30:09', '2026-09-16 02:33:22');
 
 -- ----------------------------
--- Table structure for transcription_task
--- ----------------------------
-DROP TABLE IF EXISTS `transcription_task`;
-CREATE TABLE `transcription_task`  (
-  `id` int NOT NULL AUTO_INCREMENT COMMENT '转写任务ID',
-  `meeting_id` int NOT NULL COMMENT '会议ID',
-  `material_id` int NOT NULL COMMENT '录音或视频资料ID',
-  `model_config_id` int NOT NULL COMMENT '本次使用的AI模型配置ID',
-  `initiator_id` int NOT NULL COMMENT '发起人用户ID',
-  `language` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'zh' COMMENT '音频主要语言ISO-639-1代码',
-  `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PENDING' COMMENT '状态：PENDING、PROCESSING、SUCCEEDED、FAILED',
-  `stage` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '等待执行' COMMENT '当前执行阶段',
-  `progress` int NOT NULL DEFAULT 0 COMMENT '转写进度0至100',
-  `retry_count` int NOT NULL DEFAULT 0 COMMENT '已重试次数',
-  `max_retry` int NOT NULL DEFAULT 3 COMMENT '允许的最大重试次数',
-  `total_duration_ms` bigint NOT NULL DEFAULT 0 COMMENT '音频总时长毫秒',
-  `full_text` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '全部转写文本',
-  `error_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '失败原因',
-  `started_at` datetime NULL DEFAULT NULL COMMENT '开始执行时间',
-  `finished_at` datetime NULL DEFAULT NULL COMMENT '完成或失败时间',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_transcription_material_id`(`material_id` ASC) USING BTREE,
-  INDEX `idx_transcription_meeting_status`(`meeting_id` ASC, `status` ASC) USING BTREE,
-  INDEX `idx_transcription_initiator_id`(`initiator_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '音视频异步转写任务表' ROW_FORMAT = Dynamic;
-
--- ----------------------------
 -- Records of transcription_task
 -- ----------------------------
 INSERT INTO `transcription_task` VALUES (6, 2, 7, 1, 1, 'zh', 'SUCCEEDED', '转写完成', 100, 0, 3, 956720, '各位同事上午好，现在开始产品上线复盘与下阶段发布准备会议。我是本次会议主持人李月。今天会议预计持续45分钟，主要讨论三个议题。第一，上一轮产品灰度发布的数据复盘。第二，9月1日正式发布的功能范围和风险。第三，明确发布前后的任务负责人、协作人和完成期限。请大家围绕事实数据和可执行动作发言，会议结束后会形成纪要和任务清单。先请产品负责人张晨介绍灰度发布情况。张晨本次灰度从8月20日开始覆盖10%的活跃用户，到8月26日扩大到30%，整体登录成功率为99.8%，核心下单链路成功率为99.2%。新版本的会议任务看板访问量比旧入口提升了24%，任务完成凭证上传率提升了18%。用户反馈最集中的问题有两个，第一部分用户不知道如何从会议纪要进入任务草稿。第二，移动端在网络较弱时，附件下载进度没有及时刷新。张晨继续说明，从买点和客服工单看，目前没有发现数据丢失、权限越界或订单重复提交的问题。我们已经抽样检查了管理员、会议创建人、主持人、普通参会人员四类账号。管理员可以查看企业会议数据，员工只可以看到自己创建、主持或参与的会议任务，负责人、创建人和协作人可以查看相关任务权限范围与预期一致。不过移动端附件下载的体验问题会影响发布当天的支持成本，需要在正式发布前完成处理。主持人李月请后端负责人王工补充服务和数据情况，王工，后端接口在灰度期间没有出现500错误。AI 纪要、转写、问答和agent运行的调用日志都已经进入观测中心，最近七天的会议纪要模型调用成功率为98.6%，平均耗时为7.8秒，agent工具调用成功率为97.9%。两次失败都来自外部模型服务短暂超时，系统已保存失败原因和耗时，用户可以从失败状态发起重试。王工继续数据库方面，会议转写、纪要任务、知识索引和agent运行记录都保存在my sql知识库，切片也保存在my sql的JSON字段中。我们检查了长会议的转写和纪要生成流程，音频会按时长切分，转写完成后生成带时间轴的片段，纪要会按文本长度分段总结，再合并为摘要议题发言观点、决策该确认事项和风险。对于资料更新，知识索引会标记为需要重建，旧版本仍保持可检索，直到新版本完成切换。主持人李月，请测试负责人陈琳介绍质量验证情况。陈琳目前已完成会议创建，参会人员维护录音和视频资料上传转写，发起说话人匹配、纪要修订、确认任务草稿、确认任务延期转交re问答agent人工确认和运行中断恢复的主流程验证。我们重点关注了三类边界场景，第一，会议参与人访问不属于自己的会议资料时，接口会返回，没有会议访问权限。第二，纪要处于生成中或失败状态时不能导出，只有草稿和已确认版本可以导出word或pdf。第三，已完成任务不能再修改进度、延期转交或发送提醒，陈琳继续还需要在正式发布前补充两组验收数据，第一组是至少30分钟的真实会议录音，用于验证长音频切分、异步进度和长文本纪要合并。第二组是包含多个角色发言的会议内容，用于检查说话人标签与员工身份的匹配效果。今天的会议录音将作为演示素材之一，内容会包含产品研发、测试、运营和客户支持角色的发言。主持人李月，下面讨论9月1日正式发布范围，张晨产品侧建议按既定范围发布，发布内容包括会议创建和状态流转、会议资料管理、音视频转写、AI纪要、任务跟踪、会议知识库react agent数据分析、运行观测和质量评价。移动端附件下载进度问题不影响核心会议和任务流程，但需要在发布前修复，并在发布说明中写明处理结果。运营负责人赵敏，运营册建议增加两个发布后的观察指标，第一个是员工从会议纪要创建正式任务的转化率，第二个是任务逾期率。上线后一周内，我们将按部门查看会议数量、会议时长、任务完成率、逾期率和高频一题。对于逾期任务，负责人会在任务详情中看到提醒记录。运营同学每天下午四点汇总高风险任务，并同步给部门负责人、客户支持负责人周宁，客服侧关心知识问答的引用是否足够清晰。我们希望用户在提问跨会议问题后，不只是看到答案，还要看到引用的会议名称、来源类型、时间点和原文片段，这样客服同学能够快速判断答案来自哪一场会议。王工，当前re返回结构已经包含这些信息，转写来源会显示时间点，纪要和附件来源会显示文件或纪要版本名称，前端会在回答下面展示引用依据和相似度。主持人，李月，现在讨论风险？陈琳，第一项风险是模型服务延迟波动。虽然调用失败可以重试，但在会议纪要生成和agent运行中，用户会看到等待时间，建议在发布首周每天查看运行观测中心的调用量、失败率、平均耗时和token使用量。第二项风险是会议资料频繁更新。如果用户在知识索引构建过程中上传新附件或修订转写文本，索引状态会保持需要重建，建议资料整理完成后再发起构建。第三项风险是任务负责人分配不合理。Agent可以结合员工当前任务负载提出负责人建议，但创建正式任务前仍由用户确认。王工，我补充一个数据风险，删除用户时，如果该账号已经关联会议任务转写纪要知识问答，agent运行或质量评价记录，系统不会执行删除。管理员需要先调整业务记录中的负责人、创建人或协作人关系，这样可以保证历史会议和任务记录仍能正确展示人员信息。张晨，关于移动端下载进度研发计划今天下午完成接口和前端验证，负责人是王工，协作人是陈琳，截止时间为8月30日18点。任务描述是在若网络条件下附件下载时，展示明确的下载状态和失败提示，并验证pdf、word音频和视频四类文件，请记要中记录未发布前阻断事项。陈琳，我确认测试安排，测试团队将在8月31日中午12点前完成回归。覆盖管理员和员工两种角色，重点检查登录注册部门员工权限、会议资料上传下载、长音频转写、纪要导出、任务确认、逾期提醒、知识索引重建、跨会议问答和agent人工确认完成后，会在发布群提交测试结论和任务完成凭证。赵敏运营团队在9月1日九点前完成发布公告使用指引和部门通知负责人赵敏，协作人周宁，截止时间为9月1日九点，公告中需要包含会议创建入口、录音上传入口，纪要确认入口、任务跟踪入口和知识库问答入口。运营还会准备两场线上答疑，收集员工对转写质量、纪要质量和任务提醒的反馈。周宁客户支持团队在9月1日十点前完成常见问题知识库，负责人周宁，协作人赵敏，截止时间为9月1日十点。内容包括账号登录、会议权限、资料上传、格式转写失败、重试纪要导出任务负责人调整知识索引状态和agent人工确认，遇到无法复现的问题时，客服会记录会议编号、任务编号或agent运行编号，方便研发从运行记录追踪。主持人李月请各负责人确认任务和期限。王工确认移动端附件下载进度任务8月30日18点完成。陈琳确认发布回归任务，8月31日中午12点完成。赵敏确认发布公告和部门通知任务9月1日九点完成。周宁确认常见问题知识库任务9月1日十点完成。张晨负责发布决策复盘与首周数据汇总，截止时间为9月8日18点。张晨首周复盘将重点看五项数据，第一，会议创建数量和总时长。第二，转写任务成功率和平均耗时。第三，已确认纪要数量、任务草稿数量和正式任务数量。第四，任务完成率和逾期率。第五，rap问答调用量、agent运行次数、工具调用成功率和人工确认次数。质量评价页面还会收集纪要和agent结果的综合评分，准确性、完整性和可执行性评分，用于观察模型输出是否满足业务需要。主持人，李月，关于正式发布决策，请大家最后确认。产品研发、测试、运营和客户支持均同意在9月1日九点按计划发布，前提是移动端附件下载进度任务和发布回归任务按时完成。如果任意阻断任务没有完成，由张晨和王工在8月31日下午五点召开专项评审，决定是否调整发布时间。这个条件请记录未会议该确认事项同时记录风险等级为高。最后总结本次会议决策。第一，9月1日九点发布AI智能会议助手与任务跟踪系统。第二，移动端附件下载进度发布回归、发布公告、客服常见问题和首周数据复盘五项任务按已确认负责人和期限执行。第三，知识索引构建期间资料变化时，由资料维护人完成整理后重新构建。第四，发布首周，每天查看运行观测和质量评价数据，发现任务逾期、模型调用失败率升高或员工反馈集中时，及时形成跟进报告。今天会议到这里结束，感谢大家。', NULL, '2026-09-16 10:29:00', '2026-09-16 10:29:22', '2026-09-16 02:29:00', '2026-09-16 10:29:22');
 INSERT INTO `transcription_task` VALUES (7, 2, 3, 1, 1, 'zh', 'SUCCEEDED', '转写完成', 100, 0, 3, 270080, '各位下午好，今天的产品发布评审会现在开始。今天要出三个结论，V2.0能不能按期发布？灰度怎么放？还有对外通稿什么时候定稿？先请王敏说一下功能验收的情况。好的，V2.0计划内的17个需求已经验收通过15个，剩下两个，一个是报表导出，一个是消息推送的免打扰设置。消息推送这个已经修完了，昨天回归通过报表导出。还有问题我让张涛详细说一下报表导。出的问题在压测里暴露出来了。单个用户导出三个月的数据接口要跑四十多秒，超过了网关30秒的超时限制。我们压了500并发，这个接口的失败率到了12%，其他接口都是正常的。四十多秒确实不能接受，有没有办法在发布前解决？有两个方案，一是加缓存，把常用的时间范围预生成，但覆盖不全，用户选个冷门区间还是慢。二是改成异步任务，用户点导出之后先返回一个任务号，后台跑完了再通知他下载这个方案彻底一些。从用户体验看，异步方案更好导出本来就是个低频操作，等一会儿可以接受卡在那转圈40秒反而更差。异步方案要改多久？涉及三个服务，导出服务、任务调度，还有消息通知。开发两天，连调一天，测试两天，加起来一周。那就定一步方案发布时间不变，报表导出这个功能在发布时先隐藏入口，等改造完成再单独放出来。明白，我这边今天就拆任务。陈磊说一下灰度和容量。容量这块没问题。现在的机器配置扛刀日活8万枚压力我们预估发布后日或是5万左右。灰度方案我建议分三步，第一天放10%观察一天，第二天到50%，第三天全量回滚预案也准备好了，数据库改动都是加字段向后兼容，回滚步需要动数据，最快五分钟能切回旧版本。第一天10%是按什么维度切？挨用户ID取魔，保证同一个用户每次都落在同一边，不会一会儿新版。一会儿旧版。灰度期间我们需要盯哪些指标？主要看接口错误率、平均响应时间，还有核心链路的转化率。这三个我配了告警，超过阈值会。直接发到群里。灰度这三天需要有人值班盯盘，这个排班定了吗？还没排，我明天下班前把排班表发到群里。好，这是一个行动项。刘颖市场这边呢。对外通稿的初稿已经写完了，还需要根据最终的功能清单调整报表导出。既然要隐藏，那通稿里这一段要删掉。另外我想确认发布当天要不要同步发一条产品公告。发公告和通告一起都放在发布当天上午十点。那我需要在发布前一天定稿留出审核时间。可以通稿，定稿时间就定在发布前一日下午六点前。还有个风险我要提一下，异步改造和灰度发布挨得太近，如果改造延期可能会影响到后面的排期。这个风险记下来。张涛，你这周三给我一个中期进度，如果到周三还没完成联调，我们就把报表导出推到下个版本。行，周三给进度。那今天的结。论我复述一遍，第一，V2.0按期发布，报表导出入口先隐藏。第二，灰度按10%、50%全量分三天走。第三，对外通稿和产品公告在发布前一日下午六点前定稿行动项有三个，张涛负责报表导出异步化改造，本周五前完成。陈磊明天下班前提交灰度值班排班表，刘颖负责通稿定稿。我记录一下，会后整理成绩要发给大家好。今天就到这里散会。', NULL, '2026-09-16 10:30:01', '2026-09-16 10:30:09', '2026-09-16 02:30:01', '2026-09-16 10:30:09');
-
--- ----------------------------
--- Table structure for user
--- ----------------------------
-DROP TABLE IF EXISTS `user`;
-CREATE TABLE `user`  (
-  `id` int NOT NULL AUTO_INCREMENT COMMENT '用户ID',
-  `username` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '登录账号',
-  `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '登录密码',
-  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '姓名',
-  `avatar` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '头像地址',
-  `role` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'EMPLOYEE' COMMENT '角色：ADMIN管理员、EMPLOYEE员工',
-  `phone` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '联系电话',
-  `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '电子邮箱',
-  `department_id` int NULL DEFAULT NULL COMMENT '所属部门ID',
-  `position` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '员工职位',
-  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'NORMAL' COMMENT '账号状态：NORMAL正常、DISABLED停用',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_user_username`(`username` ASC) USING BTREE,
-  INDEX `idx_user_role`(`role` ASC) USING BTREE,
-  INDEX `idx_user_department_id`(`department_id` ASC) USING BTREE,
-  INDEX `idx_user_status`(`status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 13 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '统一用户表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of user
@@ -603,5 +275,3 @@ INSERT INTO `user` VALUES (9, 'chenlei', '$2b$10$brMvBunZvuYXcBlGR5B8veAufomGb0z
 INSERT INTO `user` VALUES (10, 'zhaomin', '$2b$10$brMvBunZvuYXcBlGR5B8veAufomGb0zW4O.wdKxnN7TwyesHuYh0.', '赵敏', NULL, 'EMPLOYEE', NULL, NULL, 2, '运营负责人', 'NORMAL', '2026-09-08 23:57:06', '2026-09-08 23:57:06');
 INSERT INTO `user` VALUES (11, 'zhouning', '$2b$10$brMvBunZvuYXcBlGR5B8veAufomGb0zW4O.wdKxnN7TwyesHuYh0.', '周宁', NULL, 'EMPLOYEE', NULL, NULL, 2, '客户支持负责人', 'NORMAL', '2026-09-08 23:57:06', '2026-09-08 23:57:06');
 INSERT INTO `user` VALUES (12, 'liuying', '$2b$10$brMvBunZvuYXcBlGR5B8veAufomGb0zW4O.wdKxnN7TwyesHuYh0.', '刘颖', NULL, 'EMPLOYEE', NULL, NULL, 2, '市场专员', 'NORMAL', '2026-09-08 23:57:06', '2026-09-08 23:57:06');
-
-SET FOREIGN_KEY_CHECKS = 1;
