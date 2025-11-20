@@ -131,6 +131,12 @@ PROVIDERS: dict[str, dict[str, str]] = {
              "key_env": "DASHSCOPE_API_KEY", "fallback_key_env": "",
              "base_default": "https://dashscope.aliyuncs.com/compatible-mode/v1",
              "model_default": "qwen3.8-max-0902"},
+    # DeepSeek 族：**跨族复判用**。被测是 qwen3.8-max，裁判换成另一族才能
+    # 把"同族判定高估一致性"这个已知偏差摘掉（宪法第 2 条）。
+    "deepseek": {"base_env": "DEEPSEEK_BASE_URL", "model_env": "DEEPSEEK_MODEL",
+                 "key_env": "DEEPSEEK_API_KEY", "fallback_key_env": "",
+                 "base_default": "https://api.deepseek.com",
+                 "model_default": "deepseek-flash"},
     # 2026-09-26 移除 glm / kimi 两族：glm 持续 429（硬配额），kimi key 401 无效，
     # 且用户决定不再使用。跨族独立判定当前只剩 qwen 一族；历史产物中的
     # label_b / glm / kimi 字段不受影响（标签只追加不覆盖的纪律不变）。

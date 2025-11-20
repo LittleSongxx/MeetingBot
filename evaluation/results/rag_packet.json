@@ -128,6 +128,78 @@
           "answered": true,
           "why": "回答正面给出了灰度发布开始时间和覆盖用户比例，核心事实可由上下文支撑。"
         }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "包含灰度起止时间8月20日至26日及覆盖10%-30%活跃用户的信息"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "明确说明灰度从8月20日开始覆盖10%活跃用户，8月26日扩大到30%"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 2
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 2
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "本次灰度发布从8月20日开始",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "覆盖用户范围为10%至30%的活跃用户",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "8月20日初始覆盖10%",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "至8月26日扩大至30%",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）",
+                "supported": false
+              },
+              {
+                "index": 6,
+                "text": "人工确认纪要明确记录：“复盘8月20日至26日灰度发布数据，覆盖10%-30%活跃用户”",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "会议转写原话中，产品负责人张晨介绍：“本次灰度从8月20日开始覆盖10%的活跃用户，到8月26日扩大到30%”",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答明确给出灰度开始时间8月20日及覆盖10%-30%活跃用户，与上下文一致。"
+          }
+        }
       }
     },
     {
@@ -216,6 +288,68 @@
           ],
           "answered": true,
           "why": "回答直接给出了问题所需的登录成功率和核心下单链路成功率，核心数值有上下文支撑，但部分来源说明未被上下文支撑。"
+        }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "直接给出灰度期间登录成功率99.8%和核心下单链路成功率99.2%"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "同样包含灰度期间登录成功率99.8%和核心下单链路成功率99.2%"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "灰度期间，登录链路成功率为99.8%",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "核心下单链路成功率为99.2%",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "以上数据来自“产品发布评审会议”（meeting_id=2）",
+                "supported": false
+              },
+              {
+                "index": 4,
+                "text": "人工确认纪要中明确记录：“灰度期间整体登录成功率为99.8%，核心下单链路成功率为99.2%”",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "会议转写原话中，产品负责人张晨汇报：“整体登录成功率为99.8%，核心下单链路成功率为99.2%”（start_second=51）",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答直接给出了登录成功率99.8%和核心下单链路成功率99.2%，与上下文一致，正面回答了问题。"
+          }
         }
       }
     },
@@ -341,6 +475,78 @@
           ],
           "answered": true,
           "why": "回答直接给出了问题所问的两个用户反馈最集中问题，且核心内容可由上下文支撑。"
+        }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "明确列出用户集中反馈的两个问题，与标准事实完全对应"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "直接陈述用户反馈最集中的两个问题，包含所需信息"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "包含用户反馈最集中的两个问题的原始表述"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "用户反馈最集中的两个问题是：部分用户不知道如何从会议纪要进入任务草稿。",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "用户反馈最集中的两个问题是：移动端在网络较弱时，附件下载进度没有及时刷新。",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "以上信息来自“产品发布评审会议”（meeting_id=2）。",
+                "supported": false
+              },
+              {
+                "index": 4,
+                "text": "人工确认纪要中明确归纳：“用户集中反馈两个问题：①部分用户不知如何从会议纪要进入任务草稿；②移动端弱网下附件下载进度未及时刷新”。",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "会议转写原话中，产品负责人张晨汇报：“用户反馈最集中的问题有两个，第一部分用户不知道如何从会议纪要进入任务草稿”（start_second=86）。",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "会议转写原话中，产品负责人张晨汇报：“第二，移动端在网络较弱时，附件下载进度没有及时刷新”（start_second=96）。",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答直接列出了上下文明确记载的两个集中反馈问题，核心结论有依据支撑。"
+          }
         }
       }
     },
@@ -471,6 +677,93 @@
           ],
           "answered": true,
           "why": "回答直接给出了抽样检查的四类账号及权限控制符合预期的结论。"
+        }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "提到四类账号权限控制符合预期，与问题相关"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "明确列出抽查的四类账号及管理员与员工权限结论"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "同样包含抽查四类账号及权限范围与预期一致的结论"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 2
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 2
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "抽样检查了管理员、会议创建人、主持人、普通参会人员四类账号的权限",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "结论是四类账号权限控制符合预期",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "管理员可查看企业会议数据",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "员工仅可见自己创建/主持/参与的会议任务",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "负责人、创建人和协作人的任务查看权限与预期一致",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "以上信息来自“产品发布评审会议”（meeting_id=2）",
+                "supported": false
+              },
+              {
+                "index": 7,
+                "text": "人工确认纪要中明确归纳：“四类账号权限控制符合预期”[6]",
+                "supported": false
+              },
+              {
+                "index": 8,
+                "text": "会议转写原话中，张晨汇报了抽样检查四类账号（start_second=115）",
+                "supported": true
+              },
+              {
+                "index": 9,
+                "text": "张晨说明管理员、员工、负责人/创建人/协作人的权限范围与预期一致（start_second=125）",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答准确列出了四类账号并给出权限控制符合预期的结论，核心问题已正面回答，仅会议名称与引用编号等细节无法由上下文支撑。"
+          }
         }
       }
     },
@@ -703,6 +996,128 @@
           "answered": true,
           "why": "回答直接给出了必须在发布前处理的原因，并且该原因主要由上下文支撑。"
         }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "包含移动端附件下载体验问题会影响发布当天支持成本、需在正式发布前处理的关键信息。"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "重复了移动端附件下载问题影响发布当天支持成本、需在正式发布前处理的关键信息。"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "提到移动端下载进度研发计划及未发布前阻断事项，与发布前处理相关。"
+              },
+              {
+                "index": 4,
+                "useful": true,
+                "why": "提到移动端下载进度研发计划及未发布前阻断事项，与发布前处理相关。"
+              },
+              {
+                "index": 5,
+                "useful": true,
+                "why": "决策记录明确移动端附件下载进度问题须在发布前修复并写入发布说明。"
+              },
+              {
+                "index": 6,
+                "useful": true,
+                "why": "提到移动端附件下载进度问题需在发布前修复并写入发布说明。"
+              },
+              {
+                "index": 7,
+                "useful": true,
+                "why": "提到移动端附件下载进度问题需在发布前修复并写入发布说明。"
+              },
+              {
+                "index": 8,
+                "useful": true,
+                "why": "明确移动端附件下载体验问题需在正式发布前完成处理。"
+              },
+              {
+                "index": 9,
+                "useful": true,
+                "why": "明确移动端附件下载问题须修复并写入发布说明。"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "移动端附件下载问题必须在发布前处理",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "核心原因是该体验问题会增加发布当天的支持成本",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "会议已将其列为“未发布前阻断事项”",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "决策要求“须在发布前修复，并在发布说明中写明处理结果”",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）",
+                "supported": false
+              },
+              {
+                "index": 6,
+                "text": "张晨在转写中明确说明原因：“移动端附件下载的体验问题会影响发布当天的支持成本，需要在正式发布前完成处理”（start_second=144）",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "同一场会中，该问题被记录为发布前阻断事项：“请纪要中记录未发布前阻断事项”（start_second=621）",
+                "supported": true
+              },
+              {
+                "index": 8,
+                "text": "人工确认的决策条目写明：“移动端附件下载进度问题须在发布前修复，并在发布说明中写明处理结果”",
+                "supported": true
+              },
+              {
+                "index": 9,
+                "text": "观点汇总也提到“移动端附件下载体验问题需在正式发布前完成处理”",
+                "supported": true
+              },
+              {
+                "index": 10,
+                "text": "议题与转写均重申“需要在发布前修复，并在发布说明中写明处理结果”（start_second=397）",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答正面解释了必须在发布前处理的原因（增加支持成本、列为阻断事项、决策要求修复），核心断言均有上下文支撑，仅meeting_id=2为无依据的具体细节。"
+          }
+        }
       }
     },
     {
@@ -882,6 +1297,113 @@
           "answered": true,
           "why": "回答正面给出了最近七天纪要模型和Agent工具的成功率与纪要模型耗时，并说明Agent平均耗时未在上下文中提供。"
         }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "包含会议纪要模型调用成功率98.6%、平均耗时7.8秒、Agent工具调用成功率97.9%等全部所需数据。"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "包含最近七天会议纪要模型调用成功率98.6%、平均耗时7.8秒、agent工具调用成功率97.9%。"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "同样包含最近七天会议纪要模型调用成功率98.6%、平均耗时7.8秒、agent工具调用成功率97.9%。"
+              },
+              {
+                "index": 4,
+                "useful": false,
+                "why": "仅提及模型服务延迟波动风险和查看平均耗时等指标，未给出具体成功率或耗时数值。"
+              },
+              {
+                "index": 5,
+                "useful": false,
+                "why": "讨论首周复盘的五项数据，未给出纪要或agent的具体成功率与平均耗时。"
+              },
+              {
+                "index": 6,
+                "useful": false,
+                "why": "讨论风险及建议查看指标，未给出具体成功率或平均耗时数值。"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 3,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "最近七天会议纪要模型调用成功率为98.6%",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "最近七天会议纪要模型平均耗时为7.8秒",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "最近七天Agent工具调用成功率为97.9%",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "会上未给出Agent的平均耗时",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "以上数据来自“产品发布评审会议”（meeting_id=2）",
+                "supported": false
+              },
+              {
+                "index": 6,
+                "text": "人工确认纪要的观点条目明确记录了相关数据",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "转写原话中张晨汇报了相关数据（start_second=170）",
+                "supported": true
+              },
+              {
+                "index": 8,
+                "text": "关于Agent平均耗时，本次会议资料中未提供具体数值",
+                "supported": true
+              },
+              {
+                "index": 9,
+                "text": "风险与复盘中提到将关注“平均耗时”指标，但未给出当前数据",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答直接给出了纪要模型成功率98.6%、平均耗时7.8秒和Agent成功率97.9%，并说明Agent平均耗时未提供，正面回答了问题。"
+          }
+        }
       }
     },
     {
@@ -1033,6 +1555,98 @@
           ],
           "answered": true,
           "why": "回答正面说明了失败原因和用户可执行的重试操作，但额外声称的会议名称与meeting_id未被上下文支撑。"
+        }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "包含两次失败原因及用户可重试的信息"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "同样包含失败原因和用户可重试的信息"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "明确说明两次失败源于外部模型服务短暂超时，系统保存失败原因并支持用户重试"
+              },
+              {
+                "index": 4,
+                "useful": false,
+                "why": "只讲模型延迟波动风险和观测建议，未说明失败原因或用户可做什么"
+              },
+              {
+                "index": 5,
+                "useful": false,
+                "why": "讨论风险及索引、任务分配，未说明两次失败原因或用户可做什么"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "两次模型调用失败的原因是外部模型服务短暂超时",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "用户可以从失败状态发起重试",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "以上信息来自“产品发布评审会议”（meeting_id=2）",
+                "supported": false
+              },
+              {
+                "index": 4,
+                "text": "张晨明确说明：“两次失败都来自外部模型服务短暂超时，系统已保存失败原因和耗时，用户可以从失败状态发起重试”（start_second=193）",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "人工确认纪要的观点条目也记录：“两次失败源于外部模型服务短暂超时，系统已保存失败原因并支持用户重试”",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "风险条目补充提到“模型服务延迟波动导致纪要生成与Agent运行等待时间延长”",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "建议发布首周每日查看观测中心的失败率等指标",
+                "supported": true
+              },
+              {
+                "index": 8,
+                "text": "未给出除“重试”之外的其他用户侧操作",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答准确指出失败原因为外部模型服务短暂超时，并说明用户可发起重试，直接回应了问题。"
+          }
         }
       }
     },
@@ -1262,6 +1876,128 @@
           ],
           "answered": true,
           "why": "回答正面说明了资料更新时知识索引会标记重建且旧版本仍可检索，并补充了构建期间统一重建的处理要求，主要事实有上下文支撑。"
+        }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "包含资料更新时知识索引标记为需要重建、旧版本仍可检索直到新版本切换的完整信息。"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "同样包含资料更新时知识索引标记为需要重建、旧版本仍可检索直到新版本切换的完整信息。"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "提到知识索引更新时旧版本仍可检索，直至新版本切换完成。"
+              },
+              {
+                "index": 4,
+                "useful": true,
+                "why": "说明知识索引构建期间资料更新需统一发起重建流程，与索引处理相关。"
+              },
+              {
+                "index": 5,
+                "useful": true,
+                "why": "说明知识索引构建过程中上传新附件或修订转写文本时索引状态保持需要重建。"
+              },
+              {
+                "index": 6,
+                "useful": true,
+                "why": "包含知识索引构建过程中资料更新时索引状态保持需要重建的信息。"
+              },
+              {
+                "index": 7,
+                "useful": true,
+                "why": "提到会议资料频繁更新导致知识索引长期处于需要重建状态，并建议统一发起构建。"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "资料更新时，知识索引会标记为“需要重建”。",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "旧版本仍保持可检索，直到新版本完成切换。",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "会议决策要求：若构建期间发生资料更新，须由资料维护人完成全部整理后统一发起重建流程，以确保索引一致性。",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "若在构建过程中上传新附件或修订转写文本，索引状态会持续保持“需要重建”。",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "建议资料整理完成后再发起构建。",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）。",
+                "supported": false
+              },
+              {
+                "index": 7,
+                "text": "张晨在转写中说明机制：“对于资料更新，知识索引会标记为需要重建，旧版本仍保持可检索，直到新版本完成切换”（start_second=249）。",
+                "supported": true
+              },
+              {
+                "index": 8,
+                "text": "人工确认的观点条目也记录：“知识索引更新时旧版本仍可检索，直至新版本切换完成”。",
+                "supported": true
+              },
+              {
+                "index": 9,
+                "text": "人工确认的决策条目明确操作要求：“知识索引构建期间若发生资料更新，须由资料维护人完成全部整理后，统一发起重建流程，确保索引一致性”。",
+                "supported": true
+              },
+              {
+                "index": 10,
+                "text": "张晨在风险讨论中补充：“如果用户在知识索引构建过程中上传新附件或修订转写文本，索引状态会保持需要重建，建议资料整理完成后再发起构建”（start_second=538）。",
+                "supported": true
+              },
+              {
+                "index": 11,
+                "text": "风险条目亦提示：“会议资料频繁更新导致知识索引长期处于‘需要重建’状态，影响检索时效性与一致性”。",
+                "supported": true
+              },
+              {
+                "index": 12,
+                "text": "风险条目建议“资料整理完成后统一发起知识索引构建”。",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答准确说明了资料更新时知识索引标记为需要重建、旧版本仍可检索直至新版本切换，并补充了构建期间更新的处理要求，正面回答了问题。"
+          }
         }
       }
     },
@@ -1494,6 +2230,113 @@
           "answered": true,
           "why": "回答正面给出转写与纪要生成流程，核心流程断言均有上下文支撑，仅会议名称和id未被上下文支撑。"
         }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "包含转写和纪要生成流程的完整描述"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "包含转写和纪要生成流程的完整描述"
+              },
+              {
+                "index": 3,
+                "useful": false,
+                "why": "仅提及测试验证和边界场景，未描述转写和纪要生成流程"
+              },
+              {
+                "index": 4,
+                "useful": false,
+                "why": "仅提及测试验证和验收数据，未描述转写和纪要生成流程"
+              },
+              {
+                "index": 5,
+                "useful": false,
+                "why": "仅提及调用日志和成功率，未描述转写和纪要生成流程"
+              },
+              {
+                "index": 6,
+                "useful": true,
+                "why": "提及长音频切分、异步进度和整场转写的单遍纪要生成，部分相关"
+              },
+              {
+                "index": 7,
+                "useful": true,
+                "why": "提及长音频切分、异步进度和整场转写的单遍纪要生成，部分相关"
+              },
+              {
+                "index": 8,
+                "useful": true,
+                "why": "提及长音频切分、异步进度和整场转写的单遍纪要生成，部分相关"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 3,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "长会议音频会按时长进行切分",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "转写完成后生成带时间轴的片段",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "纪要由整场转写结果一次性生成，不再采用分段总结再合并的方式",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "纪要生成后，由 Agent 对着原文进行一遍自检",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "人工确认主流程包含说话人匹配、纪要修订、确认任务草稿等环节",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "若因外部模型服务超时导致失败，系统保存失败原因和耗时，用户可从失败状态发起重试",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "资料来自“产品发布评审会议”（id=2）",
+                "supported": false
+              }
+            ],
+            "answered": true,
+            "why": "回答完整覆盖了音频切分、转写、整场单遍纪要生成、Agent自检、人工确认及失败重试等流程，均有上下文支撑，仅会议名称与id为上下文未提供的具体信息。"
+          }
+        }
       }
     },
     {
@@ -1690,6 +2533,93 @@
           "answered": true,
           "why": "回答直接列出了正式发布前需要补充的两组验收数据，核心事实有上下文支撑。"
         }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "直接列出两组验收数据的具体内容"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "同样包含两组验收数据的完整描述"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "决策记录明确列出两组补充验收数据"
+              },
+              {
+                "index": 4,
+                "useful": true,
+                "why": "观点记录中列出需补充的两组验收数据"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "正式发布前还需补充两组验收数据。",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "第一组是至少30分钟的真实会议录音，用于验证长音频切分、异步进度和整场转写的单遍纪要生成。",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "第二组是包含多个角色发言的会议内容，用于检查说话人标签与员工身份的匹配效果。",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）。",
+                "supported": false
+              },
+              {
+                "index": 5,
+                "text": "张晨在转写中明确说明：“还需要在正式发布前补充两组验收数据，第一组是至少30分钟的真实会议录音，用于验证长音频切分、异步进度和整场转写的单遍纪要生成”（start_second=320）。",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "张晨紧接着说明“第二组是包含多个角色发言的会议内容，用于检查说话人标签与员工身份的匹配效果”（start_second=346）。",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "人工确认的决策条目完整记录了这两组要求：“发布前须完成两组补充验收：①至少30分钟真实会议录音……；②含多个角色发言的会议内容，验证说话人标签与员工身份匹配效果”。",
+                "supported": true
+              },
+              {
+                "index": 8,
+                "text": "人工确认的观点条目也佐证了该待办事项归属陈琳（测试负责人），并重申了同样的两组验收数据内容。",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答直接列出了两组验收数据，内容与上下文一致，正面回答了问题。"
+          }
+        }
       }
     },
     {
@@ -1834,6 +2764,88 @@
           ],
           "answered": true,
           "why": "回答直接给出了可导出和不可导出的状态，核心结论可由上下文明确支撑。"
+        }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "包含纪要生成中或失败不能导出、只有草稿和已确认版本可导出的关键信息"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "同样包含纪要导出状态限制的明确表述"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "总结中明确仅草稿与已确认版本可导出"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "会议纪要在“草稿”状态下可以导出",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "会议纪要在“已确认”状态下可以导出",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "导出支持 Word 或 PDF 格式",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "会议纪要在“生成中”状态下不能导出",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "会议纪要在“失败”状态下不能导出",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）",
+                "supported": false
+              },
+              {
+                "index": 7,
+                "text": "张晨在转写中明确说明边界场景验证结果：“纪要处于生成中或失败状态时不能导出，只有草稿和已确认版本可以导出word或pdf”（start_second=308）",
+                "supported": true
+              },
+              {
+                "index": 8,
+                "text": "人工确认的观点条目也记录了相同结论：“仅草稿与已确认版本可导出”",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答直接给出可导出的纪要状态（草稿和已确认），并说明生成中或失败状态不可导出，正面回答了问题。"
+          }
         }
       }
     },
@@ -2024,6 +3036,108 @@
           "answered": true,
           "why": "回答直接给出了负责人、协作人和截止时间，核心事实可由上下文支撑；但会议名称/meeting_id及“人工确认”等附加说明未被上下文支撑。"
         }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "包含移动端下载进度任务的负责人王工、协作人陈琳、截止时间8月30日18点"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "包含移动端下载进度任务的负责人王工、协作人陈琳、截止时间8月30日18点"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "包含移动端附件下载进度任务负责人王工、截止8月30日18:00"
+              },
+              {
+                "index": 4,
+                "useful": true,
+                "why": "包含移动端附件下载进度任务负责人王工、截止8月30日18:00"
+              },
+              {
+                "index": 5,
+                "useful": true,
+                "why": "包含王工确认移动端附件下载进度任务8月30日18点完成"
+              },
+              {
+                "index": 6,
+                "useful": true,
+                "why": "包含王工确认移动端附件下载进度任务8月30日18点完成"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 3,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "移动端附件下载任务的负责人是王工",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "移动端附件下载任务的协作人是陈琳",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "移动端附件下载任务的截止时间是8月30日18:00",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）",
+                "supported": false
+              },
+              {
+                "index": 5,
+                "text": "张晨在转写中明确说明：“关于移动端下载进度研发计划……负责人是王工，协作人是陈琳，截止时间为8月30日18点”（start_second=605）",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "人工确认的待办条目记录：“移动端附件下载进度任务（负责人王工，截止8月30日18:00）”",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "人工确认的决策条目亦写明：“移动端附件下载进度问题须在发布前修复……王工（后端负责人） 2023-08-30T18:00:00”",
+                "supported": true
+              },
+              {
+                "index": 8,
+                "text": "王工本人在会上确认：“移动端附件下载进度任务8月30日18点完成”（start_second=769）",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答直接给出了负责人、协作人和截止时间，且核心信息均有上下文支撑，仅会议名称与meeting_id为上下文未提供的额外细节。"
+          }
+        }
       }
     },
     {
@@ -2160,6 +3274,88 @@
           ],
           "answered": true,
           "why": "回答明确给出了完成时间和负责人，核心事实有上下文支撑。"
+        }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "提到发布回归任务负责人陈琳，截止8月31日12:00"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "明确测试团队8月31日中午12点前完成回归，陈琳确认测试安排"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "包含测试团队8月31日中午12点前完成回归及陈琳确认测试安排"
+              },
+              {
+                "index": 4,
+                "useful": true,
+                "why": "包含测试团队8月31日中午12点前完成回归的信息"
+              },
+              {
+                "index": 5,
+                "useful": true,
+                "why": "陈琳确认发布回归任务8月31日中午12点完成"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 2
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 2
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "发布回归测试的完成时间是8月31日12:00（中午）",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "发布回归测试的负责人是陈琳",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）",
+                "supported": false
+              },
+              {
+                "index": 4,
+                "text": "人工确认的待办条目明确记录：“发布回归任务（负责人陈琳，截止8月31日12:00）”",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "张晨在转写中确认测试安排：“陈琳，我确认测试安排，测试团队将在8月31日中午12点前完成回归”（start_second=642）",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "各负责人确认环节再次核实：“陈琳确认发布回归任务，8月31日中午12点完成”（start_second=777）",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答直接给出了发布回归测试的完成时间（8月31日12:00）和负责人（陈琳），与上下文一致，正面回答了问题。"
+          }
         }
       }
     },
@@ -2357,6 +3553,108 @@
           ],
           "answered": true,
           "why": "回答直接给出了发布公告任务的入口、负责人和截止时间，核心问题被正面回答。"
+        }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "包含发布公告任务的入口、负责人、协作人和截止时间"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "包含发布公告任务的入口、负责人、协作人和截止时间"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "包含发布公告任务的入口、负责人、协作人和截止时间"
+              },
+              {
+                "index": 4,
+                "useful": true,
+                "why": "包含发布公告任务的负责人、协作人和截止时间"
+              },
+              {
+                "index": 5,
+                "useful": true,
+                "why": "包含赵敏确认发布公告任务及截止时间"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "发布公告任务包含的入口有：会议创建入口、录音上传入口、纪要确认入口、任务跟踪入口、知识库问答入口，共5个",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "发布公告任务的负责人是赵敏",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "发布公告任务的协作人是周宁",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "发布公告任务的截止时间是9月1日09:00",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）",
+                "supported": false
+              },
+              {
+                "index": 6,
+                "text": "张晨在转写中明确说明：“赵敏运营团队在9月1日九点前完成发布公告使用指引和部门通知……公告中需要包含会议创建入口、录音上传入口，纪要确认入口、任务跟踪入口和知识库问答入口”（start_second=681）",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "人工确认的决策条目记录：“运营负责人赵敏牵头，协作人周宁，于9月1日9:00前完成发布公告与部门通知”",
+                "supported": true
+              },
+              {
+                "index": 8,
+                "text": "各负责人确认环节再次核实：“赵敏确认发布公告和部门通知任务9月1日九点完成”（start_second=784）",
+                "supported": true
+              },
+              {
+                "index": 9,
+                "text": "此前对话摘要中提到的“李婷、8月31日17:00、产品内弹窗/官网公告/邮件通知”等信息，在本次针对 meeting_id=2 的工具检索结果中未找到对应记录",
+                "supported": false
+              },
+              {
+                "index": 10,
+                "text": "本次回答严格以工具返回内容为准",
+                "supported": false
+              }
+            ],
+            "answered": true,
+            "why": "回答正面给出了发布公告任务的入口、负责人、协作人和截止时间，核心事实均可由上下文支撑。"
+          }
         }
       }
     },
@@ -2590,6 +3888,133 @@
           "answered": true,
           "why": "回答正面给出了正式发布时间和前提条件，核心事实有上下文支撑，但会议标识及部分引用编号未被上下文支撑。"
         }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "明确给出9月1日9:00正式发布的时间"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "确认9月1日9:00正式发布，并提及阻断任务未完成时的评审机制"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "明确9月1日九点发布，前提是移动端附件下载进度任务和发布回归任务按时完成"
+              },
+              {
+                "index": 4,
+                "useful": false,
+                "why": "仅描述阻断任务未完成的风险和评审安排，未直接给出发布时间或前提条件"
+              },
+              {
+                "index": 5,
+                "useful": false,
+                "why": "讨论对外通稿、公告等发布当天事务，未涉及正式发布的具体时间或前提条件"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 3
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 3
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "正式发布时间是9月1日09:00",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "转写中提及“上午十点”作为对外公告同步时间点",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "会议最终决策以09:00为准",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "前提条件是移动端附件下载进度任务须按时完成",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "前提条件是发布回归任务须按时完成",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "若任一阻断任务未完成，由张晨和王工于8月31日17:00召开专项评审决定是否调整发布时间",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）",
+                "supported": false
+              },
+              {
+                "index": 8,
+                "text": "人工确认的决策条目明确写道：“同意于9月1日9:00正式发布AI智能会议助手与任务跟踪系统……全体负责人 2023-09-01T09:00:00”[5]",
+                "supported": true
+              },
+              {
+                "index": 9,
+                "text": "会议纪要摘要亦确认：“明确9月1日9:00正式发布……约定阻断任务未完成时的专项评审机制”[6]",
+                "supported": true
+              },
+              {
+                "index": 10,
+                "text": "张晨在转写中说明发布前提：“产品研发、测试、运营和客户支持均同意在9月1日九点按计划发布，前提是移动端附件下载进度任务和发布回归任务按时完成”（start_second=863）[1]",
+                "supported": true
+              },
+              {
+                "index": 11,
+                "text": "同一发言中补充阻断处理机制：“如果任意阻断任务没有完成，由张晨和王工在8月31日下午五点召开专项评审，决定是否调整发布时间”（start_second=879）[1]",
+                "supported": true
+              },
+              {
+                "index": 12,
+                "text": "风险条目再次强调：“阻断任务未按时完成将触发发布时间调整风险……由张晨与王工于8月31日17:00召开专项评审”[7]",
+                "supported": true
+              },
+              {
+                "index": 13,
+                "text": "关于“上午十点”的说法出现在系统管理员转写中：“发公告和通告一起都放在发布当天上午十点”（start_second=195）[3]",
+                "supported": true
+              },
+              {
+                "index": 14,
+                "text": "该处仅指对外公告同步时间，并非正式发布决策时间",
+                "supported": true
+              },
+              {
+                "index": 15,
+                "text": "正式发布以决策条目[5]及主持人确认的9:00[1]为准",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答明确给出了正式发布时间（9月1日09:00）和前提条件（两项阻断任务按时完成及未完成时的专项评审机制），并区分了公告时间，正面回答了问题。"
+          }
+        }
       }
     },
     {
@@ -2781,6 +4206,98 @@
           "answered": true,
           "why": "回答正面说明了阻断任务未完成后的处置机制，核心事实有上下文支撑，但会议名称、meeting_id和部分来源标注无法支撑。"
         }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "明确说明阻断任务未完成时触发专项评审，由张晨与王工于8月31日17:00召开并决定是否调整发布时间。"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "说明阻断任务未完成将触发发布时间调整风险，并约定由张晨与王工于8月31日17:00召开专项评审。"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "包含张晨原话，明确任意阻断任务未完成时由张晨和王工在8月31日下午五点召开专项评审，决定是否调整发布时间。"
+              },
+              {
+                "index": 4,
+                "useful": true,
+                "why": "总结中提及约定阻断任务未完成时的专项评审机制，但未给出具体时间和人员细节。"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "若阻断任务（移动端附件下载进度任务或发布回归任务）任一未按时完成，将由张晨与王工于8月31日17:00召开专项评审会议。",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "该专项评审会议将决定是否调整原定于9月1日09:00的正式发布计划。",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）。",
+                "supported": false
+              },
+              {
+                "index": 4,
+                "text": "人工确认的待办条目明确约定触发条件与处置方式。",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "人工确认的风险条目将该情形列为高风险，并重申评审安排。",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "张晨在转写中口头确认同一机制。",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "会议纪要摘要亦概括该机制为本次会议关键约定之一。",
+                "supported": true
+              },
+              {
+                "index": 8,
+                "text": "工具返回内容仅说明“决定是否调整发布时间”，未提供评审后的具体备选方案（如延期时长、降级发布等）。",
+                "supported": true
+              },
+              {
+                "index": 9,
+                "text": "如需了解评审后续动作细节，当前资料不足。",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答明确说明阻断任务未完成将触发专项评审并决定是否调整发布时间，正面回答了问题。"
+          }
+        }
       }
     },
     {
@@ -2950,6 +4467,83 @@
           ],
           "answered": true,
           "why": "回答正面说明了删除用户时若存在关联业务记录会被阻止删除，并需先调整负责人、创建人或协作人关系。"
+        }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "直接说明删除用户时关联业务记录会被阻止，并需先调整负责人、创建人或协作人关系"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "包含删除用户时关联记录不执行删除及管理员需先调整关系的关键信息，其余为无关内容"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "包含删除用户时关联记录不执行删除及管理员需先调整关系的关键信息，其余为无关内容"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "删除用户时，若该账号已关联任何历史业务记录（包括会议、任务、转写、纪要、知识问答、Agent运行或质量评价），系统将阻止删除操作。",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "管理员须先调整相关业务记录中的负责人、创建人或协作人关系，确保人员信息可追溯后，方可执行删除。",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）。",
+                "supported": false
+              },
+              {
+                "index": 4,
+                "text": "人工确认的风险条目明确说明：“删除用户时若关联历史业务记录（会议、任务、转写、纪要、问答、Agent运行、质量评价），系统将阻止删除操作……管理员须先调整相关业务记录中的负责人、创建人或协作人关系，确保人员信息可追溯”，风险等级为 HIGH [1]。",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "张晨在转写中口头补充同一规则：“删除用户时，如果该账号已经关联会议任务转写纪要知识问答，agent运行或质量评价记录，系统不会执行删除”（start_second=570）[2][3]。",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "同一发言中进一步解释处理要求：“管理员需要先调整业务记录中的负责人、创建人或协作人关系，这样可以保证历史会议和任务记录仍能正确展示人员信息”（start_second=588）[2][3]。",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "工具返回内容仅说明“阻止删除”及“需先调整关联关系”，未提供调整关系的具体操作路径、批量处理工具或异常回滚机制；如需此类细节，当前资料不足。",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答准确说明删除用户时系统会阻止删除并需先调整关联关系，正面回答了问题。"
+          }
         }
       }
     },
@@ -3158,6 +4752,118 @@
           ],
           "answered": true,
           "why": "回答正面列出了五项数据且核心内容可由上下文支撑，但会议名称、meeting_id及“工具返回内容”等来源表述缺乏上下文支撑。"
+        }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "包含首周复盘五项数据中的前两项"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "完整列出首周复盘的五项数据"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "汇总了首周复盘要看的五项数据"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 2
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 2
+              },
+              {
+                "index": 3,
+                "found": true,
+                "in_context": 2
+              },
+              {
+                "index": 4,
+                "found": true,
+                "in_context": 2
+              },
+              {
+                "index": 5,
+                "found": true,
+                "in_context": 2
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "首周复盘需关注的五项数据为：会议创建数量和总时长",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "首周复盘需关注的五项数据为：转写任务成功率和平均耗时",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "首周复盘需关注的五项数据为：已确认纪要数量、任务草稿数量和正式任务数量",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "首周复盘需关注的五项数据为：任务完成率和逾期率",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "首周复盘需关注的五项数据为：RAG问答调用量、Agent运行次数、工具调用成功率和人工确认次数",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "还需在质量评价页面导出《纪要与Agent结果三维度评分报表》（含准确性、完整性、可执行性单项分及综合分），用于观察模型输出是否满足业务需要",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）",
+                "supported": false
+              },
+              {
+                "index": 8,
+                "text": "张晨在转写中逐项说明五项数据（start_second=807–831）",
+                "supported": true
+              },
+              {
+                "index": 9,
+                "text": "同一发言中补充评分维度（start_second=840）",
+                "supported": true
+              },
+              {
+                "index": 10,
+                "text": "人工确认的决策条目完整复述上述内容，并明确交付要求：产品负责人张晨负责发布决策复盘与首周数据汇总……并在质量评价页面导出《纪要与Agent结果三维度评分报表》……于9月8日18:00前提交",
+                "supported": true
+              },
+              {
+                "index": 11,
+                "text": "工具返回内容已完整列出五项数据名称及评分报表要求，但未提供各项指标的具体计算口径、数据采集接口或阈值标准；如需此类细节，当前资料不足",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答准确列出五项数据并补充评分报表要求，正面回答了问题。"
+          }
         }
       }
     },
@@ -3374,6 +5080,108 @@
           ],
           "answered": true,
           "why": "回答直接给出了四项引用信息并补充了展示方式，主要事实有上下文支撑，但会议名称和meeting_id无上下文依据。"
+        }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "包含用户希望看到的引用信息（会议名称、来源类型、时间点、原文片段）以及前端引用卡片展示细节。"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "包含用户希望看到的引用信息以及前端引用卡片展示细节。"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "提到客服关注知识问答引用是否清晰，并列出需包含的引用信息。"
+              },
+              {
+                "index": 4,
+                "useful": true,
+                "why": "提到当前RE返回结构已包含引用会议名称、来源类型、时间点和原文片段。"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "跨会议问答希望用户看到的引用信息包括四项：会议名称、来源类型、时间点、原文片段。",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "前端会以“引用卡片”形式展示在回答下方。",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "点击引用卡片后可进一步查看具体是哪场会议、谁说的、第几秒。",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "若来源为纪要或附件，则显示文件或纪要版本名称。",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）。",
+                "supported": false
+              },
+              {
+                "index": 6,
+                "text": "张晨在转写中明确说明期望展示的字段：“我们希望用户在提问跨会议问题后，不只是看到答案，还要看到引用的会议名称、来源类型、时间点和原文片段，这样客服同学能够快速判断答案来自哪一场会议”（start_second=462）。",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "同一发言中补充前端交互与细分来源的展示规则：“当前re返回结构已经包含这些信息，转写来源会显示时间点，纪要和附件来源会显示文件或纪要版本名称，前端会在回答下面展示带出处的引用卡片，点开能看到是哪场会、谁说的、第几秒”（start_second=482）。",
+                "supported": true
+              },
+              {
+                "index": 8,
+                "text": "人工确认的观点条目亦将上述四项列为客服侧关注要点：“客服关注知识问答引用是否清晰（需含会议名称、来源类型、时间点、原文片段）”。",
+                "supported": true
+              },
+              {
+                "index": 9,
+                "text": "王工在观点中确认后端已支持该结构：“当前RE返回结构已包含引用会议名称、来源类型、时间点和原文片段”。",
+                "supported": true
+              },
+              {
+                "index": 10,
+                "text": "工具返回内容已明确引用信息的字段组成、前端卡片交互及不同来源类型的差异化展示。",
+                "supported": true
+              },
+              {
+                "index": 11,
+                "text": "未提供引用卡片的UI样式规范、字段截断长度、缺失字段时的降级策略等技术实现细节。",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答直接列出跨会议问答希望用户看到的四项引用信息，并补充前端展示方式，正面回答了问题。"
+          }
         }
       }
     },
@@ -3601,6 +5409,98 @@
           "answered": true,
           "why": "回答正面给出了会议决策要求的处理方式，核心结论有上下文支撑，但包含会议名称、meeting_id、人工确认、引用编号及“不允许增量更新”等未被上下文支撑的内容。"
         }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "明确说明资料更新须由资料维护人完成整理后统一发起重建流程"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "会议决策总结中明确知识索引构建期间资料变化由资料维护人完成整理后重新构建"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "说明索引状态保持需要重建，建议资料整理完成后再发起构建"
+              },
+              {
+                "index": 4,
+                "useful": true,
+                "why": "风险条目建议资料整理完成后统一发起知识索引构建"
+              },
+              {
+                "index": 5,
+                "useful": false,
+                "why": "内容涉及模型超时、数据库存储、转写流程等，与资料变化处理决策无关"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 2
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "按会议决策，知识索引构建期间若发生资料更新，必须由资料维护人完成全部资料整理后，再统一发起重建流程，以确保索引一致性。",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "不允许在构建过程中穿插增量更新。",
+                "supported": false
+              },
+              {
+                "index": 3,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）。",
+                "supported": false
+              },
+              {
+                "index": 4,
+                "text": "人工确认的决策条目明确写道：“知识索引构建期间若发生资料更新，须由资料维护人完成全部整理后，统一发起重建流程，确保索引一致性”。",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "张晨在会议总结中再次确认该决策为本次会议第三项决策：“知识索引构建期间资料变化时，由资料维护人完成整理后重新构建”（start_second=926）。",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "张晨在前文解释技术背景时说明：“如果用户在知识索引构建过程中上传新附件或修订转写文本，索引状态会保持需要重建，建议资料整理完成后再发起构建”（start_second=538）。",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "人工确认的风险条目亦从风险角度佐证该处理方式：“会议资料频繁更新导致知识索引长期处于‘需要重建’状态……建议资料整理完成后统一发起知识索引构建”，风险等级 MEDIUM。",
+                "supported": true
+              },
+              {
+                "index": 8,
+                "text": "张晨另补充旧版本可用性保障：“对于资料更新，知识索引会标记为需要重建，旧版本仍保持可检索，直到新版本完成切换”（start_second=249），说明重建期间服务不中断。",
+                "supported": true
+              },
+              {
+                "index": 9,
+                "text": "工具返回内容未提供资料维护人的具体身份、重建流程的操作入口、预计耗时或失败重试机制等执行细节。",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答准确引用会议决策与风险条目，正面给出“资料维护人整理完成后统一重建”的处理方式，并说明未提供的执行细节。"
+          }
+        }
       }
     },
     {
@@ -3791,6 +5691,148 @@
           ],
           "answered": true,
           "why": "回答正面说明了V2.0计划内需求的验收数量、剩余项和进展，但存在未支撑的meeting_id=2及“异步化改造推迟处理”表述。"
+        }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "包含V2.0计划内需求验收情况：17个通过15个，剩余报表导出和消息推送免打扰设置，消息推送已修完回归通过。"
+              },
+              {
+                "index": 2,
+                "useful": false,
+                "why": "主要是发布决策和行动项，未提及计划内需求验收情况。"
+              },
+              {
+                "index": 3,
+                "useful": false,
+                "why": "讨论通稿定稿和风险，未提及计划内需求验收情况。"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 3,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "V2.0 计划内共17个需求",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "其中15个已验收通过",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "剩余2个为“报表导出”和“消息推送免打扰设置”",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "消息推送免打扰设置已修复并于昨日回归通过",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "报表导出功能在压测中暴露问题",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "报表导出尚未完成验收",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "会议决策将报表导出入口先隐藏",
+                "supported": true
+              },
+              {
+                "index": 8,
+                "text": "异步化改造推迟处理",
+                "supported": false
+              },
+              {
+                "index": 9,
+                "text": "因此，V2.0 计划内需求并未全部通过验收",
+                "supported": true
+              },
+              {
+                "index": 10,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）",
+                "supported": false
+              },
+              {
+                "index": 11,
+                "text": "张晨在开场汇报中说明：“V2.0计划内的17个需求已经验收通过15个，剩下两个，一个是报表导出，一个是消息推送的免打扰设置”（start_second=15）",
+                "supported": true
+              },
+              {
+                "index": 12,
+                "text": "同一发言中补充进展：“消息推送这个已经修完了，昨天回归通过”（start_second=26）",
+                "supported": true
+              },
+              {
+                "index": 13,
+                "text": "张晨同时指出报表导出问题来源：“报表导出的问题在压测里暴露出来了”（start_second=35）",
+                "supported": true
+              },
+              {
+                "index": 14,
+                "text": "系统管理员在会议总结中宣布处置决策：“V2.0按期发布，报表导出入口先隐藏”（start_second=233）",
+                "supported": true
+              },
+              {
+                "index": 15,
+                "text": "同一总结中明确后续安排：“张涛负责报表导出异步化改造，本周五前完成”（start_second=245）",
+                "supported": true
+              },
+              {
+                "index": 16,
+                "text": "工具返回内容已明确17项需求的验收状态、两项未完成需求的具体情况及处置决策",
+                "supported": true
+              },
+              {
+                "index": 17,
+                "text": "未提供已通过验收的15项需求清单",
+                "supported": true
+              },
+              {
+                "index": 18,
+                "text": "未提供报表导出压测问题的具体现象",
+                "supported": true
+              },
+              {
+                "index": 19,
+                "text": "未提供消息推送免打扰设置的验收凭证",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答基于会议记录准确说明了V2.0计划内17个需求中15个已验收通过、2个未完成的具体情况，正面回答了验收情况。"
+          }
         }
       }
     },
@@ -4002,6 +6044,98 @@
           "answered": true,
           "why": "回答直接指出了压测暴露的接口超时和高并发失败率问题，核心内容由上下文支撑。"
         }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "直接包含报表导出在压测中暴露的问题：单用户导出三个月需四十多秒超网关30秒限制，500并发失败率12%其他接口正常"
+              },
+              {
+                "index": 2,
+                "useful": false,
+                "why": "讲的是发布安排、灰度、行动项等，未涉及压测暴露的问题"
+              },
+              {
+                "index": 3,
+                "useful": false,
+                "why": "讨论的是解决方案（缓存、异步任务）及工期，未涉及压测暴露的问题"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "报表导出在压测中暴露的具体问题是：单个用户导出三个月数据时接口耗时超过40秒，超出网关30秒超时限制",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "在500并发压测下，该接口失败率达12%",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）",
+                "supported": false
+              },
+              {
+                "index": 4,
+                "text": "张晨在转写中明确描述问题现象：“单个用户导出三个月的数据接口要跑四十多秒，超过了网关30秒的超时限制”（start_second=38）",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "同一发言中给出压测数据：“我们压了500并发，这个接口的失败率到了12%，其他接口都是正常的”（start_second=46）",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "系统管理员随即确认问题严重性：“四十多秒确实不能接受”（start_second=52）",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "系统管理员决策“V2.0按期发布，报表导出入口先隐藏”（start_second=233）",
+                "supported": true
+              },
+              {
+                "index": 8,
+                "text": "张晨提出异步化改造方案作为根本解决措施，并评估工期为一周（start_second=67–94）",
+                "supported": true
+              },
+              {
+                "index": 9,
+                "text": "工具返回内容已完整提供压测中的具体技术指标（响应时长、超时阈值、并发数、失败率）",
+                "supported": true
+              },
+              {
+                "index": 10,
+                "text": "未包含错误日志、资源监控数据或根因代码级分析",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答准确概括了压测中暴露的报表导出接口超时和12%失败率问题，并附有上下文依据。"
+          }
+        }
       }
     },
     {
@@ -4203,6 +6337,118 @@
           "answered": true,
           "why": "回答直接说明了报表导出问题的最终处理方式，关键决策和兜底机制基本可由上下文支撑，仅会议名称/ID无依据。"
         }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "包含最终决定：发布时间不变，报表导出发布时先隐藏入口，等改造完成再单独放出来。"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "复述决定：V2.0按期发布，报表导出入口先隐藏，并提到异步化改造。"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "包含风险讨论和最终复述，确认报表导出入口先隐藏、按期发布。"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 3,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "会议最终决策对报表导出问题采取“短期规避+长期修复”双轨处理",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "V2.0 按期发布，但将报表导出入口暂时隐藏",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "由张涛负责对该功能进行异步化改造，要求在本周五前完成",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "系统管理员设置了中期检查点：若张涛在周三未能完成联调，则将该功能推迟至下个版本",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "系统管理员在会议总结中明确宣布处置决策：“V2.0按期发布，报表导出入口先隐藏”",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "同一总结中指定责任人与时限：“张涛负责报表导出异步化改造，本周五前完成”",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "系统管理员在前文已当场拍板该方案：“那就定一步方案发布时间不变，报表导出这个功能在发布时先隐藏入口，等改造完成再单独放出来”",
+                "supported": true
+              },
+              {
+                "index": 8,
+                "text": "系统管理员另设风险管控节点：“张涛，你这周三给我一个中期进度，如果到周三还没完成联调，我们就把报表导出推到下个版本”",
+                "supported": true
+              },
+              {
+                "index": 9,
+                "text": "张晨确认执行：“明白，我这边今天就拆任务”",
+                "supported": true
+              },
+              {
+                "index": 10,
+                "text": "张晨承诺“周三给进度”",
+                "supported": true
+              },
+              {
+                "index": 11,
+                "text": "工具返回内容未提供“本周五”和“周三”的具体日历日期",
+                "supported": true
+              },
+              {
+                "index": 12,
+                "text": "工具返回内容未提供隐藏入口的前端实现方式",
+                "supported": true
+              },
+              {
+                "index": 13,
+                "text": "工具返回内容未提供异步化改造的技术方案细节或验收标准",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答准确归纳了会议中关于报表导出问题的最终决策，包括隐藏入口、异步化改造及中期检查兜底机制，正面回答了问题。"
+          }
+        }
       }
     },
     {
@@ -4393,6 +6639,108 @@
           ],
           "answered": true,
           "why": "回答明确给出了灰度三步和回滚能力，核心事实可由上下文支撑，但包含会议ID、人工确认纪要及“为准”等未被上下文支撑的来源性表述。"
+        }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "包含灰度分三步10%/50%/全量及回滚预案最快五分钟切回旧版本的信息"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "复述灰度按10%、50%全量分三天走，涉及灰度步骤"
+              },
+              {
+                "index": 3,
+                "useful": true,
+                "why": "同样复述灰度按10%、50%全量分三天走"
+              },
+              {
+                "index": 4,
+                "useful": false,
+                "why": "是上一轮灰度数据复盘，与本次灰度步骤和回滚能力无关"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "灰度发布计划分三步走：第一天放10%用户观察一天，第二天扩至50%，第三天全量发布。",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "回滚预案已准备就绪。",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "数据库改动采用加字段方式且向后兼容。",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "回滚无需动数据，最快5分钟可切回旧版本。",
+                "supported": true
+              },
+              {
+                "index": 5,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）。",
+                "supported": false
+              },
+              {
+                "index": 6,
+                "text": "李悦在转写中明确说明灰度节奏与回滚能力。",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "系统管理员在会议总结中确认灰度步骤决策。",
+                "supported": true
+              },
+              {
+                "index": 8,
+                "text": "人工确认的纪要条目提及灰度覆盖范围为“10%-30%活跃用户”。",
+                "supported": true
+              },
+              {
+                "index": 9,
+                "text": "该描述为上一轮灰度复盘数据，与本次会议决策的新一轮三步灰度方案属不同阶段。",
+                "supported": true
+              },
+              {
+                "index": 10,
+                "text": "本轮灰度步骤以转写原话及会议总结为准。",
+                "supported": true
+              },
+              {
+                "index": 11,
+                "text": "工具返回内容未说明回滚触发条件、具体操作人、监控阈值或回滚后的数据一致性验证方式。",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答明确给出灰度三步节奏和回滚能力（预案、兼容策略、5分钟切回），并补充了资料不足的执行细节，正面回答了问题。"
+          }
         }
       }
     },
@@ -4633,6 +6981,113 @@
           "answered": true,
           "why": "回答直接覆盖了取模目的和灰度期间关注指标，核心事实可由上下文支撑，仅会议名称和 meeting_id 等元信息缺乏上下文依据。"
         }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [
+              {
+                "index": 1,
+                "useful": true,
+                "why": "包含按用户ID取模保证同一用户落在同一边，以及灰度期间盯接口错误率、平均响应时间、核心链路转化率的信息"
+              },
+              {
+                "index": 2,
+                "useful": true,
+                "why": "包含灰度期间盯接口错误率、平均响应时间、核心链路转化率的信息"
+              }
+            ],
+            "facts": [
+              {
+                "index": 1,
+                "found": true,
+                "in_context": 1
+              },
+              {
+                "index": 2,
+                "found": true,
+                "in_context": 1
+              }
+            ],
+            "missing_facts": []
+          },
+          "answer": {
+            "claims": [
+              {
+                "index": 1,
+                "text": "灰度按用户 ID 取模的目的是保证同一个用户每次都落在同一边（始终命中同一版本），避免体验在新旧版本间跳变",
+                "supported": true
+              },
+              {
+                "index": 2,
+                "text": "灰度期间需重点盯防的指标为：接口错误率、平均响应时间、核心链路转化率",
+                "supported": true
+              },
+              {
+                "index": 3,
+                "text": "这三个指标已配置告警，超过阈值会自动发到群里",
+                "supported": true
+              },
+              {
+                "index": 4,
+                "text": "以上信息均来自“产品发布评审会议”（meeting_id=2）",
+                "supported": false
+              },
+              {
+                "index": 5,
+                "text": "李悦在转写中解释取模目的：“挨用户ID取魔，保证同一个用户每次都落在同一边，不会一会儿新版”（start_second=145）",
+                "supported": true
+              },
+              {
+                "index": 6,
+                "text": "张晨随即补充“一会儿旧版”（start_second=151），共同说明取模是为避免版本跳变",
+                "supported": true
+              },
+              {
+                "index": 7,
+                "text": "李悦在同一轮对话中回答监控指标问题：“主要看接口错误率、平均响应时间，还有核心链路的转化率”（start_second=156）",
+                "supported": true
+              },
+              {
+                "index": 8,
+                "text": "李悦说明“这三个我配了告警，超过阈值会……直接发到群里”（start_second=161–164）",
+                "supported": true
+              },
+              {
+                "index": 9,
+                "text": "系统管理员随后确认值班安排：“灰度这三天需要有人值班盯盘”（start_second=165）",
+                "supported": true
+              },
+              {
+                "index": 10,
+                "text": "李悦承诺“明天下班前把排班表发到群里”（start_second=170）",
+                "supported": true
+              },
+              {
+                "index": 11,
+                "text": "表明监控机制已纳入执行计划",
+                "supported": true
+              },
+              {
+                "index": 12,
+                "text": "工具返回内容已明确取模目的、三项核心监控指标及告警通知方式",
+                "supported": true
+              },
+              {
+                "index": 13,
+                "text": "未提供各项指标的具体阈值数值、基线计算方法、对照组设置或数据采集频率",
+                "supported": true
+              },
+              {
+                "index": 14,
+                "text": "如需此类量化执行细节，当前资料不足",
+                "supported": true
+              }
+            ],
+            "answered": true,
+            "why": "回答直接说明了按用户ID取模的目的，并列出灰度期间需盯的三项指标，均能从上下文找到依据。"
+          }
+        }
       }
     },
     {
@@ -4677,6 +7132,40 @@
           "answered": false,
           "why": "回答为空，没有提供任何行动项和负责人信息。"
         }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [],
+            "facts": [
+              {
+                "index": 1,
+                "found": false,
+                "in_context": null
+              },
+              {
+                "index": 2,
+                "found": false,
+                "in_context": null
+              },
+              {
+                "index": 3,
+                "found": false,
+                "in_context": null
+              }
+            ],
+            "missing_facts": [
+              1,
+              2,
+              3
+            ]
+          },
+          "answer": {
+            "claims": [],
+            "answered": false,
+            "why": "没有检索到上下文，回答为空，无法确定会议行动项和负责人。"
+          }
+        }
       }
     },
     {
@@ -4713,6 +7202,34 @@
           "claims": [],
           "answered": false,
           "why": "产品回答为空，没有正面回答问题。"
+        }
+      },
+      "judgements": {
+        "b": {
+          "context": {
+            "contexts": [],
+            "facts": [
+              {
+                "index": 1,
+                "found": false,
+                "in_context": null
+              },
+              {
+                "index": 2,
+                "found": false,
+                "in_context": null
+              }
+            ],
+            "missing_facts": [
+              1,
+              2
+            ]
+          },
+          "answer": {
+            "claims": [],
+            "answered": false,
+            "why": "回答为空，未提供任何信息，无法回答问题。"
+          }
         }
       }
     }
@@ -4957,6 +7474,268 @@
         "context_precision": 1.0,
         "context_recall": 1.0,
         "faithfulness": 0.9444444444444444,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q26",
+        "context_precision": null,
+        "context_recall": 0.0,
+        "faithfulness": null,
+        "answer_relevancy": 0.0
+      },
+      {
+        "case_id": "q27",
+        "context_precision": null,
+        "context_recall": 0.0,
+        "faithfulness": null,
+        "answer_relevancy": 0.0
+      }
+    ],
+    "reading": "context_precision = 检索到的上下文里被判『有用』的比例；context_recall = 标注事实里能在上下文中找到的比例（只有带金标的 case 计入）；faithfulness = 答案断言里被上下文支撑的比例；answer_relevancy = 正面回答了问题的 case 比例（与 RAGAS 的嵌入口径不同）。四个指标各自独立报出，**没有加权总分**。",
+    "not_measured": "本次未测：产品在真实模型下的答案质量（需要一次授权运行）；本文件里的数字若是空值，说明对应样本没有判定，而不是 0 分。"
+  },
+  "adjudicators": {
+    "b": {
+      "model_used": "deepseek-flash",
+      "provider": "deepseek",
+      "thinking": false,
+      "not_gold": "这是模型判定，不是人类金标"
+    }
+  },
+  "summary_b": {
+    "cases_judged": 27,
+    "cases_total": 27,
+    "cases_step_without_gold": 0,
+    "context_precision": {
+      "successes": 91,
+      "total": 107,
+      "rate": 0.8504672897196262,
+      "wilson_95": [
+        0.7708304349721777,
+        0.9058116879118769
+      ],
+      "clopper_pearson_95": [
+        0.7685545947182353,
+        0.9120453349773103
+      ],
+      "note": "exact interval is primary; Wilson shown for comparison"
+    },
+    "context_recall": {
+      "successes": 57,
+      "total": 62,
+      "rate": 0.9193548387096774,
+      "wilson_95": [
+        0.8247142865138739,
+        0.9650616530140073
+      ],
+      "clopper_pearson_95": [
+        0.8217474068677582,
+        0.9732953832041642
+      ],
+      "note": "exact interval is primary; Wilson shown for comparison"
+    },
+    "faithfulness": {
+      "successes": 213,
+      "total": 242,
+      "rate": 0.8801652892561983,
+      "wilson_95": [
+        0.8331956053439409,
+        0.9152542325420336
+      ],
+      "clopper_pearson_95": [
+        0.8324490775625033,
+        0.9182571419006671
+      ],
+      "note": "exact interval is primary; Wilson shown for comparison"
+    },
+    "answer_relevancy": {
+      "successes": 25,
+      "total": 27,
+      "rate": 0.9259259259259259,
+      "wilson_95": [
+        0.7663040731697686,
+        0.9794453459390113
+      ],
+      "clopper_pearson_95": [
+        0.7571016531543817,
+        0.9908999270576937
+      ],
+      "note": "exact interval is primary; Wilson shown for comparison"
+    },
+    "per_case": [
+      {
+        "case_id": "q01",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.8571428571428571,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q02",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.8,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q03",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.8333333333333334,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q04",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.7777777777777778,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q05",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.9,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q06",
+        "context_precision": 0.5,
+        "context_recall": 1.0,
+        "faithfulness": 0.8888888888888888,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q07",
+        "context_precision": 0.6,
+        "context_recall": 1.0,
+        "faithfulness": 0.875,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q08",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.9166666666666666,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q09",
+        "context_precision": 0.625,
+        "context_recall": 1.0,
+        "faithfulness": 0.8571428571428571,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q10",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.875,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q11",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.875,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q12",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.875,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q13",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.8333333333333334,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q14",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.7,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q15",
+        "context_precision": 0.6,
+        "context_recall": 1.0,
+        "faithfulness": 0.9333333333333333,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q16",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.8888888888888888,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q17",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.8571428571428571,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q18",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.9090909090909091,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q19",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.9090909090909091,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q20",
+        "context_precision": 0.8,
+        "context_recall": 1.0,
+        "faithfulness": 0.7777777777777778,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q21",
+        "context_precision": 0.3333333333333333,
+        "context_recall": 1.0,
+        "faithfulness": 0.8947368421052632,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q22",
+        "context_precision": 0.3333333333333333,
+        "context_recall": 1.0,
+        "faithfulness": 0.9,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q23",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q24",
+        "context_precision": 0.75,
+        "context_recall": 1.0,
+        "faithfulness": 0.9090909090909091,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "q25",
+        "context_precision": 1.0,
+        "context_recall": 1.0,
+        "faithfulness": 0.9285714285714286,
         "answer_relevancy": 1.0
       },
       {

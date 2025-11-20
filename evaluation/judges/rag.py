@@ -267,35 +267,51 @@ def build_packet(qa_set: Mapping[str, Any], answers: Mapping[str, Any] | None) -
     }
 
 
-def _needs_judging(case: Mapping[str, Any]) -> bool:
-    """这一轮还需要（重新）判定吗：没判过、或上一次有调用失败。"""
-    judgement = case.get("judgement")
-    if not isinstance(judgement, Mapping):
+def _existing_judgement(case: Mapping[str, Any], label: str) -> Mapping[str, Any]:
+    """这一族已有的判定（`a` 存在 `judgement` 里，其它族存在 `judgements[label]` 里）。"""
+    value = case.get("judgement") if label == "a" else (case.get("judgements") or {}).get(label)
+    return value if isinstance(value, Mapping) else {}
+
+
+def _needs_judging(case: Mapping[str, Any], label: str) -> bool:
+    """这一轮还需要（重新）判定吗：这一族还没判过、或上一次有调用失败。"""
+    judgement = _existing_judgement(case, label)
+    if not judgement:
         return True
     return any(f"{part}_error" in judgement for part in ("context", "answer"))
 
 
 def judge_packet(packet: dict[str, Any], *, output_path: Path, authorized_calls: int,
-                 provider: str = "qwen", progress=print) -> dict[str, Any]:
+                 provider: str = "qwen", label: str = "a", thinking: bool = False,
+                 progress=print) -> dict[str, Any]:
     """逐 case 判定：每 case 两次调用（上下文质量、答案质量）。"""
     url, model, key = model_client.endpoint(provider)
     # 待判 = 还没判过的 + **上一次判定里有调用失败的**。后者要能重试：
     # 实测判定模型偶尔会读超时（长上下文 + 思考），把它当成"永久失败"就白白丢样本。
     pending = [
         case for case in packet["cases"]
-        if case["has_answer"] and _needs_judging(case)
+        if case["has_answer"] and _needs_judging(case, label)
     ]
     budget_cases = authorized_calls // 2
     if budget_cases < len(pending):
         progress(f"授权 {authorized_calls} 次调用 = {budget_cases} 个 case，"
                  f"待判 {len(pending)} 个，本次只判前 {budget_cases} 个")
         pending = pending[:budget_cases]
-    packet.setdefault("adjudicator_disclosure", {
-        "model_used": model, "provider": provider,
+    packet.setdefault("adjudicator_disclosure", {})
+    if label == "a":
+        packet["adjudicator_disclosure"].update({
+            "model_used": model, "provider": provider,
         "definition": ("逐段上下文有用性 + 逐条事实覆盖 + 逐断言支撑 + 是否正面回答；"
                        "answer_relevancy 与 RAGAS 的嵌入版口径不同，见模块文档"),
-        "not_gold": "这是模型判定，不是人类金标",
-    })
+            "not_gold": "这是模型判定，不是人类金标",
+        })
+    else:
+        # 第二个族另存一份：**标签只追加不覆盖**（与仓库既有的 label_b 纪律一致），
+        # 否则"跨族一致性"这件事本身就没法复核了
+        packet.setdefault("adjudicators", {})[label] = {
+            "model_used": model, "provider": provider, "thinking": thinking,
+            "not_gold": "这是模型判定，不是人类金标",
+        }
     calls = 0
     for position, case in enumerate(pending, start=1):
         context_listing = "\n".join(
@@ -312,7 +328,14 @@ def judge_packet(packet: dict[str, Any], *, output_path: Path, authorized_calls:
             f"【产品回答】\n{case['answer'][:4000]}\n\n请按格式输出 JSON。")
         judgement: dict[str, Any] = {}
         # 重试时只补失败的那一半：已经判成功的部分不重复花钱
-        previous = case.get("judgement") if isinstance(case.get("judgement"), Mapping) else {}
+        # store 必须是"这一族的判定字典"，不能是 case 本身——case 里有个 `answer` 键
+        # （答案正文），拿它当 store 会让"只补失败的那一半"误判成"answer 已判过"，
+        # 于是少发一次调用（实测：单测里 calls_made 从 2 变 1）。
+        if label == "a":
+            store = case.setdefault("judgement", {})
+        else:
+            store = case.setdefault("judgements", {}).setdefault(label, {})
+        previous = store if isinstance(store, Mapping) else {}
         for part in ("context", "answer"):
             if part in previous and f"{part}_error" not in previous:
                 judgement[part] = previous[part]
@@ -321,17 +344,21 @@ def judge_packet(packet: dict[str, Any], *, output_path: Path, authorized_calls:
             if name in judgement:
                 continue   # 这一半上轮已判成功
             try:
-                reply = model_client.call_json(url, model, key, system, user, total_deadline=240)
+                reply = model_client.call_json(url, model, key, system, user,
+                                              total_deadline=240, thinking=thinking)
                 judgement[name] = reply["parsed"]
             except model_client.ModelClientError as error:
                 judgement[f"{name}_error"] = f"{type(error).__name__}: {str(error)[:200]}"
             calls += 1
             _write(output_path, packet)
-        case["judgement"] = judgement
+        if label == "a":
+            case["judgement"] = judgement
+        else:
+            case["judgements"][label] = judgement
         progress(f"  [{position}/{len(pending)}] {case['case_id']} → "
                  f"{'失败' if judgement.get('context_error') or judgement.get('answer_error') else '已判'}")
         time.sleep(0.2)
-    return {"provider": provider, "model": model, "calls_made": calls,
+    return {"provider": provider, "model": model, "label": label, "calls_made": calls,
             "judged": sum(1 for case in packet["cases"] if case.get("judgement"))}
 
 
@@ -339,8 +366,12 @@ def _rate(successes: int, total: int) -> dict[str, Any] | None:
     return stats.proportion_report(successes, total) if total else None
 
 
-def summarize(packet: Mapping[str, Any]) -> dict[str, Any]:
-    """四个指标分别汇总；判不了的样本（缺金标、缺判定）单独报，不混进分母。"""
+def summarize(packet: Mapping[str, Any], *, label: str = "a") -> dict[str, Any]:
+    """四个指标分别汇总；判不了的样本（缺金标、缺判定）单独报，不混进分母。
+
+    `label` 选哪一族的判定：`a` 是主判（`case["judgement"]`），其它族的另存
+    `case["judgements"][label]`——换裁判等于换仪器，两族都要能各自成数。
+    """
     context_useful = context_total = 0
     facts_found = facts_total = 0
     claims_supported = claims_total = 0
@@ -350,7 +381,8 @@ def summarize(packet: Mapping[str, Any]) -> dict[str, Any]:
     per_case: list[dict[str, Any]] = []
 
     for case in packet["cases"]:
-        judgement = case.get("judgement") or {}
+        judgement = (case.get("judgement") or {}) if label == "a" \
+            else ((case.get("judgements") or {}).get(label) or {})
         if not judgement:
             continue
         context = judgement.get("context") or {}
@@ -429,6 +461,10 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument("--meeting-id", type=int, default=None,
                         help="把会话范围限定在这一场会（便于复核引用来源）")
     parser.add_argument("--provider", default="qwen", choices=sorted(model_client.PROVIDERS))
+    parser.add_argument("--label", default="a", choices=("a", "b", "c"),
+                        help="判定族的标签：a 是主判，其它标签另存一份（跨族复判用）")
+    parser.add_argument("--thinking", default="off", choices=("off", "on"),
+                        help="判定调用是否开思考：机械判定默认关（又慢又贵，实测 30–120s/次）")
     parser.add_argument("--authorized-llm-calls", type=int, default=None)
     args = parser.parse_args(list(argv) if argv is not None else None)
 
@@ -478,11 +514,14 @@ def main(argv: Iterable[str] | None = None) -> int:
             return 2
         packet = json.loads(args.packet.read_text(encoding="utf-8"))
         progress = judge_packet(packet, output_path=args.packet,
-                               authorized_calls=args.authorized_llm_calls, provider=args.provider)
-        packet["summary"] = summarize(packet)
+                               authorized_calls=args.authorized_llm_calls, provider=args.provider,
+                               label=args.label, thinking=args.thinking == "on")
+        packet["summary" if args.label == "a" else f"summary_{args.label}"] = summarize(
+            packet, label=args.label)
         _write(args.packet, packet)
         print(json.dumps(progress, ensure_ascii=False))
-        print(json.dumps(packet["summary"], ensure_ascii=False, indent=2)[:2000])
+        key = "summary" if args.label == "a" else f"summary_{args.label}"
+        print(json.dumps(packet[key], ensure_ascii=False, indent=2)[:2000])
         return 0
     parser.print_help()
     return 1
