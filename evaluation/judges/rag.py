@@ -195,6 +195,12 @@ def meeting_transcripts(base_url: str, token: str, meeting_id: int) -> dict[str,
         "task_ids": [task["id"] for task in tasks],
         "segment_count": len(segments),
         "text": "\n".join(str(item.get("content") or "") for item in segments),
+        # 片段 → 时间映射：检索侧指标（recall@k / MRR）要把检索到的切片时间窗映射回
+        # 金标里的片段号，缺了它那套指标算不出来（旧产物没有这个字段，指标会如实报无样本）
+        "segments": [{
+            "task_id": item.get("task_id"), "segment_no": item.get("segment_no"),
+            "start_ms": item.get("start_ms"), "end_ms": item.get("end_ms"),
+        } for item in segments],
     }
 
 
@@ -228,6 +234,9 @@ def capture(qa_set: Mapping[str, Any], *, base_url: str, token: str,
             "allowed_meeting_ids": [meeting_id] if meeting_id else None,
             "used_refs": _refs_from_answer(message),
             "unknown_refs": [],
+            # 本轮检索到的**全部**切片（含没被引用的）：检索侧指标的分母。
+            # 只存被引用的那一部分会把召回算高（分母里少了没被引用的东西）。
+            "retrieved": message.get("retrieved") or [],
         })
         progress(f"  [{case['id']}] {case['question'][:30]}… → {len(turns[-1]['citations'])} 条引用")
         _write(output_path, {
