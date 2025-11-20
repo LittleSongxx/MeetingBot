@@ -38,12 +38,15 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from models import AiModelConfig, ChatSession, User
 from pydantic import BaseModel, Field
-from services import chat_service, moderation
+from services import chat_service, kb_service, kb_tools, moderation, query_plan
 
 router = APIRouter(prefix="/chat")
 
 # 心跳间隔（秒）。取 15 是反代空闲超时的常见下限（nginx 默认 60s）的安全值
 HEARTBEAT_SECONDS = float(os.getenv("CHAT_HEARTBEAT_SECONDS", "15"))
+# 一轮问答里除问答模型之外、同样要计入当日 token 配额的调用类型
+# （检索重排、查询规划）。口径写在这里一处，done 事件与配额闸共用。
+AUX_CALL_TYPES = (chat_service.CHAT_CALL_TYPE, "KB_RERANK", "KB_QUERY_PLAN")
 # 断开连接后等待落库收尾的上限：不设上限会把"客户端走了"变成"服务端挂住"
 CLOSE_PERSIST_TIMEOUT = 10.0
 
@@ -91,6 +94,10 @@ async def status(current_user: User = Depends(get_current_user)):
         "vector_store_reachable": await qdrant.health(),
         # 内容审核是否在跑：没配词表时如实显示"未启用"，而不是让页面以为扫过了
         "moderation": moderation.status(),
+        # 机制开关**由被测进程自己报**：抓取进程的 env 与容器的 env 是两个空间，
+        # 从外面猜开关状态等于没有证据（product_model 留空已经演示过这个坑）
+        "kb_rerank_enabled": kb_service.rerank_enabled(),
+        "kb_query_plan_enabled": query_plan.plan_enabled(),
     })
 
 
@@ -128,6 +135,29 @@ async def messages(session_id: int, limit: int = 100,
     except chat_service.ChatError as error:
         raise CustomException(str(error)) from error
     return Result.success({"list": rows})
+
+
+class PlanPayload(BaseModel):
+    question: str = Field(description="要规划的问题（不落库、不产答案，只跑规划）")
+    meeting_ids: list[int] | None = Field(
+        default=None, description="限定会议范围；留空表示当前用户可见的全部会议")
+
+
+@router.post("/plan")
+async def plan(payload: PlanPayload, current_user: User = Depends(get_current_user)):
+    """**查询规划预览**：只跑一次规划并返回结构，不落库、不产答案。
+
+    存在的理由：意图 F1 只需要"产品怎么判"这一个信号（每题一次廉价调用），
+    走完整问答链路要多花几倍的调用与 token。它跑的是**产品自己的**规划实现
+    （不是评测侧另写一份），因此量出来的就是线上行为——评测侧只负责打这个端点、存产物。
+    """
+    text = (payload.question or "").strip()
+    if not text:
+        raise CustomException("问题不能为空")
+    actor = await kb_tools.Actor.resolve(current_user, requested=payload.meeting_ids)
+    scope = await chat_service._plan_scope(actor)
+    plan_result = await query_plan.plan_query(text, scope=scope, biz_id=0)
+    return Result.success({"plan": plan_result, "enabled": query_plan.plan_enabled()})
 
 
 @router.post("/stream")
@@ -201,7 +231,9 @@ async def _charged_stream(session: ChatSession, question: str,
             with contextlib.suppress(BaseException):
                 used = 0
                 if message_id:
-                    used = int((await chat_service.turn_tokens(message_id)).get("total_tokens") or 0)
+                    # 配额按**全部相关调用类型**计：辅助调用（重排/规划）同样花钱
+                    used = int((await chat_service.turn_tokens(
+                        message_id, call_types=AUX_CALL_TYPES)).get("total_tokens") or 0)
                 if used:
                     await ratelimit.spend("chat-tokens", str(current_user.id), used,
                                           limit=DAILY_TOKEN_BUDGET, window_seconds=86_400)

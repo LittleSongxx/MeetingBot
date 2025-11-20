@@ -703,3 +703,134 @@ class EntityCheckFalsePositiveTest(unittest.TestCase):
             [{"kind": "person", "text": "陈琳",
               "reason": "本轮检索结果里没有出现过这个名字"}],
             "只标出检索结果里没有的陈琳；张晨在检索结果里出现过，不标")
+
+
+class QueryPlanTest(unittest.TestCase):
+    """查询规划：触发门、归一化、提示渲染。**默认关**，开了才多一次调用。"""
+
+    def test_disabled_by_default(self):
+        from services import query_plan
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("KB_QUERY_PLAN_ENABLED", None)
+            self.assertFalse(query_plan.plan_enabled())
+        with patch.dict(os.environ, {"KB_QUERY_PLAN_ENABLED": "1"}):
+            self.assertTrue(query_plan.plan_enabled())
+
+    def test_trigger_gate_only_fires_on_relative_time_or_reference(self):
+        """没有相对时间/指代的问题不值得多花一次调用——触发门把它们挡在外面。"""
+        from services import query_plan
+        self.assertEqual(query_plan.trigger_terms("灰度从什么时候开始"), [])
+        self.assertEqual(query_plan.trigger_terms("最近七天的调用成功率是多少"), ["最近"])
+        self.assertTrue(query_plan.trigger_terms("下午这场会定了哪些行动项"))
+        self.assertEqual(query_plan.trigger_terms(""), [])
+
+    def test_normalize_keeps_the_original_question_when_rewriting_is_empty(self):
+        from services import query_plan
+        plan = query_plan.normalize({"intent": "single_fact", "rewritten": ""}, "最近七天呢")
+        self.assertEqual(plan["rewritten"], "最近七天呢", "改写为空要回退原问题")
+        self.assertTrue(any("回退" in issue for issue in plan["issues"]))
+
+    def test_normalize_rejects_out_of_scope_intent_and_tools(self):
+        from services import query_plan
+        plan = query_plan.normalize(
+            {"intent": "查天气", "rewritten": "x", "suggested_tools": ["drop_database", "list_facts"]},
+            "最近七天")
+        self.assertEqual(plan["intent"], "single_fact", "越界意图回退到最保守的一类")
+        self.assertEqual(plan["suggested_tools"], ["list_facts"], "幻觉工具名不许进建议")
+        self.assertTrue(any("越界" in issue for issue in plan["issues"]))
+        self.assertTrue(any("幻觉" in issue for issue in plan["issues"]))
+
+    def test_hint_says_it_is_only_a_suggestion(self):
+        from services import query_plan
+        hint = query_plan.plan_hint({"intent": "aggregation", "rewritten": "9 月 1 日发布了哪些功能",
+                                     "suggested_tools": ["list_facts"], "needs_retrieval": True})
+        self.assertIn("枚举聚合", hint)
+        self.assertIn("9 月 1 日发布了哪些功能", hint)
+        self.assertIn("list_facts", hint)
+        self.assertIn("只是建议", hint)
+
+
+class QueryPlanPipelineTest(unittest.IsolatedAsyncioTestCase):
+    """链路上：规划开着时注入一条提示、落 plan_json；失败时不注入也不报错。"""
+
+    async def asyncSetUp(self):
+        await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["models"]},
+                            use_tz=True, timezone="Asia/Shanghai")
+        await Tortoise.generate_schemas()
+        self.user = await User.create(username="plan-t", password="x", name="张晨")
+        self.meeting = await Meeting.create(
+            meeting_no="MTG-P1", title="产品发布评审会议",
+            start_time="2026-09-10 10:40:00", end_time="2026-09-10 13:00:00",
+            creator_id=self.user.id, host_id=self.user.id, status="FINISHED")
+        await AiModelConfig.create(
+            name="本地对话", model_type="AGENT", provider="OPENAI_COMPATIBLE",
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            api_key="unit-test-key", model_name="qwen-test", enabled=True)
+
+    async def asyncTearDown(self):
+        await Tortoise.close_connections()
+
+    def _plan(self):
+        return {"enabled": True, "used": True, "triggers": ["最近"],
+                "intent": "aggregation", "rewritten": "最近七天的调用成功率",
+                "suggested_tools": ["list_facts"], "needs_retrieval": True, "issues": []}
+
+    async def _run(self, question="最近七天的调用成功率是多少"):
+        from services import query_plan
+        script = [AIMessage(content="", tool_calls=[_tool_call("search_knowledge", {"query": "成功率"})]),
+                  AIMessage(content="根据纪要[1]，是 98.6%。")]
+        session = await chat_service.create_session(self.user)
+        events = []
+        with patch.dict(os.environ, {"KB_QUERY_PLAN_ENABLED": "1"}), \
+                patch.object(query_plan, "plan_query", AsyncMock(return_value=self._plan())), \
+                patch.object(kb_service, "search_knowledge", AsyncMock(return_value=[])):
+            async for kind, payload in chat_service.stream_answer(
+                    session, question, user=self.user, model=ScriptedChatModel(rounds=script)):
+                events.append((kind, payload))
+        return events, session
+
+    async def test_plan_is_injected_persisted_and_reported(self):
+        events, session = await self._run()
+        meta = [payload for kind, payload in events if kind == "meta"][0]
+        self.assertEqual(meta["plan"]["intent"], "aggregation")
+        done = [payload for kind, payload in events if kind == "done"][0]
+        self.assertEqual(done["plan"]["rewritten"], "最近七天的调用成功率")
+        assistant = await ChatMessage.filter(session_id=session.id, role="ASSISTANT").first()
+        self.assertEqual(assistant.plan_json["intent"], "aggregation", "规划要落库，否则无法归因")
+        messages = await chat_service.list_messages(session.id, self.user)
+        self.assertEqual(messages[-1]["plan"]["intent"], "aggregation")
+
+    async def test_plan_call_failure_does_not_break_the_turn(self):
+        from services import query_plan
+        script = [AIMessage(content="", tool_calls=[_tool_call("search_knowledge", {"query": "x"})]),
+                  AIMessage(content="答[1]。")]
+        session = await chat_service.create_session(self.user)
+        events = []
+        with patch.dict(os.environ, {"KB_QUERY_PLAN_ENABLED": "1"}), \
+                patch.object(query_plan, "plan_query",
+                             AsyncMock(side_effect=RuntimeError("规划模型挂了"))), \
+                patch.object(kb_service, "search_knowledge", AsyncMock(return_value=[])):
+            async for kind, payload in chat_service.stream_answer(
+                    session, "最近七天呢", user=self.user, model=ScriptedChatModel(rounds=script)):
+                events.append((kind, payload))
+        self.assertEqual(events[-1][0], "done", "规划失败不该把这一轮变成错误")
+        assistant = await ChatMessage.filter(session_id=session.id, role="ASSISTANT").first()
+        # 失败也留痕（不是 None）：复盘时要能分清"没开规划"与"开了但失败了"
+        self.assertFalse(assistant.plan_json["used"])
+        self.assertIn("规划失败", assistant.plan_json["reason"])
+
+    async def test_plan_is_skipped_when_the_switch_is_off(self):
+        from services import query_plan
+        script = [AIMessage(content="", tool_calls=[_tool_call("search_knowledge", {"query": "x"})]),
+                  AIMessage(content="答[1]。")]
+        session = await chat_service.create_session(self.user)
+        events = []
+        with patch.object(query_plan, "plan_enabled", return_value=False), \
+                patch.object(query_plan, "plan_query", AsyncMock()) as planner, \
+                patch.object(kb_service, "search_knowledge", AsyncMock(return_value=[])):
+            async for kind, payload in chat_service.stream_answer(
+                    session, "最近七天呢", user=self.user, model=ScriptedChatModel(rounds=script)):
+                events.append((kind, payload))
+        self.assertEqual(planner.await_count, 0, "开关关着就不许发生规划调用")
+        assistant = await ChatMessage.filter(session_id=session.id, role="ASSISTANT").first()
+        self.assertIsNone(assistant.plan_json)

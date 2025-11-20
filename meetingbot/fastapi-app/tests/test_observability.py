@@ -162,7 +162,7 @@ class EmployeeCanSeeLogTest(unittest.TestCase):
         from services.observability_service import CALL_TYPE_OWNERSHIP
         for call_type in ("TRANSCRIPTION", "MINUTES", "AGENT_REVIEW", "AGENT_REFINE",
                           "AGENT_REVIEW_SUPPORT", "CHAT", "CHAT_SUMMARY", "KB_EMBEDDING",
-                          "KB_QUERY_EMBED"):
+                          "KB_QUERY_EMBED", "KB_RERANK", "KB_QUERY_PLAN"):
             self.assertIn(call_type, CALL_TYPE_OWNERSHIP, call_type)
 
     def test_unknown_call_type_still_hidden(self):

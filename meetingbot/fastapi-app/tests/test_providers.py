@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import unittest
+import unittest.mock  # noqa: F401 - patch.dict 通过它取用
 
 from common import providers
 
@@ -80,7 +81,8 @@ class ReasoningPolicyTest(unittest.TestCase):
     def test_every_declared_call_type_has_a_policy(self):
         """契约层的调用类型都必须有明确的推理声明，避免漏配后静默走默认值。"""
         for call_type in ("minutes", "agent_review", "agent_refine",
-                          "speaker_match"):
+                          "speaker_match", "chat", "chat_summary", "kb_rerank",
+                          "kb_query_plan"):
             self.assertIn(call_type, providers.REASONING_BY_CALL_TYPE, msg=call_type)
 
 

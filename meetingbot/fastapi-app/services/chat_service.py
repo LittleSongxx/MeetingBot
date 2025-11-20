@@ -38,10 +38,10 @@ from common.times import format_datetime, now
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.tools import StructuredTool
 from langgraph.prebuilt import ToolNode
-from models import AiCallLog, AiModelConfig, ChatMessage, ChatSession, Meeting, PromptTemplate, User
+from models import AiCallLog, AiModelConfig, ChatMessage, ChatSession, Meeting, PromptTemplate, TranscriptionTask, User
 from tortoise.expressions import F
 
-from services import chat_graph, citations, entity_check, kb_tools, model_factory, moderation
+from services import chat_graph, citations, entity_check, kb_tools, model_factory, moderation, query_plan
 
 logger = logging.getLogger("meetingbot.chat")
 
@@ -225,6 +225,8 @@ def _message_dict(row: ChatMessage) -> dict[str, Any]:
         # 也是评测侧算检索指标（recall@k / MRR）的分母——只给被引用的会把召回算高
         "retrieved": (row.citations_json or {}).get("all", []),
         "tools": row.tools_json or [],
+        # 查询规划留痕（没有规划过就是 None）：页面不渲染它，但复盘时要能对上
+        "plan": row.plan_json,
     }
     if row.stop_reason and row.stop_reason != chat_graph.STOP_FINISHED:
         payload["notice"] = chat_graph.STOP_NOTICE.get(row.stop_reason, "")
@@ -436,16 +438,36 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         values["title"] = text[:SESSION_TITLE_CHARS]
     await ChatSession.filter(id=session.id).update(**values)
 
+    # 查询规划（默认关）：把相对时间/指代落到已知事实上，并给出意图与建议工具。
+    # **提示式注入**——它只多出一条系统消息，不改工具集、不替换问题、也不强制 tool_choice。
+    # 失败一律降级为"不注入"（规划是增强，不该有能力把主链路弄挂）。
+    plan: dict[str, Any] | None = None
+    plan_message: SystemMessage | None = None
+    if query_plan.plan_enabled():
+        # 整段包住：`plan_query` 内部已经吞掉模型调用失败，但**取范围**那一步也会碰库——
+        # 增强能力不该有任何一条路径能把主链路弄挂
+        try:
+            plan = await query_plan.plan_query(
+                text, scope=await _plan_scope(actor), biz_id=assistant_row.id)
+        except Exception:  # noqa: BLE001 - 规划是增强，失败就退回"不注入"
+            logger.exception("查询规划失败，本轮不注入规划提示")
+            plan = {"enabled": True, "used": False, "triggers": [], "reason": "规划失败"}
+        if plan.get("used"):
+            plan_message = SystemMessage(query_plan.plan_hint(plan))
+
     yield ("meta", {
         "session_id": session.id, "message_id": assistant_row.id,
         "user_message_id": user_row.id, "model": config.model_name,
         "scope_meeting_ids": list(session.scope_meeting_ids or []),
         "question": text,
+        # 规划结果也进 meta：抓取侧据此能判断"这一轮到底有没有开规划、改写成什么"
+        "plan": plan,
     })
 
     history = await build_memory(session, user=user)
+    messages = history + ([plan_message] if plan_message else []) + [await question_message(text)]
     state_in: dict[str, Any] = {
-        "messages": history + [await question_message(text)],
+        "messages": messages,
         "call_model": model_factory.make_model_caller(
             config, tools=kb_tools.openai_tools(), call_type=CHAT_CALL_TYPE,
             biz_id=assistant_row.id, label="问答模型", model=model,
@@ -563,7 +585,7 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     tokens = await turn_tokens(assistant_row.id)
     stored = await _persist_turn(assistant_row, answer=answer, stop_reason=stop_reason,
                                  registry=registry, state=final_state, failure=failure,
-                                 tokens=tokens, moderation_verdict=output_verdict)
+                                 tokens=tokens, moderation_verdict=output_verdict, plan=plan)
     if interrupted is not None:
         raise interrupted
     if failure:
@@ -581,7 +603,34 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         "tokens": tokens, "citations": stored["citations"]["used"],
         "tool_calls": len(stored["tools"]),
         "unknown_refs": stored["citations"]["unknown_refs"],
+        "plan": plan,
     })
+
+
+async def _plan_scope(actor: kb_tools.Actor) -> str:
+    """给规划模型的"已知事实"：今天 + 可见会议（含日期）+ 各会议录音段数与时间。
+
+    只给这些——改写要落到**系统确实知道**的实体上；给多了它就会去猜
+    （实测它把 2026 年的会猜成 2024 年，一次猜错丢了一轮的全部金标事实）。
+    """
+    allowed = actor.allowed_meeting_ids
+    query = Meeting.all() if allowed is None else Meeting.filter(id__in=list(allowed) or [-1])
+    rows = await query.order_by("-start_time").limit(20)
+    meetings = [{"id": row.id, "title": row.title, "start_time": _fmt(row.start_time)}
+                for row in rows]
+    tasks = (TranscriptionTask.filter(status="SUCCEEDED", meeting_id__in=[row["id"] for row in meetings])
+             if meetings else None)
+    recordings: list[dict[str, Any]] = []
+    if tasks is not None:
+        scanned = await tasks.order_by("meeting_id", "started_at").limit(40)
+        grouped: dict[int, list[Any]] = {}
+        for task in scanned:
+            grouped.setdefault(int(task.meeting_id), []).append(task)
+        for meeting_id, items in grouped.items():
+            times = [_fmt(item.started_at or item.create_time) for item in items]
+            recordings.append({"meeting_id": meeting_id, "count": len(items),
+                               "first": times[0], "last": times[-1]})
+    return query_plan.scope_lines(meetings, recordings, _fmt(now()) or "")
 
 
 def _tool_node(tools: list[Any]) -> Any:
@@ -622,15 +671,19 @@ def _tool_output_text(event: dict[str, Any]) -> str:
     return str(output or "")
 
 
-async def turn_tokens(message_id: int) -> dict[str, int]:
+async def turn_tokens(message_id: int, *, call_types: tuple[str, ...] = (CHAT_CALL_TYPE,)
+                      ) -> dict[str, int]:
     """本轮 token 用量：直接聚合 ai_call_log（记账的唯一真源，不再另记一份）。
 
     接口层也用它——**按账本记账而不是按 done 事件记账**：客户端在答案生成完之前
     断开时拿不到 done 事件，若按它记账，反复"提问→立刻断开"就能绕开每日预算。
     账本里的行是每次调用当场写的，与客户端在不在无关。
+
+    `call_types` 默认只算问答模型（CHAT）。**配额要传全部相关类型**（问答 + 检索重排 +
+    查询规划）：那些调用同样花钱，不记进配额等于给了一条免费额度。
     """
     totals = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
-    rows = await AiCallLog.filter(biz_id=message_id, call_type=CHAT_CALL_TYPE)
+    rows = await AiCallLog.filter(biz_id=message_id, call_type__in=list(call_types))
     for row in rows:
         usage = row.usage_json or {}
         totals["input_tokens"] += int(usage.get("input_tokens") or usage.get("prompt_tokens") or 0)
@@ -642,7 +695,8 @@ async def turn_tokens(message_id: int) -> dict[str, int]:
 async def _persist_turn(assistant_row: ChatMessage, *, answer: str, stop_reason: str,
                         registry: citations.CitationRegistry, state: dict[str, Any],
                         failure: str | None, tokens: dict[str, int],
-                        moderation_verdict: Any = None) -> dict[str, Any]:
+                        moderation_verdict: Any = None,
+                        plan: dict[str, Any] | None = None) -> dict[str, Any]:
     """把这一轮的结果落库：正文、停止原因、引用快照、工具轨迹、用量。"""
     used = citations.used_citations(answer, registry)
     stored = {
@@ -665,6 +719,7 @@ async def _persist_turn(assistant_row: ChatMessage, *, answer: str, stop_reason:
                          else None),
         token_count=tokens["total_tokens"],
         error_message=failure,
+        plan_json=plan,
     )
     return stored
 

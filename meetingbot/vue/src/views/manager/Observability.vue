@@ -437,6 +437,8 @@ const renderCharts = () => {
     CHAT_SUMMARY: '会话摘要',
     KB_EMBEDDING: '知识库嵌入',
     KB_QUERY_EMBED: '检索查询嵌入',
+    KB_RERANK: '检索重排',
+    KB_QUERY_PLAN: '查询规划',
   }
   const callTypes = data.result.call_types || []
   chart(callTypeRef.value).setOption(
