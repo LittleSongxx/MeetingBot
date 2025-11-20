@@ -255,7 +255,7 @@
         <div v-if="data.detail.change_list" class="revision-item change-list">
           <b>本次改动</b>
           <div class="change-summary">{{ data.detail.change_list.summary_line }}</div>
-          <template v-for="(sections, field) in data.detail.change_list.detail" :key="field">
+          <template v-for="(sections, field) in data.detail.change_list.per_field" :key="field">
             <div
               v-if="
                 (sections.added && sections.added.length) ||
@@ -421,12 +421,12 @@ interface AgentChangeSection {
   modified?: string[]
 }
 
-// 变更清单：summary_line 是给人看的一句话，逐字段的改动在 detail 里
+// 变更清单：summary_line 是给人看的一句话，逐字段的改动在 per_field 里
+// （键名与后端 build_change_list 的返回一致；此前模板读的是 detail，那个键不存在，
+//  于是"本次改动"逐条列表一直渲染为空——字段名对不上时 v-for 会静默跳过）
 interface AgentChangeList {
   summary_line?: string
-  // 页面按字段名遍历它渲染逐条改动（后端 build_change_list 里这个键叫 per_field，
-  // 此处按页面既有绑定名声明，模板零改动）
-  detail?: Record<string, AgentChangeSection>
+  per_field?: Record<string, AgentChangeSection>
 }
 
 // 修订稿预览的条目（议题 / 发言观点）：revised_json 里存的是纪要契约的条目，

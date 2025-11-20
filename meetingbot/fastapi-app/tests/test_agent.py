@@ -552,3 +552,59 @@ class FinalResultRoundTripTest(unittest.TestCase):
         record = _acceptance_record(run, payload, None)
         self.assertEqual(record["text"], "经过 2 轮自检，等待人工确认。")
         self.assertEqual(record["acceptance"]["decision"], "rejected")
+
+
+class RevisionPresentationTest(unittest.IsolatedAsyncioTestCase):
+    """修订稿预览必须过表现适配出口：库里是类型化槽位，页面读的是字符串。
+
+    这条曾经断在中间：接口直接把 `revised_json` 吐给页面，而页面读
+    `owner_suggestion` / `deadline_suggestion`（适配后的键），于是预览里的负责人与
+    完成时间恒显示"未指定"。它不是展示问题——"表现适配只有一个出口"是契约层的
+    不变量，绕开它就会在这里、导出、写回三处各断一次。
+    """
+
+    async def asyncSetUp(self):
+        await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["models"]},
+                            use_tz=True, timezone="Asia/Shanghai")
+        await Tortoise.generate_schemas()
+
+    async def asyncTearDown(self):
+        await Tortoise.close_connections()
+
+    async def test_typed_slots_are_presented_as_strings(self):
+        from services import contracts
+
+        revised = {
+            "summary": "一句话摘要",
+            "decisions": [{
+                "content": "上线时间定在十月",
+                "owner": {"text": "张晨", "basis": "stated", "evidence": []},
+                "deadline": {"text": "十月十日", "basis": "stated", "evidence": []},
+                "origin": "stated", "evidence": [],
+            }],
+        }
+        presented = contracts.present_minutes_fields(contracts.upgrade_output(revised))
+        item = presented["decisions"][0]
+        self.assertEqual(item["owner_suggestion"], "张晨")
+        self.assertEqual(item["deadline_suggestion"], "十月十日")
+        # 表现适配把类型化槽位**换掉**（不是并列）：页面只认字符串形态，
+        # 留着两份同义字段迟早有人读错那一份
+        self.assertNotIn("owner", item)
+        self.assertNotIn("deadline", item)
+        self.assertEqual(presented["summary"], "一句话摘要")
+
+    async def test_detail_endpoint_returns_presented_revision(self):
+        """接口层确实走了适配：这是上面那条不变量的接线检查。"""
+        # summary 在契约里就是普通字符串（五个列表字段才有类型化槽位）
+        record = {
+            "summary": "摘要",
+            "decisions": [{
+                "content": "上线时间定在十月",
+                "owner": {"text": "张晨", "basis": "stated", "evidence": []},
+                "origin": "stated", "evidence": [],
+            }],
+        }
+        from services import contracts
+        presented = contracts.present_minutes_fields(contracts.upgrade_output(record))
+        self.assertEqual(presented["decisions"][0]["owner_suggestion"], "张晨")
+        self.assertEqual(presented["summary"], "摘要")
