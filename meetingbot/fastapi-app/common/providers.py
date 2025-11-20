@@ -26,6 +26,9 @@
   JSON 模式必须自己在提示词里要求输出 JSON，否则可能一直吐空白直到触顶。
 * DashScope/通义：支持 `json_schema` 严格模式；`enable_thinking` 是它专有的额外参数
   （见 `model_factory` 里按模型名前缀判断的处理）。
+* 两家都支持 function calling，但 `tool_choice="required"`（首轮强制检索）是**有条件**的：
+  DeepSeek 只在关思考时支持，开着思考直接 400（`Thinking mode does not support this
+  tool_choice`）。这条与其余能力一样写在声明表里（`KNOWN_REQUIRED_TOOL_CHOICE`）。
 """
 
 from __future__ import annotations
@@ -80,6 +83,42 @@ def supports_tool_calling(base_url: str) -> bool:
         if host == known_host or host.endswith("." + known_host):
             return bool(supported)
     return DEFAULT_TOOL_CALLING
+
+
+# 首轮强制检索用 `tool_choice="required"`。这是**第三张能力表**，因为它的可用性
+# 不只是"这家支持不支持工具调用"，还与**推理开关**耦合——实测（2026-10-16）：
+#
+# * DashScope：开不关思考都支持（首轮 required 实测可用）；
+# * DeepSeek：**只在关思考时**支持；开着思考发 required 直接被 400 拒
+#   （`Thinking mode does not support this tool_choice`）。
+#
+# 只声明成 bool 就会在"另一半条件"上踩坑，所以取值写成"在什么条件下可用"。
+# 与 KNOWN_TOOL_CALLING 同一条保守默认：未列出的主机一律按不可用处理——
+# 猜错的代价是整轮问答被 400 打死，而不确定时退回"提醒"路径只是少省一点 token。
+REQUIRED_ALWAYS = "always"
+REQUIRED_THINKING_OFF = "thinking_off"
+REQUIRED_NEVER = "never"
+
+KNOWN_REQUIRED_TOOL_CHOICE: dict[str, str] = {
+    "dashscope.aliyuncs.com": REQUIRED_ALWAYS,
+    "api.deepseek.com": REQUIRED_THINKING_OFF,
+}
+
+
+def supports_required_tool_choice(base_url: str, *, thinking: bool) -> bool:
+    """这家供应商**在当前推理配置下**能不能用 `tool_choice="required"`。"""
+    level = REQUIRED_NEVER
+    host = host_of(base_url)
+    if host:
+        for known_host, declared in KNOWN_REQUIRED_TOOL_CHOICE.items():
+            if host == known_host or host.endswith("." + known_host):
+                level = declared
+                break
+    if level == REQUIRED_ALWAYS:
+        return True
+    if level == REQUIRED_THINKING_OFF:
+        return not thinking
+    return False
 
 
 def host_of(base_url: str) -> str:

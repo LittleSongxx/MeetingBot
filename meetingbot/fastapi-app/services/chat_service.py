@@ -374,7 +374,11 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         "messages": history + [await question_message(text)],
         "call_model": model_factory.make_model_caller(
             config, tools=kb_tools.openai_tools(), call_type=CHAT_CALL_TYPE,
-            biz_id=assistant_row.id, label="问答模型", model=model),
+            biz_id=assistant_row.id, label="问答模型", model=model,
+            # 首轮强制检索：能力允许时用 tool_choice="required"（供应商 × 推理开关
+            # 的判定在 model_factory 里），判不了就退回图里的"提醒"路径。
+            # 实测背景：修复前 27 轮里 24 轮首轮不检索，多花约 26% token。
+            first_round_tool_choice=model_factory.first_round_tool_choice(config, CHAT_CALL_TYPE)),
         "tools": _tool_node(tools),
         "budget": budget,
     }

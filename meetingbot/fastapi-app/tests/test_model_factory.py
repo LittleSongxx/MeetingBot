@@ -4,7 +4,7 @@ from unittest import mock
 
 import httpx
 import openai
-from langchain_core.messages import AIMessageChunk, HumanMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, ToolMessage
 from models import AiCallLog, AiModelConfig
 from services import model_factory
 from tortoise import Tortoise
@@ -315,6 +315,75 @@ class ToolBindingTest(unittest.TestCase):
         from common import providers
         self.assertFalse(providers.wants_reasoning("chat"))
         self.assertFalse(providers.wants_reasoning("chat_summary"))
+
+    def test_tool_choice_is_sent_only_when_it_is_not_the_default(self):
+        """默认值不发进请求：既有调用路径的请求体因此一个字节都没变。"""
+        tools = [{"type": "function", "function": {"name": "search_knowledge",
+                                                   "description": "d", "parameters": {}}}]
+        config = self._config("https://dashscope.aliyuncs.com/compatible-mode/v1")
+        plain = model_factory.build_tool_model(config, tools, "chat")
+        self.assertNotIn("tool_choice", plain.kwargs)
+        required = model_factory.build_tool_model(
+            config, tools, "chat", tool_choice=model_factory.TOOL_CHOICE_REQUIRED)
+        self.assertEqual(required.kwargs["tool_choice"], "required")
+
+
+class FirstRoundToolChoiceTest(unittest.IsolatedAsyncioTestCase):
+    """首轮强制检索：能力判定 + "还没有工具结果就 required"的调用时机。
+
+    实测背景（2026-10-16）：修复前 27 轮里 **24 轮**首轮完全不检索、靠一句提醒补救，
+    多花约 26% token（≈102k/390k）与一次往返。
+    """
+
+    def _config(self, base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"):
+        return AiModelConfig(name="t", model_type="AGENT", base_url=base_url,
+                             api_key="k", model_name="m")
+
+    def test_dashscope_gets_required_in_both_thinking_modes(self):
+        config = self._config()
+        self.assertEqual(model_factory.first_round_tool_choice(config, "chat"),
+                         model_factory.TOOL_CHOICE_REQUIRED)
+        with mock.patch.dict("os.environ", {"LLM_ENABLE_THINKING": "true"}):
+            self.assertEqual(model_factory.first_round_tool_choice(config, "chat"),
+                             model_factory.TOOL_CHOICE_REQUIRED)
+
+    def test_deepseek_with_thinking_on_falls_back_to_the_nudge_path(self):
+        """实测约束：DeepSeek 开着思考发 required 会被 400 拒——必须退回 auto。"""
+        config = self._config("https://api.deepseek.com")
+        self.assertEqual(model_factory.first_round_tool_choice(config, "chat"),
+                         model_factory.TOOL_CHOICE_REQUIRED)
+        with mock.patch.dict("os.environ", {"LLM_ENABLE_THINKING": "true"}):
+            self.assertEqual(model_factory.first_round_tool_choice(config, "chat"),
+                             model_factory.TOOL_CHOICE_AUTO)
+
+    def test_undeclared_provider_falls_back_to_the_nudge_path(self):
+        config = self._config("https://nobody-heard-of.example/v1")
+        self.assertEqual(model_factory.first_round_tool_choice(config, "chat"),
+                         model_factory.TOOL_CHOICE_AUTO)
+
+    async def test_required_is_used_until_a_tool_result_exists(self):
+        seen: list[str] = []
+
+        async def fake_stream_chat(config, messages, **kwargs):
+            seen.append(kwargs.get("tool_choice"))
+            yield ("message", AIMessage(content="ok"))
+
+        caller = model_factory.make_model_caller(
+            self._config(), tools=[], first_round_tool_choice=model_factory.TOOL_CHOICE_REQUIRED)
+        with mock.patch.object(model_factory, "stream_chat", fake_stream_chat):
+            # 还没有任何工具结果 → 强制检索
+            await caller([HumanMessage("问")])
+            # 提醒之后重问：仍然没有工具结果 → 依然强制（提醒正是为这件事加的兜底）
+            await caller([HumanMessage("问"), AIMessage(content="没查就答"), HumanMessage("先查")])
+            # 工具结果已经回来了 → 回到 auto，不再逼模型继续调工具
+            await caller([HumanMessage("问"),
+                          ToolMessage(content='{"ok": true}', tool_call_id="c1")])
+        self.assertEqual(seen, ["required", "required", "auto"])
+
+    def test_has_tool_result_reads_message_types(self):
+        self.assertFalse(model_factory.has_tool_result([HumanMessage("问"), AIMessage("答")]))
+        self.assertTrue(model_factory.has_tool_result(
+            [HumanMessage("问"), ToolMessage(content="{}", tool_call_id="c1")]))
 
 
 class EmbeddingShapeTest(unittest.IsolatedAsyncioTestCase):

@@ -84,6 +84,32 @@ class ReasoningPolicyTest(unittest.TestCase):
             self.assertIn(call_type, providers.REASONING_BY_CALL_TYPE, msg=call_type)
 
 
+class RequiredToolChoiceTest(unittest.TestCase):
+    """首轮强制检索的能力声明：它与**推理开关**耦合，不能只声明成 bool。
+
+    实测（2026-10-16）：DashScope 开不关思考都支持；DeepSeek **只在关思考时**支持，
+    开着思考发 `tool_choice="required"` 会被 400 拒（`Thinking mode does not support
+    this tool_choice`）。判不了的一律按不可用处理（保守默认），退回"提醒"路径。
+    """
+
+    def test_dashscope_supports_it_regardless_of_thinking(self):
+        self.assertTrue(providers.supports_required_tool_choice(
+            "https://dashscope.aliyuncs.com/compatible-mode/v1", thinking=True))
+        self.assertTrue(providers.supports_required_tool_choice(
+            "https://dashscope.aliyuncs.com/compatible-mode/v1", thinking=False))
+
+    def test_deepseek_supports_it_only_with_thinking_off(self):
+        self.assertTrue(providers.supports_required_tool_choice(
+            "https://api.deepseek.com", thinking=False))
+        self.assertFalse(providers.supports_required_tool_choice(
+            "https://api.deepseek.com", thinking=True))
+
+    def test_undeclared_hosts_are_conservative(self):
+        for base_url in ("https://nobody-heard-of.example/v1", "", "https://api.openai.com"):
+            self.assertFalse(providers.supports_required_tool_choice(base_url, thinking=False),
+                             msg=base_url)
+
+
 class ThinkingParameterShapeTest(unittest.TestCase):
     def test_deepseek_uses_a_thinking_object(self):
         shape = providers.thinking_shape("https://api.deepseek.com")
