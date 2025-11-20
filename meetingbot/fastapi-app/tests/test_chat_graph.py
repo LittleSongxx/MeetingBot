@@ -446,10 +446,6 @@ def _plain_tool(coroutine) -> Any:
         args_schema=SearchArgs)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class MinutesCitationTest(unittest.TestCase):
     """整份纪要的条目也要能被引用：这条路径原先不登记，模型只能编编号。"""
 
@@ -506,3 +502,79 @@ class MinutesCitationTest(unittest.TestCase):
         })
         self.assertEqual(result["fields"]["summary"], "整段摘要文本", "摘要保持字符串形态")
         self.assertEqual(len(registry), 0)
+
+
+class FactSourceTextTest(unittest.TestCase):
+    """事实条目的**完整正文**要进引用快照（判定者拿它核对槽位类断言）。
+
+    实测背景（P1 复测）：表格里的"截止时间/负责人"来自类型化槽位，而引用快照只带
+    证据原句，判定者看不到槽位 → 6 条断言被判"上下文没写"（不支撑）。
+    与 `quote` 的分工是刻意的：quote 要能逐字落回原文，`source_text` 是核对用的全文。
+    """
+
+    def test_fact_citation_carries_the_item_text_with_slots(self):
+        registry = citations.CitationRegistry()
+        registry.annotate("list_facts", {"ok": True, "kind": "pending_item", "facts": [
+            {"meeting_id": 2, "minutes_id": 3, "field": "pending_items", "item_index": 0,
+             "authority": "CONFIRMED", "meeting_title": "产品发布评审会议",
+             "item": {"content": {"text": "修复移动端附件下载进度问题"},
+                      "owner_suggestion": "王工", "deadline_suggestion": "2023-08-30 18:00",
+                      "evidence": [{"quote": "王工你这边本周五前处理掉", "speaker": "张晨"}]}},
+        ]})
+        citation = registry.get(1)
+        self.assertEqual(citation.quote, "王工你这边本周五前处理掉", "quote 仍是证据原句")
+        self.assertIn("修复移动端附件下载进度问题", citation.source_text)
+        self.assertIn("负责人：王工", citation.source_text)
+        self.assertIn("截止时间：2023-08-30 18:00", citation.source_text)
+        # 快照里也带出去（判定包与页面都读它）
+        self.assertIn("截止时间：2023-08-30 18:00", citation.as_dict()["source_text"])
+
+    def test_minutes_items_carry_it_too(self):
+        registry = citations.CitationRegistry()
+        registry.annotate("get_minutes", {
+            "ok": True, "meeting": {"id": 2, "title": "评审会"}, "minutes_id": 3,
+            "authority": "CONFIRMED",
+            "fields": {"risks": [{"content": {"text": "导出超时"}, "level": "HIGH",
+                                  "evidence": [{"quote": "导出会超时"}]}]},
+        })
+        citation = registry.get(1)
+        self.assertEqual(citation.quote, "导出会超时")
+        self.assertIn("导出超时", citation.source_text)
+        self.assertIn("等级：HIGH", citation.source_text)
+
+    def test_chunk_citations_do_not_carry_a_second_copy(self):
+        """切片引用的 quote 就是切片正文：再塞一份 source_text 只是把载荷翻倍。"""
+        registry = citations.CitationRegistry()
+        registry.annotate("search_knowledge", {"ok": True, "hits": [
+            {"chunk_id": 1, "meeting_id": 2, "quote": "[51s][张晨] 灰度从 8 月 20 日开始",
+             "authority": "RAW", "meeting_title": "评审会"},
+        ]})
+        self.assertNotIn("source_text", registry.get(1).as_dict())
+
+    def test_empty_item_text_is_not_emitted(self):
+        # 没有正文也没有槽位的条目：不写空字段（判定侧与今天的回退路径一致）
+        registry = citations.CitationRegistry()
+        registry.annotate("list_facts", {"ok": True, "kind": "meeting", "facts": [
+            {"meeting_id": 2, "title": "", "start_time": None, "status": "FINISHED"},
+        ]})
+        self.assertNotIn("source_text", registry.get(1).as_dict())
+
+    def test_entity_check_uses_the_item_text_as_haystack(self):
+        """实体核查的 haystack 因此变宽——**这是有意的**：条目正文确实在检索结果里，
+        表格里的数字不该被标成"检索结果里找不到"。"""
+        from services import entity_check
+        registry = citations.CitationRegistry()
+        registry.annotate("list_facts", {"ok": True, "kind": "pending_item", "facts": [
+            {"meeting_id": 2, "minutes_id": 3, "field": "pending_items", "item_index": 0,
+             "authority": "CONFIRMED", "meeting_title": "评审会",
+             "item": {"content": {"text": "修复下载进度问题"},
+                      "deadline_suggestion": "2023-08-30 18:00"}},
+        ]})
+        flags = entity_check.check_entities("截止时间是 2023-08-30 18:00[1]。",
+                                            registry.as_dicts())
+        self.assertEqual(flags, [], "槽位里的数字就在检索结果里，不该被标注")
+
+
+
+if __name__ == "__main__":
+    unittest.main()
