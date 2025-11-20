@@ -26,12 +26,18 @@ if __package__ in (None, ""):  # allow direct script execution
     from judges import actions as amc_aid  # type: ignore
     from lib import corpora, stats  # type: ignore
 
-    from regression import analysis, contract_checks, grounding, reliability  # type: ignore
+    from regression import (  # type: ignore
+        analysis,
+        chat_checks,
+        contract_checks,
+        grounding,
+        reliability,
+    )
 else:
     from judges import actions as amc_aid
     from lib import corpora, stats
 
-    from regression import analysis, contract_checks, grounding, reliability
+    from regression import analysis, chat_checks, contract_checks, grounding, reliability
 
 # 兼容再导出：历史代码与测试通过本模块访问装载器
 PUBLIC_RESULTS = corpora.PUBLIC_RESULTS
@@ -295,6 +301,10 @@ def build_report(
     # 问题——「这套链路跑得稳不稳、贵不贵」，而它与会议内容无关。
     if results_root is not None:
         report["reliability"] = reliability.build_report(results_root)
+    # 问答引用（阶段 2 新增子系统的两条零调用不变量）：引用能否在被引内容里定位、
+    # 引用有没有越权。没有抓取样本时如实报"无样本"，不报 0% 也不报 100%。
+    artifact = chat_checks.load_artifact()
+    report["chat_citations"] = chat_checks.summarize((artifact or {}).get("turns") or [])
     for name, cases in sets.items():
         if not cases:
             continue
@@ -468,6 +478,37 @@ def _render_citation_level(block: Mapping[str, Any]) -> list[str]:
         "",
         f"判定方：{(block.get('adjudicator_disclosure') or {}).get('model_used', '未知')}"
         f"（{(block.get('adjudicator_disclosure') or {}).get('model_used') and '独立族' or ''}）。",
+        "",
+    ]
+    return lines
+
+
+def _render_chat_citations(block: Mapping[str, Any]) -> list[str]:
+    """问答引用的两条零调用不变量（阶段 2 新增子系统的回归护栏）。"""
+    lines = ["## 问答引用（零调用不变量）", ""]
+    if not block.get("available"):
+        lines += [f"契约层不可用：{block.get('reason')}", ""]
+        return lines
+    if not block.get("turn_count"):
+        lines += [block.get("reading") or "无样本", ""]
+        return lines
+    lines += [
+        f"样本：{block['turn_count']} 轮问答、{block['used_citation_count']} 条被引引用。",
+        "",
+        "| 不变量 | 结果 | 95% 区间（Clopper–Pearson） |",
+        "|---|---|---|",
+        f"| 引用可在被引内容中定位 | {_pct((block.get('locatable') or {}).get('rate'), 1)} "
+        f"| {_interval(block.get('locatable') or {})} |",
+        f"| 引用未越权（会议在提问者可见范围内） | {_pct((block.get('authorized') or {}).get('rate'), 1)} "
+        f"| {_interval(block.get('authorized') or {})} |",
+        "",
+        f"- 判不了定位的引用（缺 `source_text`）：{block['unchecked_citation_count']} 条"
+        "（单独计数，**不算通过**）",
+        f"- 答案引用了检索未返回过的编号：{block['unknown_ref_count']} 条"
+        "（非零说明模型在编编号）",
+        f"- 引用类型分布：`{json.dumps(block.get('citation_kinds') or {}, ensure_ascii=False)}`",
+        "",
+        block.get("reading") or "",
         "",
     ]
     return lines
@@ -920,6 +961,7 @@ def format_markdown(report: Mapping[str, Any]) -> str:
         ]
 
     lines += _render_citation_level(report.get("citation_level") or {})
+    lines += _render_chat_citations(report.get("chat_citations") or {})
     lines += _render_reliability(report.get("reliability") or {})
 
     lines += [

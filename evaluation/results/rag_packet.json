@@ -1,0 +1,315 @@
+{
+  "packet_version": 1,
+  "purpose": "轴 5 检索与回答：context precision/recall、faithfulness、answer relevancy",
+  "qa_set": "种子会议问答标注集（context recall 的 ground truth）",
+  "qa_set_discipline": "按评测宪法第 3 条：n=27 只算方向信号，不进产品决策；context recall 用它与检索到的上下文比对，逐指标报，不并入任何加权总分",
+  "case_count": 27,
+  "answered_case_count": 0,
+  "cases": [
+    {
+      "case_id": "q01",
+      "question": "这次灰度发布从什么时候开始、覆盖了多少用户？",
+      "expected_facts": [
+        "灰度从 8 月 20 日开始，覆盖 10% 的活跃用户",
+        "8 月 26 日扩大到 30%"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q02",
+      "question": "灰度期间登录和核心下单链路的成功率是多少？",
+      "expected_facts": [
+        "登录成功率 99.8%",
+        "核心下单链路成功率 99.2%"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q03",
+      "question": "用户反馈最集中的两个问题是什么？",
+      "expected_facts": [
+        "用户不知道怎么从会议纪要进入任务草稿",
+        "移动端弱网时附件下载进度没有及时刷新"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q04",
+      "question": "抽样检查了哪几类账号的权限？结论是什么？",
+      "expected_facts": [
+        "抽查了管理员、会议创建人、主持人、普通参会人员四类账号",
+        "管理员能看企业会议数据，员工只能看自己创建、主持或参与的会议"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q05",
+      "question": "移动端附件下载的问题为什么必须在发布前处理？",
+      "expected_facts": [
+        "它会影响发布当天的支持成本",
+        "需要在正式发布前完成处理"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q06",
+      "question": "最近七天纪要和 agent 的调用成功率、平均耗时是多少？",
+      "expected_facts": [
+        "会议纪要模型调用成功率 98.6%",
+        "平均耗时 7.8 秒",
+        "agent 工具调用成功率 97.9%"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q07",
+      "question": "两次模型调用失败的原因是什么？用户能做什么？",
+      "expected_facts": [
+        "外部模型服务短暂超时",
+        "系统保存了失败原因和耗时，用户可以从失败状态发起重试"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q08",
+      "question": "资料更新时知识索引会怎么处理？",
+      "expected_facts": [
+        "索引会标记为需要重建",
+        "旧版本仍保持可检索，直到新版本完成切换"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q09",
+      "question": "转写和纪要生成的流程是怎样的？",
+      "expected_facts": [
+        "音频按时长切分，转写完成后生成带时间轴的片段",
+        "纪要由整场转写一次生成",
+        "生成后由 agent 对着原文自检一遍"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q10",
+      "question": "正式发布前还要补充哪两组验收数据？",
+      "expected_facts": [
+        "至少 30 分钟的真实会议录音，用于验证长音频切分与异步进度",
+        "包含多个角色发言的会议内容，用于检查说话人标签与员工身份匹配"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q11",
+      "question": "会议纪要处于什么状态时可以导出？",
+      "expected_facts": [
+        "只有草稿和已确认版本可以导出 word 或 pdf",
+        "生成中或失败状态不能导出"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q12",
+      "question": "移动端附件下载任务的负责人、协作人和截止时间是什么？",
+      "expected_facts": [
+        "负责人是王工",
+        "协作人是陈琳",
+        "截止时间为 8 月 30 日 18 点"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q13",
+      "question": "发布回归测试的完成时间是什么？由谁负责？",
+      "expected_facts": [
+        "测试团队在 8 月 31 日中午 12 点前完成回归",
+        "由陈琳确认安排"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q14",
+      "question": "发布公告任务包含哪些入口？负责人和截止时间是什么？",
+      "expected_facts": [
+        "包含会议创建入口、录音上传入口、纪要确认入口、任务跟踪入口和知识库问答入口",
+        "负责人赵敏，协作人周宁，9 月 1 日九点前完成"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q15",
+      "question": "正式发布的时间是什么？前提条件是什么？",
+      "expected_facts": [
+        "9 月 1 日九点发布",
+        "前提是移动端附件下载进度任务和发布回归任务按时完成"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q16",
+      "question": "如果阻断任务没有完成，接下来会发生什么？",
+      "expected_facts": [
+        "由张晨和王工在 8 月 31 日下午五点召开专项评审",
+        "决定是否调整发布时间"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q17",
+      "question": "删除用户时会怎样处理已关联的业务记录？",
+      "expected_facts": [
+        "如果账号已关联会议、任务、转写、纪要、知识问答、agent 运行或质量评价记录，系统不会执行删除",
+        "管理员需要先调整业务记录中的负责人、创建人或协作人关系"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q18",
+      "question": "首周复盘要看哪五项数据？",
+      "expected_facts": [
+        "会议创建数量和总时长",
+        "转写任务成功率和平均耗时",
+        "已确认纪要数量、任务草稿数量和正式任务数量",
+        "任务完成率和逾期率",
+        "问答调用量、agent 运行次数、工具调用成功率和人工确认次数"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q19",
+      "question": "跨会议问答希望用户看到哪些引用信息？",
+      "expected_facts": [
+        "引用的会议名称、来源类型、时间点和原文片段",
+        "前端在回答下面展示带出处的引用卡片，点开能看到是哪场会、谁说的、第几秒"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q20",
+      "question": "知识索引构建期间资料变化，按会议决策应该怎么处理？",
+      "expected_facts": [
+        "由资料维护人完成整理后重新构建索引"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q21",
+      "question": "V2.0 计划内的需求验收情况如何？",
+      "expected_facts": [
+        "计划内 17 个需求已验收通过 15 个",
+        "剩下两个是报表导出和消息推送的免打扰设置",
+        "消息推送已修完并回归通过"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q22",
+      "question": "报表导出在压测里暴露了什么问题？",
+      "expected_facts": [
+        "单用户导出三个月数据的接口要跑四十多秒，超过网关 30 秒超时限制",
+        "压测 500 并发时该接口失败率 12%，其他接口正常"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q23",
+      "question": "报表导出问题最后决定怎么处理？",
+      "expected_facts": [
+        "发布时先隐藏报表导出入口",
+        "等异步改造完成再单独放出来",
+        "发布时间不变"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q24",
+      "question": "灰度分几步走？回滚能力如何？",
+      "expected_facts": [
+        "分三步：第一天 10%，第二天 50%，第三天全量",
+        "回滚预案已准备好，最快五分钟能切回旧版本"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q25",
+      "question": "灰度按用户 ID 取模的目的是什么？灰度期间盯哪些指标？",
+      "expected_facts": [
+        "保证同一个用户每次都落在同一边",
+        "主要看接口错误率、平均响应时间、核心链路的转化率"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q26",
+      "question": "下午这场会定了哪些行动项和负责人？",
+      "expected_facts": [
+        "张涛负责报表导出异步化改造，本周五前完成",
+        "陈磊明天下班前提交灰度值班排班表",
+        "刘颖负责通稿定稿"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    },
+    {
+      "case_id": "q27",
+      "question": "对外通稿的定稿时间是什么？为什么要删掉一段内容？",
+      "expected_facts": [
+        "发布前一日下午六点前定稿",
+        "因为报表导出要隐藏入口，通稿里这一段要删掉"
+      ],
+      "answer": "",
+      "contexts": [],
+      "has_answer": false
+    }
+  ]
+}

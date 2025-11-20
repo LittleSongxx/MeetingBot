@@ -15,7 +15,12 @@
 登录账号和密码分别查看 `.env` 的 `APP_ADMIN_USERNAME`、`APP_ADMIN_PASSWORD`，本次已生成独立本地密码。
 
 `scripts/compose.sh` 统一从指定位置读取 `.env`，无需把密钥放到项目根目录。
-默认使用单个后端 worker：登录/注册限流器的失败计数在进程内存里（任务调度已迁 Temporal，与 worker 数无关）。MySQL 仅在 Compose 网络内开放，网页及后端仅绑定宿主机回环地址。
+后端可以多 worker / 多副本：登录限流与问答预算的计数已搬到 Redis（`common/ratelimit.py`），
+多个进程共享同一份计数。镜像默认 `WEB_CONCURRENCY=2`，按机器核数调整即可。
+**未配置 `REDIS_URL` 时会退回进程内存实现**——那种部署下多副本的阈值语义与单进程不同
+（每个进程各算一份），要保阈值语义就配 Redis。Redis 不可达时限流与预算闸 **fail-open**
+（放行并记 ERROR 日志），这是刻意的取舍：计数组件故障不该把登录与问答一起变成不可用。
+MySQL 仅在 Compose 网络内开放，网页及后端仅绑定宿主机回环地址。
 数据保存在本项目独立的 `meetingbot-local_mysql_data` 卷；SQL 样例只在空卷初始化时导入。上传文件保存在原项目 `fastapi-app/files` 目录。
 
 ## 模型配置
@@ -33,7 +38,11 @@
 | `ASR_MODEL` | 录音文件转写模型，初始为 `qwen-audio-3.1-asr-flash-filetrans` |
 | `LLM_TIMEOUT_SECONDS` / `ASR_TIMEOUT_SECONDS` | 请求超时参数 |
 | `LLM_ENABLE_THINKING` | Qwen 思考开关；本轮固定为 `false` |
-| `LLM_MAX_TOKENS` | 单次文本输出上限，本轮为 `4096` |
+| `LLM_MAX_TOKENS` | 单次文本输出上限（可按调用类型分档：`LLM_MAX_TOKENS_MINUTES` 等） |
+| `LLM_INPUT_PRICE_MICRO_PER_1K` / `LLM_OUTPUT_PRICE_MICRO_PER_1K` | 每 1000 token 的单价（单位：微元=1e-6 元）。不填=未定价：成本记 0 但**在观测页标注"未计入"**，不是免费 |
+| `EMBEDDING_MODEL` / `EMBEDDING_DIM` | 知识库嵌入模型与维度（默认 `text-embedding-v4` / 1024）。**换模型需要重建知识库** |
+| `QDRANT_URL` | 向量库地址（compose 内为 `http://qdrant:6333`） |
+| `REDIS_URL` | 限流与预算的集中式计数（compose 内为 `redis://redis:6379/0`） |
 
 2026-09-25 根据官方模型文档选择 Qwen3.8-Max 的 `0902` 快照及 Qwen-Audio-3.1-ASR-Flash-Filetrans。前者支持严格 JSON Schema，后者支持长录音与说话人分离，HTTP 请求及结果结构兼容项目已有适配器。模型权限以实际 API 调用结果为准。
 
@@ -50,8 +59,19 @@
 ## 验证
 
 ```bash
-./scripts/compose.sh exec -T backend python -m unittest discover -s tests -v
+./scripts/compose.sh exec -T backend python -m unittest discover -s tests -v   # 产品 405 项
+make -C evaluation test && make -C evaluation smoke                            # 评测 223 项 + 零调用回归
+cd meetingbot/vue && npm ci && npm run type-check && npm run lint && npm run test   # 前端 32 项
 ```
+
+**新增表怎么进已有库**：`chat_session` / `chat_message` 与两个单价列 + `cost_micro`
+在本轮引入，走迁移：
+
+```bash
+cd meetingbot/fastapi-app
+MYSQL_HOST=… MYSQL_DATABASE=… .venv/bin/python -m aerich upgrade   # 1_…chat_session、2_…cost_tracking
+```
+空库由 `db/01-schema.sql` 直接建出最新结构（与迁移殊途同归，有漂移测试兜底）。
 
 现有业务测试使用内存 SQLite 和 Mock 模型，包含实际 FFmpeg 格式处理，不需要付费 API。
 质量评测入口、固定样本、预算与指标口径见 `evaluation/README.md`。默认 dry-run 不调用模型；live 必须显式启用。
@@ -66,6 +86,27 @@
 ```
 
 停止容器保留数据。不要使用 `down -v`，除非确实要删除本项目数据库。
+
+## 知识库 / 问答 / 可观测（2026-10-16 新增）
+
+| 子系统 | 关键开关 | 排障入口 |
+|---|---|---|
+| 知识库 | `EMBEDDING_MODEL`、`EMBEDDING_DIM`、`QDRANT_URL` | `GET /kb/status`：向量库可达性、嵌入配置、文档/切片/待处理任务计数 |
+| 问答 | `CHAT_MAX_ROUNDS`、`CHAT_MAX_TOKENS`、`CHAT_HISTORY_WINDOW`、`CHAT_SUMMARY_THRESHOLD` | `GET /chat/status`：模型是否配好、供应商是否声明支持工具调用、向量库与嵌入是否就绪、**内容审核是否启用** |
+| 限流与预算 | `CHAT_ASK_LIMIT_PER_USER`、`CHAT_ASK_LIMIT_PER_IP`、`CHAT_ASK_WINDOW_SECONDS`、`CHAT_DAILY_TOKEN_BUDGET` | 被拒时返回 429 并带 `X-RateLimit-*` / `Retry-After`；`common/ratelimit.py` 的 fail-open 会记 ERROR |
+| 内容审核 | `MODERATION_WORDS` 或 `MODERATION_WORDS_FILE`、`MODERATION_OUTPUT_ACTION`(`flag`/`redact`/`block`) | 命中写 WARNING 日志；留痕存 `chat_message.moderation_json`（只记词与位置，不含上下文） |
+| 可观测 | `LOG_FORMAT`(默认 json)、`LOG_LEVEL`、`OTEL_EXPORTER_OTLP_ENDPOINT`（未设=不上报）、`OTEL_SERVICE_NAME`、`METRICS_TOKEN` | `/metrics`（Prometheus 文本）；设了 `METRICS_TOKEN` 后采集器要带 `x-metrics-token` |
+| 长任务并发 | `TEMPORAL_MAX_CONCURRENCY_<类型>`（`TRANSCRIPTION`/`MINUTES`/`AGENT_RUN`/`KB_INDEX`） | 每类一个队列；升级时另起兼容 worker 消费旧队列，在途任务不会卡住 |
+
+**MCP 端点**：`POST /mcp`（streamable HTTP，stateless）。客户端需带 JWT
+（`Authorization: Bearer <token>` 或本产品的 `token` 头）。`MCP_ALLOWED_HOSTS`
+（逗号分隔）用于 Host 白名单：**不设时关闭 DNS 重绑定防护**——库的默认白名单只允许
+回环地址，容器部署下会让每个请求 421（实测确认）。工具每个都要 JWT 才能取到数据，
+所以默认关在安全上可接受；要开就把它设成实际域名。
+
+**问答是个花钱的入口**：一次提问会触发 2–7 次模型调用（检索嵌入 + 多轮生成）。
+对外部署务必设 `CHAT_DAILY_TOKEN_BUDGET` 与频率上限，并给模型配置填单价——
+否则观测页只能显示"未定价"，成本无从判断。
 
 ## 表结构变更（迁移）
 
@@ -99,6 +140,11 @@ python -m unittest discover -s tests -p 'test_*.py'
   **空库统一走 initdb**，aerich 只负责增量变更。别反过来用 aerich 建空库——
   能建，但会丢掉列注释这层文档。
 - **`generate_schemas` 只在测试里用**（内存 sqlite）。产品运行时不允许它建表。
+- **本轮的三个迁移**：`0_*_init`（基线，IF NOT EXISTS）、
+  `1_20261016190000_chat_session`（问答两张表，同样用 IF NOT EXISTS 便于重复执行）、
+  `2_20261016200000_cost_tracking`（两列单价 + `cost_micro`/`trace_id`，ALTER 加列）。
+  增量迁移用普通 ALTER 而不是 IF NOT EXISTS：MySQL 的 ADD COLUMN 不支持它，
+  而 aerich 的版本表保证每条迁移只执行一次。
 - 改结构时记得同步三处：模型、`db/01-schema.sql`、迁移文件。漏了第一处或第二处
   会被测试拦下，漏了第三处会在别的环境上表现为"结构没跟上"。
 

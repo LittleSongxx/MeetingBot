@@ -33,17 +33,20 @@
 | 纪要实 | **忠实度/幻觉率**（HHEM 式会议级 + 条目级声明判定） | ROUGE 结构性测不出幻觉（Liu & Liu 2008 起证据链）；会议纪要驱动行动，幻觉代价最高 |
 | 纪要全 | **关键点召回**（清单式，非打分） | FineSurE：清单法与人工相关 0.677 vs 自由打分 0.295；自动指标在召回维度与人工相关性最弱 |
 | 结构准 | **行动项三元组（owner/action/deadline）逐字段正确性** | 会议垂类付费点；错误可回溯到 cpCER 说话人错误 |
+| 检索与回答 | **RAGAS 四指标**：context precision / context recall / faithfulness / answer relevancy | 2024 起 RAG 评测的行业默认；四个指标各自可诊断（哪个环节坏了），合成总分则不可诊断 |
 
 ROUGE 仅作回归护栏（本项目历来如此）；延迟/可靠性单列为体验层。
+轴 5 上一层还有**零调用**的结构不变量（引用可定位、引用不越权），
+它们与四个质量指标互补：前者判"引用对不对得上、有没有越权"，后者判"答得好不好"。
 
-## 三、新结构：四轴 × 三层 × 一个金标锚
+## 三、结构：五轴 × 三层 × 一个金标锚
 
 ```
 evaluation/
   README.md      评测宪法：三层定义、运行手册、预注册模板（唯一入口文档）
   LEDGER.md      运行账本 + 存活结论登记（接替 17 节的 RUN_INDEX）
   DESIGN.md      本文
-  Makefile       四个入口：smoke / deep / gate / gold
+  Makefile       五个入口：smoke / deep / gate / gold / rag
   lib/           共享基础（无业务语义）
     stats.py           小样本统计：Clopper-Pearson、McNemar、配对 bootstrap
     model_client.py    评测侧调模型的唯一入口（key 不落盘、分段计时）
@@ -51,13 +54,15 @@ evaluation/
   asr/           轴1（转写）
     cer_tool.py        CER 三口径（raw/no_punct/normalized）
     first_test/        首测脚本与证据（3 场远场真实链路）
-  judges/        轴2/3/4 的判定仪器（都是"调模型判读"的一类）
+  judges/        轴2/3/4/5 的判定仪器（都是"调模型判读"的一类）
     packets.py         盲态裁决包构建（分层抽样、打乱、匿名）
     item_judge.py      条目级四分类判定（S/D/X/C + D1–D5，冻结标准）
     meeting_level.py   会议级整篇判读（单位对齐 HHEM，配置随产物披露）
     citations.py       引用级（ALCE 式）：引用是否支撑断言
     completeness.py    关键点清单式完整性（清单只看转写）
     actions.py         AMC-AID 行动项指标 + 论文基线（中文公开锚点）
+    rag.py             轴5：检索与回答四指标（逐指标报；--ask 驱动产品接口抓取、
+                       --build 零调用组包、--judge 需授权）
   regression/    L0 零调用回归（每次改动必跑，秒级）
     run.py             离线复算主入口（契约不变量/可定位率/可靠性，0 调用）
     grounding.py       词法代理与共享归一化（代理登记表在模块内）
@@ -82,6 +87,7 @@ evaluation/
     scoring.py / bench_common.py（分块估算唯一实现、六字段独立校验）
     alimeeting_review.py / alimeeting_annotation_score.py（轴4 人工标注流水线）
   results/       判定证据（选择性跟踪：只留 LEDGER 引用到的产物）
+    chat_checks.py     问答引用的零调用不变量（定位 / 越权），随 smoke 跑
   tests/         评测代码自身单测（205 项，零调用，cd evaluation && unittest discover）
 ```
 
@@ -132,10 +138,13 @@ run_eval 的共用工具拆入 `benchmarks/bench_common.py`；annotation 内联
    存入 LEDGER 后才跑；功效算不出的差异明说"检不出"，禁止说"无效果"。
 5. **隔离边界**：评测不得 import 产品内部实现；只允许四条登记在案的例外，
    方向一律是"产品定义、评测委托并标注"——`regression/grounding.py` 委托
-   `common/textsim`／`common/timex`、`regression/contract_checks.py` 委托
-   `services/contracts`、`lib/model_client.py` 读 `common/providers` 的能力声明、
+   `common/textsim`／`common/timex`、`regression/contract_checks.py` 与
+   `regression/chat_checks.py` 委托 `services/contracts`（同一条例外：契约不变量；
+   引用是否可定位用的就是产品那一份 `evidence_locatable`）、
+   `lib/model_client.py` 读 `common/providers` 的能力声明、
    `benchmarks/manage_fixture.py` 在容器内跑真实产品服务（清单同步维护在
-   `README.md` 宪法第 5 条）。放宽归一化让读数上涨的通道（旧 R2）仍属登记在案的
+   `README.md` 宪法第 5 条）。轴 5 的抓取走**产品 HTTP 接口**（`judges/rag.py --ask`），
+   不 import 产品代码——评测不该为了取数而穿透到进程内部。放宽归一化让读数上涨的通道（旧 R2）仍属登记在案的
    风险，触碰须先在 LEDGER 登记预期影响。
 6. **机制与端点不得共用机械**：任何"产品机制由 X 驱动、端点又用 X 计算"的
    组合（本次删除 holdout_analysis 的原因）在评审时直接打回。
