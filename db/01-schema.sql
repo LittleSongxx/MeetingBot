@@ -418,4 +418,43 @@ CREATE TABLE `kb_chunk`  (
   INDEX `idx_kb_chunk_meeting`(`meeting_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '知识库切片表' ROW_FORMAT = Dynamic;
 
+-- ----------------------------
+-- Table structure for chat_session
+-- ----------------------------
+DROP TABLE IF EXISTS `chat_session`;
+CREATE TABLE `chat_session`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '会话ID',
+  `user_id` int NOT NULL COMMENT '会话归属用户ID',
+  `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '新对话' COMMENT '会话标题（首次提问前若干字）',
+  `scope_meeting_ids` json NOT NULL COMMENT '本次对话限定的会议ID数组，空数组表示不限（权限仍按用户实时判定）',
+  `summary` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '滑窗之外历史的滚动摘要',
+  `summary_upto_message_id` int NOT NULL DEFAULT 0 COMMENT '摘要已覆盖到的消息ID（水位线）',
+  `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ACTIVE' COMMENT '状态：ACTIVE、DELETED',
+  `message_count` int NOT NULL DEFAULT 0 COMMENT '消息条数（会话列表直接读，不做聚合）',
+  `last_active_time` datetime(6) NULL DEFAULT NULL COMMENT '最后活跃时间',
+  `create_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `update_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_chat_session_user`(`user_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '知识问答会话表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for chat_message
+-- ----------------------------
+DROP TABLE IF EXISTS `chat_message`;
+CREATE TABLE `chat_message`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '消息ID',
+  `session_id` int NOT NULL COMMENT '所属会话ID',
+  `role` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '角色：USER用户、ASSISTANT助手',
+  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '消息正文',
+  `citations_json` json NULL COMMENT '这一轮用到的引用快照（切片会被重建删除，引用必须留得下来）',
+  `tools_json` json NULL COMMENT '工具调用轨迹（页面折叠展示）',
+  `stop_reason` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '结束原因：finished、max_rounds、budget_tokens、budget_cost、budget_tools、stalled',
+  `error_message` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '本轮失败原因',
+  `token_count` int NOT NULL DEFAULT 0 COMMENT '本轮 token 用量',
+  `create_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_chat_message_session`(`session_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '知识问答消息表' ROW_FORMAT = Dynamic;
+
 SET FOREIGN_KEY_CHECKS = 1;

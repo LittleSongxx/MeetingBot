@@ -563,6 +563,82 @@ class KbChunk(Model):
         table = "kb_chunk"
         # 对应唯一索引 uk_kb_chunk_no
         unique_together = (("document_id", "chunk_no"),)
+        # 对应 scripts/indexes.sql 的二级索引（按会议收窄检索范围）
+        indexes = [("meeting_id",)]
+
+
+class ChatSession(Model):
+    """一次连续对话（问答 Agent 的会话）。
+
+    会话是**用户的**，不是会议的：一次对话可以跨多场会（"把这周的会都总结一下"），
+    所以范围单独存 `scope_meeting_ids`（空数组 = 当前用户可见的全部会议），
+    权限仍在工具层按用户实时判定——这里存的范围只是"这次对话限定看哪几场"，
+    不是权限授予（用户权限被回收后，旧会话自然看不到那场会）。
+    """
+
+    # 对应 chat_session.id
+    id = fields.IntField(pk=True)
+    # 对应 chat_session.user_id：会话归属，列表页按它过滤
+    user_id = fields.IntField()
+    # 对应 chat_session.title：首次提问的前若干字，页面列表显示
+    title = fields.CharField(max_length=255, default="新对话")
+    # 对应 chat_session.scope_meeting_ids：本次对话限定的会议集合，空数组表示不限定
+    scope_meeting_ids = fields.JSONField(default=list)
+    # 对应 chat_session.summary 与 summary_upto_message_id：
+    # 滑窗之外的历史压成一段摘要（会话记忆的第二层），水位线记它覆盖到哪条消息为止，
+    # 于是"哪些消息已经进过摘要"不必再猜——没有水位线就只能整段重算或重复计入
+    summary = fields.TextField(null=True)
+    summary_upto_message_id = fields.IntField(default=0)
+    # 对应 chat_session.status：ACTIVE / DELETED（删除是软删，保留消息供审计）
+    status = fields.CharField(max_length=30, default="ACTIVE")
+    # 对应 chat_session.message_count：会话列表直接读它，不为此对消息表做聚合
+    message_count = fields.IntField(default=0)
+    # 对应 chat_session.last_active_time：列表页按它倒序
+    last_active_time = fields.DatetimeField(null=True)
+    # 对应 chat_session.create_time 与 update_time
+    create_time = fields.DatetimeField(auto_now_add=True)
+    update_time = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "chat_session"
+        # 对应 scripts/indexes.sql 的二级索引（会话列表按用户过滤）
+        indexes = [("user_id",)]
+
+
+class ChatMessage(Model):
+    """一条问答消息。用户与助手各占一行，工具调用与引用作为附件存在助手行上。
+
+    助手行上的 `citations_json` 是**当时那一轮的引用快照**，不是指向切片的外键：
+    切片会随文档重建被删掉（`kb_service` 重建文档时物理删除旧切片），
+    而"这条回答当时引用了什么"必须留得下来——这正是知识库要能问责的前提。
+    """
+
+    # 对应 chat_message.id
+    id = fields.IntField(pk=True)
+    # 对应 chat_message.session_id
+    session_id = fields.IntField()
+    # 对应 chat_message.role：USER / ASSISTANT
+    role = fields.CharField(max_length=20)
+    # 对应 chat_message.content：正文（助手行是逐 token 拼起来的完整回答）
+    content = fields.TextField()
+    # 对应 chat_message.citations_json：这一轮答案用到的引用（含编号与出处定位）
+    citations_json = fields.JSONField(null=True)
+    # 对应 chat_message.tools_json：工具调用轨迹（页面折叠展示"查了什么"）
+    tools_json = fields.JSONField(null=True)
+    # 对应 chat_message.stop_reason：finished / max_rounds / budget_* / stalled，
+    # 用户看到的是它对应的中文提示，观测看到的是这个值
+    stop_reason = fields.CharField(max_length=30, null=True)
+    # 对应 chat_message.error_message：这一轮失败时的原因（失败消息也留在会话里）
+    error_message = fields.TextField(null=True)
+    # 对应 chat_message.token_count：本轮 token 用量（来自 ai_call_log 的用量汇总）
+    token_count = fields.IntField(default=0)
+    # 对应 chat_message.create_time
+    create_time = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "chat_message"
+        # 对应 scripts/indexes.sql 的二级索引（按会话取历史消息）
+        indexes = [("session_id",)]
 
 
 

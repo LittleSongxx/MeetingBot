@@ -1,6 +1,7 @@
 import os
 from contextlib import asynccontextmanager
 
+import mcp_server
 import uvicorn
 from api import api_router
 from common.exception_handler import setup_exceptions
@@ -39,8 +40,11 @@ async def lifespan(app: FastAPI):
     await recover_minutes_tasks()
     await recover_agent_runs()
     await recover_kb_index_tasks()
-    # yield 之后服务才开始接收请求，本项目在关闭阶段没有要做的事，所以 yield 后面没有代码
-    yield
+    # MCP 的会话管理器要由**父应用**的 lifespan 进入：子应用的 lifespan 在挂载后
+    # 不会被执行，少了这一步第一次调用就会报"session manager 没启动"。
+    async with mcp_server.session_manager():
+        # yield 之后服务才开始接收请求，本项目在关闭阶段没有要做的事，所以 yield 后面没有代码
+        yield
 
 
 # 把生命周期钩子交给 FastAPI，应用实例一创建就带上启动时的恢复动作
@@ -60,6 +64,12 @@ app.add_middleware(
 
 # 配置路由
 app.include_router(api_router)
+# MCP 子应用挂到 /mcp：同一组知识库工具的第二种传输（工具实现在 services/kb_tools，
+# 这里只挂载）。挂载点写在路由注册之后——它是一个前缀路由，越靠后越不容易挡住
+# 其他路径；鉴权不在这一层做，而在每个工具内部按 JWT 判权。
+# 上面那层 PathAlias 让 /mcp 与 /mcp/ 都能直达（否则默认会先回一个 307）。
+app.add_middleware(mcp_server.PathAlias)
+app.mount(mcp_server.MCP_PATH, mcp_server.streamable_app())
 # 注册orm
 register_tortoise(app, config=TORTOISE_ORM, add_exception_handlers=True)
 # 注册异常处理器
