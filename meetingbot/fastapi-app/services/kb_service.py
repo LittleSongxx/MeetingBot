@@ -23,6 +23,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+import os
 from dataclasses import dataclass
 from typing import Any, Iterable, Sequence
 
@@ -433,7 +434,7 @@ async def search_knowledge(
     meeting_time_to: int | None = None,
     biz_id: int = 0,
 ) -> list[Hit]:
-    """混合检索。`allowed_meeting_ids` 由权限层给出，本函数不做权限判断。
+    """混合检索（可选 rerank）。`allowed_meeting_ids` 由权限层给出，本函数不做权限判断。
 
     None 表示管理员（不过滤），空集合表示无可见会议（返回空）——两者语义不同，
     由上层的 access 层负责算清楚，这里只如实执行。
@@ -442,7 +443,7 @@ async def search_knowledge(
     它们解决的是"下午这场会""最近七天"这类语义相似度碰不到的限定。
     时间按**会议开始时间**过滤（epoch 秒），不是录音内偏移。
 
-    `biz_id` 只影响 `ai_call_log` 的归属（哪条业务记录引发了这次嵌入调用）：
+    `biz_id` 只影响 `ai_call_log` 的归属（哪条业务记录引发了这次调用）：
     问答传入那条助手消息的 id，接口预览传 0。0 表示"没有业务归属"，
     观测页据此把它算作平台级调用。
     """
@@ -453,8 +454,10 @@ async def search_knowledge(
     vectors = await model_factory.embed_texts(config, [text], biz_id=biz_id,
                                               call_type="KB_QUERY_EMBED")
     dense = vectors[0]
+    # rerank 开着时先多召回一批候选，再由模型挑出真正能回答问题的那些
+    fetch = max(int(limit), RERANK_CANDIDATES) if rerank_enabled() else int(limit)
     raw = await qdrant.hybrid_search(
-        dense=dense, sparse=kb_sparse.encode(text), limit=limit,
+        dense=dense, sparse=kb_sparse.encode(text), limit=fetch,
         allowed_meeting_ids=allowed_meeting_ids, authority=authority,
         chunk_type=chunk_type, meeting_time_from=meeting_time_from,
         meeting_time_to=meeting_time_to,
@@ -473,4 +476,84 @@ async def search_knowledge(
             end_ms=payload.get("end_ms"), document_id=payload.get("document_id"),
             origin=payload.get("origin"),
         ))
+    if rerank_enabled() and len(hits) > 1:
+        hits = await _rerank(text, hits, limit=int(limit), biz_id=biz_id)
     return hits
+
+
+# --------------------------------------------------------------------------- #
+# rerank（可选增强，默认关）
+# --------------------------------------------------------------------------- #
+
+# rerank 的调用类型（新调用类型必须登记 CALL_TYPE_OWNERSHIP，见 observability_service）
+RERANK_CALL_TYPE = "KB_RERANK"
+# 先召回多少候选再重排。取与 Qdrant 的 PREFETCH_LIMIT 同量级：再大就超出单次
+# 融合的召回深度，重排也就无从挑起了。
+RERANK_CANDIDATES = qdrant.PREFETCH_LIMIT
+
+RERANK_SYSTEM = (
+    "你在给检索结果排序。给你一个问题与若干候选片段（各带编号）。"
+    "按「这段内容能不能回答这个问题」从强到弱排序，最相关的排最前。"
+    "只是提到关键词但答不了问题的排在后面。不要解释、不要改写内容。"
+)
+RERANK_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {"ranking": {"type": "array", "items": {"type": "integer"}}},
+    "required": ["ranking"],
+}
+
+
+def rerank_enabled() -> bool:
+    """rerank 开关。**默认关**：新机制默认关是本仓的规矩（未实测就开默认，
+    等于把一个没量过的机制塞进主链路），要开就显式配 KB_RERANK_ENABLED=1。"""
+    return os.getenv("KB_RERANK_ENABLED", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+async def _chat_config() -> AiModelConfig:
+    config = await AiModelConfig.filter(model_type="AGENT", enabled=True).order_by("-id").first()
+    if config is None:
+        raise KbError("没有启用中的 AGENT 用途模型配置，无法做重排")
+    return config
+
+
+def _ranking_of(parsed: Any, size: int) -> list[int]:
+    """把模型给的排序整理成合法的下标序列：去重、剔除越界、补上没提到的。
+
+    **补全而不是丢弃**：模型只回了前几名是常态，剩下那些按原顺序接在后面——
+    否则"模型没提"会变成"这些候选被删掉了"，而它们本来是被召回的。
+    """
+    ranking: list[int] = []
+    for item in (parsed or {}).get("ranking") or []:
+        try:
+            index = int(item) - 1          # 提示词里给的是 1 起的编号
+        except (TypeError, ValueError):
+            continue
+        if 0 <= index < size and index not in ranking:
+            ranking.append(index)
+    for index in range(size):
+        if index not in ranking:
+            ranking.append(index)
+    return ranking
+
+
+async def _rerank(query: str, hits: list[Hit], *, limit: int, biz_id: int) -> list[Hit]:
+    """用一次模型调用重排候选，取前 limit 条。
+
+    为什么值得多一次调用：RRF 只看两路排名的融合，它分不出"提到了"与"回答了"——
+    实测 15% 的噪声全是**同会议同主题、但答不了该问题**的窗口。
+
+    **失败绝不打断检索**：重排是增强，出错就按原顺序返回（与"索引失败不影响主流程"
+    同款判断——增强能力不该有能力把主链路弄挂）。
+    """
+    listing = "\n".join(
+        f"[{index}] {hit.text[:400]}" for index, hit in enumerate(hits, start=1))
+    user = f"【问题】\n{query}\n\n【候选片段】\n{listing}\n\n请按格式输出 JSON。"
+    try:
+        config = await _chat_config()
+        parsed = await model_factory.invoke_json(
+            config, RERANK_SYSTEM, user, RERANK_SCHEMA, RERANK_CALL_TYPE, biz_id, "重排模型")
+    except Exception:  # noqa: BLE001 - 重排失败不该让检索失败
+        logger.exception("重排失败，按原顺序返回候选（biz_id=%s）", biz_id)
+        return hits[:limit]
+    return [hits[index] for index in _ranking_of(parsed, len(hits))][:limit]

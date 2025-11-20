@@ -181,6 +181,8 @@ REASONING_BY_CALL_TYPE: dict[str, bool] = {
     "chat": False,
     # 滚动摘要（会话记忆压缩）：机械摘要任务，同 minutes
     "chat_summary": False,
+    # 检索重排：机械判定（"这段能不能回答问题"），与判定类调用不同，关推理
+    "kb_rerank": False,
 }
 DEFAULT_REASONING = False
 
