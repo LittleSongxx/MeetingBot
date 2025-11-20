@@ -2,7 +2,11 @@
   <div>
     <div class="card" style="margin-bottom: 5px">
       <!-- 配置名称输入框，写入 data.name，后端按名称模糊匹配 -->
-      <el-input v-model="data.name" style="width: 240px; margin-right: 10px" placeholder="请输入配置名称"></el-input>
+      <el-input
+        v-model="data.name"
+        style="width: 240px; margin-right: 10px"
+        placeholder="请输入配置名称"
+      ></el-input>
       <!-- 模型用途下拉框，写入 data.modelType，四个取值与数据库的 model_type 一致 -->
       <el-select
         v-model="data.modelType"
@@ -61,7 +65,13 @@
     </div>
 
     <el-dialog title="AI模型配置" v-model="data.formVisible" width="48%" destroy-on-close>
-      <el-form ref="formRef" :model="data.form" :rules="data.rules" label-width="110px" style="padding: 10px 20px">
+      <el-form
+        ref="formRef"
+        :model="data.form"
+        :rules="data.rules"
+        label-width="110px"
+        style="padding: 10px 20px"
+      >
         <!-- 配置名称，必填，写入 data.form.name -->
         <el-form-item label="配置名称" prop="name">
           <el-input v-model="data.form.name" placeholder="请输入配置名称"></el-input>
@@ -108,7 +118,9 @@
         <!-- 启用开关，写入 data.form.enabled -->
         <el-form-item label="启用配置">
           <el-switch v-model="data.form.enabled"></el-switch>
-          <span style="margin-left: 10px; color: rgba(17, 24, 39, .55)">同一用途只允许启用一个模型</span>
+          <span style="margin-left: 10px; color: rgba(17, 24, 39, 0.55)"
+            >同一用途只允许启用一个模型</span
+          >
         </el-form-item>
       </el-form>
       <template #footer>
@@ -119,14 +131,54 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import request from '@/utils/request.js'
+import { ElMessage, ElMessageBox, type FormRules } from 'element-plus'
+import request, { type PageData } from '@/utils/request'
+
+// 表格行来自 /aiModel/selectPage 返回的 ai_model_config；api_key 是后端做过掩码的字符串
+interface AiModelRow {
+  id: number
+  name: string
+  model_type: string
+  provider: string
+  base_url: string
+  api_key: string
+  model_name: string
+  timeout_seconds: number
+  enabled: boolean
+}
+
+// 弹窗表单：id 有值走编辑；name 和 api_key 只在弹窗里由管理员填写（handleAdd 不带这两个字段），
+// 其余字段在弹窗打开时已被 handleAdd 或 changeModelType 填好，所以按是否必填区分可选性
+interface AiModelForm {
+  id?: number
+  name?: string
+  api_key?: string
+  model_type: string
+  provider: string
+  base_url: string
+  model_name: string
+  timeout_seconds: number
+  enabled: boolean
+}
+
+// AI 模型配置页的状态对象：查询条件 + 分页 + 表格 + 弹窗表单
+interface AiModelState {
+  name: string
+  modelType: string
+  pageNum: number
+  pageSize: number
+  total: number
+  tableData: AiModelRow[]
+  formVisible: boolean
+  form: AiModelForm
+  rules: FormRules
+}
 
 const formRef = ref()
 
-const data = reactive({
+const data = reactive<AiModelState>({
   // 顶部配置名称输入框
   name: '',
   // 顶部模型用途下拉框
@@ -141,18 +193,18 @@ const data = reactive({
   tableData: [],
   // 控制配置弹窗显示
   formVisible: false,
-  // 弹窗表单对象，有 id 表示编辑
-  form: {},
+  // 弹窗表单对象，有 id 表示编辑；初始是空对象，打开弹窗时被 handleAdd 的预设或 handleEdit
+  // 深拷贝的行整体替换，这里的断言只是把"初始为空"写进类型，运行时的值仍是 {}
+  form: {} as AiModelForm,
   // 弹窗必填校验规则
   rules: {
     name: [{ required: true, message: '请输入配置名称', trigger: 'blur' }],
     model_type: [{ required: true, message: '请选择模型用途', trigger: 'change' }],
     base_url: [{ required: true, message: '请输入API地址', trigger: 'blur' }],
     api_key: [{ required: true, message: '请输入API Key', trigger: 'blur' }],
-    model_name: [{ required: true, message: '请输入模型名称', trigger: 'blur' }]
-  }
+    model_name: [{ required: true, message: '请输入模型名称', trigger: 'blur' }],
+  },
 })
-
 
 // 删除最后一条后当前页变空：回退一页再查，避免停在空表
 const reloadAfterDelete = () => {
@@ -162,17 +214,17 @@ const reloadAfterDelete = () => {
 
 const load = () => {
   request
-    .get('/aiModel/selectPage', {
+    .get<PageData<AiModelRow>>('/aiModel/selectPage', {
       params: {
         // 配置名称输入框的值
         name: data.name,
         // 用途下拉框的值。清空后是空串，转成 undefined 让 Axios 不拼这个参数
         model_type: data.modelType || undefined,
         page_num: data.pageNum,
-        page_size: data.pageSize
-      }
+        page_size: data.pageSize,
+      },
     })
-    .then(res => {
+    .then((res) => {
       if (res.code === '200') {
         data.tableData = res.data?.list || []
         data.total = res.data?.total || 0
@@ -182,32 +234,56 @@ const load = () => {
     })
 }
 
-const modelTypeText = value =>
+const modelTypeText = (value) =>
   ({
     TRANSCRIPTION: '音视频转写',
     MINUTES: '会议纪要',
     AGENT: '纪要自检',
-    SPEAKER: '说话人匹配'
+    SPEAKER: '说话人匹配',
   })[value] || value
 
 // 四类模型的默认服务地址、模型名和超时秒数，和仓库根目录 meetingbot.sql 里的初始配置保持一致
 // 纪要、纪要自检和说话人匹配走阿里百炼的 OpenAI 兼容地址
 // 转写走百炼自己的录音文件识别协议，地址和服务协议都和另外三类不同
 const MODEL_DEFAULTS = {
-  TRANSCRIPTION: { base_url: 'https://dashscope.aliyuncs.com/api/v1', model_name: 'paraformer-v2', timeout_seconds: 600, provider: 'DASHSCOPE' },
-  MINUTES: { base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model_name: 'qwen-plus', timeout_seconds: 600, provider: 'OPENAI_COMPATIBLE' },
-  AGENT: { base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model_name: 'qwen-plus', timeout_seconds: 300, provider: 'OPENAI_COMPATIBLE' },
-  SPEAKER: { base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model_name: 'qwen-plus', timeout_seconds: 180, provider: 'OPENAI_COMPATIBLE' }
+  TRANSCRIPTION: {
+    base_url: 'https://dashscope.aliyuncs.com/api/v1',
+    model_name: 'paraformer-v2',
+    timeout_seconds: 600,
+    provider: 'DASHSCOPE',
+  },
+  MINUTES: {
+    base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model_name: 'qwen-plus',
+    timeout_seconds: 600,
+    provider: 'OPENAI_COMPATIBLE',
+  },
+  AGENT: {
+    base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model_name: 'qwen-plus',
+    timeout_seconds: 300,
+    provider: 'OPENAI_COMPATIBLE',
+  },
+  SPEAKER: {
+    base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model_name: 'qwen-plus',
+    timeout_seconds: 180,
+    provider: 'OPENAI_COMPATIBLE',
+  },
 }
 
 // 模型名称输入框的提示文字，随上面选中的模型类型变化
-const modelPlaceholder = computed(() => MODEL_DEFAULTS[data.form.model_type]?.model_name || '请输入模型名称')
+const modelPlaceholder = computed(
+  () => MODEL_DEFAULTS[data.form.model_type]?.model_name || '请输入模型名称',
+)
 
 // 服务地址输入框的提示文字，同样随模型类型变化
-const baseUrlPlaceholder = computed(() => MODEL_DEFAULTS[data.form.model_type]?.base_url || '请输入服务地址')
+const baseUrlPlaceholder = computed(
+  () => MODEL_DEFAULTS[data.form.model_type]?.base_url || '请输入服务地址',
+)
 
 // 模型用途下拉框的 @change 回调，value 是新选中的 model_type
-const changeModelType = value => {
+const changeModelType = (value) => {
   // 切换模型类型时，把该类型的默认地址、模型名和超时一并填进表单，管理员只需要补 API Key
   const preset = MODEL_DEFAULTS[value]
   // 转写和其余三类用的不是同一套协议，服务协议要跟着模型类型走
@@ -230,13 +306,13 @@ const handleAdd = () => {
     base_url: MODEL_DEFAULTS.TRANSCRIPTION.base_url,
     model_name: MODEL_DEFAULTS.TRANSCRIPTION.model_name,
     timeout_seconds: MODEL_DEFAULTS.TRANSCRIPTION.timeout_seconds,
-    enabled: false
+    enabled: false,
   }
   // 打开配置弹窗，API 地址、模型名、超时和启用状态由上述默认值渲染。
   data.formVisible = true
 }
 
-const handleEdit = row => {
+const handleEdit = (row) => {
   // 深拷贝当前行，弹窗里的改动不影响表格上正在显示的那一行
   // 拷贝进来的 api_key 是掩码字符串，不是真实 Key
   data.form = JSON.parse(JSON.stringify(row))
@@ -245,13 +321,15 @@ const handleEdit = row => {
 
 const save = () => {
   // 先跑五条必填校验
-  formRef.value.validate(valid => {
+  formRef.value.validate((valid) => {
     if (!valid) {
       return
     }
     // 有 id 走编辑，没有 id 走新增
-    const action = data.form.id ? request.put('/aiModel/update', data.form) : request.post('/aiModel/add', data.form)
-    action.then(res => {
+    const action = data.form.id
+      ? request.put('/aiModel/update', data.form)
+      : request.post('/aiModel/add', data.form)
+    action.then((res) => {
       if (res.code === '200') {
         ElMessage.success('保存成功')
         data.formVisible = false
@@ -265,9 +343,9 @@ const save = () => {
   })
 }
 
-const del = id => {
+const del = (id) => {
   ElMessageBox.confirm('确定删除该AI模型配置吗？', '删除确认', { type: 'warning' }).then(() => {
-    request.delete('/aiModel/delete/' + id).then(res => {
+    request.delete('/aiModel/delete/' + id).then((res) => {
       if (res.code === '200') {
         ElMessage.success('删除成功')
         reloadAfterDelete()

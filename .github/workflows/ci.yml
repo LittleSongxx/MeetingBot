@@ -81,12 +81,30 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # 22 是当前 LTS；工具链里已有包要求 >=22.22（eslint 10 / vitest 4），
+          # 钉 20 会在安装阶段就报 EBADENGINE
+          node-version: '22'
           cache: npm
           cache-dependency-path: meetingbot/vue/package-lock.json
 
       - name: 安装依赖（npm ci 按 lock 文件精确安装）
         run: npm ci
+        working-directory: meetingbot/vue
+
+      - name: 类型检查（vue-tsc --noEmit）
+        run: npm run type-check
+        working-directory: meetingbot/vue
+
+      - name: Lint（ESLint，格式交给 Prettier）
+        run: npm run lint
+        working-directory: meetingbot/vue
+
+      - name: 格式检查（prettier --check）
+        run: npm run format:check
+        working-directory: meetingbot/vue
+
+      - name: 前端单测（vitest，jsdom）
+        run: npm run test
         working-directory: meetingbot/vue
 
       - name: 构建（vite build）

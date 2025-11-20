@@ -2,16 +2,22 @@
   <div>
     <div class="card" style="margin-bottom: 5px">
       <!-- 模板名称输入框，写入 data.name，后端按名称模糊匹配 -->
-      <el-input v-model="data.name" style="width: 240px; margin-right: 10px" placeholder="请输入模板名称"></el-input>
-      <!-- 应用场景下拉框，写入 data.sceneType，三个取值与数据库的 scene_type 一致；clearable 清空后查全部 -->
+      <el-input
+        v-model="data.name"
+        style="width: 240px; margin-right: 10px"
+        placeholder="请输入模板名称"
+      ></el-input>
+      <!-- 应用场景下拉框，写入 data.sceneType，四个取值与数据库的 scene_type 一致；clearable 清空后查全部 -->
       <el-select
         v-model="data.sceneType"
         clearable
         style="width: 180px; margin-right: 10px"
         placeholder="请选择应用场景"
-        ><el-option label="会议纪要" value="MEETING_MINUTES" /><el-option label="纪要自检" value="AGENT" /><el-option
-          label="音视频转写"
-          value="TRANSCRIPTION"
+        ><el-option label="会议纪要" value="MEETING_MINUTES" /><el-option
+          label="纪要自检"
+          value="AGENT" /><el-option label="音视频转写" value="TRANSCRIPTION" /><el-option
+          label="知识问答"
+          value="CHAT"
       /></el-select>
       <el-button type="info" plain @click="search">查询</el-button>
       <el-button type="warning" plain style="margin-left: 10px" @click="reset">重置</el-button>
@@ -43,7 +49,9 @@
         <!-- 只有编辑一个入口，没有新增和删除 -->
         <el-table-column label="操作" width="90" fixed="right">
           <template #default="scope"
-            ><el-button link type="primary" @click="handleEdit(scope.row)">编辑</el-button></template
+            ><el-button link type="primary" @click="handleEdit(scope.row)"
+              >编辑</el-button
+            ></template
           >
         </el-table-column>
       </el-table>
@@ -60,12 +68,24 @@
       />
     </div>
 
-    <el-dialog title="编辑Prompt模板" v-model="data.formVisible" width="70%" top="4vh" destroy-on-close>
+    <el-dialog
+      title="编辑Prompt模板"
+      v-model="data.formVisible"
+      width="70%"
+      top="4vh"
+      destroy-on-close
+    >
       <el-form ref="formRef" :model="data.form" :rules="data.rules" label-width="100px">
         <!-- 模板名称可改，写入 data.form.name -->
-        <el-form-item label="模板名称" prop="name"><el-input v-model="data.form.name"></el-input></el-form-item>
+        <el-form-item label="模板名称" prop="name"
+          ><el-input v-model="data.form.name"></el-input
+        ></el-form-item>
         <!-- 应用场景只读展示，没有输入框；保存时 data.form 里的原值随请求一起提交 -->
-        <el-form-item label="应用场景"><span style="color: rgba(17, 24, 39, .75)">{{ sceneText(data.form.scene_type) }}</span></el-form-item>
+        <el-form-item label="应用场景"
+          ><span style="color: rgba(17, 24, 39, 0.75)">{{
+            sceneText(data.form.scene_type)
+          }}</span></el-form-item
+        >
         <!-- 系统指令文本域，写入 data.form.system_prompt，调模型时作为系统消息发送 -->
         <el-form-item label="系统指令" prop="system_prompt"
           ><el-input v-model="data.form.system_prompt" type="textarea" :rows="7"></el-input
@@ -75,7 +95,9 @@
           ><el-input v-model="data.form.user_prompt" type="textarea" :rows="10"></el-input
         ></el-form-item>
         <!-- 启用开关，关掉之后对应功能取不到模板会直接报错 -->
-        <el-form-item label="启用模板"><el-switch v-model="data.form.enabled"></el-switch></el-form-item>
+        <el-form-item label="启用模板"
+          ><el-switch v-model="data.form.enabled"></el-switch
+        ></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="data.formVisible = false">取消</el-button>
@@ -85,22 +107,61 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import request from '@/utils/request.js'
+import { ElMessage, type FormRules } from 'element-plus'
+import request, { type PageData } from '@/utils/request'
 
-// 应用场景在页面上只读，取值由系统预置，这里把存库的英文标识翻成中文展示
-const sceneText = value =>
+// 应用场景在页面上只读，取值由系统预置，这里把存库的英文标识翻成中文展示；
+// CHAT 是后端新增的知识问答模板（code=CHAT_ANSWER）的场景值
+const sceneText = (value) =>
   ({
     MEETING_MINUTES: '会议纪要',
     AGENT: '纪要自检',
-    TRANSCRIPTION: '音视频转写'
+    TRANSCRIPTION: '音视频转写',
+    CHAT: '知识问答',
   })[value] || value
+
+// 表格行来自 /promptTemplate/selectPage 返回的 prompt_dict，系统预置模板页面上只能编辑内容
+interface PromptTemplateRow {
+  id: number
+  code: string
+  name: string
+  scene_type: string
+  system_prompt: string
+  user_prompt: string
+  enabled: boolean
+  create_time?: string | null
+  update_time?: string | null
+}
+
+// 编辑弹窗的表单对象：初始为空对象，handleEdit 深拷贝当前行填充，保存时整体提交（带 id 和 code）
+interface PromptTemplateForm {
+  id?: number
+  code?: string
+  name?: string
+  scene_type?: string
+  system_prompt?: string
+  user_prompt?: string
+  enabled?: boolean
+}
+
+// Prompt 模板页的状态对象：查询条件 + 分页 + 表格 + 编辑弹窗表单
+interface PromptTemplateState {
+  name: string
+  sceneType: string
+  pageNum: number
+  pageSize: number
+  total: number
+  tableData: PromptTemplateRow[]
+  formVisible: boolean
+  form: PromptTemplateForm
+  rules: FormRules
+}
 
 // 指向编辑弹窗里的 el-form，save 通过它调用 validate
 const formRef = ref()
-const data = reactive({
+const data = reactive<PromptTemplateState>({
   // 模板名称查询框绑定它，作为 name 参数发给后端做模糊匹配
   name: '',
   // 应用场景下拉框绑定它，作为 sceneType 参数发给后端做精确匹配
@@ -121,17 +182,22 @@ const data = reactive({
   rules: {
     name: [{ required: true, message: '请输入模板名称', trigger: 'blur' }],
     system_prompt: [{ required: true, message: '请输入系统指令', trigger: 'blur' }],
-    user_prompt: [{ required: true, message: '请输入用户模板', trigger: 'blur' }]
-  }
+    user_prompt: [{ required: true, message: '请输入用户模板', trigger: 'blur' }],
+  },
 })
 
 const load = () => {
   request
-    .get('/promptTemplate/selectPage', {
+    .get<PageData<PromptTemplateRow>>('/promptTemplate/selectPage', {
       // 四个查询参数：名称模糊词、场景、页码和每页条数
-      params: { name: data.name, sceneType: data.sceneType, pageNum: data.pageNum, pageSize: data.pageSize }
+      params: {
+        name: data.name,
+        sceneType: data.sceneType,
+        pageNum: data.pageNum,
+        pageSize: data.pageSize,
+      },
     })
-    .then(res => {
+    .then((res) => {
       if (res.code === '200') {
         // list 填进表格，total 交给分页控件算页数
         data.tableData = res.data?.list || []
@@ -140,7 +206,7 @@ const load = () => {
     })
 }
 
-const handleEdit = row => {
+const handleEdit = (row) => {
   // 深拷贝当前行，弹窗里改到一半点取消时不会影响表格上正在显示的那一行
   // 拷贝进来的对象带着 id 和 code，保存时原样提交给后端
   data.form = JSON.parse(JSON.stringify(row))
@@ -148,18 +214,18 @@ const handleEdit = row => {
 }
 
 const save = () => {
-  formRef.value.validate(valid => {
+  formRef.value.validate((valid) => {
     // 三条必填校验没通过时停在弹窗上，不发请求
     if (!valid) return
     // data.form 整体作为 JSON 提交，带着 id 和 code，后端按 code 校验必需变量
-    request.put('/promptTemplate/update', data.form).then(res => {
+    request.put('/promptTemplate/update', data.form).then((res) => {
       if (res.code === '200') {
         ElMessage.success('Prompt模板保存成功')
         // 关闭编辑弹窗
         data.formVisible = false
         // 按当前查询条件重拉列表，“更新时间”列刷新
         load()
-      // 例如“用户模板缺少必需变量：{transcript}”，弹窗保持打开
+        // 例如“用户模板缺少必需变量：{transcript}”，弹窗保持打开
       } else ElMessage.error(res.msg)
     })
   })

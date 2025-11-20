@@ -1,0 +1,41 @@
+{
+  // 前端类型检查的唯一配置（CI 跑 `npm run type-check`，即 vue-tsc --noEmit）。
+  // 没有用 @vue/tsconfig 的预设：那份预设的内容会随版本变，而这里的取舍是明确的、
+  // 需要写下来的——见下面两条注释。
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "preserve",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    // 严格模式开着：新增代码必须类型正确。存量页面在迁移过程中用 `null` 断言/
+    // 显式联合类型逐步收口，而不是把整个项目降级成 any。
+    "strict": true,
+    // 迁移期保留：老页面里有若干函数参数没标类型，逐个补需要改动模板绑定之外的代码，
+    // 收益低于风险；新代码（utils/api/Chat）一律带类型。
+    "noImplicitAny": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    // TS 6 起 baseUrl 已废弃（7.0 移除）；路径映射只用相对路径写法，不再需要它
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "types": ["node"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.vue",
+    "env.d.ts",
+    "auto-imports.d.ts",
+    "components.d.ts",
+    "vitest.config.ts",
+    "vite.config.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

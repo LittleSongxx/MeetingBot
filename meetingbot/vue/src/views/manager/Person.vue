@@ -3,12 +3,12 @@
     <el-form ref="user" :model="data.user" label-width="70px" style="padding: 20px">
       <el-form-item prop="avatar" label="头像">
         <el-upload
-            :action="baseUrl + '/files/upload'"
-            :headers="{ token: data.user.token || '' }"
-            :on-success="handleFileUpload"
-            :on-error="handleFileUploadError"
-            :show-file-list="false"
-            class="avatar-uploader"
+          :action="baseUrl + '/files/upload'"
+          :headers="{ token: data.user.token || '' }"
+          :on-success="handleFileUpload"
+          :on-error="handleFileUploadError"
+          :show-file-list="false"
+          class="avatar-uploader"
         >
           <!-- 已有头像时把它当成点击区域，点图片即可重新选择 -->
           <img v-if="data.user.avatar" :src="fileUrl(data.user.avatar)" class="avatar" />
@@ -34,7 +34,11 @@
       </el-form-item>
       <!-- 所属部门只读，值来自登录时后端查部门表补上的 department_name -->
       <el-form-item label="所属部门">
-        <el-input v-model="data.user.department_name" disabled placeholder="暂未分配部门"></el-input>
+        <el-input
+          v-model="data.user.department_name"
+          disabled
+          placeholder="暂未分配部门"
+        ></el-input>
       </el-form-item>
       <!-- 职位只读，由第 2 章管理员在员工账号管理页维护 -->
       <el-form-item label="职位">
@@ -48,17 +52,17 @@
   </div>
 </template>
 
-<script setup>
-import { reactive } from "vue";
-import request from "@/utils/request.js";
-import { fileUrl } from "@/utils/fileUrl.js";
-import {ElMessage} from "element-plus";
+<script setup lang="ts">
+import { reactive } from 'vue'
+import request from '@/utils/request'
+import { fileUrl } from '@/utils/fileUrl'
+import { ElMessage } from 'element-plus'
 
 const baseUrl = import.meta.env.VITE_BASE_URL
 
 const data = reactive({
   // 直接把登录缓存整份拿来当表单模型，页面上的输入框改的就是这份对象
-  user: JSON.parse(localStorage.getItem('xm-user') || '{}')
+  user: JSON.parse(localStorage.getItem('xm-user') || '{}'),
 })
 
 const handleFileUpload = (res) => {
@@ -81,7 +85,7 @@ const handleFileUploadError = () => {
 const emit = defineEmits(['updateUser'])
 const update = () => {
   // 把整份 data.user 提交给第 2 章的更新接口，其中带着 id，后端按它定位记录
-  request.put('/user/update', data.user).then(res => {
+  request.put('/user/update', data.user).then((res) => {
     if (res.code === '200') {
       ElMessage.success('保存成功')
       // 后端只回 code，不回数据，所以直接把页面上这份对象写回缓存
@@ -119,7 +123,7 @@ const update = () => {
 
 .el-icon.avatar-uploader-icon {
   font-size: 28px;
-  color: rgba(17, 24, 39, .55);
+  color: rgba(17, 24, 39, 0.55);
   width: 120px;
   height: 120px;
   text-align: center;

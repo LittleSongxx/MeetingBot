@@ -6,14 +6,23 @@
         <div class="home-hello">您好，{{ data.user?.name }}</div>
         <div class="home-sub">{{ today }}</div>
       </div>
-      <el-button type="primary" plain @click="router.push('/manager/meeting')">去会议管理</el-button>
+      <el-button type="primary" plain @click="router.push('/manager/meeting')"
+        >去会议管理</el-button
+      >
     </div>
 
     <!-- 四个数字来自各列表接口的分页总数，管理员看全公司，员工看自己相关的 -->
     <div class="home-metrics">
-      <div class="card home-metric" v-for="item in metrics" :key="item.label" @click="router.push(item.path)">
+      <div
+        class="card home-metric"
+        v-for="item in metrics"
+        :key="item.label"
+        @click="router.push(item.path)"
+      >
         <div class="home-metric-label">{{ item.label }}</div>
-        <div class="home-metric-value">{{ item.value }}<span class="home-metric-unit">{{ item.unit }}</span></div>
+        <div class="home-metric-value">
+          {{ item.value }}<span class="home-metric-unit">{{ item.unit }}</span>
+        </div>
         <div class="home-metric-hint">{{ item.hint }}</div>
       </div>
     </div>
@@ -31,9 +40,13 @@
           <div class="home-row" v-for="item in data.meetings" :key="item.id">
             <div class="home-row-main">
               <div class="home-row-title">{{ item.title }}</div>
-              <div class="home-row-sub">{{ item.start_time }}·{{ item.host_name }}主持·{{ item.participant_count }}人参会</div>
+              <div class="home-row-sub">
+                {{ item.start_time }}·{{ item.host_name }}主持·{{ item.participant_count }}人参会
+              </div>
             </div>
-            <el-tag size="small" :type="meetingTag(item.status)">{{ meetingText(item.status) }}</el-tag>
+            <el-tag size="small" :type="meetingTag(item.status)">{{
+              meetingText(item.status)
+            }}</el-tag>
           </div>
         </div>
       </div>
@@ -50,9 +63,13 @@
           <div class="home-row" v-for="item in data.minutes" :key="item.id">
             <div class="home-row-main">
               <div class="home-row-title">{{ item.meeting_title }}</div>
-              <div class="home-row-sub">{{ item.material_name || '会议素材' }}·{{ item.create_time }}</div>
+              <div class="home-row-sub">
+                {{ item.material_name || '会议素材' }}·{{ item.create_time }}
+              </div>
             </div>
-            <el-tag size="small" :type="minutesTag(item.status)">{{ minutesText(item.status) }}</el-tag>
+            <el-tag size="small" :type="minutesTag(item.status)">{{
+              minutesText(item.status)
+            }}</el-tag>
           </div>
         </div>
       </div>
@@ -60,20 +77,61 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, reactive } from 'vue'
-import request from '@/utils/request.js'
-import { MEETING_STATUS, MINUTES_STATUS } from '@/constants/status.js'
-import router from '@/router/index.js'
+import request, { type PageData } from '@/utils/request'
+import { MEETING_STATUS, MINUTES_STATUS } from '@/constants/status'
+import router from '@/router/index'
 
-const data = reactive({
+// xm-user 缓存里本页只用到 name，用于欢迎语
+interface HomeUser {
+  name?: string | null
+}
+
+// 四张统计卡片的数字，全部来自各列表接口分页返回的 total
+interface HomeCounts {
+  meeting: number
+  transcription: number
+  minutes: number
+  confirmedMinutes: number
+  agentRun: number
+}
+
+// 「最近会议」行来自 /meeting/selectPage 的 meeting_dict，这里只声明面板用到的字段
+interface HomeMeetingRow {
+  id: number
+  title: string
+  start_time: string
+  host_name?: string | null
+  participant_count: number
+  status: string
+}
+
+// 「最近纪要」行来自 /meetingMinutes/selectPage 的 minutes_dict，material_name 可能为空
+interface HomeMinutesRow {
+  id: number
+  meeting_title?: string | null
+  material_name?: string | null
+  create_time: string
+  status: string
+}
+
+// 首页的状态对象：user 供欢迎语，counts 供四张卡片，meetings/minutes 供两个最近列表面板
+interface HomeState {
+  user: HomeUser
+  counts: HomeCounts
+  meetings: HomeMeetingRow[]
+  minutes: HomeMinutesRow[]
+}
+
+const data = reactive<HomeState>({
   // 登录时存进 localStorage 的用户信息，欢迎语显示其中的 name
   user: JSON.parse(localStorage.getItem('xm-user') || '{}'),
   // 四张卡片的数字，confirmedMinutes 用在「会议纪要」卡片的说明文字里
   counts: { meeting: 0, transcription: 0, minutes: 0, confirmedMinutes: 0, agentRun: 0 },
   // 「最近会议」和「最近纪要」两个面板的列表
   meetings: [],
-  minutes: []
+  minutes: [],
 })
 
 // 欢迎语下面的日期，按浏览器当前时间拼成「年月日 星期」
@@ -86,57 +144,99 @@ const today = computed(() => {
 // 四张统计卡片，点一下跳到对应的功能页。
 // 数字都取各列表接口分页返回的 total，不额外做一套统计接口
 const metrics = computed(() => [
-  { label: '我的会议', value: data.counts.meeting, unit: '场', hint: '我创建、主持或参与的会议', path: '/manager/meeting' },
-  { label: '转写任务', value: data.counts.transcription, unit: '个', hint: '已上传并发起转写的音视频', path: '/manager/transcription' },
-  { label: '会议纪要', value: data.counts.minutes, unit: '份', hint: `其中 ${data.counts.confirmedMinutes} 份已确认`, path: '/manager/meetingMinutes' },
-  { label: '纪要自检', value: data.counts.agentRun, unit: '次', hint: 'Agent 跑过的自检运行', path: '/manager/agent' }
+  {
+    label: '我的会议',
+    value: data.counts.meeting,
+    unit: '场',
+    hint: '我创建、主持或参与的会议',
+    path: '/manager/meeting',
+  },
+  {
+    label: '转写任务',
+    value: data.counts.transcription,
+    unit: '个',
+    hint: '已上传并发起转写的音视频',
+    path: '/manager/transcription',
+  },
+  {
+    label: '会议纪要',
+    value: data.counts.minutes,
+    unit: '份',
+    hint: `其中 ${data.counts.confirmedMinutes} 份已确认`,
+    path: '/manager/meetingMinutes',
+  },
+  {
+    label: '纪要自检',
+    value: data.counts.agentRun,
+    unit: '次',
+    hint: 'Agent 跑过的自检运行',
+    path: '/manager/agent',
+  },
 ])
+
+// el-tag 的 :type 只接受这五个字面量，而 @/constants 里 tag 函数声明的返回值是 string（实际值就是这五个），
+// 所以这里把两个标签函数的返回值收窄；断言只作用于类型，运行时调用的仍是 constants 里的同一个函数
+type TagType = 'primary' | 'success' | 'warning' | 'info' | 'danger'
 
 // 会议状态和纪要状态的中文与标签颜色：共享 @/constants（与各管理页同源，
 // 此前本页 SCHEDULED/CANCELLED 的文案颜色与会议管理页不一致，已统一到管理页版本）
 const meetingText = MEETING_STATUS.text
-const meetingTag = MEETING_STATUS.tag
+const meetingTag = MEETING_STATUS.tag as (status?: string) => TagType
 const minutesText = MINUTES_STATUS.text
-const minutesTag = MINUTES_STATUS.tag
+const minutesTag = MINUTES_STATUS.tag as (status?: string) => TagType
 
 // 卡片上的数字全部来自各列表接口的分页总数。
 // pageSize 传 1 是因为这里只要 total，不需要真的把列表拉回来
 const countOf = (url, params) =>
-  request.get(url, { params }).then(res => (res.code === '200' ? res.data?.total || 0 : 0))
+  request
+    .get<PageData<unknown>>(url, { params })
+    .then((res) => (res.code === '200' ? res.data?.total || 0 : 0))
 
 // 会议接口的分页参数是下划线写法，其余三个是驼峰，这里按各自的来
 const loadCounts = () => {
-  countOf('/meeting/selectPage', { view_type: 'MY', page_num: 1, page_size: 1 }).then(value => (data.counts.meeting = value))
-  countOf('/transcription/selectPage', { pageNum: 1, pageSize: 1 }).then(value => (data.counts.transcription = value))
-  countOf('/meetingMinutes/selectPage', { pageNum: 1, pageSize: 1 }).then(value => (data.counts.minutes = value))
-  countOf('/meetingMinutes/selectPage', { status: 'CONFIRMED', pageNum: 1, pageSize: 1 }).then(
-    value => (data.counts.confirmedMinutes = value)
+  countOf('/meeting/selectPage', { view_type: 'MY', page_num: 1, page_size: 1 }).then(
+    (value) => (data.counts.meeting = value),
   )
-  countOf('/agent/selectPage', { pageNum: 1, pageSize: 1 }).then(value => (data.counts.agentRun = value))
+  countOf('/transcription/selectPage', { pageNum: 1, pageSize: 1 }).then(
+    (value) => (data.counts.transcription = value),
+  )
+  countOf('/meetingMinutes/selectPage', { pageNum: 1, pageSize: 1 }).then(
+    (value) => (data.counts.minutes = value),
+  )
+  countOf('/meetingMinutes/selectPage', { status: 'CONFIRMED', pageNum: 1, pageSize: 1 }).then(
+    (value) => (data.counts.confirmedMinutes = value),
+  )
+  countOf('/agent/selectPage', { pageNum: 1, pageSize: 1 }).then(
+    (value) => (data.counts.agentRun = value),
+  )
 }
 
 // 最近会议：view_type 用 MY，管理员和员工都只看与自己有关的会议
 const loadMeetings = () => {
-  request.get('/meeting/selectPage', {
-    params: { view_type: 'MY', page_num: 1, page_size: 5 }
-  }).then(res => {
-    if (res.code === '200') {
-      // 前五条会议填进「最近会议」面板，空数组时显示空状态
-      data.meetings = res.data?.list || []
-    }
-  })
+  request
+    .get<PageData<HomeMeetingRow>>('/meeting/selectPage', {
+      params: { view_type: 'MY', page_num: 1, page_size: 5 },
+    })
+    .then((res) => {
+      if (res.code === '200') {
+        // 前五条会议填进「最近会议」面板，空数组时显示空状态
+        data.meetings = res.data?.list || []
+      }
+    })
 }
 
 // 最近纪要：接口已经按当前身份过滤过，这里只取前五条
 const loadMinutes = () => {
-  request.get('/meetingMinutes/selectPage', {
-    params: { pageNum: 1, pageSize: 5 }
-  }).then(res => {
-    if (res.code === '200') {
-      // 前五条纪要填进「最近纪要」面板，空数组时显示空状态
-      data.minutes = res.data?.list || []
-    }
-  })
+  request
+    .get<PageData<HomeMinutesRow>>('/meetingMinutes/selectPage', {
+      params: { pageNum: 1, pageSize: 5 },
+    })
+    .then((res) => {
+      if (res.code === '200') {
+        // 前五条纪要填进「最近纪要」面板，空数组时显示空状态
+        data.minutes = res.data?.list || []
+      }
+    })
 }
 
 // 页面打开时三组请求同时发出，各自返回后更新自己的区域
@@ -156,13 +256,13 @@ loadMinutes()
 .home-hello {
   font-size: 18px;
   font-weight: 600;
-  color: rgba(17, 24, 39, .95);
+  color: rgba(17, 24, 39, 0.95);
 }
 
 .home-sub {
   margin-top: 6px;
   font-size: 13px;
-  color: rgba(17, 24, 39, .55);
+  color: rgba(17, 24, 39, 0.55);
 }
 
 /* 四张统计卡片一行排开，窄屏时自动折行 */
@@ -175,7 +275,7 @@ loadMinutes()
 
 .home-metric {
   cursor: pointer;
-  transition: border-color .2s;
+  transition: border-color 0.2s;
 }
 
 .home-metric:hover {
@@ -184,26 +284,26 @@ loadMinutes()
 
 .home-metric-label {
   font-size: 13px;
-  color: rgba(17, 24, 39, .55);
+  color: rgba(17, 24, 39, 0.55);
 }
 
 .home-metric-value {
   margin: 8px 0 4px;
   font-size: 26px;
   font-weight: 600;
-  color: rgba(17, 24, 39, .95);
+  color: rgba(17, 24, 39, 0.95);
 }
 
 .home-metric-unit {
   margin-left: 4px;
   font-size: 13px;
   font-weight: normal;
-  color: rgba(17, 24, 39, .55);
+  color: rgba(17, 24, 39, 0.55);
 }
 
 .home-metric-hint {
   font-size: 12px;
-  color: rgba(17, 24, 39, .55);
+  color: rgba(17, 24, 39, 0.55);
 }
 
 .home-columns {
@@ -218,9 +318,9 @@ loadMinutes()
   justify-content: space-between;
   font-size: 15px;
   font-weight: 600;
-  color: rgba(17, 24, 39, .95);
+  color: rgba(17, 24, 39, 0.95);
   padding-bottom: 10px;
-  border-bottom: 1px solid rgba(17, 24, 39, .10);
+  border-bottom: 1px solid rgba(17, 24, 39, 0.1);
 }
 
 .home-panel-head a {
@@ -249,7 +349,7 @@ loadMinutes()
 
 .home-row-title {
   font-size: 14px;
-  color: rgba(17, 24, 39, .95);
+  color: rgba(17, 24, 39, 0.95);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -258,7 +358,7 @@ loadMinutes()
 .home-row-sub {
   margin-top: 4px;
   font-size: 12px;
-  color: rgba(17, 24, 39, .55);
+  color: rgba(17, 24, 39, 0.55);
 }
 
 @media (max-width: 1100px) {
