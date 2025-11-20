@@ -57,8 +57,8 @@ def to_wav_16k(source: Path, target: Path) -> None:
         raise RuntimeError(f"ffmpeg 转码失败：{proc.stderr[:300]}")
 
 
-from fastapi import FastAPI, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, UploadFile  # noqa: E402 - 刻意延迟到工具函数之后，便于本文件被当脚本通读
+from fastapi.responses import JSONResponse  # noqa: E402
 
 app = FastAPI(title="local-asr-sidecar", docs_url=None)
 
@@ -93,7 +93,6 @@ async def transcribe(file: UploadFile):
             continue
         # FunASR sentence_info 的时间戳单位是毫秒；产品契约是秒
         start = float(seg.get("start") or 0) / 1000.0
-        end = float(seg.get("end") or 0) / 1000.0 / 1  # noqa: 保持显式
         end = float(seg.get("end") or 0) / 1000.0
         segments.append({"start": start, "end": end,
                          "speaker": seg.get("spk"), "text": text})

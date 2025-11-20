@@ -1,14 +1,12 @@
-from types import SimpleNamespace
-import types
-import unittest
-import unittest.mock
 import shutil
 import subprocess
 import tempfile
+import types
+import unittest
+import unittest.mock
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
-
-from tortoise import Tortoise
 
 from api.meeting_material import MATERIAL_DIR
 from api.transcription import (
@@ -27,11 +25,12 @@ from models import (
     Meeting,
     MeetingMaterial,
     MeetingParticipant,
-    TranscriptSegment,
     TranscriptionTask,
+    TranscriptSegment,
     User,
 )
 from services.transcription_service import execute_transcription, parse_segments, prepare_audio_file
+from tortoise import Tortoise
 
 
 class TranscriptionTest(unittest.IsolatedAsyncioTestCase):
@@ -236,11 +235,11 @@ class DurationPrecheckTest(unittest.TestCase):
 
     def test_overlong_audio_is_rejected_with_readable_message(self):
         import services.transcription_service as svc
-        with unittest.mock.patch.object(
+        with (unittest.mock.patch.object(
                 svc.subprocess, "run",
-                return_value=SimpleNamespace(returncode=0, stdout=b"9000.0\n", stderr=b"")):
-            with self.assertRaises(RuntimeError) as caught:
-                svc.reject_overlong_audio(Path("x.mp3"))
+                return_value=SimpleNamespace(returncode=0, stdout=b"9000.0\n", stderr=b"")),
+              self.assertRaises(RuntimeError) as caught):
+            svc.reject_overlong_audio(Path("x.mp3"))
         self.assertIn("拆分", str(caught.exception))
 
     def test_probe_failure_fails_open(self):
@@ -268,8 +267,9 @@ class HttpEngineTest(unittest.IsolatedAsyncioTestCase):
     """TRANSCRIPTION_ENGINE=http 的适配分支：契约转换、引擎选择、日志模型名。"""
 
     async def test_active_engine_defaults_to_dashscope(self):
-        from services import transcription_service as svc
         import os
+
+        from services import transcription_service as svc
         with unittest.mock.patch.dict("os.environ", {}, clear=False):
             os.environ.pop("TRANSCRIPTION_ENGINE", None)
             self.assertEqual(svc._active_engine(), "dashscope")
@@ -309,15 +309,15 @@ class HttpEngineTest(unittest.IsolatedAsyncioTestCase):
         audio = Path(tempfile.mkstemp(suffix=".mp3")[1])
         audio.write_bytes(b"fake-audio")
         try:
-            with unittest.mock.patch.dict("os.environ", {
+            with (unittest.mock.patch.dict("os.environ", {
                     "TRANSCRIPTION_ENGINE": "http",
-                    "ASR_HTTP_URL": "http://127.0.0.1:9970/transcribe"}):
-                with unittest.mock.patch.object(svc.httpx, "AsyncClient",
-                                                lambda timeout: FakeClient(fake_post)):
-                    with unittest.mock.patch.object(
-                            svc, "create_call_log",
-                            AsyncMock(side_effect=lambda *a, **k: logs.append((a, k)))):
-                        result = await svc.call_transcription_model(task, config, audio)
+                    "ASR_HTTP_URL": "http://127.0.0.1:9970/transcribe"}),
+                  unittest.mock.patch.object(svc.httpx, "AsyncClient",
+                                             lambda timeout: FakeClient(fake_post)),
+                  unittest.mock.patch.object(
+                          svc, "create_call_log",
+                          AsyncMock(side_effect=lambda *a, **k: logs.append((a, k))))):
+                result = await svc.call_transcription_model(task, config, audio)
         finally:
             audio.unlink(missing_ok=True)
 
@@ -335,11 +335,11 @@ class HttpEngineTest(unittest.IsolatedAsyncioTestCase):
         audio = Path(tempfile.mkstemp(suffix=".mp3")[1])
         audio.write_bytes(b"x")
         try:
-            with unittest.mock.patch.dict("os.environ", {
-                    "TRANSCRIPTION_ENGINE": "http", "ASR_HTTP_URL": ""}):
-                with unittest.mock.patch.object(svc, "create_call_log", AsyncMock()):
-                    with self.assertRaises(RuntimeError):
-                        await svc.call_transcription_model(task, config, audio)
+            with (unittest.mock.patch.dict("os.environ", {
+                    "TRANSCRIPTION_ENGINE": "http", "ASR_HTTP_URL": ""}),
+                  unittest.mock.patch.object(svc, "create_call_log", AsyncMock()),
+                  self.assertRaises(RuntimeError)):
+                await svc.call_transcription_model(task, config, audio)
         finally:
             audio.unlink(missing_ok=True)
 

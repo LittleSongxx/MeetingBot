@@ -36,11 +36,12 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 import time
 from pathlib import Path
-from typing import Any, Callable, Iterable, Mapping, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 
 if __package__ in (None, ""):  # allow direct script execution
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -307,10 +308,8 @@ def main(argv: Iterable[str] | None = None) -> int:
     state: dict[str, Any] = {"keypoint_count": args.keypoints, "arms": args.arms.split(","),
                              "records": []}
     if args.output.exists():
-        try:
+        with contextlib.suppress(ValueError):
             state = json.loads(args.output.read_text(encoding="utf-8"))
-        except ValueError:
-            pass
     # **失败的场次不算完成**：只把"清单生成成功"的记录视为已完成，否则一次网络抖动
     # 会让那一场永久留在"已跳过"里（本轮踩到：两场生成超时后再跑全被跳过，白跑一轮）。
     done = {r["case_id"] for r in state["records"] if r.get("keypoints") and not r.get("error")}

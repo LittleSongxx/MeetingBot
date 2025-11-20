@@ -41,10 +41,6 @@ NEW_CONTRACT_EXPECTED_CASES = 26
 VCSUM_ALL_DEV_MANIFEST = EVALUATION_DIR / "benchmarks" / "manifest_all_dev.json"
 
 
-def sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
 # --------------------------------------------------------------------------- #
 # Loading
 # --------------------------------------------------------------------------- #

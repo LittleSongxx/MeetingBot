@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import subprocess
 import sys
@@ -28,7 +29,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parents[1]))
 sys.path.insert(0, str(HERE))
 
-from asr.cer_tool import cer  # type: ignore
+from asr.cer_tool import cer  # type: ignore  # noqa: E402 - 需先注入 sys.path 才能导入本地包
 
 
 class API:
@@ -103,10 +104,8 @@ def mixdown(meeting: str, container: str, mode: str = "avg") -> Path:
         levels = []
         for line in proc.stderr.splitlines():
             if "RMS level dB:" in line:
-                try:
+                with contextlib.suppress(ValueError):
                     levels.append(float(line.split("RMS level dB:")[1].strip()))
-                except ValueError:
-                    pass
         per_channel = levels[:8]
         channel = max(range(len(per_channel)), key=lambda i: per_channel[i]) if per_channel else 0
         audio_args = ["-af", f"pan=mono|c0=c{channel}"]

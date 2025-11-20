@@ -15,10 +15,12 @@ from models import (
     PromptTemplate,
     TranscriptionTask,
 )
+
+from services import contracts
 from services.agent_graph import build_review_graph, recursion_limit, review_passed
 from services.minutes_service import MinutesResult
-from services import contracts
 from services.model_factory import invoke_json
+
 
 def get_transcript_char_limit() -> int:
     """读取审查原文字符预算；此值不是模型的 Token 上下文窗口。"""

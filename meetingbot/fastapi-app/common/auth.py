@@ -1,10 +1,9 @@
 from datetime import datetime, timedelta, timezone
 
 import jwt
-from fastapi import Header
-
 from common import security
 from common.exception_handler import CustomException
+from fastapi import Header
 from models import User
 from settings import JWT_ALGORITHM, JWT_EXPIRE_HOURS, JWT_SECRET
 
@@ -31,9 +30,9 @@ async def get_current_user(token: str | None = Header(default=None)) -> User:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         # 签发时 sub 存的是字符串形式的用户ID，这里转回整数
         user_id = int(payload.get("sub"))
-    except (jwt.InvalidTokenError, TypeError, ValueError):
+    except (jwt.InvalidTokenError, TypeError, ValueError) as error:
         # Token 被篡改、已过期、sub 缺失或不是数字，统一按登录失效处理
-        raise CustomException("登录状态已失效，请重新登录", "401")
+        raise CustomException("登录状态已失效，请重新登录", "401") from error
     # 拿 Token 里的用户ID回查数据库，而不是直接信任 Token 里的其他字段
     user = await User.get_or_none(id=user_id)
     # 账号已被第 2 章删除，或被管理员停用，即使 Token 没过期也不放行

@@ -1331,7 +1331,8 @@ def _load_shared_contract():
     if str(product_root) not in sys.path:
         sys.path.insert(0, str(product_root))
     try:
-        from common import textsim as _textsim, timex as _timex  # type: ignore
+        from common import textsim as _textsim  # type: ignore
+        from common import timex as _timex
     except Exception:
         return None
     return {"textsim": _textsim, "timex": _timex}

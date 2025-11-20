@@ -54,10 +54,12 @@ from typing import Any, Iterable, Mapping
 if __package__ in (None, ""):  # allow script direct execution
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from gate import arms as aa  # type: ignore
-    from lib import corpora as rm, model_client, stats  # type: ignore
+    from lib import corpora as rm  # type: ignore
+    from lib import model_client, stats
 else:
     from gate import arms as aa
-    from lib import corpora as rm, model_client, stats
+    from lib import corpora as rm
+    from lib import model_client, stats
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 DEFAULT_PACKET = RESULTS_DIR / "meeting_level_packet.json"

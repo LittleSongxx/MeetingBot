@@ -92,9 +92,9 @@ def positive_f1(gold: Sequence[int], predicted: Sequence[int]) -> dict[str, Any]
     """Precision, recall and F1 over the positive (action-item) class."""
     if len(gold) != len(predicted):
         raise ValueError("gold and predicted must have equal length")
-    tp = sum(1 for g, p in zip(gold, predicted) if g == 1 and p == 1)
-    fp = sum(1 for g, p in zip(gold, predicted) if g == 0 and p == 1)
-    fn = sum(1 for g, p in zip(gold, predicted) if g == 1 and p == 0)
+    tp = sum(1 for g, p in zip(gold, predicted, strict=False) if g == 1 and p == 1)
+    fp = sum(1 for g, p in zip(gold, predicted, strict=False) if g == 0 and p == 1)
+    fn = sum(1 for g, p in zip(gold, predicted, strict=False) if g == 1 and p == 0)
     precision = tp / (tp + fp) if tp + fp else 0.0
     recall = tp / (tp + fn) if tp + fn else 0.0
     f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
@@ -105,7 +105,7 @@ def positive_f1(gold: Sequence[int], predicted: Sequence[int]) -> dict[str, Any]
         "precision": precision,
         "recall": recall,
         "positive_f1": f1,
-        "accuracy": (tp + sum(1 for g, p in zip(gold, predicted) if g == 0 and p == 0)) / len(gold)
+        "accuracy": (tp + sum(1 for g, p in zip(gold, predicted, strict=False) if g == 0 and p == 0)) / len(gold)
         if gold else None,
     }
 
@@ -119,7 +119,7 @@ def macro_positive_f1(
     per_meeting: list[dict[str, Any]] = []
     pooled_gold: list[int] = []
     pooled_pred: list[int] = []
-    for record, predicted in zip(records, predictions):
+    for record, predicted in zip(records, predictions, strict=False):
         gold = gold_labels(record)
         if not gold:
             continue

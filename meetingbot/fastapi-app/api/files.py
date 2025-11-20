@@ -1,13 +1,12 @@
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, UploadFile
-from starlette.responses import FileResponse
-
 from common.auth import get_current_user
 from common.exception_handler import CustomException
 from common.result import Result
+from fastapi import APIRouter, Depends, File, UploadFile
 from models import User
+from starlette.responses import FileResponse
 
 UPLOAD_DIR = Path(__file__).resolve().parent.parent / "files"
 AVATAR_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}

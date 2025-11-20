@@ -12,10 +12,8 @@ import argparse
 import hashlib
 import json
 import urllib.request
-import os
 from pathlib import Path
 from typing import Any
-
 
 HERE = Path(__file__).resolve().parent
 SOURCE_DIR = HERE / "source" / "vcsum"
@@ -89,7 +87,7 @@ def ensure_test_source(source_dir: Path, fetch: bool = False) -> None:
 def read_jsonl(path: Path) -> dict[str, tuple[dict[str, Any], str]]:
     records: dict[str, tuple[dict[str, Any], str]] = {}
     with path.open("r", encoding="utf-8") as stream:
-        for line_number, line in enumerate(stream, 1):
+        for _line_number, line in enumerate(stream, 1):
             if not line.strip():
                 continue
             row = json.loads(line)
@@ -135,7 +133,7 @@ def serialize_case(
     segments: list[dict[str, Any]] = []
     transcript_lines: list[str] = []
     utterance_count = 0
-    for turn_index, (utterances, speaker_id) in enumerate(zip(turns, speakers), 1):
+    for turn_index, (utterances, speaker_id) in enumerate(zip(turns, speakers, strict=False), 1):
         # The pinned test file has one empty utterance (id 97, turn 10).
         # Keep it in position so the adapted transcript remains source-faithful.
         if not isinstance(utterances, list) or not utterances or not all(
@@ -443,7 +441,7 @@ def serialize_holdout_case(
     segments: list[dict[str, Any]] = []
     transcript_lines: list[str] = []
     utterance_count = 0
-    for turn_index, (utterances, speaker_id) in enumerate(zip(turns, speakers), 1):
+    for turn_index, (utterances, speaker_id) in enumerate(zip(turns, speakers, strict=False), 1):
         if not isinstance(utterances, list) or not utterances or not all(
             isinstance(item, str) for item in utterances
         ) or not any(item.strip() for item in utterances):

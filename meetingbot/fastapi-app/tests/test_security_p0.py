@@ -70,7 +70,7 @@ class DownloadMimeTest(unittest.TestCase):
     def test_avatar_mime_is_always_image_or_octet(self):
         from api import files as files_api
         allowed = files_api.AVATAR_EXTENSIONS
-        for ext in allowed:
+        for _ext in allowed:
             self.assertIn(files_api.UPLOAD_DIR.name, "files")  # sanity
         # 映射表在下载函数内部；此处锁住白名单不含可执行类型
         self.assertNotIn("html", allowed)

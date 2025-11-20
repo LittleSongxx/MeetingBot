@@ -21,12 +21,11 @@ DB 的 status/stage/progress 仍是 UI 与观测的唯一真源，activity 内�
 
 from __future__ import annotations
 
+import contextlib
 import os
-from typing import Any
 
 from temporalio.client import Client
 from temporalio.exceptions import WorkflowAlreadyStartedError
-from temporalio.common import RetryPolicy
 from temporalio.worker import Worker
 
 TEMPORAL_ADDRESS = os.getenv("TEMPORAL_ADDRESS", "temporal:7233")
@@ -85,18 +84,17 @@ async def cancel(kind: str, business_id: int) -> None:
     """请求取消一个任务 workflow（activity 收到 CancelledError 后各服务自行收尾）。"""
     client = await get_client()
     handle = client.get_workflow_handle(workflow_id(kind, business_id))
-    try:
+    # 已完成/不存在的 workflow 取消失败不算错误（与旧字典里没有该任务同义）
+    with contextlib.suppress(Exception):
         await handle.cancel()
-    except Exception:
-        # 已完成/不存在的 workflow 取消失败不算错误（与旧字典里没有该任务同义）
-        pass
 
 
 async def run_worker() -> None:
     """worker 进程入口：注册三类 workflow + 各自的 activity 实现。"""
-    from services import temporal_workflows
-    from tortoise import Tortoise
     from settings import TORTOISE_ORM
+    from tortoise import Tortoise
+
+    from services import temporal_workflows
 
     await Tortoise.init(config=TORTOISE_ORM)
     try:

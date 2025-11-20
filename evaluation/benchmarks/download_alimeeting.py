@@ -9,20 +9,19 @@ The default verify mode is offline and never reads the project .env file.
 from __future__ import annotations
 
 import argparse
-from contextlib import redirect_stderr, redirect_stdout
 import hashlib
-from importlib import metadata
 import io
 import json
 import os
-from pathlib import Path
 import re
 import shutil
 import sys
 import tempfile
-from typing import Any
 import zipfile
-
+from contextlib import redirect_stderr, redirect_stdout
+from importlib import metadata
+from pathlib import Path
+from typing import Any
 
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parents[1]

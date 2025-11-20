@@ -10,16 +10,15 @@ human-reviewed output, not the official AID leaderboard evaluation.
 from __future__ import annotations
 
 import argparse
-from collections import defaultdict
 import csv
 import hashlib
 import json
-from pathlib import Path
 import random
 import re
 import sys
+from collections import defaultdict
+from pathlib import Path
 from typing import Any
-
 
 HERE = Path(__file__).resolve().parent
 PROJECT = HERE.parents[1]
@@ -30,9 +29,10 @@ if str(HERE) not in sys.path:
 
 import alimeeting_review as review  # noqa: E402
 from alimeeting_adapter import (  # noqa: E402
-    DATASET_ID, SOURCE_DIR, load_action_labels,
+    DATASET_ID,
+    SOURCE_DIR,
+    load_action_labels,
 )
-
 
 POSITIVE_ID = re.compile(r"[1-9][0-9]*\Z")
 MIN_BOOTSTRAP_MEETINGS = 10

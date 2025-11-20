@@ -22,8 +22,9 @@ from collections import Counter, defaultdict
 from difflib import SequenceMatcher
 from typing import Any, Mapping, Sequence
 
-from regression import grounding as g
 from lib import stats
+
+from regression import grounding as g
 
 FIELDS = ("summary", "topics", "viewpoints", "decisions", "pending_items", "risks")
 
@@ -126,7 +127,7 @@ def pair_items(field: str, base_items: Sequence[Any], rev_items: Sequence[Any]) 
                 continue
             if _is_match(base_text, rev_text):
                 candidates.append((_similarity(base_text, rev_text)[0], i, j))
-    for score, i, j in sorted(candidates, reverse=True):
+    for _score, i, j in sorted(candidates, reverse=True):
         if i in paired_base or j in used_rev:
             continue
         pairs.append((i, j))
@@ -290,7 +291,7 @@ def transition_report(cases: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "per_case": per_case,
         "per_field": {field: dict(counter) for field, counter in per_field.items()},
         "paired_bootstrap": stats.paired_bootstrap_mean_ci(differences),
-        "examples_for_audit": {k: v for k, v in example_bag.items()},
+        "examples_for_audit": dict(example_bag.items()),
         "pairing_note": (
             f"matched pairs use exact text equality first, then similarity >= "
             f"{g.shared_thresholds()['similarity']:g} "
@@ -699,7 +700,7 @@ def slot_report(cases: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             ),
         },
         "per_case": per_case,
-        "examples_for_audit": {k: v for k, v in examples.items()},
+        "examples_for_audit": dict(examples.items()),
         "interpretation": (
             "Fabrication counts are lexical: an owner or deadline is counted only when a concrete "
             "assertion has no textual trace in the transcript. Explicit unknowns and vague periods "

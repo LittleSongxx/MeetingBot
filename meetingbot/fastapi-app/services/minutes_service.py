@@ -1,14 +1,6 @@
 import asyncio
 import hashlib
 import json
-from pathlib import Path
-
-from common.prompts import render_prompt
-from models import (AiModelConfig, Meeting, MeetingMaterial, MeetingMinutes,
-                    PromptTemplate, TranscriptSegment,
-                    TranscriptionTask, User)
-from services import contracts
-from services.model_factory import invoke_json
 
 # 纪要生成的结果缓存（重试去重）：重试时同一模型 + 同一提示词的调用不再重复付费。
 # 键 = 模型名 + system + 渲染后的 user prompt 的 sha256——提示词、转写内容任何一项
@@ -16,6 +8,23 @@ from services.model_factory import invoke_json
 # 单测进程禁用磁盘缓存：保证测试密闭（同一提示词跨测试运行命中缓存会让
 # "调用次数"类断言失真）；生产进程不受影响。
 import sys as _sys
+from pathlib import Path
+
+from common.prompts import render_prompt
+from models import (
+    AiModelConfig,
+    Meeting,
+    MeetingMaterial,
+    MeetingMinutes,
+    PromptTemplate,
+    TranscriptionTask,
+    TranscriptSegment,
+    User,
+)
+
+from services import contracts
+from services.model_factory import invoke_json
+
 _CACHE_ENABLED = "unittest" not in _sys.modules
 MINUTES_CACHE_DIR = Path(__file__).resolve().parent.parent / "files" / "minutes_cache"
 

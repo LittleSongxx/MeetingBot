@@ -10,20 +10,19 @@
 音视频转写走百炼录音文件识别接口，由 transcription_service 用 httpx 直接调用，不经过这里。
 """
 
-from time import perf_counter
 import asyncio
 import os
 import random
+from time import perf_counter
 from typing import Any, Callable
 from uuid import uuid4
 
 import openai
+from common import providers
+from common.model_json import build_schema_instruction, parse_model_json
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import Runnable
 from langchain_openai import ChatOpenAI
-
-from common import providers
-from common.model_json import build_schema_instruction, parse_model_json
 from models import AiCallLog, AiModelConfig
 
 

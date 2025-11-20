@@ -58,7 +58,8 @@ v3 下 baseline 核心点覆盖 0.781（deepseek 裁判）/ 0.869（qwen 裁判�
 
 ## 三、工程质量
 
-- **测试**：产品 187 项 + 评测 205 项单元测试（零模型调用），CI 可复算。
+- **测试**：产品 193 项（192 通过 + 1 项按环境条件跳过）+ 评测 205 项单元测试（零模型调用）；
+  命令与实跑数字见 `DEPLOYMENT.md`，CI（`.github/workflows/ci.yml`）每次推送重跑并复算。
 - **安全**：bcrypt 密码哈希、JWT 密码指纹（改密即吊销）、服务端 MIME 映射 +
   nosniff、登录限流、统一权限口径（管理员/属主）、多表写事务化。
 - **健壮性**：转写/纪要/自检三类后台任务的中断-恢复-续跑；分块结果缓存
@@ -79,6 +80,6 @@ v3 下 baseline 核心点覆盖 0.781（deepseek 裁判）/ 0.869（qwen 裁判�
 ```bash
 ./scripts/compose.sh up -d          # db + backend + web（http://127.0.0.1:18082）
 make -C evaluation smoke            # 零调用回归：契约不变量/可定位率/可靠性复算
-make -C evaluation test             # 评测侧 190 项单测
+make -C evaluation test             # 评测侧 205 项单测
 # 本地 ASR 侧车（可选引擎）：scripts/moss_asr_server.py + requirements-moss.txt
 ```

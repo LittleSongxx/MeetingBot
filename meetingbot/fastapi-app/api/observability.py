@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends
-
 from common.auth import get_current_user
 from common.result import Result
+from fastapi import APIRouter, Depends
 from models import User
 from services.observability_service import build_observability
 

@@ -79,8 +79,9 @@ uv pip install --python .venv/bin/python -r requirements.txt
 .venv/bin/python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-当前实测：**193 项通过，1 项跳过**（缺 ffmpeg 时的条件跳过；pytest 口径 192 项通过）。
+当前实测：**收集 193 项，192 项通过，1 项条件跳过**（缺 ffmpeg 时跳过；pytest 口径同为 192 passed + 1 skipped）。
 其中 74 项是契约层测试（`tests/test_contracts.py`），只依赖 pydantic、不碰数据库。
+数字以 CI（`.github/workflows/ci.yml` 的 backend 作业）每次实跑为准。
 
 离线指标套件有两种跑法：
 

@@ -14,20 +14,24 @@ import sys
 import tempfile
 import unittest
 import urllib.error
-from unittest import mock
-
 from collections import Counter as _Counter
 from pathlib import Path
+from unittest import mock
 
+from gate import arms as arm_analysis
+from judges import actions as amc_aid
+from judges import completeness, stage_attribution
+from judges import packets as A
+from lib import model_client, stats
 from regression import (
-    analysis, contract_checks, grounding as g, reliability,
+    analysis,
+    contract_checks,
+    reliability,
+)
+from regression import (
+    grounding as g,
 )
 from regression import run as rm
-from judges import actions as amc_aid, completeness, stage_attribution
-from judges import packets as adjudication
-from judges import packets as A
-from gate import arms as arm_analysis
-from lib import model_client, stats
 
 
 def minutes(**overrides):
@@ -768,7 +772,7 @@ class AdjudicationTest(unittest.TestCase):
         proxy_flags = proxy_flags or {}
         items = []
         key = {}
-        for index, (label, stratum) in enumerate(zip(labels, strata), start=1):
+        for index, (label, stratum) in enumerate(zip(labels, strata, strict=False), start=1):
             aid = f"item_{index:03d}"
             items.append({"anonymous_id": aid, "field": "decisions", "item_text": "x",
                           "transcript_window": "y", "label": label, "note": ""})
@@ -1116,9 +1120,8 @@ class NewContractLoaderTest(unittest.TestCase):
             self.assertIn("vcsum_108", message)  # 缺哪一场必须点出来
 
     def test_missing_run_directory_is_rejected(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            with self.assertRaises(FileNotFoundError):
-                rm.load_new_contract_cases(["does-not-exist"], results_root=Path(tmp))
+        with tempfile.TemporaryDirectory() as tmp, self.assertRaises(FileNotFoundError):
+            rm.load_new_contract_cases(["does-not-exist"], results_root=Path(tmp))
 
     def test_all_warns_and_continues_while_explicit_request_fails(self):
         """缺一份产物不能让无关的测量全部停摆，但也不能静默。
@@ -1200,9 +1203,8 @@ class ModelClientTest(unittest.TestCase):
             self.assertEqual(model_client.endpoint()[0], "https://example.test/v1/chat/completions")
 
     def test_missing_credentials_raise_without_touching_the_network(self):
-        with mock.patch.dict("os.environ", {"LLM_API_KEY": "", "DASHSCOPE_API_KEY": ""}, clear=False):
-            with self.assertRaises(model_client.ModelClientError):
-                model_client.endpoint()
+        with mock.patch.dict("os.environ", {"LLM_API_KEY": "", "DASHSCOPE_API_KEY": ""}, clear=False), self.assertRaises(model_client.ModelClientError):
+            model_client.endpoint()
 
     def test_transport_error_never_echoes_the_key(self):
         """任何失败路径都不能把 key 带进异常文本（异常会被写进产物）。"""
@@ -1252,9 +1254,8 @@ class ModelClientTest(unittest.TestCase):
         def fake(host, port, family=0, type=0, proto=0, flags=0):
             return [(_socket.AF_INET6, 1, 6, "", ("2001:2::6d", port, 0, 0))]
 
-        with mock.patch("socket.getaddrinfo", fake):
-            with model_client._restrict_address_family():
-                self.assertEqual(len(_socket.getaddrinfo("h", 443)), 1)
+        with mock.patch("socket.getaddrinfo", fake), model_client._restrict_address_family():
+            self.assertEqual(len(_socket.getaddrinfo("h", 443)), 1)
 
     def test_probe_transport_reports_a_blocked_family_as_diagnosis(self):
         """把「调用很慢」变成可落盘的诊断：哪个族不可达、各花多久。"""
@@ -1302,9 +1303,8 @@ class ModelClientTest(unittest.TestCase):
     def test_a_slow_response_header_is_named_in_the_failure_message(self):
         """等到响应头就超时的话，消息里必须能看出来——否则又会被读成「供应商慢」。"""
         with mock.patch("urllib.request.urlopen",
-                        side_effect=TimeoutError("read operation timed out")):
-            with self.assertRaises(model_client.ModelClientError) as caught:
-                model_client.call_json("https://example.test/v1/chat/completions", "m", "k", "s", "u")
+                        side_effect=TimeoutError("read operation timed out")), self.assertRaises(model_client.ModelClientError) as caught:
+            model_client.call_json("https://example.test/v1/chat/completions", "m", "k", "s", "u")
         self.assertIn("等待响应头已耗时", str(caught.exception))
 
 
@@ -1331,9 +1331,8 @@ class CompletenessTest(unittest.TestCase):
         """清单为空必须报错：静默返回空清单会让"覆盖率高"看起来完美。"""
         with mock.patch.object(model_client, "endpoint", return_value=("u", "m", "k")), \
              mock.patch.object(model_client, "call_json",
-                               return_value=self._fake_reply({"keypoints": []})):
-            with self.assertRaises(model_client.ModelClientError):
-                completeness.generate_keypoints("转写")
+                               return_value=self._fake_reply({"keypoints": []})), self.assertRaises(model_client.ModelClientError):
+            completeness.generate_keypoints("转写")
 
     def test_negation_form_judging_returns_per_keypoint_verdicts(self):
         keypoints = [{"id": 1, "text": "A"}, {"id": 2, "text": "B"}, {"id": 3, "text": "C"}]

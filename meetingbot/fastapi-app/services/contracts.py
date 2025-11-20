@@ -39,9 +39,8 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any, Literal, Mapping, Sequence
 
-from pydantic import BaseModel, Field, model_validator
-
 from common import textsim, timex
+from pydantic import BaseModel, Field, model_validator
 
 CONTRACT_VERSION = 2
 
@@ -802,7 +801,7 @@ def item_json_schema(field_name: str) -> dict:
         else:
             properties[key] = {"type": "string"}
         required.append(key)
-    for slot, kind in SLOT_KINDS.get(field_name, {}).items():
+    for slot, _kind in SLOT_KINDS.get(field_name, {}).items():
         properties[slot] = sourced_value_schema()
         required.append(slot)
     properties["origin"] = {"type": "string", "enum": list(ORIGINS)}

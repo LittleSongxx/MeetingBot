@@ -12,10 +12,9 @@ import csv
 import hashlib
 import json
 import os
-from pathlib import Path
 import re
 import sys
-
+from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 PROJECT = HERE.parents[1]
@@ -25,10 +24,11 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 from alimeeting_adapter import (  # noqa: E402
-    DATASET_ID, SOURCE_DIR, load_cases,
+    DATASET_ID,
+    SOURCE_DIR,
+    load_cases,
 )
 from bench_common import schema_errors  # noqa: E402
-
 
 SENTENCE_FIELDS = ("case_id", "split", "sentence_id", "start_ms", "end_ms", "speaker", "text")
 ITEM_FIELDS = (
@@ -95,7 +95,7 @@ def _checked_inputs(report_path: Path, source_dir: Path) -> tuple[dict, bytes, l
         raise ValueError("Locked manifest is not AliMeeting4MUG source data")
     locked_rows = locked.get("cases")
     locked_ids = _unique_case_ids(locked_rows, label="locked cases", key="id")
-    locked_by_id = dict(zip(locked_ids, locked_rows))
+    locked_by_id = dict(zip(locked_ids, locked_rows, strict=False))
 
     plan = report.get("plan")
     if not isinstance(plan, dict):
@@ -214,7 +214,7 @@ def prepare(
                         "owner_suggestion": item["owner_suggestion"],
                         "deadline_suggestion": item["deadline_suggestion"],
                     }
-                    row.update({field: "" for field in ANNOTATION_FIELDS})
+                    row.update(dict.fromkeys(ANNOTATION_FIELDS, ""))
                     item_rows.append(row)
 
     stage_key = {

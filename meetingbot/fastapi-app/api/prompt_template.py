@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
-
 from common.auth import require_admin
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime
+from fastapi import APIRouter, Depends
 from models import PromptTemplate, User
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/promptTemplate")
 

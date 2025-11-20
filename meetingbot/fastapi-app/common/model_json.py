@@ -1,10 +1,10 @@
 import json
 import re
 
+from langchain_core.output_parsers import JsonOutputParser
+
 # 最近一次解析的抢救诊断，供调用方记录到调用日志
 LAST_SALVAGE: dict = {"repaired": False, "dropped_chars": 0, "attempts": 0}
-
-from langchain_core.output_parsers import JsonOutputParser
 
 
 class SchemaJsonParser(JsonOutputParser):

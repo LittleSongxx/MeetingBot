@@ -1,5 +1,6 @@
-from models import AiModelConfig, Meeting, MeetingParticipant, PromptTemplate, TranscriptSegment, User
 from common.prompts import render_prompt
+from models import AiModelConfig, Meeting, MeetingParticipant, PromptTemplate, TranscriptSegment, User
+
 from services.model_factory import invoke_json
 
 # 说话人证据采样：按标签分组节选，而不是截取整段转写的前 N 条。

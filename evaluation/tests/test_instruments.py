@@ -5,13 +5,11 @@
 
 from __future__ import annotations
 
-import json
 import unittest
 
 from gold import annotation
 from judges import completeness
 from lib import model_client
-
 
 if __name__ == "__main__":
     unittest.main()
@@ -89,8 +87,8 @@ class ProviderRegistryTest(unittest.TestCase):
 
         该逻辑原由 glm（智谱 /api/paas/v4 基地址）引入，注册项移除后用注入的
         假 spec 锁住，防止未来接入新族时回归成 /v4/v1/chat/completions。"""
-        from unittest import mock
         import os
+        from unittest import mock
         fake = {"base_env": "FAKE_BASE", "model_env": "FAKE_MODEL",
                 "key_env": "FAKE_KEY", "fallback_key_env": "",
                 "base_default": "https://example.com/api/paas/v4",

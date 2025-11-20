@@ -22,7 +22,7 @@ make smoke   # L0 零调用回归：契约不变量、可定位率、可靠性�
 make deep    # L1 深度评测：抽样 + 裁判判读（judges/，里程碑时跑，需授权调用）
 make gate    # L2 变更门禁：留出集双臂 A/B + 内容盲判（产品改动合并前置）
 make gold    # 金标与裁判校准：标注包构建 / 裁判跨族校准（防"无锚点裁判"）
-make test    # 评测代码自身单测（190 项，零调用）
+make test    # 评测代码自身单测（205 项，零调用；数字由 CI 实跑）
 ```
 
 判定标准（什么算"有依据"）：`meetingbot/fastapi-app/JUDGMENT_STANDARD.md`

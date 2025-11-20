@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel, ConfigDict
-
 from common.auth import require_admin
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime
+from fastapi import APIRouter, Depends
 from models import AgentRun, AiModelConfig, MeetingMinutes, TranscriptionTask, User
+from pydantic import BaseModel, ConfigDict
 
 router = APIRouter(prefix="/aiModel")
 

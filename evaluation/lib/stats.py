@@ -151,7 +151,7 @@ def family_report(comparisons: Sequence[tuple[str, float | None]]) -> dict[str, 
     rows = [
         {"label": label, "p_raw": p, "p_holm": adj,
          "reject_at_0_05_holm": (adj is not None and adj < 0.05)}
-        for label, (_, p), adj in zip(labels, comparisons, adjusted)
+        for label, (_, p), adj in zip(labels, comparisons, adjusted, strict=False)
     ]
     return {
         "n_tests": sum(1 for _, p in comparisons if p is not None),
@@ -243,7 +243,7 @@ def spearman_rho(x: Sequence[float], y: Sequence[float]) -> float | None:
     rx, ry = _ranks(x), _ranks(y)
     n = len(rx)
     mx, my = sum(rx) / n, sum(ry) / n
-    numerator = sum((a - mx) * (b - my) for a, b in zip(rx, ry))
+    numerator = sum((a - mx) * (b - my) for a, b in zip(rx, ry, strict=False))
     dx = math.sqrt(sum((a - mx) ** 2 for a in rx))
     dy = math.sqrt(sum((b - my) ** 2 for b in ry))
     if dx == 0 or dy == 0:
@@ -331,8 +331,8 @@ def _wilcoxon_core(
 ) -> dict[str, object]:
     magnitudes = [abs(d) for d in nonzero]
     ranks = _ranks(magnitudes)
-    w_plus = sum(rank for rank, d in zip(ranks, nonzero) if d > 0)
-    w_minus = sum(rank for rank, d in zip(ranks, nonzero) if d < 0)
+    w_plus = sum(rank for rank, d in zip(ranks, nonzero, strict=False) if d > 0)
+    w_minus = sum(rank for rank, d in zip(ranks, nonzero, strict=False) if d < 0)
     statistic = min(w_plus, w_minus)
     n = len(nonzero)
     if n <= exact_max_n:
@@ -340,7 +340,7 @@ def _wilcoxon_core(
 
         counts: dict[float, int] = {}
         for signs in product((1, -1), repeat=n):
-            value = sum(rank for rank, sign in zip(ranks, signs) if sign > 0)
+            value = sum(rank for rank, sign in zip(ranks, signs, strict=False) if sign > 0)
             low = min(value, sum(ranks) - value)
             counts[low] = counts.get(low, 0) + 1
         hits = sum(count for value, count in counts.items() if value <= statistic)
@@ -397,11 +397,11 @@ def _wilcoxon_pratt(values_all: list[float], exact_max_n: int) -> dict[str, obje
     """
     magnitudes_all = [abs(d) for d in values_all]
     ranks_all = _ranks(magnitudes_all)
-    pairs = [(rank, d) for rank, d in zip(ranks_all, values_all) if d != 0]
+    pairs = [(rank, d) for rank, d in zip(ranks_all, values_all, strict=False) if d != 0]
     ranks = [rank for rank, _ in pairs]
     signs = [1 if d > 0 else -1 for _, d in pairs]
-    w_plus = sum(rank for rank, s in zip(ranks, signs) if s > 0)
-    w_minus = sum(rank for rank, s in zip(ranks, signs) if s < 0)
+    w_plus = sum(rank for rank, s in zip(ranks, signs, strict=False) if s > 0)
+    w_minus = sum(rank for rank, s in zip(ranks, signs, strict=False) if s < 0)
     statistic = min(w_plus, w_minus)
     n = len(ranks)
     if n == 0:
@@ -412,7 +412,7 @@ def _wilcoxon_pratt(values_all: list[float], exact_max_n: int) -> dict[str, obje
         total = sum(ranks)
         hits = 0
         for combo in product((1, -1), repeat=n):
-            value = sum(rank for rank, s in zip(ranks, combo) if s > 0)
+            value = sum(rank for rank, s in zip(ranks, combo, strict=False) if s > 0)
             if min(value, total - value) <= statistic:
                 hits += 1
         p_value = min(1.0, hits / (2 ** n))

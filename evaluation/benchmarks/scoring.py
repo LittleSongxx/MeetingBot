@@ -10,16 +10,15 @@ directly comparable with published word-segmented ROUGE scores.
 from __future__ import annotations
 
 import argparse
-from collections import Counter
 import hashlib
 import json
 import math
-from pathlib import Path
 import random
 import re
 import unicodedata
+from collections import Counter
+from pathlib import Path
 from typing import Any, Mapping, Sequence
-
 
 METRICS = ("rouge_1", "rouge_2", "rouge_l")
 SUPPORTED_VCSUM_SPLITS = {"vcsum_long_dev": "dev", "vcsum_long_test_repo26": "test"}
@@ -222,9 +221,9 @@ def score_records(records: Sequence[Mapping[str, Any]], references: Mapping[str,
 
 def _load_records(path: Path, *, manifest_sha256: str | None = None) -> list[dict[str, Any]]:
     payload = json.loads(path.read_text(encoding="utf-8"))
-    if isinstance(payload, dict) and payload.get("manifest_sha256") is not None:
-        if payload["manifest_sha256"] != manifest_sha256:
-            raise ValueError("result report manifest_sha256 differs from the supplied manifest")
+    if (isinstance(payload, dict) and payload.get("manifest_sha256") is not None
+            and payload["manifest_sha256"] != manifest_sha256):
+        raise ValueError("result report manifest_sha256 differs from the supplied manifest")
     records = payload.get("records") if isinstance(payload, dict) else payload
     if not isinstance(records, list):
         raise ValueError("result JSON must be a list or contain a records list")

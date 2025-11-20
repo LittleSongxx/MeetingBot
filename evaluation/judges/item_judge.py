@@ -33,19 +33,20 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, Callable, Iterable, Mapping, Sequence
+from typing import Any, Callable, Iterable, Mapping
 
 if __package__ in (None, ""):  # allow direct script execution
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from judges import packets as adjudication  # type: ignore
     from lib import model_client  # type: ignore
+
+    from judges import packets as adjudication  # type: ignore
 else:
-    from judges import packets as adjudication
     from lib import model_client
+
+    from judges import packets as adjudication
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 

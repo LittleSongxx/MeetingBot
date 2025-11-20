@@ -1,11 +1,10 @@
 import unittest
 from datetime import datetime, timedelta, timezone
 
-from tortoise import Tortoise
-
 from api.user import has_business_reference, validate_user_delete
 from common.exception_handler import CustomException
 from models import AgentRun, Meeting, User
+from tortoise import Tortoise
 
 
 class UserIntegrityTest(unittest.IsolatedAsyncioTestCase):

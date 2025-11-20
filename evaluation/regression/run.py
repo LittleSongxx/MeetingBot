@@ -16,7 +16,6 @@ explicitly authorised runs already produced.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from pathlib import Path
@@ -26,10 +25,12 @@ if __package__ in (None, ""):  # allow direct script execution
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from judges import actions as amc_aid  # type: ignore
     from lib import corpora, stats  # type: ignore
+
     from regression import analysis, contract_checks, grounding, reliability  # type: ignore
 else:
     from judges import actions as amc_aid
     from lib import corpora, stats
+
     from regression import analysis, contract_checks, grounding, reliability
 
 # 兼容再导出：历史代码与测试通过本模块访问装载器
@@ -120,7 +121,7 @@ def summarize_grounding(cases: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
                     bucket[f"{side}_checkable"] += result["checkable_count"]
                     bucket[f"{side}_unsupported"] += len(result["unsupported_atoms"])
 
-    for kind, bucket in by_kind.items():
+    for _kind, bucket in by_kind.items():
         bucket["baseline_rate"] = (
             bucket["baseline_unsupported"] / bucket["baseline_checkable"]
             if bucket["baseline_checkable"] else None
@@ -180,8 +181,8 @@ def summarize_grounding(cases: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         coverage_means[side] = sum(values) / len(values) if values else None
 
 
-    meetings_improved = sum(1 for a, b in zip(after_atoms, before_atoms) if a < b)
-    meetings_worsened = sum(1 for a, b in zip(after_atoms, before_atoms) if a > b)
+    meetings_improved = sum(1 for a, b in zip(after_atoms, before_atoms, strict=False) if a < b)
+    meetings_worsened = sum(1 for a, b in zip(after_atoms, before_atoms, strict=False) if a > b)
 
     # Length sensitivity: does the lexical flag rate rise with transcript length?
     # This is the free test of the truncation hypothesis. It cannot establish
@@ -190,7 +191,7 @@ def summarize_grounding(cases: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     lengths: list[float] = []
     baseline_rates: list[float] = []
     revised_rates: list[float] = []
-    for case, row in zip(cases, rows):
+    for case, row in zip(cases, rows, strict=False):
         length = float(len(case.get("transcript") or ""))
         base_checkable = int(row["baseline"]["checkable_atoms"])
         rev_checkable = int(row["revised"]["checkable_atoms"])
@@ -236,7 +237,7 @@ def summarize_grounding(cases: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             "unchanged": len(rows) - meetings_improved - meetings_worsened,
             "sign_test": stats.mcnemar_exact(meetings_worsened, meetings_improved),
             "paired_bootstrap_flagged_items": stats.paired_bootstrap_mean_ci(
-                [a - b for a, b in zip(after_items, before_items)]
+                [a - b for a, b in zip(after_items, before_items, strict=False)]
             ),
         },
         "per_field": per_field,

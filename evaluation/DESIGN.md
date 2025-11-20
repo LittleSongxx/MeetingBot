@@ -82,7 +82,7 @@ evaluation/
     scoring.py / bench_common.py（分块估算唯一实现、六字段独立校验）
     alimeeting_review.py / alimeeting_annotation_score.py（轴4 人工标注流水线）
   results/       判定证据（选择性跟踪：只留 LEDGER 引用到的产物）
-  tests/         评测代码自身单测（190 项，零调用，cd evaluation && unittest discover）
+  tests/         评测代码自身单测（205 项，零调用，cd evaluation && unittest discover）
 ```
 
 **为什么是这五个抽象**（调研结论：这五个是必要的，registry/插件/沙箱/托管

@@ -7,13 +7,13 @@ No previous evaluation allowance authorizes a new live run. Live requires both
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timedelta, timezone
 import hashlib
 import json
-from pathlib import Path
 import re
 import subprocess
 import sys
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from uuid import uuid4
 
 HERE = Path(__file__).resolve().parent
@@ -22,8 +22,14 @@ if str(PROJECT) not in sys.path:
     sys.path.insert(0, str(PROJECT))
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
-from bench_common import (api_request, credentials, estimated_generation_calls,
-                                 normalized_segments, schema_errors, write_json)
+from bench_common import (  # noqa: E402 - 需先注入 sys.path 才能导入同目录模块
+    api_request,
+    credentials,
+    estimated_generation_calls,
+    normalized_segments,
+    schema_errors,
+    write_json,
+)
 
 # 授权上限的护栏值（防失控），**不是**预算审批——审批由 --authorized-llm-calls 承担。
 #
@@ -428,7 +434,7 @@ def run_live(args: argparse.Namespace, manifest: dict, cases: list[dict], manife
         user, preflight = authenticate_and_preflight(args, plan["agent_context_limit_chars"])
         report["preflight"] = preflight
         write_json(report_path, report)
-        for case, reservation in zip(cases, plan["cases"]):
+        for case, reservation in zip(cases, plan["cases"], strict=False):
             report["reserved_llm_calls"] += reservation["reserved_calls"]
             if report["reserved_llm_calls"] > args.authorized_llm_calls:
                 raise RuntimeError("Call reservation invariant violated")
