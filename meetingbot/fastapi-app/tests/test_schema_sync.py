@@ -198,3 +198,97 @@ class SchemaSyncTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# --------------------------------------------------------------------------- #
+# 演示数据的 INSERT 与表列数：位置化 INSERT 一旦对不上，**整份种子数据都不入库**
+#
+# 这组检查来自一次真实事故：给 `ai_call_log` 加了两列、改了 models.py 与 schema.sql，
+# 但 `db/02-seed.sql` 里的 `INSERT INTO ai_call_log VALUES (...)` 是**位置化**的，
+# 值个数没跟上。空库初始化时条 32 直接报 `Column count doesn't match value count`，
+# 于是演示数据一条都没进去——而漂移测试当时只比对"模型 ↔ schema.sql"，看不见这一处。
+# --------------------------------------------------------------------------- #
+
+SEED_PATH = SCHEMA_PATH.parent / "02-seed.sql"
+
+
+def _split_insert_values(statement: str) -> list[str]:
+    """按顶层逗号切开 `VALUES (...)` 的值列表。
+
+    必须正确处理单引号字符串（含 `\'` 转义）与 JSON 里成对的嵌套括号，
+    否则一个含逗号的字符串就会把计数带偏。
+    """
+    start = statement.index("VALUES") + len("VALUES")
+    body = statement[start:].strip()
+    assert body.startswith("("), body[:40]
+    depth = 0
+    values: list[str] = []
+    current: list[str] = []
+    in_string = False
+    escaped = False
+    for char in body[1:]:
+        if in_string:
+            current.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == "'":
+                in_string = False
+            continue
+        if char == "'":
+            in_string = True
+            current.append(char)
+        elif char == "(":
+            depth += 1
+            current.append(char)
+        elif char == ")":
+            if depth == 0:
+                values.append("".join(current).strip())
+                return values
+            depth -= 1
+            current.append(char)
+        elif char == "," and depth == 0:
+            values.append("".join(current).strip())
+            current = []
+        else:
+            current.append(char)
+    raise AssertionError("种子里有未闭合的括号")
+
+
+class SeedInsertArityTest(unittest.TestCase):
+    """演示数据的每个位置化 INSERT，值个数必须等于该表的列数。"""
+
+    def _column_counts(self) -> dict[str, int]:
+        schema = _parse_schema(SCHEMA_PATH)
+        return {table: len(columns) for table, columns in schema.items()}
+
+    def _inserts(self) -> list[tuple[int, str, int]]:
+        counts = self._column_counts()
+        rows: list[tuple[int, str, int]] = []
+        text = SEED_PATH.read_text(encoding="utf-8")
+        for number, line in enumerate(text.splitlines(), start=1):
+            match = re.match(r"INSERT INTO `([A-Za-z0-9_]+)` VALUES \(", line)
+            if not match:
+                continue
+            table = match.group(1)
+            if table not in counts:
+                continue
+            rows.append((number, table, len(_split_insert_values(line))))
+        return rows
+
+    def test_seed_inserts_match_the_declared_columns(self):
+        expected = self._column_counts()
+        offenders = [
+            f"第 {number} 行 {table}: 值 {actual} 个，表 {expected[table]} 列"
+            for number, table, actual in self._inserts()
+            if actual != expected[table]
+        ]
+        self.assertEqual(offenders, [], "演示数据的位置化 INSERT 与表结构不一致：" +
+                         "、".join(offenders))
+
+    def test_seed_covers_every_table_that_has_rows(self):
+        """有数据的表必须在种子里出现（防止"加了表忘了放演示数据"）。"""
+        tables = {table for _, table, _ in self._inserts()}
+        self.assertIn("ai_call_log", tables)
+        self.assertIn("prompt_template", tables)
