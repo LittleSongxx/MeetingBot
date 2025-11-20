@@ -513,6 +513,11 @@ async def execute_transcription(task_id: int):
                 error_message=None,
                 finished_at=now(),
             )
+            # 转写成功即入知识库（RAW 权威级）：索引失败不影响转写结果，
+            # 所以走"尽力而为"的后台排程，见 kb_service.schedule_kb_index_in_background
+            from services import kb_service
+            kb_service.schedule_kb_index_in_background(
+                kb_service.SOURCE_TRANSCRIPT, task.id, task.meeting_id, task.initiator_id)
     except Exception as error:
         # 任何一步失败都把任务标成 FAILED 并记下原因，页面上出现“重试”按钮
         await TranscriptionTask.filter(id=task.id).update(

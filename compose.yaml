@@ -33,6 +33,8 @@ services:
       MYSQL_PORT: "3306"
       SQL_ECHO: "false"
       TZ: Asia/Shanghai
+      # 向量库：容器间走内部网络，不暴露到宿主
+      QDRANT_URL: http://qdrant:6333
       # JWT 密钥必须显式提供（settings.py 已 fail-fast，这里再拦一道部署层）
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (openssl rand -hex 32)}
       CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-*}
@@ -46,6 +48,8 @@ services:
       db:
         condition: service_healthy
       temporal:
+        condition: service_healthy
+      qdrant:
         condition: service_healthy
     # 让容器能用 host.docker.internal 访问宿主机上的本地 ASR 侧车
     #（TRANSCRIPTION_ENGINE=http 时才需要；默认 dashscope 不受影响）
@@ -71,6 +75,21 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+
+  # 向量检索底座：MySQL 8.4 没有向量类型、Community 9.x 也缺 ANN 索引，
+  # 而知识库既要按会议过滤、又要混合检索（dense + sparse 由它做服务端 RRF 融合）。
+  qdrant:
+    image: qdrant/qdrant:v1.15.4
+    restart: unless-stopped
+    # 不映射宿主端口：只有 backend 与 worker 用它，内部网络足够
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
   temporal:
     image: temporalio/auto-setup:1.28.1
@@ -112,6 +131,7 @@ services:
       TZ: Asia/Shanghai
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (openssl rand -hex 32)}
       TEMPORAL_ADDRESS: temporal:7233
+      QDRANT_URL: http://qdrant:6333
       CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-*}
     volumes:
       - ./meetingbot/fastapi-app/files:/app/files
@@ -121,7 +141,11 @@ services:
         condition: service_healthy
       temporal:
         condition: service_healthy
+      qdrant:
+        condition: service_healthy
 
 
 volumes:
   mysql_data:
+  # 向量索引体积小（切片级），但丢了要重嵌花钱，所以单独持久化
+  qdrant_data:

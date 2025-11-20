@@ -38,6 +38,10 @@ async def main():
         specs = [
             ("TRANSCRIPTION", asr_key, "DASHSCOPE", os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/api/v1").rstrip("/"), os.getenv("ASR_MODEL", "qwen-audio-3.1-asr-flash-filetrans"), int(os.getenv("ASR_TIMEOUT_SECONDS", "600"))),
             *[(kind, llm_key, "OPENAI_COMPATIBLE", llm_url, os.getenv(kind + "_MODEL") or llm_model, int(os.getenv("LLM_TIMEOUT_SECONDS", "300"))) for kind in ("MINUTES", "AGENT", "SPEAKER")],
+            # 嵌入走同一套 OpenAI 兼容端点（百炼 compatible-mode 提供 /embeddings）。
+            # 单独一条配置：换嵌入模型要重建知识库，所以它必须能独立于对话模型切换。
+            ("EMBEDDING", llm_key, "OPENAI_COMPATIBLE", llm_url,
+             os.getenv("EMBEDDING_MODEL", "text-embedding-v4"), int(os.getenv("EMBEDDING_TIMEOUT_SECONDS", "120"))),
         ]
         configured = []
         for kind, key, provider, base_url, model, timeout in specs:

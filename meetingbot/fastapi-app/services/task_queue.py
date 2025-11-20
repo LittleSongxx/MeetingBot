@@ -39,6 +39,8 @@ _client: Client | None = None
 KIND_TRANSCRIPTION = "transcription"
 KIND_MINUTES = "minutes"
 KIND_AGENT_RUN = "agent-run"
+# 知识库索引：转写成功 / 纪要确认后自动入队（见 kb_service 的幂等说明）
+KIND_KB_INDEX = "kb-index"
 
 
 async def get_client() -> Client:

@@ -41,6 +41,20 @@ class MinutesWorkflow:
 
 
 @workflow.defn
+class KbIndexWorkflow:
+    """知识库索引：切片 + 嵌入可能调很多次模型，给足超时。"""
+
+    @workflow.run
+    async def run(self, kb_task_id: int) -> None:
+        await workflow.execute_activity(
+            "run_kb_index",
+            args=[kb_task_id],
+            start_to_close_timeout=timedelta(hours=1),
+            retry_policy=_retry_policy(),
+        )
+
+
+@workflow.defn
 class AgentRunWorkflow:
     @workflow.run
     async def run(self, run_id: int) -> None:
@@ -83,6 +97,12 @@ async def run_minutes(minutes_id: int) -> None:
 
 
 @activity.defn
+async def run_kb_index(kb_task_id: int) -> None:
+    from services.kb_service import execute_kb_index
+    await execute_kb_index(kb_task_id)
+
+
+@activity.defn
 async def run_agent(run_id: int) -> None:
     from services.agent_service import execute_agent_run
     await execute_agent_run(run_id)
@@ -92,8 +112,9 @@ WORKFLOW_BY_KIND = {
     task_queue.KIND_TRANSCRIPTION: TranscriptionWorkflow,
     task_queue.KIND_MINUTES: MinutesWorkflow,
     task_queue.KIND_AGENT_RUN: AgentRunWorkflow,
+    task_queue.KIND_KB_INDEX: KbIndexWorkflow,
 }
 
 
 def all_activities() -> list:
-    return [run_transcription, run_minutes, run_agent]
+    return [run_transcription, run_minutes, run_agent, run_kb_index]
