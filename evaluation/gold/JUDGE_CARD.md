@@ -10,7 +10,7 @@
 | 裁判模型 | `qwen3.8-max-0902`（DashScope，compatible-mode 端点） |
 | 裁判角色 | 条目级忠实度四分类（S/D/X/C）、支撑复核、完整性关键点判定、会议级判读、内容级臂间盲判 |
 | 采样参数 | temperature=0；thinking=**OFF**（主配置） |
-| 提示词 | 冻结于 `ai_meeting/fastapi-app/JUDGMENT_STANDARD.md`（S/D/X/C + D1–D5 具名操作）；实现见 `judges/item_judge.py`（SYSTEM_PROMPT） |
+| 提示词 | 冻结于 `meetingbot/fastapi-app/JUDGMENT_STANDARD.md`（S/D/X/C + D1–D5 具名操作）；实现见 `judges/item_judge.py`（SYSTEM_PROMPT） |
 | 访问日期 | 2026-09-25 起持续使用；模型为托管服务，供应商侧更新不在我们控制内——**引用历史数字时注明"截至 2026-09"** |
 | 与被测的关系 | 被测主模型为 deepseek-flash（不同族）；机制 ① 开启时审查者同为 qwen——**该配置下"审查质量"类读数存在同族闭环风险** |
 

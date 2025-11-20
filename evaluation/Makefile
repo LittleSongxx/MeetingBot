@@ -1,5 +1,5 @@
-# AIMeeting 评测入口（四层，见 README.md 的评测宪法）
-PY ?= ../ai_meeting/fastapi-app/.venv/bin/python
+# MeetingBot 评测入口（四层，见 README.md 的评测宪法）
+PY ?= ../meetingbot/fastapi-app/.venv/bin/python
 
 .PHONY: smoke deep gate gold test
 

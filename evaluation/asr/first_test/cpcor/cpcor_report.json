@@ -2,7 +2,7 @@
   "meetings": [
     {
       "session": "R8001_M8004",
-      "task": "/home/song/code/Agent/media_agent/AIMeeting/evaluation/asr/first_test/task_R8001_M8004.json",
+      "task": "/home/song/code/Agent/media_agent/MeetingBot/evaluation/asr/first_test/task_R8001_M8004.json",
       "ref_speakers": 4,
       "hyp_speakers": 8,
       "cpcor": 0.7042,
@@ -17,7 +17,7 @@
     },
     {
       "session": "R8003_M8001",
-      "task": "/home/song/code/Agent/media_agent/AIMeeting/evaluation/asr/first_test/task_R8003_M8001.json",
+      "task": "/home/song/code/Agent/media_agent/MeetingBot/evaluation/asr/first_test/task_R8003_M8001.json",
       "ref_speakers": 4,
       "hyp_speakers": 8,
       "cpcor": 0.9142,
@@ -32,7 +32,7 @@
     },
     {
       "session": "R8007_M8010",
-      "task": "/home/song/code/Agent/media_agent/AIMeeting/evaluation/asr/first_test/task_R8007_M8010.json",
+      "task": "/home/song/code/Agent/media_agent/MeetingBot/evaluation/asr/first_test/task_R8007_M8010.json",
       "ref_speakers": 4,
       "hyp_speakers": 8,
       "cpcor": 0.9234,

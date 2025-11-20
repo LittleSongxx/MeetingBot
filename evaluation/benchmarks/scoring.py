@@ -1,6 +1,6 @@
 """Offline, paired VCSum summary-overlap diagnostics.
 
-This module never calls a model. It compares only AIMeeting's ``summary`` field
+This module never calls a model. It compares only MeetingBot's ``summary`` field
 with VCSum's overall meeting summary; the other five minutes fields do not have
 matching VCSum overall-summary references. Character-level ROUGE scores are
 reproducible within this module, but do not measure factuality and are not
@@ -127,7 +127,7 @@ def _aggregate_telemetry(cases: list[dict[str, Any]]) -> dict[str, dict[str, int
 
 
 def score_records(records: Sequence[Mapping[str, Any]], references: Mapping[str, str]) -> dict[str, Any]:
-    """Score complete, paired AIMeeting records against VCSum overall summaries.
+    """Score complete, paired MeetingBot records against VCSum overall summaries.
 
     ``records`` use the existing evaluator shape: ``case_id``, ``status``,
     ``baseline.output.summary``, ``revised.output.summary`` and optional
@@ -206,7 +206,7 @@ def score_records(records: Sequence[Mapping[str, Any]], references: Mapping[str,
         "benchmark": "VCSum overall meeting summary",
         "metric": "character-level ROUGE diagnostic",
         "protocol": METRIC_METHOD,
-        "output_projection": "AIMeeting minutes.output.summary -> VCSum summary",
+        "output_projection": "MeetingBot minutes.output.summary -> VCSum summary",
         "interpretation": INTERPRETATION,
         "reference_case_count": len(references),
         "result_case_count": len(records),
@@ -322,7 +322,7 @@ def format_summary_markdown(report: Mapping[str, Any]) -> str:
         lines.extend(("", f"已出现结果的 Token 合计：{item['sum']:,.0f}（{item['observed_case_count']} 场有记录，包含失败样例）。"))
     lines.extend((
         "",
-        "说明：这里只比较 AIMeeting `summary` 与 VCSum 官方整体摘要的文字重叠。字符级 ROUGE "
+        "说明：这里只比较 MeetingBot `summary` 与 VCSum 官方整体摘要的文字重叠。字符级 ROUGE "
         "与论文可能采用的分词评分口径不同，不能直接对照论文分数；公开参考摘要没有负责人、期限或人工采纳的逐项金标。"
         "需要依据原始转写进行人工盲审，才能评估这些事实与业务指标。",
         "",
@@ -331,7 +331,7 @@ def format_summary_markdown(report: Mapping[str, Any]) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Score AIMeeting results against VCSum summaries without model calls")
+    parser = argparse.ArgumentParser(description="Score MeetingBot results against VCSum summaries without model calls")
     parser.add_argument("--manifest", type=Path, required=True, help="locked VCSum manifest with official references")
     parser.add_argument("--results", type=Path, required=True, help="completed public benchmark result JSON")
     parser.add_argument("--output", type=Path, required=True, help="destination score JSON")

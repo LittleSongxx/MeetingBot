@@ -177,7 +177,7 @@ def _thinking_extra_body(base_url: str, enabled: bool) -> dict[str, Any] | None:
     import sys as _sys
     from pathlib import Path as _Path
 
-    product_root = _Path(__file__).resolve().parents[2] / "ai_meeting" / "fastapi-app"
+    product_root = _Path(__file__).resolve().parents[2] / "meetingbot" / "fastapi-app"
     if (product_root / "common" / "providers.py").exists():
         if str(product_root) not in _sys.path:
             _sys.path.insert(0, str(product_root))

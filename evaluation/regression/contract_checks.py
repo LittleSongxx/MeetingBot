@@ -5,7 +5,7 @@
 读已存的初稿/自检稿与转写，输出逐不变量、逐版本的计数。
 
 前置条件与 `grounding.shared_contract` 相同的模式：产品目录可用时直接调用契约层
-（需要 pydantic，因此要用 `ai_meeting/fastapi-app/.venv` 运行）；不可用时**明确标注
+（需要 pydantic，因此要用 `meetingbot/fastapi-app/.venv` 运行）；不可用时**明确标注
 不可用**，而不是退回一份本地近似实现——契约判定没有"近似版"，近似就是另一套规则。
 
 一条重要的测量限制写在 `RETRO_MEASUREMENT` 里：证据类不变量**无法在旧数据上回溯
@@ -22,7 +22,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 from lib import stats
 
-PRODUCT_ROOT = Path(__file__).resolve().parents[2] / "ai_meeting" / "fastapi-app"
+PRODUCT_ROOT = Path(__file__).resolve().parents[2] / "meetingbot" / "fastapi-app"
 
 RETRO_MEASUREMENT = {
     "possible_on_legacy_data": (
@@ -395,7 +395,7 @@ def build_report(
             "data_contract": data_contract,
             "reason": (
                 "无法载入产品契约层。契约判定没有近似实现，因此这里不提供替代数字。"
-                "请用 ai_meeting/fastapi-app/.venv/bin/python 运行本套件。"
+                "请用 meetingbot/fastapi-app/.venv/bin/python 运行本套件。"
             ),
             "limits": RETRO_MEASUREMENT,
         }

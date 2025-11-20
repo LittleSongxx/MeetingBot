@@ -27,7 +27,7 @@ import zipfile
 HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = HERE.parents[1]
 SOURCE_DIR = HERE / "source" / "alimeeting4mug"
-ENV_FILE = PROJECT_ROOT / "ai_meeting" / "fastapi-app" / ".env"
+ENV_FILE = PROJECT_ROOT / "meetingbot" / "fastapi-app" / ".env"
 DATASET_ID = "modelscope/Alimeeting4MUG"
 DATASET_NAME = "Alimeeting4MUG"
 NAMESPACE = "modelscope"

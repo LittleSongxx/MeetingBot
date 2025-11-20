@@ -145,7 +145,7 @@ def serialize_case(
         speaker = f"发言人{speaker_id}"
         text = "\n".join(utterances)
         # VCSum has no utterance timestamps. These indices preserve ordering
-        # for AIMeeting's required segment schema, not elapsed meeting time.
+        # for MeetingBot's required segment schema, not elapsed meeting time.
         segments.append(
             {
                 "start_ms": (turn_index - 1) * 1000,

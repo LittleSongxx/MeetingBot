@@ -1,4 +1,4 @@
-# AliMeeting4MUG：AIMeeting 行动事项评测协议
+# AliMeeting4MUG：MeetingBot 行动事项评测协议
 
 本协议在查看模型输出前固定口径。数据集为 ModelScope `modelscope/Alimeeting4MUG` 的 `default.validation`（65 场）和带标签的 `default.test` / `except_TS_test1.zip`（82 场）；源文件 SHA-256 见 `source/alimeeting4mug/source-manifest.json`。test1 是公开的第一阶段带标签测试集，不等于不可见的最终挑战榜单。
 

@@ -1,4 +1,4 @@
--- AIMeeting 索引补齐（2026-09-27 审计：列表页与观测页核心过滤列全表扫描）
+-- MeetingBot 索引补齐（2026-09-27 审计：列表页与观测页核心过滤列全表扫描）
 -- 幂等：MySQL 8 支持 CREATE INDEX IF NOT EXISTS？不支持——用存储过程式判存。
 -- 直接逐条执行即可；重复执行会报 Duplicate key name，忽略即可。
 
