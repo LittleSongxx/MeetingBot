@@ -90,6 +90,6 @@ v3 下 baseline 核心点覆盖 0.781（deepseek 裁判）/ 0.869（qwen 裁判�
 ```bash
 ./scripts/compose.sh up -d          # db + backend + web（http://127.0.0.1:18082）
 make -C evaluation smoke            # 零调用回归：契约不变量/可定位率/可靠性复算
-make -C evaluation test             # 评测侧 205 项单测
+make -C evaluation test             # 评测侧 223 项单测
 # 本地 ASR 侧车（可选引擎）：scripts/moss_asr_server.py + requirements-moss.txt
 ```
