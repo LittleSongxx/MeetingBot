@@ -437,4 +437,132 @@ class AgentStep(Model):
         unique_together = (("run_id", "step_no"),)
 
 
+class KbIndexTask(Model):
+    """知识库索引任务：一类来源（一段转写的全文 / 一份已确认纪要）一行任务。
+
+    与转写任务同构：status 用条件更新抢占，重复调度不会重复建索引；
+    一个来源只留一行任务，重新索引是覆盖同一行（内容变了就重建文档版本）。
+    """
+
+    # 对应 kb_index_task.id
+    id = fields.IntField(pk=True)
+    # 对应 kb_index_task.meeting_id
+    meeting_id = fields.IntField()
+    # 对应 kb_index_task.source_type：TRANSCRIPT（转写）/ MINUTES（纪要）
+    source_type = fields.CharField(max_length=30)
+    # 对应 kb_index_task.source_id：source_type 为 TRANSCRIPT 时是 transcription_task.id，
+    # 为 MINUTES 时是 meeting_minutes.id
+    source_id = fields.IntField()
+    # 对应 kb_index_task.model_config_id：嵌入模型配置
+    model_config_id = fields.IntField()
+    # 对应 kb_index_task.initiator_id
+    initiator_id = fields.IntField()
+    # 对应 kb_index_task.status：PENDING、PROCESSING、SUCCEEDED、FAILED
+    status = fields.CharField(max_length=30, default="PENDING")
+    # 对应 kb_index_task.stage 与 progress（给页面看的进度，不是状态机的一部分）
+    stage = fields.CharField(max_length=100, default="等待执行")
+    progress = fields.IntField(default=0)
+    # 对应 kb_index_task.retry_count 与 max_retry
+    retry_count = fields.IntField(default=0)
+    max_retry = fields.IntField(default=3)
+    # 对应 kb_index_task.document_id：本次产出的文档版本
+    document_id = fields.IntField(null=True)
+    # 对应 kb_index_task.chunk_count 与 embedded_count（后者用于"只补没嵌入的"，重试不重复付费）
+    chunk_count = fields.IntField(default=0)
+    embedded_count = fields.IntField(default=0)
+    # 对应 kb_index_task.error_message
+    error_message = fields.TextField(null=True)
+    # 对应 kb_index_task.started_at 与 finished_at
+    started_at = fields.DatetimeField(null=True)
+    finished_at = fields.DatetimeField(null=True)
+    # 对应 kb_index_task.create_time 与 update_time
+    create_time = fields.DatetimeField(auto_now_add=True)
+    update_time = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "kb_index_task"
+        # 对应唯一索引 uk_kb_index_source：一类来源只留一行任务
+        unique_together = (("source_type", "source_id"),)
+
+
+class KbDocument(Model):
+    """一次索引产出的文档版本：一个来源 + 一次内容指纹 = 一份文档。
+
+    与纪要的"重新生成覆盖同一行"不同，这里每次重建都新起一行：检索结果要能指回
+    "当时索引的是哪一版内容"，覆盖掉就说不清了。旧版本在重建时物理删除其切片。
+    """
+
+    # 对应 kb_document.id
+    id = fields.IntField(pk=True)
+    # 对应 kb_document.meeting_id（检索时按会议可见性过滤就靠它）
+    meeting_id = fields.IntField()
+    # 对应 kb_document.source_type 与 source_id，含义同 KbIndexTask
+    source_type = fields.CharField(max_length=30)
+    source_id = fields.IntField()
+    # 对应 kb_document.task_id：产出这份文档的索引任务
+    task_id = fields.IntField()
+    # 对应 kb_document.authority：RAW（转写原话）/ CONFIRMED（人确认过的纪要）
+    # 这是"人拍板才算数"在知识库里的落地：答案更该引权威条目，而不是模型草稿
+    authority = fields.CharField(max_length=30, default="RAW")
+    # 对应 kb_document.content_hash：来源内容的指纹，用来判断要不要重建
+    content_hash = fields.CharField(max_length=64)
+    # 对应 kb_document.chunk_count
+    chunk_count = fields.IntField(default=0)
+    # 对应 kb_document.embed_model 与 embed_dim：向量维度和模型名一起存，
+    # 换嵌入模型时能一眼看出哪些文档需要重嵌
+    embed_model = fields.CharField(max_length=100)
+    embed_dim = fields.IntField(default=0)
+    # 对应 kb_document.status：SUCCEEDED、FAILED（失败保留原因，供排障）
+    status = fields.CharField(max_length=30, default="SUCCEEDED")
+    error_message = fields.TextField(null=True)
+    # 对应 kb_document.create_time
+    create_time = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "kb_document"
+
+
+class KbChunk(Model):
+    """知识库切片：检索的最小单位，也是引用能落到的地方。
+
+    切片的 id 同时就是 Qdrant 里的 point id——不做第二套编号，
+    否则"库里这条切片"和"向量库那个点"迟早对不上。
+    """
+
+    # 对应 kb_chunk.id（同时是 Qdrant point id）
+    id = fields.IntField(pk=True)
+    # 对应 kb_chunk.document_id 与 meeting_id
+    document_id = fields.IntField()
+    meeting_id = fields.IntField()
+    # 对应 kb_chunk.chunk_no：同一文档内的顺序号
+    chunk_no = fields.IntField()
+    # 对应 kb_chunk.chunk_type：TRANSCRIPT_WINDOW（转写窗口）/ MINUTES_ITEM（纪要条目）
+    chunk_type = fields.CharField(max_length=30)
+    # 对应 kb_chunk.text：切片正文（引用回显与人工核对都靠它）
+    text = fields.TextField()
+    # 对应 kb_chunk.speaker、start_ms、end_ms：转写窗口的定位信息
+    speaker = fields.CharField(max_length=50, null=True)
+    start_ms = fields.BigIntField(null=True)
+    end_ms = fields.BigIntField(null=True)
+    # 对应 kb_chunk.field 与 item_index：纪要条目所属字段与序号
+    field = fields.CharField(max_length=30, null=True)
+    item_index = fields.IntField(null=True)
+    # 对应 kb_chunk.origin：纪要条目的来源标注（stated/derived/model_inferred）
+    origin = fields.CharField(max_length=30, null=True)
+    # 对应 kb_chunk.evidence_json：纪要条目自带的证据（引用校验要用）
+    evidence_json = fields.JSONField(null=True)
+    # 对应 kb_chunk.token_count：粗估字符数，用于预算与截断，不是精确 token 数
+    token_count = fields.IntField(default=0)
+    # 对应 kb_chunk.embedded：向量是否已写入 Qdrant。
+    # 重试时只补 embedded=0 的切片——不重复为已成功的切片付费（沿用纪要缓存同款理由）
+    embedded = fields.BooleanField(default=False)
+    # 对应 kb_chunk.create_time
+    create_time = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "kb_chunk"
+        # 对应唯一索引 uk_kb_chunk_no
+        unique_together = (("document_id", "chunk_no"),)
+
+
 
