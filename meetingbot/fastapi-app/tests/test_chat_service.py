@@ -889,3 +889,53 @@ class QueryPlanPipelineTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(planner.await_count, 0, "开关关着就不许发生规划调用")
         assistant = await ChatMessage.filter(session_id=session.id, role="ASSISTANT").first()
         self.assertIsNone(assistant.plan_json)
+
+
+class FailureDiagnosisTest(unittest.IsolatedAsyncioTestCase):
+    """失败原因不许被换成另一句错诊断（实测踩过：中间失败的轮次被标成"没检索"）。
+
+    真实链路：模型调了两次工具后，最后一次调用挂住 122 秒失败 → 图抛异常 →
+    `final_state` 空 → `tool_calls` 读出来是 0 → 旧代码判"这一轮没有检索"，
+    把"问答模型调用失败"这条真原因**覆盖**掉了。排查的人会照着"为什么没检索"查。
+    """
+
+    async def asyncSetUp(self):
+        await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["models"]},
+                            use_tz=True, timezone="Asia/Shanghai")
+        await Tortoise.generate_schemas()
+        self.user = await User.create(username="diag-t", password="x", name="张晨")
+        self.meeting = await Meeting.create(
+            meeting_no="MTG-D1", title="产品发布评审会议",
+            start_time="2026-09-10 10:40:00", end_time="2026-09-10 13:00:00",
+            creator_id=self.user.id, host_id=self.user.id, status="FINISHED")
+        await AiModelConfig.create(
+            name="本地对话", model_type="AGENT", provider="OPENAI_COMPATIBLE",
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            api_key="unit-test-key", model_name="qwen-test", enabled=True)
+
+    async def asyncTearDown(self):
+        await Tortoise.close_connections()
+
+    async def test_mid_turn_failure_keeps_its_own_reason(self):
+        """工具跑过但最终调用失败：原因必须是失败本身，不能写成"没检索"。"""
+        class DyingModel(ScriptedChatModel):
+            async def _astream(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ANN001
+                if self.cursor == 0:
+                    async for chunk in super()._astream(messages, stop, run_manager, **kwargs):
+                        yield chunk
+                    return
+                raise RuntimeError("No streaming chunk received for 120.0s")
+
+        script = [AIMessage(content="", tool_calls=[_tool_call("search_knowledge", {"query": "灰度"})]),
+                  AIMessage(content="永远到不了这里")]
+        session = await chat_service.create_session(self.user)
+        events = []
+        with patch.object(kb_service, "search_knowledge", AsyncMock(return_value=[])):
+            async for kind, payload in chat_service.stream_answer(
+                    session, "灰度是什么", user=self.user,
+                    model=DyingModel(rounds=script)):
+                events.append((kind, payload))
+        assistant = await ChatMessage.filter(session_id=session.id, role="ASSISTANT").first()
+        self.assertNotEqual(assistant.stop_reason, chat_graph.STOP_NO_RETRIEVAL,
+                            "中间失败不是「没有检索」")
+        self.assertIn("调用失败", assistant.error_message or "")

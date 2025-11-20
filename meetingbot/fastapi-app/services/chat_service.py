@@ -554,7 +554,14 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     # 声称来自某场会（同一条问题连问四次，两次如此）。处置是"如实标注"而不是静默
     # 放行——页面以错误级提示告知这一轮的回答不作为依据（"无证据不判定"在问答侧
     # 的落点），原文仍留库供审计与复盘。
-    if int(final_state.get("tool_calls", 0) or 0) == 0 and answer:
+    #
+    # **两个前提缺一不可**（实测踩过：一条中间失败的轮次被扣上了"没检索"的帽子）：
+    # 1. 图**正常跑完**才谈得上"这一轮有没有调工具"——中途抛异常时 `final_state` 是空的，
+    #    `tool_calls` 读出来是 0，那是"没有状态"而不是"没有检索"；
+    # 2. 已经有失败原因时不许覆盖——那会把真实原因（模型调用失败）换成一句错的诊断，
+    #    排查的人会照着错的方向查（"为什么没检索"）（这一步是本条缺陷的根因）。
+    if (final_state and failure is None
+            and int(final_state.get("tool_calls", 0) or 0) == 0 and answer):
         stop_reason = chat_graph.STOP_NO_RETRIEVAL
         failure = chat_graph.STOP_NOTICE[chat_graph.STOP_NO_RETRIEVAL]
         logger.warning("会话 %s 的这一轮没有调用任何工具（跑了 %d 轮）",

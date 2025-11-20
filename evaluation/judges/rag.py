@@ -216,6 +216,10 @@ def capture(qa_set: Mapping[str, Any], *, base_url: str, token: str,
             output_path: Path, meeting_id: int | None = None,
             progress=print) -> dict[str, Any]:
     """逐条提问并抓取产物，写成 `results/chat_answers.json`。"""
+    # 开关必须由**被测进程自己报**（抓取进程 env 与容器 env 是两个空间）：
+    # 不记这一笔，"这一臂到底开了什么"就只能靠命令行回忆——那是没有证据的
+    switches = _product_switches(base_url, token)
+    progress(f"  产品自报开关：{switches}")
     created = _http_json(f"{base_url}/chat/session",
                          payload={"meeting_ids": [meeting_id] if meeting_id else None},
                          token=token)
@@ -251,13 +255,26 @@ def capture(qa_set: Mapping[str, Any], *, base_url: str, token: str,
             "artifact_version": 1,
             "captured_from": {"base_url": base_url, "session_id": session_id,
                               "meeting_id": meeting_id, "captured_at": _now(),
-                              "product_model": os.getenv("RAG_CAPTURE_MODEL", "")},
+                              "product_model": os.getenv("RAG_CAPTURE_MODEL", ""),
+                              "product_switches": switches},
             # 每场会的转写全文：零调用检查用它判"引用的那句话真的在会议里吗"
             "source_texts": sources,
             "turns": turns,
         })
         time.sleep(0.2)
     return {"session_id": session_id, "turns": len(turns)}
+
+
+def _product_switches(base_url: str, token: str) -> dict[str, Any]:
+    """被测进程自报的机制开关（读不到就如实写 unavailable，不猜）。"""
+    try:
+        status = _http_json(f"{base_url}/chat/status", method="GET", token=token)
+    except (CaptureError, KeyError) as error:
+        return {"unavailable": str(error)[:200]}
+    data = (status or {}).get("data") or {}
+    return {"model": data.get("model"),
+            "kb_rerank_enabled": data.get("kb_rerank_enabled"),
+            "kb_query_plan_enabled": data.get("kb_query_plan_enabled")}
 
 
 def _refs_from_answer(message: Mapping[str, Any]) -> list[int]:

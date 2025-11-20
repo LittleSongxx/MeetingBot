@@ -285,10 +285,34 @@ class KbToolsDbTest(unittest.IsolatedAsyncioTestCase):
                 "query": "最近的调用成功率", "date_from": "2024-08-20", "date_to": "2024-08-26"})
         self.assertEqual(len(calls), 2, "带时间限定一次 + 放宽后一次")
         self.assertIsNone(calls[1].get("meeting_time_from"), "放宽时不再传时间限定")
-        self.assertTrue(result["relaxed_time_filter"])
+        self.assertTrue(result["relaxed_filters"])
         self.assertEqual(len(result["hits"]), 1)
-        self.assertIn("已去掉时间限定重试", result["notice"])
-        self.assertIn("会议日期与你的限定不符", result["notice"])
+        self.assertIn("去掉时间与来源限定重试", result["notice"])
+        self.assertIn("与实际情况不符", result["notice"])
+
+    async def test_source_filter_miss_also_retries_without_it(self):
+        """来源限定也是**模型猜的**（实测：它把"下午这场会"猜成某一段录音，
+        而那场会两段录音的时间戳都是上午，元数据判不出"下午"）——空了同样要放宽。"""
+        meeting = await self._meeting("MTG-F4", self.owner)
+        actor = await kb_tools.Actor.resolve(self.owner)
+        hit = kb_service.Hit(chunk_id=12, score=0.5, text="张涛负责报表导出异步化改造",
+                             meeting_id=meeting.id, authority="RAW",
+                             chunk_type="TRANSCRIPT_WINDOW", field=None, item_index=None,
+                             speaker="系统管理员", start_ms=245_000, end_ms=260_000,
+                             document_id=1, origin=None, source_id=7)
+        calls: list[dict] = []
+
+        async def fake_search(query, **kwargs):
+            calls.append(kwargs)
+            return [] if kwargs.get("source_ids") else [hit]
+
+        with patch.object(kb_service, "search_knowledge", AsyncMock(side_effect=fake_search)):
+            result = await kb_tools.execute_tool(actor, "search_knowledge", {
+                "query": "下午这场会的行动项", "source_ids": [6]})
+        self.assertEqual(len(calls), 2)
+        self.assertIsNone(calls[1].get("source_ids"), "放宽时不再按来源收窄")
+        self.assertEqual(len(result["hits"]), 1)
+        self.assertIn("去掉时间与来源限定重试", result["notice"])
 
     async def test_search_rejects_a_bad_date_and_an_inverted_range(self):
         actor = await kb_tools.Actor.resolve(self.owner)

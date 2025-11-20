@@ -326,27 +326,31 @@ async def _search_knowledge(actor: Actor, args: SearchKnowledgeArgs) -> dict[str
     applied = _applied_filters(args, None if allowed is None else list(allowed))
     if applied:
         result["applied_filters"] = applied
-    if not hits and (time_from is not None or time_to is not None):
-        # **时间限定是模型猜出来的**（实测：它把 2026 年的会猜成 2024 年，
-        # 于是过滤把正确内容全挡在外面，那一轮的 3 条金标事实一条都没检索到）。
-        # 只靠一句"你可以放宽"不够——模型不会自己回头。这里自动去掉时间限定重试一次，
-        # 并把"放宽后有什么"如实交出去：**结论仍由模型下**，它只是不再因为一次猜错而盲。
+    guessed = time_from is not None or time_to is not None or bool(args.source_ids)
+    if not hits and guessed:
+        # **时间与来源限定都是模型从语料布局里猜出来的**，而它看不到布局：
+        # 实测两次——① 它把 2026 年的会猜成 2024 年（时间限定），那一轮 3 条金标事实
+        # 全丢；② 它把"下午这场会"猜成某一段录音（来源限定），而那场会的两段录音
+        # 时间戳都是上午，元数据根本判不出"下午"——猜错的方向把正确内容挡在外面。
+        # 只靠一句"你可以放宽"不够（模型不会自己回头），这里自动去掉**猜出来的**
+        # 限定重试一次，并把"放宽后有什么"如实交出去：结论仍由模型下，
+        # 它只是不再因为一次猜错而盲。会议范围/权威级/切片类型**不放宽**——那些是
+        # 用户或权限给的明确条件，不是猜的。
         relaxed = await kb_service.search_knowledge(
             args.query, allowed_meeting_ids=allowed, limit=args.limit,
-            authority=args.authority, chunk_type=args.chunk_type,
-            source_ids=args.source_ids, biz_id=actor.biz_id)
+            authority=args.authority, chunk_type=args.chunk_type, biz_id=actor.biz_id)
         titles.update(await _meeting_titles([hit.meeting_id for hit in relaxed]))
         result["hits"] = [
             {**hit.as_citation(), "meeting_title": titles.get(hit.meeting_id, ""),
              "score": round(hit.score, 6)}
             for hit in relaxed
         ]
-        result["relaxed_time_filter"] = True
+        result["relaxed_filters"] = True
         result["notice"] = (
-            "在给定的时间限定（" + "；".join(applied) + "）下没有命中任何切片；"
-            f"**已去掉时间限定重试，下面是 {len(relaxed)} 条结果**。"
-            "如果这些内容其实谈的正是你问的事，说明会议日期与你的限定不符——"
-            "请按会议实际日期回答，并说明时间限定没有命中；"
+            "在给定的限定（" + "；".join(applied) + "）下没有命中任何切片；"
+            f"**已去掉时间与来源限定重试，下面是 {len(relaxed)} 条结果**。"
+            "如果这些内容其实谈的正是你问的事，说明你的限定（日期/录音）与实际情况不符——"
+            "请按检索结果如实回答，并说明限定没有命中；"
             "若放宽后仍为空，才可以说这个范围内没有相关记录。")
     elif applied and not hits:
         result["notice"] = (
