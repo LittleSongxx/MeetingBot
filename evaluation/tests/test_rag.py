@@ -107,6 +107,59 @@ class SummarizeTest(unittest.TestCase):
         self.assertIsNone(summary2["context_precision"])
         self.assertIsNone(summary2["faithfulness"])
 
+    def test_meta_claims_are_excluded_from_the_content_caliber(self):
+        """出处说明类元陈述不进内容级口径：首测 81 条"不支撑"里 67 条是这一类。"""
+        packet = self._packet({
+            "context": {"contexts": [], "facts": []},
+            "answer": {"claims": [
+                {"index": 1, "supported": True, "meta": False},
+                {"index": 2, "supported": False, "meta": False},
+                {"index": 3, "supported": False, "meta": True},
+                {"index": 4, "supported": False, "meta": True},
+            ], "answered": True},
+        })
+        summary = rag.summarize(packet)
+        self.assertEqual(summary["faithfulness"]["rate"], 0.25, "全部口径照旧")
+        self.assertEqual(summary["faithfulness_content"]["rate"], 0.5)
+        self.assertEqual(summary["faithfulness_content"]["total"], 2)
+        self.assertEqual(summary["faithfulness_meta_claims"], 2)
+        self.assertEqual(summary["per_case"][0]["meta_claims"], 2)
+
+    def test_content_caliber_is_null_when_the_judge_never_marked_meta(self):
+        """旧提示词的标签没有 meta 字段 → 内容级算不出来，报 null 而不是等于全部。"""
+        packet = self._packet({
+            "context": {"contexts": [], "facts": []},
+            "answer": {"claims": [{"index": 1, "supported": True}], "answered": True},
+        })
+        summary = rag.summarize(packet)
+        self.assertEqual(summary["faithfulness"]["rate"], 1.0)
+        self.assertIsNone(summary["faithfulness_content"])
+        self.assertIsNone(summary["faithfulness_meta_claims"])
+        self.assertIsNone(summary["per_case"][0]["faithfulness_content"])
+
+    def test_case_whose_claims_are_all_meta_has_no_content_caliber(self):
+        packet = self._packet({
+            "context": {"contexts": [], "facts": []},
+            "answer": {"claims": [{"index": 1, "supported": False, "meta": True}],
+                       "answered": True},
+        })
+        summary = rag.summarize(packet)
+        self.assertEqual(summary["faithfulness"]["rate"], 0.0)
+        self.assertIsNone(summary["faithfulness_content"], "内容级没有样本时报 null")
+
+    def test_answered_flag_counts_meta_claims_normally(self):
+        """口径修正只动 faithfulness：其它三个指标的分母一个都没变。"""
+        packet = self._packet({
+            "context": {"contexts": [{"index": 1, "useful": True}],
+                        "facts": [{"index": 1, "found": True}]},
+            "answer": {"claims": [{"index": 1, "supported": True, "meta": True}],
+                       "answered": True},
+        })
+        summary = rag.summarize(packet)
+        self.assertEqual(summary["context_precision"]["rate"], 1.0)
+        self.assertEqual(summary["context_recall"]["rate"], 1.0)
+        self.assertEqual(summary["answer_relevancy"]["rate"], 1.0)
+
     def test_unjudged_cases_are_not_in_the_denominator(self):
         packet = {"case_count": 2, "cases": [
             {"case_id": "q1", "question": "问", "expected_facts": [], "answer": "答",
