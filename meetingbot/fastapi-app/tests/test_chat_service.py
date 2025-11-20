@@ -55,18 +55,20 @@ class ScriptedChatModel(BaseChatModel):
     async def _astream(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ANN001
         message = self.rounds[self.cursor]
         self.cursor += 1
-        if getattr(message, "tool_calls", None):
-            yield ChatGenerationChunk(message=AIMessageChunk(content="", tool_call_chunks=[
-                {"name": call["name"], "args": json.dumps(call["args"], ensure_ascii=False),
-                 "id": call["id"], "index": index}
-                for index, call in enumerate(message.tool_calls)]))
-        else:
-            text = str(message.content)
+        # 真实模型会"边说边调工具"（正文 + tool_calls 同一条消息），所以正文照发——
+        # 只发工具调用会让"答了半句再卡住"这种形态在测试里无法构造
+        text = str(message.content or "")
+        if text:
             # 切成两段，验证"逐 token 推送"而不是整段一次给
             middle = max(1, len(text) // 2)
             for piece in (text[:middle], text[middle:]):
                 if piece:
                     yield ChatGenerationChunk(message=AIMessageChunk(content=piece))
+        if getattr(message, "tool_calls", None):
+            yield ChatGenerationChunk(message=AIMessageChunk(content="", tool_call_chunks=[
+                {"name": call["name"], "args": json.dumps(call["args"], ensure_ascii=False),
+                 "id": call["id"], "index": index}
+                for index, call in enumerate(message.tool_calls)]))
         yield ChatGenerationChunk(message=AIMessageChunk(content="", usage_metadata=self.usage))
 
 
@@ -244,6 +246,56 @@ class ChatServiceTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(events[-1][0], "error")
         assistant = await ChatMessage.filter(session_id=session.id, role="ASSISTANT").first()
         self.assertIn("问答模型调用失败", assistant.error_message)
+
+    async def test_stalled_turn_tells_the_user_where_it_got_stuck(self):
+        """q26/q27 的形态：工具一直失败、模型原样重试 → 停滞闸掐断。
+
+        停在闸门上是正确行为；**说不清"卡在哪"才是缺陷**——修复前用户只看到一句
+        "已停止继续检索"，配一个空气泡，无从知道工具卡在参数上。
+        """
+        script = [AIMessage(content="", tool_calls=[_tool_call("search_knowledge",
+                                                              {"query": "同一个词"})])
+                  for _ in range(4)]
+        session = await chat_service.create_session(self.user)
+        model = ScriptedChatModel(rounds=script)
+        with patch.object(kb_service, "search_knowledge",
+                          AsyncMock(side_effect=kb_service.KbError("向量库不可达"))):
+            events = []
+            async for kind, payload in chat_service.stream_answer(
+                    session, "下午这场会定了哪些行动项", user=self.user, model=model):
+                events.append((kind, payload))
+        self.assertEqual(events[-1][0], "error", "什么都没给出来的一轮走错误通道")
+        message = events[-1][1]["message"]
+        self.assertIn("原地重复", message)
+        self.assertIn("search_knowledge", message)
+        self.assertIn("向量库不可达", message)
+        assistant = await ChatMessage.filter(session_id=session.id, role="ASSISTANT").first()
+        self.assertEqual(assistant.stop_reason, chat_graph.STOP_STALLED)
+        self.assertEqual(assistant.error_message, message, "页面与库里的说法必须一致")
+        self.assertEqual(assistant.content, "")
+
+    async def test_stalled_turn_with_a_partial_answer_keeps_the_done_event(self):
+        """已经给用户答了话才停滞：结局仍走 done，原因随 payload 带出（红色告警只给"什么都没给"的那轮）。"""
+        repeat = _tool_call("search_knowledge", {"query": "同一个词"})
+        script = [AIMessage(content="", tool_calls=[repeat]),
+                  AIMessage(content="", tool_calls=[repeat]),
+                  # 第三轮带上正文：它会被推给用户，于是这一轮不再是"什么都没给"
+                  AIMessage(content="检索一直失败，我只能先说明情况。", tool_calls=[repeat])]
+        session = await chat_service.create_session(self.user)
+        model = ScriptedChatModel(rounds=script)
+        with patch.object(kb_service, "search_knowledge",
+                          AsyncMock(side_effect=kb_service.KbError("向量库不可达"))):
+            events = []
+            async for kind, payload in chat_service.stream_answer(
+                    session, "上线时间", user=self.user, model=model):
+                events.append((kind, payload))
+        done = [payload for kind, payload in events if kind == "done"][0]
+        self.assertEqual(done["stop_reason"], chat_graph.STOP_STALLED)
+        self.assertIn("原地重复", done["notice"])
+        self.assertIn("向量库不可达", done["detail"])
+        assistant = await ChatMessage.filter(session_id=session.id, role="ASSISTANT").first()
+        self.assertIsNone(assistant.error_message, "有答案的一轮不该同时报错")
+        self.assertIn("只能先说明情况", assistant.content)
 
 
 class MemoryTest(unittest.IsolatedAsyncioTestCase):
