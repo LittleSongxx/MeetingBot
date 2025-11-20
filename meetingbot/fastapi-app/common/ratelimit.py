@@ -1,9 +1,8 @@
 """登录/注册的进程内限流。
 
 防在线爆破的最小实现：滑动窗口失败计数，按 用户名 与 来源IP 两个键独立
-累计，任一键达到阈值即拒绝。进程内字典（单 worker 部署语义与
-_running_tasks 等内存态结构一致）；多副本部署需要换集中式存储（见
-DEPLOYMENT.md 的单进程约束）。
+累计，任一键达到阈值即拒绝。计数器在进程内存里（backend 以 --workers 1
+运行，语义一致）；多副本部署需要换集中式存储（见 DEPLOYMENT.md 的单进程约束）。
 """
 
 from __future__ import annotations

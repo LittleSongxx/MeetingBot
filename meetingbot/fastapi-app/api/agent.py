@@ -30,6 +30,7 @@ from services.agent_service import (
     dump_final_result,
     load_final_result,
     schedule_agent_run,
+    schedule_agent_run_awaited,
 )
 
 router = APIRouter(prefix="/agent")
@@ -411,8 +412,20 @@ async def resume(run_id: int, current_user: User = Depends(get_current_user)):
     await AgentRun.filter(id=run.id).update(
         status="RUNNING", stage="等待继续", error_message=None, finished_at=None
     )
-    # 重新调度后台任务，execute_agent_run 从 current_round 和 revised_json 接着跑
-    schedule_agent_run(run.id)
+    # 上次中断的取消可能尚未在 Temporal 侧传播完：同 id workflow 还在收尾时
+    # enqueue 会被拒。稍候重试一次，仍被拒则回滚为已中断并明确告知——
+    # 静默跳过会让运行停在 RUNNING 无人执行，直到服务重启的兜底扫尾才补投
+    started = await schedule_agent_run_awaited(run.id)
+    if not started:
+        await asyncio.sleep(2)
+        started = await schedule_agent_run_awaited(run.id)
+    if not started:
+        await AgentRun.filter(id=run.id, status="RUNNING").update(
+            status="INTERRUPTED", stage="已中断",
+            error_message="上一次运行的取消还在收尾，请稍后再次点击恢复",
+        )
+        raise CustomException("上一次运行尚未完全停止，请稍后重试")
+    # 重新调度成功后，execute_agent_run 从 current_round 和 revised_json 接着跑
     return Result.success()
 
 @router.delete("/delete/{run_id}")
@@ -428,7 +441,11 @@ async def delete(run_id: int, current_user: User = Depends(get_current_user)):
 
 @router.get("/events/{run_id}")
 async def events(run_id: int, current_user: User = Depends(get_current_user)):
-    """把运行状态和步骤时间线推给页面，省掉前端定时轮询。"""
+    """把运行状态和步骤时间线推给页面，省掉前端定时轮询。
+
+    实现是服务端每秒查一次库、内容有变化才推（见下方循环）：对前端是推送，
+    对数据库仍是轮询——事件源是 DB 状态，不是进程内事件。
+    """
     # 先过权限，员工连不上别人的运行事件流
     await get_accessible_run(run_id, current_user)
 

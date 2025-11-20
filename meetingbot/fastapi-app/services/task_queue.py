@@ -3,9 +3,12 @@
 三类长任务（转写/纪要/自检）从进程内 asyncio 字典 + MySQL 状态机的自研调度，
 迁到 Temporal durable execution：
 
-- **workflow 即任务**：workflow id = `{kind}-{业务id}`，重复启动同一 id 被
+- **workflow 即任务**：workflow id = `{kind}-{业务id}`，仍在运行的同一 id 会被
   Temporal 以 WorkflowExecutionAlreadyStarted 拒绝——这正是旧 `_running_tasks`
-  字典"同一任务不双跑"判断的标准等价物，且跨进程、跨重启成立；
+  字典"同一任务不双跑"判断的标准等价物，且跨进程、跨重启成立。注意它只拦
+  "正在运行"：已完成的同 id 在默认 ID 复用策略（ALLOW_DUPLICATE）下可以再启
+  新 run，retry 复用同一 id 正是靠这一点；"不重复执行"的另一半保障在各
+  activity 开头的 DB 条件抢占（如 execute_transcription 的 PENDING→PROCESSING）；
 - **activity 即 execute_* 协程**：转写/纪要/自检的 `execute_*` 保持可直接
   await 的普通协程（评测的 manage_fixture 在自己进程里直接调用它们并拦截
   模型调用——这个预算护栏依赖"协程不经调度层也能跑"）；
@@ -28,7 +31,7 @@ from temporalio.worker import Worker
 
 TEMPORAL_ADDRESS = os.getenv("TEMPORAL_ADDRESS", "temporal:7233")
 TEMPORAL_NAMESPACE = os.getenv("TEMPORAL_NAMESPACE", "default")
-TEMPORAL_TASK_QUEUE = os.getenv("TEMPORAL_TASK_QUEUE", "aimeeting")
+TEMPORAL_TASK_QUEUE = os.getenv("TEMPORAL_TASK_QUEUE", "meetingbot")
 # 单类任务的并发上限：与旧信号量容量一致（同时 2 路转写/纪要/自检）。
 MAX_CONCURRENT_ACTIVITIES = int(os.getenv("TEMPORAL_MAX_CONCURRENCY", "2"))
 
@@ -52,13 +55,15 @@ def workflow_id(kind: str, business_id: int) -> str:
     return f"{kind}-{business_id}"
 
 
-async def enqueue(kind: str, business_id: int, input_args: tuple = ()) -> None:
-    """启动一个任务 workflow；同名 workflow 已在运行/已完成时静默忽略（幂等）。
+async def enqueue(kind: str, business_id: int, input_args: tuple = ()) -> bool:
+    """启动一个任务 workflow。同名 workflow 仍在运行时跳过并返回 False，否则返回 True。
 
-    幂等语义与旧 `_running_tasks.get(id).done()` 判断等价：
-    - 已在运行 → 不双跑；
-    - 已跑完（同 id 历史存在）→ 也不重跑；需要重跑的语义（retry 接口）
-      由调用方换新 workflow id（`{kind}-{id}-r{n}`）表达，见各服务的 retry 路径。
+    幂等语义分两半：
+    - 正在运行 → start_workflow 抛 WorkflowAlreadyStartedError，跳过（防双跑）；
+    - 已跑完 → 默认 ID 复用策略允许同 id 再启新 run，retry 复用同一 id 即靠此；
+    因此"不重复执行"的完整保障是两层：这里拦"正在跑"，activity 开头的 DB
+    条件抢占拦"重复执行"。调用方需要区分两种结果时（如自检的 resume）应检查
+    返回值，静默忽略会让"还想再跑"的意图无声丢失。
     """
     client = await get_client()
     from services import temporal_workflows
@@ -70,9 +75,10 @@ async def enqueue(kind: str, business_id: int, input_args: tuple = ()) -> None:
             id=workflow_id(kind, business_id),
             task_queue=TEMPORAL_TASK_QUEUE,
         )
+        return True
     except WorkflowAlreadyStartedError:
-        # 同 id 已在运行：这正是"同一任务不重复调度"要的结果
-        pass
+        # 同 id 仍在运行：这正是"同一任务不重复调度"要的结果
+        return False
 
 
 async def cancel(kind: str, business_id: int) -> None:

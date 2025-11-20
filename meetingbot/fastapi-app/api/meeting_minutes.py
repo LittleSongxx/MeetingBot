@@ -33,7 +33,8 @@ from models import (
     TranscriptionTask,
     User,
 )
-from services.minutes_service import MinutesResult, material_name_of_minutes, schedule_minutes
+from services.minutes_service import (MinutesResult, cancel_minutes,
+                                      material_name_of_minutes, schedule_minutes)
 
 router = APIRouter(prefix="/meetingMinutes")
 
@@ -149,7 +150,7 @@ async def generate(task_id: int, current_user: User = Depends(get_current_user))
     config = await AiModelConfig.filter(model_type="MINUTES", enabled=True).order_by("-id").first()
     if config is None or not config.api_key:
         raise CustomException("请先由管理员启用会议纪要模型配置")
-    # 第 10 章的分段提取和合并两条模板必须都已启用，否则提示是哪一条
+    # 纪要生成模板必须已启用，否则生成任务建起来就会失败
     await assert_minutes_prompts_enabled()
     # 同一场会议同时只允许有一份在生成
     if await MeetingMinutes.filter(meeting_id=task.meeting_id, status="GENERATING").exists():
@@ -207,8 +208,9 @@ async def delete(minutes_id: int, current_user: User = Depends(get_current_user)
 
 @router.put("/forceFail/{minutes_id}")
 async def force_fail(minutes_id: int, current_user: User = Depends(get_current_user)):
-    """卡死纪要的出路：GENERATING 状态而后台协程已丢失时强制置 FAILED。
-    真在跑的协程随后会继续写库，把状态推进回 GENERATING——抢占只对死任务生效。"""
+    """卡死纪要的出路：后台协程已丢失（进程崩溃且恢复失效）时，把停在
+    GENERATING 的纪要强制置为 FAILED，让重试/删除按钮重新可用。条件更新保证
+    只对 GENERATING 状态生效；若协程其实还活着，随后的取消请求会把它停掉。"""
     minutes = await get_accessible_minutes(minutes_id, current_user)
     if current_user.role != "ADMIN" and minutes.created_by != current_user.id:
         raise CustomException("只有管理员或纪要创建人可以强制结束", "403")
@@ -218,6 +220,8 @@ async def force_fail(minutes_id: int, current_user: User = Depends(get_current_u
              error_message="生成长时间无进展，被强制结束；可点击重试重新生成")
     if not claimed:
         raise CustomException("纪要状态已经变化，请刷新查看")
+    # 若协程其实还活着，把它停掉，避免它稍后把状态写回去（对齐转写 forceFail）
+    cancel_minutes(minutes_id)
     return Result.success()
 
 
@@ -228,7 +232,7 @@ async def retry(minutes_id: int, current_user: User = Depends(get_current_user))
     # 只有失败的可以重试，GENERATING 状态的纪要后台协程还在执行
     if minutes.status != "FAILED":
         raise CustomException("只有生成失败的纪要可以重试")
-    # 模板可能在失败之后被停用，重试前同样检查两条纪要模板
+    # 模板可能在失败之后被停用，重试前同样检查纪要模板
     await assert_minutes_prompts_enabled()
     # 重试权限与重新生成同口径：改的是这份纪要的产出，只有管理员或创建人可触发
     if current_user.role != "ADMIN" and minutes.created_by != current_user.id:

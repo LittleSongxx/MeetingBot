@@ -253,7 +253,7 @@ async def wait_dashscope_result(
     dashscope_task_id: str,
 ) -> dict:
     """按固定间隔查询任务状态，成功后把转写结果的 JSON 下载回来。"""
-    # 每个音频分段最多查询 240 次，每次查询前等待 5 秒。
+    # 查询次数与间隔取模块常量（POLL_MAX_TIMES / POLL_INTERVAL_SECONDS），别在这里另写数字。
     for _ in range(POLL_MAX_TIMES):
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
         response = await client.get(
@@ -478,7 +478,7 @@ async def execute_transcription(task_id: int):
         # 时长预检：超限音频在付费调用前拒绝（重试与恢复路径自动复用同一守卫）
         reject_overlong_audio(source_path)
         # 临时目录存放转换后的音频，with 结束时自动整个删掉
-        with tempfile.TemporaryDirectory(prefix="ai_meeting_transcribe_") as temp_dir:
+        with tempfile.TemporaryDirectory(prefix="meetingbot_transcribe_") as temp_dir:
             audio_path = await prepare_audio_file(source_path, Path(temp_dir))
             # 音频准备完成，进度推到 20
             await TranscriptionTask.filter(id=task.id).update(

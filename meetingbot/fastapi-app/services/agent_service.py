@@ -570,6 +570,16 @@ def schedule_agent_run(run_id: int):
         task_queue.enqueue(task_queue.KIND_AGENT_RUN, run_id, (run_id,)))
 
 
+async def schedule_agent_run_awaited(run_id: int) -> bool:
+    """恢复路径专用：等待 enqueue 完成，返回是否成功发起了 workflow 启动。
+
+    同 id workflow 仍在收尾（上次中断的取消尚未在 Temporal 侧传播完）时
+    返回 False，调用方据此回滚状态并提示——静默跳过会让运行永远停在 RUNNING。
+    """
+    from services import task_queue
+    return await task_queue.enqueue(task_queue.KIND_AGENT_RUN, run_id, (run_id,))
+
+
 def cancel_agent_run(run_id: int):
     """请求取消自检 workflow；运行状态由中断接口先写好。"""
     from services import task_queue

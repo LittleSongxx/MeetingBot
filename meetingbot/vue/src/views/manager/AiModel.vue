@@ -190,7 +190,7 @@ const modelTypeText = value =>
     SPEAKER: '说话人匹配'
   })[value] || value
 
-// 四类模型的默认服务地址、模型名和超时秒数，和 ai_meeting/ai_meeting.sql 里的初始配置保持一致
+// 四类模型的默认服务地址、模型名和超时秒数，和仓库根目录 meetingbot.sql 里的初始配置保持一致
 // 纪要、纪要自检和说话人匹配走阿里百炼的 OpenAI 兼容地址
 // 转写走百炼自己的录音文件识别协议，地址和服务协议都和另外三类不同
 const MODEL_DEFAULTS = {
