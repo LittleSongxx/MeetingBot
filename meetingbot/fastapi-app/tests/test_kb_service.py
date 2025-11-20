@@ -368,3 +368,29 @@ class RerankTest(_KbBase):
                           AsyncMock(side_effect=RuntimeError("重排模型调用失败"))):
             hits = await kb_service.search_knowledge("灰度", allowed_meeting_ids=None, limit=2)
         self.assertEqual([hit.chunk_id for hit in hits], [1, 2], "重排失败必须退回原顺序")
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+class PayloadIndexTest(IndexTranscriptTest):
+    """payload 索引：过滤性能的前提，且**必须在"跳过重建"的那条路径上也建**。
+
+    实测踩过：建索引原先只发生在 `_embed_and_store` 里，而内容未变化的库会在它之前
+    就返回——于是最常见的情形（内容没变）永远建不出索引，过滤一直是慢查询且不报错。
+    """
+
+    async def test_collection_and_indexes_are_ensured_even_when_content_is_unchanged(self):
+        task = await self._transcript()
+        await self._run_index(task.id)                     # 第一次：真建
+        with patch.object(kb_service.model_factory, "embed_texts", AsyncMock()) as embed, \
+             patch.object(kb_service.qdrant, "ensure_collection", AsyncMock()) as ensure, \
+             patch.object(kb_service.task_queue, "enqueue", AsyncMock()):
+            kb_task_id = await kb_service.schedule_kb_index(
+                kb_service.SOURCE_TRANSCRIPT, task.id, self.meeting.id, self.user.id)
+            await kb_service.execute_kb_index(kb_task_id)
+        self.assertEqual(embed.await_count, 0, "内容未变不该重嵌")
+        ensure.assert_awaited(), "但索引就绪这一步必须照跑"
+        kb_task = await KbIndexTask.get(id=kb_task_id)
+        self.assertIn("内容未变化", kb_task.stage or "")

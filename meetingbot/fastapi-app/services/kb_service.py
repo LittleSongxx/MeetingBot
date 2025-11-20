@@ -85,6 +85,9 @@ class Hit:
     end_ms: int | None
     document_id: int | None
     origin: str | None
+    # 来源身份（转写任务 id / 纪要 id）：一场会可能有多段录音，引用要能落到**哪一段**，
+    # 过滤要能按它收窄（"下午这场会"）；评测侧的检索指标也要靠它把切片映射回录音
+    source_id: int | None = None
 
     def as_citation(self) -> dict[str, Any]:
         """转成给前端/工具用的引用结构（时间戳换算成秒，和转写行格式一致）。"""
@@ -98,6 +101,7 @@ class Hit:
             "speaker": self.speaker,
             "start_second": (self.start_ms or 0) // 1000 if self.start_ms is not None else None,
             "end_second": (self.end_ms or 0) // 1000 if self.end_ms is not None else None,
+            "source_id": self.source_id,
             "quote": self.text,
         }
 
@@ -239,6 +243,12 @@ async def execute_kb_index(kb_task_id: int) -> None:
         config = await AiModelConfig.get_or_none(id=task.model_config_id, enabled=True)
         if config is None:
             raise KbError("嵌入模型配置不存在或已停用")
+
+        # **索引就绪是基础设施步骤，不挂在"要重嵌"那条路径上**：实测踩过——
+        # 它原先只在 `_embed_and_store` 里做，于是"内容未变化，跳过重建"的库
+        # （最常见的情形）永远建不出 payload 索引，过滤一直是慢查询且不报错。
+        # 官方口径也要求"建索引要在写入之前"（过滤感知的 HNSW 边只在建索引后生成）。
+        await qdrant.ensure_collection(model_factory.embedding_dim())
 
         chunks, fingerprint = await _load_source_chunks(task)
         if not chunks:
@@ -430,6 +440,7 @@ async def search_knowledge(
     limit: int = 8,
     authority: Iterable[str] | None = None,
     chunk_type: Iterable[str] | None = None,
+    source_ids: Iterable[int] | None = None,
     meeting_time_from: int | None = None,
     meeting_time_to: int | None = None,
     biz_id: int = 0,
@@ -459,8 +470,8 @@ async def search_knowledge(
     raw = await qdrant.hybrid_search(
         dense=dense, sparse=kb_sparse.encode(text), limit=fetch,
         allowed_meeting_ids=allowed_meeting_ids, authority=authority,
-        chunk_type=chunk_type, meeting_time_from=meeting_time_from,
-        meeting_time_to=meeting_time_to,
+        chunk_type=chunk_type, source_ids=source_ids,
+        meeting_time_from=meeting_time_from, meeting_time_to=meeting_time_to,
     )
     hits: list[Hit] = []
     for item in raw:
@@ -474,7 +485,7 @@ async def search_knowledge(
             field=payload.get("field"), item_index=payload.get("item_index"),
             speaker=payload.get("speaker"), start_ms=payload.get("start_ms"),
             end_ms=payload.get("end_ms"), document_id=payload.get("document_id"),
-            origin=payload.get("origin"),
+            origin=payload.get("origin"), source_id=payload.get("source_id"),
         ))
     if rerank_enabled() and len(hits) > 1:
         hits = await _rerank(text, hits, limit=int(limit), biz_id=biz_id)

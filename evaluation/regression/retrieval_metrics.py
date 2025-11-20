@@ -12,8 +12,11 @@
 ## 口径（与 judge 的那些不同，必须连口径一起报）
 
 - **相关切片**：片段的起点落进切片的时间范围（`start_second ≤ 片段起点 ≤ end_second`，
-  没有精确窗时用引文里的定位前缀 `[224s]` 的区间近似）。切片是转写窗口（几句一段），
-  金标是句子级，所以"起点落进范围"是这里唯一可判定的关系。
+  没有精确窗时用引文里的定位前缀 `[224s]` 的区间近似），且（当两侧都带来源身份时）
+  切片与片段属于**同一段录音**。切片是转写窗口（几句一段），金标是句子级，
+  所以"起点落进范围"是这里唯一可判定的关系。
+- **跨录音问题**（金标里带 `also_in`）现在可以评了：切片引用带上了 `source_id`
+  （来源录音 id），每个来源各按自己的片段表映射。缺 `source_id` 的老产物仍按"判不了"跳过。
 - `recall@k`：金标片段里**被 top-k 覆盖**的比例（覆盖 = 至少一条相关切片进了前 k）。
   这里 k 取"这一次实际检索到的条数"（模型自选 limit，实测 1–10），因此它是
   "这次检索有没有盖住金标"，不是"固定 k 下的召回"——**报数时必须连 k 一起报**。
@@ -88,39 +91,78 @@ def _window(item: Mapping[str, Any]) -> tuple[int, int] | None:
     return None
 
 
-def _covers(item: Mapping[str, Any], start_second: int) -> bool:
-    """这条检索切片覆盖这个片段吗（片段的起点落进切片的时间范围）。"""
+def _covers(item: Mapping[str, Any], start_second: int, *, task_id: int | None = None) -> bool:
+    """这条检索切片覆盖这个片段吗：起点落进时间范围，且（能判时）来自同一段录音。
+
+    来源身份（`source_id`）能判时必须一致：两段录音的时间轴都从 0 开始，
+    只比时间窗会把"上午 51 秒"与"下午 51 秒"算成同一条——那是假命中。
+    """
     window = _window(item)
-    return bool(window and window[0] <= int(start_second) <= window[1])
+    if not window or not (window[0] <= int(start_second) <= window[1]):
+        return False
+    source_id = item.get("source_id")
+    if task_id is None or source_id is None:
+        return True    # 判不了来源就不拿它当否决条件（老产物没有这个字段）
+    return int(source_id) == int(task_id)
+
+
+def case_sources(case: Mapping[str, Any]) -> list[tuple[int, list[int]]]:
+    """这道题的金标来源：`source` 与可选的 `also_in`（跨录音题的第二段录音）。"""
+    pairs: list[tuple[int, list[int]]] = []
+    for key in ("source", "also_in"):
+        entry = case.get(key) or {}
+        task_id = entry.get("task_id")
+        segments = [int(seg) for seg in (entry.get("segments") or [])]
+        if task_id is not None and segments:
+            pairs.append((int(task_id), segments))
+    return pairs
 
 
 def evaluate_turn(turn: Mapping[str, Any], case: Mapping[str, Any],
-                  starts: Mapping[int, int]) -> dict[str, Any] | None:
-    """一轮的检索侧读数。判不了（缺检索集/缺片段时间）返回 None。"""
+                  sources: Mapping[str, Any]) -> dict[str, Any] | None:
+    """一轮的检索侧读数。判不了（缺检索集/缺片段时间）返回 None。
+
+    `sources` 是产物的 `source_texts`（每个会议一条，内含各任务的片段→时间表）。
+    金标可能横跨多段录音（`also_in`），这里按 (task_id, segment_no) 记账——
+    **跨录音题因此可评**，前提是切片带 `source_id`（新产物有）。
+    """
     retrieved = turn.get("retrieved")
     if not retrieved:
         return None
-    gold = [seg for seg in ((case.get("source") or {}).get("segments") or [])
-            if int(seg) in starts]
+    gold: list[tuple[int, int, int]] = []      # (task_id, segment_no, start_second)
+    for task_id, segments in case_sources(case):
+        per_task = segment_starts(sources, task_id)
+        for seg in segments:
+            if int(seg) in per_task:
+                gold.append((task_id, int(seg), per_task[int(seg)]))
     if not gold:
         return None
-    gold_starts = {seg: starts[int(seg)] for seg in gold}
-    relevant = [any(_covers(item, start) for start in gold_starts.values()) for item in retrieved]
+    relevant = [any(_covers(item, start, task_id=task) for task, _, start in gold)
+                for item in retrieved]
     k = len(retrieved)
-    covered = {seg for seg, start in gold_starts.items()
-               if any(_covers(item, start) for item in retrieved)}
+    covered = {(task, seg) for task, seg, start in gold
+               if any(_covers(item, start, task_id=task) for item in retrieved)}
+    # 来源对不上时的覆盖数是"能判的那部分"：来源身份缺失（老产物）按可判的算
+    scorable = [entry for entry in gold if _source_known(retrieved, entry[0])]
     mrr = next((1.0 / (index + 1) for index, hit in enumerate(relevant) if hit), 0.0)
     dcg = sum((1.0 if hit else 0.0) / math.log2(index + 2) for index, hit in enumerate(relevant))
     ideal = sum(1.0 / math.log2(index + 2)
                 for index in range(min(k, max(1, sum(1 for hit in relevant if hit)))))
+    denominator = len(scorable) or len(gold)
     return {
         "case_id": case.get("id"),
         "k": k,
-        "recall": len(covered) / len(gold_starts),
+        "recall": len(covered) / denominator,
         "mrr": mrr,
         "ndcg": (dcg / ideal) if ideal else None,
         "relevant_count": sum(1 for hit in relevant if hit),
+        "sources_known": bool(scorable),
     }
+
+
+def _source_known(retrieved: list[Mapping[str, Any]], task_id: int) -> bool:
+    """检索集里有没有带来源身份的切片（有才敢按来源判覆盖）。"""
+    return any(item.get("source_id") is not None for item in retrieved)
 
 
 def summarize(artifact: Mapping[str, Any] | None,
@@ -136,24 +178,16 @@ def summarize(artifact: Mapping[str, Any] | None,
         if turn is None:
             skipped.append({"case_id": case.get("id"), "reason": "没有这一轮的产物"})
             continue
-        source = case.get("source") or {}
-        if not source.get("segments"):
+        if not case_sources(case):
             # 寒暄类没有金标片段：它们考的是"不该去检索"，不是检索覆盖
             skipped.append({"case_id": case.get("id"), "reason": "这一题没有金标片段（寒暄类）"})
             continue
-        if case.get("also_in"):
-            # 跨录音问题：切片的载荷里没有 task_id，而两段录音的时间轴都从 0 开始，
-            # 光看时间窗分不出命中来自哪一段——**判不了就如实跳过**，不猜
-            skipped.append({"case_id": case.get("id"),
-                            "reason": "跨录音问题：切片载荷不带 task_id，映射不回是哪段录音"})
-            continue
-        task_id = int(source.get("task_id") or 0)
-        starts = segment_starts(sources, task_id)
-        if not starts:
+        if not any(segment_starts(sources, task_id)
+                   for task_id, _ in case_sources(case)):
             skipped.append({"case_id": case.get("id"),
                             "reason": "产物里没有片段→时间映射（旧版抓取只存了全文）"})
             continue
-        row = evaluate_turn(turn, case, starts)
+        row = evaluate_turn(turn, case, sources)
         if row is None:
             skipped.append({"case_id": case.get("id"),
                             "reason": "这一轮没有记下检索到的全部切片（只有被引用的）"})

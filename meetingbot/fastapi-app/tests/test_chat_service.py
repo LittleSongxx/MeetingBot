@@ -750,6 +750,49 @@ class QueryPlanTest(unittest.TestCase):
         self.assertIn("list_facts", hint)
         self.assertIn("只是建议", hint)
 
+    def test_low_confidence_abstains_and_falls_back_to_retrieval(self):
+        """弃权路径（行业共识：低置信度宁可按检索走，也不要送错工具）。
+
+        低置信度时：丢掉工具建议（它是噪声）、强制 needs_retrieval、提示里明说按检索处理。
+        """
+        from services import query_plan
+        plan = query_plan.normalize({"intent": "procedure", "confidence": 0.3,
+                                     "rewritten": "问", "suggested_tools": ["list_facts"],
+                                     "needs_retrieval": False}, "问")
+        self.assertTrue(plan["low_confidence"])
+        self.assertEqual(plan["suggested_tools"], [])
+        self.assertTrue(plan["needs_retrieval"], "弃权时必须要求检索")
+        self.assertIn("按检索处理", query_plan.plan_hint(plan))
+
+    def test_confidence_is_clamped_and_unknown_is_tolerated(self):
+        from services import query_plan
+        high = query_plan.normalize({"intent": "single_fact", "confidence": 1.4,
+                                     "rewritten": "问"}, "问")
+        self.assertEqual(high["confidence"], 1.0)
+        self.assertFalse(high["low_confidence"])
+        missing = query_plan.normalize({"intent": "single_fact", "rewritten": "问"}, "问")
+        self.assertIsNone(missing["confidence"], "模型没给置信度时不假装知道")
+        self.assertFalse(missing["low_confidence"], "没给不按低置信处理（那是另一种猜）")
+
+    def test_sub_questions_are_cleaned_and_capped(self):
+        """子问句：空串丢掉、重复去掉、与原句相同的丢掉、单条不算分解、超过上限截断。"""
+        from services import query_plan
+        plan = query_plan.normalize({"intent": "aggregation", "rewritten": "问",
+                                     "sub_questions": ["A？", "A？", "", "问",
+                                                       "B？", "C？", "D？", "E？", "F？"]}, "问")
+        self.assertEqual(plan["sub_questions"], ["A？", "B？", "C？", "D？"])
+        single = query_plan.normalize({"intent": "single_fact", "rewritten": "问",
+                                       "sub_questions": ["只有一个"]}, "问")
+        self.assertEqual(single["sub_questions"], [], "只有一条不算分解")
+
+    def test_hint_asks_for_separate_retrieval_on_multi_part_questions(self):
+        from services import query_plan
+        hint = query_plan.plan_hint({"intent": "aggregation", "rewritten": "问",
+                                     "sub_questions": ["灰度分几步？", "回滚要多久？"],
+                                     "suggested_tools": ["search_knowledge"]})
+        self.assertIn("分别检索", hint)
+        self.assertIn("1. 灰度分几步？", hint)
+
     def test_hint_drops_the_rewrite_when_it_was_out_of_scope(self):
         """触发门只管改写：没有相对时间/指代时，改写那一句不进提示（本来就没改写空间）。"""
         from services import query_plan

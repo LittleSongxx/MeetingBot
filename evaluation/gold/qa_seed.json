@@ -10,10 +10,10 @@
       "single_fact",
       "aggregation",
       "cross_meeting",
-      "procedure",
       "smalltalk"
     ],
-    "intent_note": "意图标签由**代理起草**（**待人工确认**）：single_fact 单点事实 / aggregation 枚举聚合 / cross_meeting 跨录音（本语料只有一场会，因此是跨两段录音）汇总 / procedure 流程与机制解释 / smalltalk 寒暄。case_source=agent_draft 的问题与事实同样是代理起草，待人工复核。"
+    "intent_note": "意图标签由**代理起草**（**待人工确认**）：single_fact 单点事实 / aggregation 枚举聚合 / cross_meeting 跨录音（本语料只有一场会，因此是跨两段录音）汇总 / smalltalk 寒暄。case_source=agent_draft 的问题与事实同样是代理起草，待人工复核。",
+    "intent_taxonomy_revision": "v2：删掉 procedure（流程解释）。理由：它与 single_fact 的**路由动作相同**（都走检索），而两版提示词下它的 F1 从 53% 摆到 12%——这条边界不可稳定测量，只产出标签噪声。行业口径：分类只在动作不同处才有价值（Anthropic 的路由一节、Amazon REIC 分层路由）。迁移规则是机械的：问题里出现「哪些/哪几项/哪几类/分别/几个」→ aggregation，其余 → single_fact（共 15 条，逐条标了 `intent_revision`）。**标签仍全部是代理起草、待人工确认**。"
   },
   "discipline": "本集 27 条为人工标注的问题与金标事实、76 条为代理起草（待人工确认）；意图标签全部由代理起草。n 变大后仍只作**方向信号**，逐类结论必须连支持数一起报，不作产品决策依据。",
   "cases": [
@@ -145,8 +145,9 @@
           22
         ]
       },
-      "intent": "procedure",
-      "intent_source": "agent_draft"
+      "intent": "single_fact",
+      "intent_source": "agent_draft",
+      "intent_revision": "procedure→single_fact（合并到动作等价的类；规则见 annotation.intent_note）"
     },
     {
       "id": "q09",
@@ -162,8 +163,9 @@
           21
         ]
       },
-      "intent": "procedure",
-      "intent_source": "agent_draft"
+      "intent": "single_fact",
+      "intent_source": "agent_draft",
+      "intent_revision": "procedure→single_fact（合并到动作等价的类；规则见 annotation.intent_note）"
     },
     {
       "id": "q10",
@@ -297,8 +299,9 @@
           46
         ]
       },
-      "intent": "procedure",
-      "intent_source": "agent_draft"
+      "intent": "single_fact",
+      "intent_source": "agent_draft",
+      "intent_revision": "procedure→single_fact（合并到动作等价的类；规则见 annotation.intent_note）"
     },
     {
       "id": "q18",
@@ -1311,7 +1314,7 @@
         "数据库改动都是加字段、向后兼容，回滚不需要动数据",
         "最快五分钟能切回旧版本"
       ],
-      "intent": "procedure",
+      "intent": "single_fact",
       "intent_source": "agent_draft",
       "case_source": "agent_draft",
       "source": {
@@ -1319,7 +1322,8 @@
         "segments": [
           24
         ]
-      }
+      },
+      "intent_revision": "procedure→single_fact（合并到动作等价的类；规则见 annotation.intent_note）"
     },
     {
       "id": "q77",
@@ -1329,7 +1333,7 @@
         "说话人匹配、纪要修订、确认任务草稿、确认任务延期转交",
         "知识问答 agent 的人工确认和运行中断恢复"
       ],
-      "intent": "procedure",
+      "intent": "aggregation",
       "intent_source": "agent_draft",
       "case_source": "agent_draft",
       "source": {
@@ -1337,7 +1341,8 @@
         "segments": [
           24
         ]
-      }
+      },
+      "intent_revision": "procedure→aggregation（合并到动作等价的类；规则见 annotation.intent_note）"
     },
     {
       "id": "q78",
@@ -1346,7 +1351,7 @@
         "索引状态会保持需要重建",
         "建议资料整理完成后再发起构建"
       ],
-      "intent": "procedure",
+      "intent": "single_fact",
       "intent_source": "agent_draft",
       "case_source": "agent_draft",
       "source": {
@@ -1354,7 +1359,8 @@
         "segments": [
           42
         ]
-      }
+      },
+      "intent_revision": "procedure→single_fact（合并到动作等价的类；规则见 annotation.intent_note）"
     },
     {
       "id": "q79",
@@ -1363,7 +1369,7 @@
         "可以结合员工当前任务负载提出负责人建议",
         "创建正式任务前仍由用户确认"
       ],
-      "intent": "procedure",
+      "intent": "single_fact",
       "intent_source": "agent_draft",
       "case_source": "agent_draft",
       "source": {
@@ -1371,7 +1377,8 @@
         "segments": [
           44
         ]
-      }
+      },
+      "intent_revision": "procedure→single_fact（合并到动作等价的类；规则见 annotation.intent_note）"
     },
     {
       "id": "q80",
@@ -1380,7 +1387,7 @@
         "先调整业务记录中的负责人、创建人或协作人关系",
         "保证历史会议和任务记录仍能正确展示人员信息"
       ],
-      "intent": "procedure",
+      "intent": "single_fact",
       "intent_source": "agent_draft",
       "case_source": "agent_draft",
       "source": {
@@ -1388,7 +1395,8 @@
         "segments": [
           46
         ]
-      }
+      },
+      "intent_revision": "procedure→single_fact（合并到动作等价的类；规则见 annotation.intent_note）"
     },
     {
       "id": "q81",
@@ -1397,7 +1405,7 @@
         "至少 30 分钟真实录音：验证长音频切分、异步进度与整场转写的单遍纪要生成",
         "多角色发言内容：检查说话人标签与员工身份的匹配效果"
       ],
-      "intent": "procedure",
+      "intent": "aggregation",
       "intent_source": "agent_draft",
       "case_source": "agent_draft",
       "source": {
@@ -1406,7 +1414,8 @@
           27,
           28
         ]
-      }
+      },
+      "intent_revision": "procedure→aggregation（合并到动作等价的类；规则见 annotation.intent_note）"
     },
     {
       "id": "q82",
@@ -1415,7 +1424,7 @@
         "按部门查看会议数量、会议时长、任务完成率、逾期率和高频问题",
         "运营同学每天下午四点汇总高风险任务，同步给部门负责人和客户支持负责人"
       ],
-      "intent": "procedure",
+      "intent": "single_fact",
       "intent_source": "agent_draft",
       "case_source": "agent_draft",
       "source": {
@@ -1424,7 +1433,8 @@
           33,
           35
         ]
-      }
+      },
+      "intent_revision": "procedure→single_fact（合并到动作等价的类；规则见 annotation.intent_note）"
     },
     {
       "id": "q83",
@@ -1433,7 +1443,7 @@
         "每天查看运行观测中心的调用量、失败率、平均耗时和 token 使用量",
         "发现任务逾期、模型调用失败率升高或员工反馈集中时，及时形成跟进报告"
       ],
-      "intent": "procedure",
+      "intent": "single_fact",
       "intent_source": "agent_draft",
       "case_source": "agent_draft",
       "source": {
@@ -1442,7 +1452,8 @@
           40,
           75
         ]
-      }
+      },
+      "intent_revision": "procedure→single_fact（合并到动作等价的类；规则见 annotation.intent_note）"
     },
     {
       "id": "q84",
@@ -1451,7 +1462,7 @@
         "用户点导出之后先返回一个任务号，后台跑完再通知下载",
         "导出是低频操作，等一会儿可以接受，卡在那里转圈 40 秒更差"
       ],
-      "intent": "procedure",
+      "intent": "single_fact",
       "intent_source": "agent_draft",
       "case_source": "agent_draft",
       "source": {
@@ -1460,7 +1471,8 @@
           14,
           15
         ]
-      }
+      },
+      "intent_revision": "procedure→single_fact（合并到动作等价的类；规则见 annotation.intent_note）"
     },
     {
       "id": "q85",
@@ -1469,7 +1481,7 @@
         "主要看接口错误率、平均响应时间和核心链路转化率",
         "这三个指标都配了告警，超过阈值直接发到群里"
       ],
-      "intent": "procedure",
+      "intent": "single_fact",
       "intent_source": "agent_draft",
       "case_source": "agent_draft",
       "source": {
@@ -1478,7 +1490,8 @@
           30,
           31
         ]
-      }
+      },
+      "intent_revision": "procedure→single_fact（合并到动作等价的类；规则见 annotation.intent_note）"
     },
     {
       "id": "q86",
@@ -1486,7 +1499,7 @@
       "expected_facts": [
         "异步改造和灰度发布挨得太近，改造延期可能影响后面的排期"
       ],
-      "intent": "procedure",
+      "intent": "single_fact",
       "intent_source": "agent_draft",
       "case_source": "agent_draft",
       "source": {
@@ -1494,7 +1507,8 @@
         "segments": [
           42
         ]
-      }
+      },
+      "intent_revision": "procedure→single_fact（合并到动作等价的类；规则见 annotation.intent_note）"
     },
     {
       "id": "q87",
@@ -1503,7 +1517,7 @@
         "需要根据最终的功能清单调整",
         "报表导出要隐藏入口，通稿里这一段要删掉"
       ],
-      "intent": "procedure",
+      "intent": "single_fact",
       "intent_source": "agent_draft",
       "case_source": "agent_draft",
       "source": {
@@ -1512,7 +1526,8 @@
           36,
           37
         ]
-      }
+      },
+      "intent_revision": "procedure→single_fact（合并到动作等价的类；规则见 annotation.intent_note）"
     },
     {
       "id": "q88",

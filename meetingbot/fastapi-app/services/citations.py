@@ -59,6 +59,9 @@ class Citation:
     # 事实条目的类型化槽位（负责人/截止时间/风险等级）只在这里，缺了它判定者
     # 只能对"表格里的截止时间"这类断言判"不支撑"（P1 复测里 6 条不支撑就是这么来的）。
     source_text: str | None = None
+    # 来源身份（转写任务/纪要的 id）：模型据此指认"哪段录音"，
+    # 评测侧据此把切片映射回录音（跨录音问题的检索指标靠它）
+    source_id: int | None = None
     task_id: int | None = None
     segment_no: int | None = None
 
@@ -80,7 +83,8 @@ class Citation:
         }
         if self.source_text:
             data["source_text"] = self.source_text
-        for name in ("chunk_id", "minutes_id", "field", "item_index", "task_id", "segment_no"):
+        for name in ("chunk_id", "minutes_id", "field", "item_index", "task_id", "segment_no",
+                     "source_id"):
             value = getattr(self, name)
             if value is not None:
                 data[name] = value
@@ -201,7 +205,7 @@ def _from_search(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation]
             quote=str(hit.get("quote") or ""), meeting_title=str(hit.get("meeting_title") or ""),
             chunk_id=hit.get("chunk_id"), speaker=hit.get("speaker"),
             start_second=hit.get("start_second"), end_second=hit.get("end_second"),
-            authority=hit.get("authority"),
+            authority=hit.get("authority"), source_id=hit.get("source_id"),
         )))
     return pairs
 
