@@ -3,21 +3,21 @@
   "paired": 50,
   "missing": [],
   "strict_accuracy": 0.6,
-  "acceptable_accuracy": 0.88,
+  "acceptable_accuracy": 0.9,
   "per_intent": {
     "cross_meeting": {
       "support": 8,
-      "strict_hits": 5,
+      "strict_hits": 4,
       "acceptable_hits": 8,
-      "strict_accuracy": 0.625,
+      "strict_accuracy": 0.5,
       "acceptable_accuracy": 1.0
     },
     "single_fact": {
       "support": 25,
-      "strict_hits": 22,
-      "acceptable_hits": 22,
-      "strict_accuracy": 0.88,
-      "acceptable_accuracy": 0.88
+      "strict_hits": 23,
+      "acceptable_hits": 23,
+      "strict_accuracy": 0.92,
+      "acceptable_accuracy": 0.92
     },
     "aggregation": {
       "support": 17,
@@ -30,15 +30,6 @@
   "mismatches": [
     {
       "case_id": "q12",
-      "intent": "single_fact",
-      "first_tool": "list_facts",
-      "expected": "search_knowledge",
-      "acceptable": [
-        "search_knowledge"
-      ]
-    },
-    {
-      "case_id": "q13",
       "intent": "single_fact",
       "first_tool": "list_facts",
       "expected": "search_knowledge",
