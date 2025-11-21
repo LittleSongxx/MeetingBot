@@ -1,3 +1,4 @@
+from datetime import datetime
 
 from common import access
 from common.auth import get_current_user
@@ -30,6 +31,9 @@ router = APIRouter(prefix="/transcription")
 class StartPayload(BaseModel):
     # 弹窗下拉框选择的音频语言代码，不传时按中文处理
     language: str = "zh"
+    # 录音**实际开始时间**（墙钟）：一场会可能有多段录音（上午/下午），
+    # 这是"下午那场"唯一的判断依据。不传 = 未标注，不拿上传时间冒充。
+    recorded_at: datetime | None = None
 
 
 class SegmentPayload(BaseModel):
@@ -110,6 +114,7 @@ async def task_dict(task: TranscriptionTask) -> dict:
         "segment_count": segment_count,
         # 详情弹窗“失败原因”
         "error_message": task.error_message,
+        "recorded_at": format_datetime(task.recorded_at),
         "started_at": format_datetime(task.started_at),
         "finished_at": format_datetime(task.finished_at),
         # 列表“提交时间”列
@@ -230,6 +235,7 @@ async def start(
             # 发起人取自 Token 里的当前用户
             initiator_id=current_user.id,
             language=payload.language.lower() if payload.language else "",
+            recorded_at=payload.recorded_at,
             status="PENDING",
             stage="等待执行",
             progress=0,

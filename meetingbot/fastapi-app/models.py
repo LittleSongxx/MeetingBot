@@ -202,6 +202,11 @@ class TranscriptionTask(Model):
     max_retry = fields.IntField(default=3)
     # 对应 transcription_task.total_duration_ms
     total_duration_ms = fields.BigIntField(default=0)
+    # 对应 transcription_task.recorded_at：录音**实际开始时间**（墙钟）。
+    # 与 create_time（上传时间）和 meeting.start_time（会议名义时间）都不是一回事：
+    # 一场会可能有多段录音（上午一场、下午一场），"下午那场"只能靠它判断。
+    # 为空表示未标注；不拿 create_time 冒充（上传可能发生在几天后）。
+    recorded_at = fields.DatetimeField(null=True)
     # 对应 transcription_task.full_text
     full_text = fields.TextField(null=True)
     # 对应 transcription_task.error_message

@@ -306,6 +306,7 @@ CREATE TABLE `transcription_task`  (
   `retry_count` int NOT NULL DEFAULT 0 COMMENT '已重试次数',
   `max_retry` int NOT NULL DEFAULT 3 COMMENT '允许的最大重试次数',
   `total_duration_ms` bigint NOT NULL DEFAULT 0 COMMENT '音频总时长毫秒',
+  `recorded_at` datetime(6) NULL DEFAULT NULL COMMENT '录音实际开始时间（墙钟）；用于判断上午/下午；空=未标注',
   `full_text` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '全部转写文本',
   `error_message` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '失败原因',
   `started_at` datetime(6) NULL DEFAULT NULL COMMENT '开始执行时间',
