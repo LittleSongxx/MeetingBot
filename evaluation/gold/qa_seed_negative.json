@@ -1,0 +1,110 @@
+{
+  "qa_set_version": 2,
+  "name": "种子会议不可答负样（12 条；拒答率与检索噪声的单列口径）",
+  "corpus": "db/02-seed.sql 的种子会议：两段录音（task 6 上午产品发布评审、task 7 下午 V2.0 发布评审）",
+  "annotation": {
+    "by": "项目作者",
+    "date": "2026-10-17",
+    "rule": "问题问的东西在种子会议的转写与纪要里完全没有；expected_facts 为空、unanswerable=true。",
+    "source_of_truth": "已用全文检索确认关键词（预算/竞品/服务器/机房/专利/海外/投诉/加密/合同/法务/下次）在语料中零出现。"
+  },
+  "discipline": "只用于负样：拒答率越高越好、负样上下文 useful 率越低越好；不并进四个质量指标。",
+  "cases": [
+    {
+      "id": "n01",
+      "question": "这次发布评审批准的预算金额是多少？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "负样：种子会议的转写与纪要里没有这条信息；正确行为是明确说没找到，不硬凑。"
+    },
+    {
+      "id": "n02",
+      "question": "会上有没有讨论竞品的定价策略？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "负样：种子会议的转写与纪要里没有这条信息；正确行为是明确说没找到，不硬凑。"
+    },
+    {
+      "id": "n03",
+      "question": "这次发布需要采购多少台服务器？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "负样：种子会议的转写与纪要里没有这条信息；正确行为是明确说没找到，不硬凑。"
+    },
+    {
+      "id": "n04",
+      "question": "数据中心的机房在哪个城市？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "负样：种子会议的转写与纪要里没有这条信息；正确行为是明确说没找到，不硬凑。"
+    },
+    {
+      "id": "n05",
+      "question": "会上提到的专利申请数量是多少？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "负样：种子会议的转写与纪要里没有这条信息；正确行为是明确说没找到，不硬凑。"
+    },
+    {
+      "id": "n06",
+      "question": "海外市场的发布时间是什么时候？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "负样：种子会议的转写与纪要里没有这条信息；正确行为是明确说没找到，不硬凑。"
+    },
+    {
+      "id": "n07",
+      "question": "客户投诉的官方电话是多少？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "负样：种子会议的转写与纪要里没有这条信息；正确行为是明确说没找到，不硬凑。"
+    },
+    {
+      "id": "n08",
+      "question": "这次发布采用了哪种加密算法？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "负样：种子会议的转写与纪要里没有这条信息；正确行为是明确说没找到，不硬凑。"
+    },
+    {
+      "id": "n09",
+      "question": "会上决定与哪家供应商签合同？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "负样：种子会议的转写与纪要里没有这条信息；正确行为是明确说没找到，不硬凑。"
+    },
+    {
+      "id": "n10",
+      "question": "V2.0 的研发预算和人力投入是多少？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "负样：种子会议的转写与纪要里没有这条信息；正确行为是明确说没找到，不硬凑。"
+    },
+    {
+      "id": "n11",
+      "question": "法务部门对发布时间的意见是什么？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "负样：种子会议的转写与纪要里没有这条信息；正确行为是明确说没找到，不硬凑。"
+    },
+    {
+      "id": "n12",
+      "question": "会上有没有确定下一次发布评审的具体日期？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "负样：种子会议的转写与纪要里没有这条信息；正确行为是明确说没找到，不硬凑。"
+    }
+  ]
+}

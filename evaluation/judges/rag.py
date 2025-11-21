@@ -48,6 +48,7 @@
 | `c` | 内容级口径首测：加 meta 标记、剔纯出处说明 |
 | `d` | 新仪器 × qwen：归属句判据写死（**归属 + 引述按引号里的内容判支撑**，说话人/秒数/编号等定位装置不参与判定），且判定上下文改取引用快照的 `source_text`（纪要条目整条，含类型化槽位） |
 | `e` | 新仪器 × deepseek（`d` 的跨族对照；**一个标签只装一份判定**，族也是仪器的一部分） |
+| `g` | 负样专用判定（`refused`/`fabricated`）：通用 `answered` 不是拒答检测器 |
 """
 
 from __future__ import annotations
@@ -117,6 +118,25 @@ ANSWER_SYSTEM = """你在判定**回答质量**。
 格式：
 {"claims": [{"index": 1, "text": "…", "supported": true, "meta": false}],
  "answered": true, "why": "一句话"}"""
+
+# 不可答题的专用判定。**通用 `answered` 不能当拒答检测器**：实测 12 条负样答案
+# 全部写着"资料不足/未找到"，通用判定仍把它们全标成 answered=true——它判的是
+# "有没有回应"，不是"有没有拒绝硬凑"。负样必须问一个不同的问题：
+# refused = 明确说明资料里没有该信息/无法回答；fabricated = 给出了上下文里不存在的
+# 具体事实（人名、数字、日期、渠道、结论）。
+NEGATIVE_ANSWER_SYSTEM = """你在判定**不可答题的拒答质量**。
+
+这道题问的信息在给定的会议资料里**根本不存在**。正确的回答应当明确说资料不足/
+没有找到，而不是给出具体事实。只依据给定的上下文，不要用你自己的知识补全。
+
+请输出一个完整的 JSON 对象：
+{"refused": true, "fabricated": false, "why": "一句话"}
+
+- `refused: true` = 回答明确说明资料里没有该信息，或明确说无法回答；
+- `refused: false` = 回答绕开了"有没有"这个问题，或把无关内容当成答案；
+- `fabricated: true` = 回答给出了上下文里不存在的具体事实（人名、数字、日期、
+  渠道、供应商、金额等）；只要有一处就算 true。
+三个字段都不能省；不要输出 JSON 以外的文字。"""
 
 
 # --------------------------------------------------------------------------- #
@@ -339,6 +359,9 @@ def build_packet(qa_set: Mapping[str, Any], answers: Mapping[str, Any] | None) -
             "case_id": case["id"],
             "question": case["question"],
             "expected_facts": case.get("expected_facts") or [],
+            # 不可答题：金标事实为空，正确行为是"不硬凑答案"。评分单列拒答率，
+            # 不混进四个质量指标（否则 precision/recall 会被没有正确答案的题污染）。
+            "unanswerable": bool(case.get("unanswerable")),
             "answer": (turn or {}).get("answer") or "",
             "contexts": contexts,
             # 判定包自己记下上下文来自哪里：新产物是"检索集"，老产物只能退回引用集
@@ -400,6 +423,14 @@ def _answer_shape_problem(parsed: Mapping[str, Any]) -> str:
     return ""
 
 
+def _negative_answer_shape_problem(parsed: Mapping[str, Any]) -> str:
+    """负样判定的形状问题：refused 与 fabricated 必须都是布尔值。"""
+    for field in ("refused", "fabricated"):
+        if not isinstance(parsed.get(field), bool):
+            return f"缺少布尔字段 {field}（响应被截断？）"
+    return ""
+
+
 # 每一半判定最多尝试几次真实调用。存在理由：实测（2026-10-16）判定模型偶尔会在
 # JSON 模式下**中途停住并补上闭合括号**（返回的 JSON 可解析但内容被截断），
 # 换一次调用通常就好了。重试的那次会附上"上一次被截断"的说明（instructor 式 re-ask，
@@ -458,6 +489,16 @@ def judge_packet(packet: dict[str, Any], *, output_path: Path, authorized_calls:
             f"【问题】\n{case['question']}\n\n"
             f"【检索到的上下文】\n{context_listing or '（没有检索到上下文）'}\n\n"
             f"【产品回答】\n{case['answer'][:4000]}\n\n请按格式输出 JSON。")
+        negative = bool(case.get("unanswerable"))
+        if negative:
+            answer_system = NEGATIVE_ANSWER_SYSTEM
+            answer_prompt = (
+                f"【问题（不可答题）】\n{case['question']}\n\n"
+                f"【检索到的上下文】\n{context_listing or '（没有检索到上下文）'}\n\n"
+                f"【产品回答】\n{case['answer'][:4000]}\n\n"
+                "提醒：这道题问的信息在资料里不存在；请按 refused/fabricated 的格式输出 JSON。")
+        else:
+            answer_system, answer_prompt = ANSWER_SYSTEM, answer_user
         judgement: dict[str, Any] = {}
         # 重试时只补失败的那一半：已经判成功的部分不重复花钱
         # store 必须是"这一族的判定字典"，不能是 case 本身——case 里有个 `answer` 键
@@ -472,7 +513,7 @@ def judge_packet(packet: dict[str, Any], *, output_path: Path, authorized_calls:
             if part in previous and f"{part}_error" not in previous:
                 judgement[part] = previous[part]
         for name, system, user in (("context", CONTEXT_SYSTEM, context_user),
-                                   ("answer", ANSWER_SYSTEM, answer_user)):
+                                   ("answer", answer_system, answer_prompt)):
             if name in judgement:
                 continue   # 这一半上轮已判成功
             attempt = 0
@@ -489,8 +530,12 @@ def judge_packet(packet: dict[str, Any], *, output_path: Path, authorized_calls:
                                                   total_deadline=240, thinking=thinking)
                     parsed = reply["parsed"]
                     # 形状不合格按**判定失败**记：截断的响应混进"判成功"会让分母静默变小
-                    problem = (_context_shape_problem(parsed) if name == "context"
-                               else _answer_shape_problem(parsed))
+                    if name == "context":
+                        problem = _context_shape_problem(parsed)
+                    elif negative:
+                        problem = _negative_answer_shape_problem(parsed)
+                    else:
+                        problem = _answer_shape_problem(parsed)
                     if problem:
                         truncated = True
                         problem = f"响应形状不合格：{problem}"
@@ -541,6 +586,13 @@ def summarize(packet: Mapping[str, Any], *, label: str = "a") -> dict[str, Any]:
     answered_ok = answered_total = 0
     cases_with_judgement = 0
     cases_without_gold = 0
+    negative_cases = sum(1 for case in packet["cases"] if case.get("unanswerable"))
+    negative_judged = 0
+    neg_context_useful = neg_context_total = 0
+    neg_claims_supported = neg_claims_total = 0
+    neg_answered_total = neg_refused = neg_forced = 0
+    neg_fabricated_total = neg_fabricated = 0
+    negative_rows: list[dict[str, Any]] = []
     per_case: list[dict[str, Any]] = []
 
     for case in packet["cases"]:
@@ -554,13 +606,53 @@ def summarize(packet: Mapping[str, Any], *, label: str = "a") -> dict[str, Any]:
 
         contexts = [entry for entry in (context.get("contexts") or [])
                     if isinstance(entry, Mapping) and "useful" in entry]
-        context_total += len(contexts)
-        context_useful += sum(1 for entry in contexts if entry["useful"])
-        row["context_precision"] = (sum(1 for entry in contexts if entry["useful"]) / len(contexts)
-                                    if contexts else None)
-
         facts = [entry for entry in (context.get("facts") or [])
                  if isinstance(entry, Mapping) and "found" in entry]
+        claims = [entry for entry in (answer.get("claims") or [])
+                  if isinstance(entry, Mapping) and "supported" in entry]
+        marked = any("meta" in entry for entry in claims)
+        content = [entry for entry in claims if not entry.get("meta")]
+        useful = sum(1 for entry in contexts if entry["useful"])
+
+        if case.get("unanswerable"):
+            # 不可答题：**不并进四个质量指标**。它们没有正确答案，正确的行为是
+            # 不硬凑；如果混进 precision/recall 的分母，会把"拒答"读成"检索无用"。
+            negative_judged += 1
+            neg_context_total += len(contexts)
+            neg_context_useful += useful
+            neg_claims_total += len(claims)
+            neg_claims_supported += sum(1 for entry in claims if entry["supported"])
+            # **只认负样专用字段**：通用 answered 不是拒答检测器（实测它把
+            # "资料不足"全判成 answered=true）。没有 refused 字段时拒答率报 null，
+            # 不拿 answered 冒充——那是把"仪器没测"记成"0% 拒答"。
+            refused = answer.get("refused")
+            fabricated = answer.get("fabricated")
+            if isinstance(refused, bool):
+                neg_answered_total += 1
+                if refused:
+                    neg_refused += 1
+                else:
+                    neg_forced += 1
+            if isinstance(fabricated, bool):
+                neg_fabricated_total += 1
+                if fabricated:
+                    neg_fabricated += 1
+            row["unanswerable"] = True
+            row["context_precision"] = useful / len(contexts) if contexts else None
+            row["faithfulness"] = (sum(1 for entry in claims if entry["supported"]) / len(claims)
+                                   if claims else None)
+            row["refused"] = refused
+            row["fabricated"] = fabricated
+            row["answered"] = answer.get("answered")
+            negative_rows.append(row)
+            cases_with_judgement += 1
+            per_case.append(row)
+            continue
+
+        context_total += len(contexts)
+        context_useful += useful
+        row["context_precision"] = useful / len(contexts) if contexts else None
+
         if facts:
             facts_total += len(facts)
             facts_found += sum(1 for entry in facts if entry["found"])
@@ -569,11 +661,7 @@ def summarize(packet: Mapping[str, Any], *, label: str = "a") -> dict[str, Any]:
             cases_without_gold += 1
             row["context_recall"] = None
 
-        claims = [entry for entry in (answer.get("claims") or [])
-                  if isinstance(entry, Mapping) and "supported" in entry]
-        marked = any("meta" in entry for entry in claims)
         meta_marked = meta_marked or marked
-        content = [entry for entry in claims if not entry.get("meta")]
         claims_total += len(claims)
         claims_supported += sum(1 for entry in claims if entry["supported"])
         content_total += len(content)
@@ -594,6 +682,22 @@ def summarize(packet: Mapping[str, Any], *, label: str = "a") -> dict[str, Any]:
         cases_with_judgement += 1
         per_case.append(row)
 
+    negative_summary = None
+    if negative_cases:
+        negative_summary = {
+            "cases": negative_cases,
+            "cases_judged": negative_judged,
+            # 拒答率只用负样专用判定（refused）；没有该字段时为 null，不是 0%
+            "refusal_rate": _rate(neg_refused, neg_answered_total),
+            "forced_answer_rate": _rate(neg_forced, neg_answered_total),
+            "fabricated_rate": _rate(neg_fabricated, neg_fabricated_total),
+            "context_useful_rate": _rate(neg_context_useful, neg_context_total),
+            "faithfulness": _rate(neg_claims_supported, neg_claims_total),
+            "instrument": ("refused/fabricated（负样专用）" if neg_answered_total
+                           else "缺 refused/fabricated：拒答率判不了，不拿 answered 冒充"),
+            "per_case": negative_rows,
+        }
+
     return {
         "cases_judged": cases_with_judgement,
         "cases_total": packet.get("case_count"),
@@ -605,6 +709,9 @@ def summarize(packet: Mapping[str, Any], *, label: str = "a") -> dict[str, Any]:
         "faithfulness_content": _rate(content_supported, content_total) if meta_marked else None,
         "faithfulness_meta_claims": meta_claims if meta_marked else None,
         "answer_relevancy": _rate(answered_ok, answered_total),
+        # 不可答题单列：拒答率 / 硬凑率 / 检索噪声 / 支撑率。没有负样时为 null，
+        # 不报 0（"没测"与"测了是 0"是两件事）。
+        "unanswerable": negative_summary,
         "per_case": per_case,
         "reading": (
             "context_precision = **检索到的全部切片**里被判『有用』的比例"
@@ -615,6 +722,8 @@ def summarize(packet: Mapping[str, Any], *, label: str = "a") -> dict[str, Any]:
             "判定标了 meta 才有；旧提示词的标签报 null）；"
             "answer_relevancy = 正面回答了问题的 case 比例（与 RAGAS 的嵌入口径不同）。"
             "四个指标各自独立报出，**没有加权总分**。"
+            "`unanswerable` 一节**不并进四个指标**：拒答率 = 不可答题里没有硬凑答案的比例，"
+            "context_useful_rate = 负样上下文里被判有用的比例（越低越好，暴露检索噪声）。"
         ),
         "not_measured": (
             "本次未测：产品在真实模型下的答案质量（需要一次授权运行）；"
@@ -639,7 +748,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument("--meeting-id", type=int, default=None,
                         help="把会话范围限定在这一场会（便于复核引用来源）")
     parser.add_argument("--provider", default="qwen", choices=sorted(model_client.PROVIDERS))
-    parser.add_argument("--label", default="a", choices=("a", "b", "c", "d", "e", "f"),
+    parser.add_argument("--label", default="a", choices=("a", "b", "c", "d", "e", "f", "g"),
                         help="判定标签：a 是主判，其它标签另存一份。**一个标签只装一份判定**"
                              "（族与仪器都在里面）——换提示词/换上下文来源就是换仪器，"
                              "要把它与旧的**分开**存；同一仪器换族也要换标签")

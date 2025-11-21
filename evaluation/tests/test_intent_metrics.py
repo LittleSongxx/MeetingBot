@@ -106,8 +106,13 @@ class RealSeedSetTest(unittest.TestCase):
         qa_set = json.loads((EVALUATION_DIR / "gold" / "qa_seed.json").read_text(encoding="utf-8"))
         taxonomy = qa_set["annotation"]["intent_taxonomy"]
         cases = qa_set["cases"]
-        self.assertTrue(all(case.get("intent") in taxonomy for case in cases))
-        self.assertTrue(all(case.get("intent_source") for case in cases))
+        # 不可答题没有意图标签：它们不进逐类 F1，只由 rag.py 的 unanswerable 一节评分
+        answerable = [case for case in cases if not case.get("unanswerable")]
+        self.assertTrue(all(case.get("intent") in taxonomy for case in answerable))
+        self.assertTrue(all(case.get("intent_source") for case in answerable))
+        negatives = [case for case in cases if case.get("unanswerable")]
+        self.assertTrue(negatives, "负样必须留在标注集里（可追溯到 expected_facts=[]）")
+        self.assertTrue(all(case.get("expected_facts") == [] for case in negatives))
         draft = [case for case in cases if case.get("case_source") == "agent_draft"]
         self.assertTrue(draft, "扩标的那批必须如实标成代理起草")
         self.assertIn("待人工确认", qa_set["annotation"]["intent_note"])
