@@ -447,6 +447,22 @@ class ChatChecksTest(unittest.TestCase):
         summary = self._summarize([self._turn(allowed_meeting_ids=None)])
         self.assertEqual(summary["authorized"]["rate"], 1.0)
 
+    def test_inventory_fact_is_not_applicable_not_unlocatable(self):
+        """录音/会议清单是元数据卡片，不是逐字转写；不能拿转写定位它。"""
+        turn = self._turn(
+            used_refs=[1, 2],
+            citations=[
+                self._turn()["citations"][0],
+                {"ref": 2, "kind": "fact", "meeting_id": 2,
+                 "quote": "录音 task 7 · 2026-09-10 14:00:00 · 下午",
+                 "task_id": 7, "source_id": 7},
+            ])
+        summary = self._summarize([turn])
+        self.assertEqual(summary["locatable"]["rate"], 1.0)
+        self.assertEqual(summary["unlocatable_count"], 0)
+        self.assertEqual(summary["not_applicable_count"], 1)
+        self.assertEqual(summary["turns_with_violation"], 0)
+
     def test_citation_without_a_transcript_reference_is_reported_as_unchecked(self):
         """会议转写没抓到（例如来源不是转写）时判不了定位：如实计数，不算通过。"""
         turn = self._turn(citations=[{"ref": 1, "kind": "chunk", "meeting_id": 999, "quote": "x"}])

@@ -123,6 +123,14 @@ def check_turn(turn: Mapping[str, Any], contracts=None,
         if str(citation.get("authority") or "").upper() == "CONFIRMED":
             not_applicable.append(ref)
             continue
+        # 录音/会议清单是**结构化元数据**（task_id/recorded_at/period/标题），不是逐字
+        # 转写；用转写全文定位它必然失败。与纪要条目同列 not_applicable：这不是放水，
+        # 清单卡片的正确性要靠内容抽检，而不是逐字定位。
+        if (str(citation.get("kind") or "") == "fact"
+                and citation.get("chunk_id") is None
+                and citation.get("minutes_id") is None):
+            not_applicable.append(ref)
+            continue
         source_text = _source_text(sources, meeting_id)
         quote = strip_locators(str(citation.get("quote") or ""))
         if not source_text or not quote:

@@ -280,16 +280,11 @@ class GetMinutesArgs(BaseModel):
                     "**必须**把问题里的名词放进来，例如 [\"发布范围\", \"功能\"]；"
                     "不要整字段返回。summary 不受 keywords 影响。",
     )
-    limit: int = Field(
-        default=5, ge=1, le=50,
-        description="每个列表字段最多返回几条（默认 5）。问「最后 N 条/最近 N 条」时"
-                    "把 limit 设为 N，并把 order 设为 last；返回的 field_meta 会标出"
-                    "total/truncated，还有更多时可再取。",
-    )
-    order: Literal["first", "last"] = Field(
-        default="first",
-        description="列表字段的取法：first=从前往后（默认），last=从后往前。"
-                    "问「最后几条决策/最近几条」时用 last。",
+    limit: int | None = Field(
+        default=None, ge=1, le=50,
+        description="每个列表字段最多返回前几条（默认不截断）。这只是**纪要数组顺序**，"
+                    "不保证会议时间顺序；问「会议最后总结的几条」不要用它猜，"
+                    "改用 search_knowledge 检索总结段。field_meta 会标 total/returned/truncated。",
     )
 
     @field_validator("fields", "keywords", mode="before")
@@ -300,7 +295,7 @@ class GetMinutesArgs(BaseModel):
     @field_validator("limit", mode="before")
     @classmethod
     def _loose_limit(cls, value: Any) -> Any:
-        return _loose(value, int)
+        return _loose(value, (int, type(None)))
 
     @field_validator("minutes_id", "meeting_id", mode="before")
     @classmethod
@@ -538,7 +533,8 @@ async def _get_minutes(actor: Actor, args: GetMinutesArgs) -> dict[str, Any]:
             pairs = [(index, item) for index, item in pairs
                      if _keywords_match(item, args.keywords)]
         total = len(pairs)
-        pairs = pairs[-args.limit:] if args.order == "last" else pairs[:args.limit]
+        if args.limit is not None:
+            pairs = pairs[:args.limit]
         rendered: list[Any] = []
         for index, item in pairs:
             # **引用身份必须保留原始下标**：过滤/截断后如果重新 enumerate，
@@ -552,11 +548,12 @@ async def _get_minutes(actor: Actor, args: GetMinutesArgs) -> dict[str, Any]:
     draft = minutes.status != "CONFIRMED"
     notice = ("这是尚未确认的草稿，引用时必须说明是草稿。" if draft
               else "这是人工确认过的纪要，可以直接作为会议事实引用。")
-    notice += (f" 列表字段每项最多返回 {args.limit} 条（order={args.order}）；"
-               "问最后 N 条用 order=\"last\" + limit=N，问某主题用 keywords 缩小；"
-               "field_meta 给出 total/returned/truncated。")
+    notice += (" 列表字段是**纪要数组顺序**，不保证会议时间顺序；问某主题用 keywords 缩小，"
+               "limit 只截前 N 条。summary/topics 不保证包含会议时长、数量、具体时间点；"
+               "问这些元信息时必须用 search_knowledge 检索转写；问「会议最后总结的几条」"
+               "也要检索总结段，不要用字段顺序猜。")
     if any(meta["truncated"] for meta in field_meta.values()):
-        notice += " 还有更多条目未返回，需要时缩小 keywords 或调整 limit/order。"
+        notice += " 还有更多条目未返回，需要时缩小 keywords 或调整 limit。"
     if args.keywords and field_meta and not any(meta["total"] for meta in field_meta.values()):
         notice += " keywords 没有命中任何列表条目；可换关键词或去掉 keywords。"
     return {
@@ -689,9 +686,10 @@ TOOL_SPECS: tuple[ToolSpec, ...] = (
         description="取某场会的纪要字段（摘要、议题、观点、决策、待办、风险，含证据）。"
                     "**按需传 fields**：问时长/议题只取 summary/topics，问待办只取 "
                     "pending_items；不确定才取全部。一次取六字段会把无关条目塞满上下文。"
-                    "**问某主题/发布范围/功能时传 keywords**（从问题取名词）；"
-                    "**问最后 N 条/最近 N 条时传 order=last + limit=N**；"
-                    "列表字段默认每项最多 5 条，field_meta 会标 total/truncated。",
+                    "**问某主题/发布范围/功能时传 keywords**（从问题取名词）。"
+                    "列表字段是纪要数组顺序，**不保证会议时间顺序**；问「会议最后总结的几条」"
+                    "请用 search_knowledge 检索总结段，不要用字段顺序猜。"
+                    "summary/topics 不保证包含时长/数量/具体时间点；问这些元信息必须检索转写。",
         arguments=GetMinutesArgs,
         handler=_get_minutes,
     ),
