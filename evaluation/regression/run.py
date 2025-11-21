@@ -335,9 +335,12 @@ def build_report(
         (artifact or {}).get("turns") or [], sources=(artifact or {}).get("source_texts"))
     # 检索侧指标（recall@k / MRR / nDCG）：同样零调用，但需要产物里带"检索到的全部切片"
     # 与"片段→时间"映射。缺这两样时报无样本——**不拿被引用的切片冒充检索集**。
-    # 意图层（零调用）：逐类 F1 + 混淆矩阵。金标是 qa_seed 的 intent 字段（代理起草、
-    # 待人工确认），产品决策来自 `judges/intent.py` 抓的 /chat/plan 产物。
-    intent_decisions, intent_gold = intent_metrics.load_inputs()
+    # 意图层（零调用）：逐类 F1 + 混淆矩阵。产品决策来自 `judges/intent.py` 抓的
+    # /chat/plan 产物。标签优先用 **AI 复核**（用户授权替代人工；`intent_source=ai_review`，
+    # 不冒充 human）；没有 AI 复核文件时才退回 qa_seed 的代理标签。
+    ai_reviewed = EVALUATION_DIR / "gold" / "qa_seed_ai_reviewed.json"
+    intent_decisions, intent_gold = intent_metrics.load_inputs(
+        qa_path=ai_reviewed if ai_reviewed.exists() else None)
     report["intent_metrics"] = intent_metrics.summarize(intent_decisions, intent_gold)
     report["retrieval_metrics"] = retrieval_metrics.summarize(
         artifact, json.loads((EVALUATION_DIR / "gold" / "qa_seed.json").read_text(encoding="utf-8"))
