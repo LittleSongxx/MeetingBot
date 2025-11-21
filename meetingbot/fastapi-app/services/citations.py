@@ -242,6 +242,9 @@ def _from_segments(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citatio
             speaker=segment.get("speaker"), start_second=segment.get("start_second"),
             end_second=segment.get("end_second"),
             task_id=result.get("task_id"), segment_no=segment.get("segment_no"),
+            # 来源身份与 task_id 同值：评测侧按 source_id 把片段映射回录音；
+            # 缺了它，get_transcript_excerpt 的引用会被误判成"没有时间轴"（任务 5 扩展集暴露）
+            source_id=result.get("task_id"),
         )))
     return pairs
 

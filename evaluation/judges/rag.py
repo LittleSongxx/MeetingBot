@@ -265,7 +265,10 @@ def capture(qa_set: Mapping[str, Any], *, base_url: str, token: str,
             # 会话限定范围就是这次提问的允许集合（抓取时固定一场会，便于复核）
             "allowed_meeting_ids": [meeting_id] if meeting_id else None,
             "used_refs": _refs_from_answer(message),
-            "unknown_refs": [],
+            # 答案引用了、但**这条消息的引用快照里没有**的编号：页面会显示成死链。
+            # 不能写死成 []——实测（扩展集 q93）模型复用了上一轮的 [3][5]，
+            # 本消息只快照了 [1]，旧实现把这条违约记成了"0 编编号"。
+            "unknown_refs": _unknown_refs(message),
             # 本轮检索到的**全部**切片（含没被引用的）：检索侧指标的分母。
             # 只存被引用的那一部分会把召回算高（分母里少了没被引用的东西）。
             "retrieved": message.get("retrieved") or [],
@@ -312,6 +315,18 @@ def _refs_from_answer(message: Mapping[str, Any]) -> list[int]:
     """答案里出现过的引用编号（与页面渲染用的是同一个模式：`[n]`）。"""
     import re
     return sorted({int(m.group(1)) for m in re.finditer(r"\[(\d{1,3})\]", message.get("content") or "")})
+
+
+def _unknown_refs(message: Mapping[str, Any]) -> list[int]:
+    """答案引用了、但这条消息的引用快照里没有的编号。
+
+    这是**死链探针**：页面按快照渲染引用卡片，快照里没有的编号点不开。
+    注意它比产品 `unknown_refs` 更窄——产品可能持有会话级登记表，而消息快照
+    只存本轮用到的；无论哪种，答案里出现快照外的编号都必须如实计数。
+    """
+    known = {int(item.get("ref")) for item in (message.get("citations") or [])
+             if isinstance(item, Mapping) and item.get("ref") is not None}
+    return [ref for ref in _refs_from_answer(message) if ref not in known]
 
 
 def _now() -> str:

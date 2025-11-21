@@ -368,6 +368,17 @@ class BudgetGateTest(unittest.TestCase):
         self.assertIn("context_error", case["judgement"])
 
 
+class CaptureRefsTest(unittest.TestCase):
+    def test_refs_outside_the_message_snapshot_are_counted(self):
+        """扩展集 q93 的死链：答案写 [1][3][5]，快照只有 [1]。"""
+        message = {"content": "结论 [1]，下午场 [3][5]。", "citations": [{"ref": 1}]}
+        self.assertEqual(rag._unknown_refs(message), [3, 5])
+
+    def test_all_refs_in_snapshot_is_clean(self):
+        message = {"content": "结论 [1][2]。", "citations": [{"ref": 1}, {"ref": 2}]}
+        self.assertEqual(rag._unknown_refs(message), [])
+
+
 class ChatChecksTest(unittest.TestCase):
     """两条零调用不变量：定位与越权。判据来自产品契约层（登记在案的例外②）。
 
@@ -487,6 +498,20 @@ class ChatChecksTest(unittest.TestCase):
             self.assertTrue(case["source"]["segments"], case["id"])
         # 宪法第 3 条：小样本只作方向信号，这一点必须写在数据里
         self.assertIn("方向信号", qa_set["discipline"])
+
+    def test_extended_set_is_a_separate_heldout_sample(self):
+        """68 条扩展集与 27 条人工集分开报：全部代理起草、有金标片段、未参与调参。"""
+        qa_set = json.loads((EVALUATION_DIR / "gold" / "qa_seed_extended.json")
+                            .read_text(encoding="utf-8"))
+        cases = qa_set["cases"]
+        self.assertEqual(len(cases), 68)
+        for case in cases:
+            self.assertEqual(case.get("case_source"), "agent_draft", case["id"])
+            self.assertTrue(case.get("expected_facts"), case["id"])
+            self.assertTrue(case.get("source", {}).get("segments"), case["id"])
+            self.assertIn(case.get("intent"), ("single_fact", "aggregation", "cross_meeting"))
+        self.assertIn("未参与本轮", qa_set["annotation"]["holdout_note"])
+        self.assertIn("代理起草", qa_set["discipline"])
 
 
 if __name__ == "__main__":
