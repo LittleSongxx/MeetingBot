@@ -307,6 +307,7 @@ def _product_switches(base_url: str, token: str) -> dict[str, Any]:
         "kb_dedupe_enabled": data.get("kb_dedupe_enabled"),
         "kb_dedupe_overlap_seconds": data.get("kb_dedupe_overlap_seconds"),
         "kb_contextual_enabled": data.get("kb_contextual_enabled"),
+        "cross_recording_prefetch_k": data.get("cross_recording_prefetch_k"),
         "qdrant_collection": data.get("qdrant_collection"),
     }
 

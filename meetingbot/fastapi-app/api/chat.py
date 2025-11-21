@@ -107,6 +107,7 @@ async def status(current_user: User = Depends(get_current_user)):
         "kb_dedupe_enabled": kb_service.dedupe_enabled(),
         "kb_dedupe_overlap_seconds": kb_service.dedupe_overlap_seconds(),
         "kb_contextual_enabled": kb_service.contextual_enabled(),
+        "cross_recording_prefetch_k": chat_service.cross_recording_prefetch_k(),
         "qdrant_collection": qdrant.collection_name(),
     })
 

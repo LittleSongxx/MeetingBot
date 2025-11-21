@@ -956,6 +956,18 @@ class QueryPlanPipelineTest(unittest.IsolatedAsyncioTestCase):
         assistant = await ChatMessage.filter(session_id=session.id, role="ASSISTANT").first()
         self.assertIsNone(assistant.plan_json)
 
+    def test_cross_recording_prefetch_depth_is_configurable(self):
+        with patch.dict(os.environ, {"CROSS_RECORDING_PREFETCH_K": "2"}):
+            self.assertEqual(chat_service.cross_recording_prefetch_k(), 2)
+        with patch.dict(os.environ, {"CROSS_RECORDING_PREFETCH_K": "99"}):
+            self.assertEqual(chat_service.cross_recording_prefetch_k(), 5)
+        with patch.dict(os.environ, {"CROSS_RECORDING_PREFETCH_K": "0"}):
+            self.assertEqual(chat_service.cross_recording_prefetch_k(), 0)
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("CROSS_RECORDING_PREFETCH_K", None)
+            self.assertEqual(chat_service.cross_recording_prefetch_k(), 0,
+                             "cross8 标定后默认关")
+
     def test_cross_recording_markers(self):
         for question in ("两段录音分别提到了哪些风险？",
                          "发布公告与对外通稿分别由谁负责？",
@@ -977,16 +989,20 @@ class QueryPlanPipelineTest(unittest.IsolatedAsyncioTestCase):
             self.user, requested=[self.meeting.id])
         registry = chat_service.citations.CitationRegistry()
 
+        limits: list[int] = []
+
         async def fake_search(query, **kwargs):
             source_id = kwargs["source_ids"][0]
+            limits.append(kwargs["limit"])
             return [Hit(chunk_id=source_id, score=1.0, text=f"task {source_id} 的原文",
                         meeting_id=self.meeting.id, authority="RAW",
                         chunk_type="TRANSCRIPT_WINDOW", field=None, item_index=None,
                         speaker="张晨", start_ms=0, end_ms=1000, document_id=1,
                         origin=None, source_id=source_id)]
 
-        with patch.object(kb_service, "search_knowledge",
-                          AsyncMock(side_effect=fake_search)) as search:
+        with patch.dict(os.environ, {"CROSS_RECORDING_PREFETCH_K": "3"}), \
+                patch.object(kb_service, "search_knowledge",
+                             AsyncMock(side_effect=fake_search)) as search:
             message = await chat_service._cross_recording_message(
                 actor, registry, "两段录音分别说了什么",
                 scope=[self.meeting.id], biz_id=0)
@@ -996,13 +1012,15 @@ class QueryPlanPipelineTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("上午", message.content)
         self.assertIn("下午", message.content)
         self.assertEqual(search.await_count, 2)
+        self.assertEqual(limits, [3, 3], "默认每段 3 条")
         self.assertEqual(len(registry), 2)
 
     async def test_cross_recording_prefetch_skips_non_cross_questions(self):
         actor = await chat_service.kb_tools.Actor.resolve(
             self.user, requested=[self.meeting.id])
         registry = chat_service.citations.CitationRegistry()
-        with patch.object(kb_service, "search_knowledge", AsyncMock()) as search:
+        with patch.dict(os.environ, {"CROSS_RECORDING_PREFETCH_K": "3"}), \
+                patch.object(kb_service, "search_knowledge", AsyncMock()) as search:
             message = await chat_service._cross_recording_message(
                 actor, registry, "灰度从什么时候开始",
                 scope=[self.meeting.id], biz_id=0)
