@@ -842,6 +842,11 @@ def _period_of(value: Any) -> str | None:
     return "晚上"
 
 
+def period_of(value: Any) -> str | None:
+    """公开别名：跨录音预检索也要用同一套上午/下午判定。"""
+    return _period_of(value)
+
+
 __all__ = [
     "Actor", "ToolError", "ToolSpec", "TOOL_SPECS", "TOOLS_BY_NAME",
     "execute_tool", "openai_tools", "tool_result_text",

@@ -31,6 +31,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from typing import Any, AsyncIterator
 
 from common.prompts import render_prompt
@@ -41,7 +42,7 @@ from langgraph.prebuilt import ToolNode
 from models import AiCallLog, AiModelConfig, ChatMessage, ChatSession, Meeting, PromptTemplate, TranscriptionTask, User
 from tortoise.expressions import F
 
-from services import chat_graph, citations, entity_check, kb_tools, model_factory, moderation, query_plan
+from services import chat_graph, citations, entity_check, kb_service, kb_tools, model_factory, moderation, query_plan
 
 logger = logging.getLogger("meetingbot.chat")
 
@@ -307,6 +308,53 @@ def _used_refs(row: ChatMessage) -> list[int]:
     return [int(item.get("ref")) for item in used if item.get("ref")]
 
 
+# 跨录音问题的显式标记：要求“两段/分别/各自/一致”的题才做预检索。
+# 这不是对单题加词表，而是“比较/分述两段”这一类问题的动作标记；同一段录音里的
+# 多问句（“时间和前提分别是什么”）也会命中，所以只在**会议确有多段录音**时生效。
+_CROSS_RECORDING_MARKERS = re.compile(r"两段|两场|分别|各自|一致|上午.*下午|下午.*上午")
+
+
+def wants_cross_recording(question: str) -> bool:
+    return bool(_CROSS_RECORDING_MARKERS.search(str(question or "")))
+
+
+async def _cross_recording_message(actor: kb_tools.Actor, registry: citations.CitationRegistry,
+                                   question: str, *, scope: list[int],
+                                   biz_id: int) -> SystemMessage | None:
+    """跨录音预检索：按每段录音各搜一次，把两段证据直接放进上下文。
+
+    为什么放在 Agent 循环之前：提示词说“两段各检索一次”是概率性的——实测 q91
+    只调 list_facts/get_minutes、q94 只覆盖 task 6。这里在入口处**结构性**补上
+    两段各 top-3，引用编号也登记好；Agent 后面还可以自己再检索，但两段的覆盖
+    不再取决于它是否听话。
+
+    只在会话限定了会议、且该会议确有 ≥2 段转写时执行；失败不打断主链路。
+    """
+    if not scope or not wants_cross_recording(question):
+        return None
+    tasks = await TranscriptionTask.filter(
+        meeting_id__in=scope, status="SUCCEEDED").order_by("id")
+    if len(tasks) < 2:
+        return None
+    lines = ["【跨录音预检索】这个问题要求分别说明多段录音；系统已按每段录音各检索一次。"
+             "回答必须分别标注来源（task_id/recorded_at）；某段没有命中就如实说明。"]
+    for task in tasks:
+        try:
+            hits = await kb_service.search_knowledge(
+                question, allowed_meeting_ids=scope, limit=3, source_ids=[task.id],
+                biz_id=biz_id)
+        except Exception:  # noqa: BLE001 - 预检索失败退回 Agent 自己的工具路径
+            logger.exception("跨录音预检索失败（task=%s），本轮退回模型自行检索", task.id)
+            continue
+        annotated = registry.annotate("search_knowledge", {
+            "ok": True, "hits": [hit.as_citation() for hit in hits]})
+        period = kb_tools.period_of(task.recorded_at) or "未标注"
+        lines.append(f"录音 task {task.id}（{period}）：")
+        for hit in annotated.get("hits") or []:
+            lines.append(f"[{hit['ref']}] {str(hit.get('quote') or '')[:300]}")
+    return SystemMessage("\n".join(lines)) if len(lines) > 1 else None
+
+
 def _entity_haystack(registry: citations.CitationRegistry,
                      state: dict[str, Any] | None) -> str:
     """实体核查的对照物：引用正文 + **本轮全部工具结果**。
@@ -558,7 +606,14 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     })
 
     history = await build_memory(session, user=user)
-    messages = history + ([plan_message] if plan_message else []) + [await question_message(text)]
+    # 跨录音预检索：只对“两段/分别/各自/一致”类问题、且会话限定的会议确有多段录音时执行。
+    # 它把两段各 top-3 直接放进上下文，弥补“提示词要求两段各查一次”的概率性。
+    cross_message = await _cross_recording_message(
+        actor, registry, text, scope=list(session.scope_meeting_ids or []),
+        biz_id=assistant_row.id)
+    messages = (history + ([plan_message] if plan_message else [])
+                + ([cross_message] if cross_message else [])
+                + [await question_message(text)])
     state_in: dict[str, Any] = {
         "messages": messages,
         "call_model": model_factory.make_model_caller(
