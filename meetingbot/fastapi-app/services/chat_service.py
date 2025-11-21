@@ -75,6 +75,23 @@ DEFAULT_SYSTEM_PROMPT = (
     "资料不足时如实说资料不足，并说明缺什么。"
 )
 
+# 资料覆盖规则：**这是正确性约束，不交给可编辑模板**。
+# 实测（q26）：list_facts 只读已确认纪要，返回 1 条待办 + source_coverage 显示还有
+# 2 段录音与 1 份草稿；模型看懂了"资料不足"，却直接答"无法列出"，没有回头检索转写。
+# 把"确认纪要里没有"说成"没有发生"是错误结论，所以这条规则与引用协议一样由代码持有，
+# 管理员改模板不会把它弄丢。它只约束**有资料缺口时**的行为，不要求每个问题都多检索。
+SOURCE_COVERAGE_PROTOCOL = (
+    "\n\n【资料覆盖规则】\n"
+    "1. list_facts 只读已确认纪要。它的 source_coverage 显示还有未确认纪要或转写录音时，"
+    "「确认纪要里没有」不等于「没有发生过」。\n"
+    "2. **只有当问题明确在问「有哪些行动项/待办」或「行动项清单」**，"
+    "而 list_facts 没有给出完整清单时，才必须再用 search_knowledge 检索转写原话；"
+    "会议有多段录音时，对每段各检索一次（或一次不限来源），再下结论。"
+    "问单一事实、流程步骤、时间点、原因或一般决策复述时，不要为了「覆盖」额外检索。\n"
+    "3. 问题里的「上午/下午/那场会」在元数据里判不出来时，检索相关录音并如实说明，"
+    "不要猜一段录音；猜出来的日期/来源限定空了会自动放宽。"
+)
+
 # 引用协议：**这不是可编辑的提示词**，而是前后端之间的协议——页面按 `[n]`
 # 渲染可点击的引用卡片，答案里的编号必须与工具返回的条目对得上。
 # 与 `build_schema_instruction` 同款理由：结构约束只写在代码常量里，
@@ -151,8 +168,10 @@ async def get_system_prompt() -> str:
     """
     template = await PromptTemplate.filter(code="CHAT_ANSWER", enabled=True).first()
     body = (template.system_prompt if template else "") or DEFAULT_SYSTEM_PROMPT
-    # 内容审核的第二层：生成约束。未配置词表时它返回空串（不留一句空话）
-    return body.strip() + CITATION_PROTOCOL + moderation.prompt_constraints()
+    # 内容审核的第二层：生成约束。未配置词表时它返回空串（不留一句空话）。
+    # 资料覆盖规则放在引用协议之前：引用协议始终是最后一块结构性约束。
+    return (body.strip() + SOURCE_COVERAGE_PROTOCOL + CITATION_PROTOCOL
+            + moderation.prompt_constraints())
 
 
 async def question_message(question: str) -> HumanMessage:

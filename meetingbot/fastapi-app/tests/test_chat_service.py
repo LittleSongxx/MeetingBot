@@ -421,6 +421,7 @@ class PromptTest(unittest.IsolatedAsyncioTestCase):
     async def test_default_prompt_is_used_when_template_is_absent(self):
         prompt = await chat_service.get_system_prompt()
         self.assertIn("企业会议知识助手", prompt)
+        self.assertIn("【资料覆盖规则】", prompt)
         self.assertIn("【引用规则】", prompt)
 
     async def test_database_template_wins_but_protocol_still_appended(self):
@@ -430,6 +431,7 @@ class PromptTest(unittest.IsolatedAsyncioTestCase):
             system_prompt="你是定制助手。", user_prompt="")
         prompt = await chat_service.get_system_prompt()
         self.assertTrue(prompt.startswith("你是定制助手。"))
+        self.assertIn("【资料覆盖规则】", prompt)
         self.assertIn("【引用规则】", prompt)
 
     async def test_template_user_prompt_is_appended_after_the_question(self):
