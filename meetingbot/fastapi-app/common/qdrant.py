@@ -249,6 +249,7 @@ async def hybrid_search(
     dense: Sequence[float],
     sparse: dict[str, Any],
     limit: int = 8,
+    prefetch_limit: int | None = None,
     allowed_meeting_ids: Sequence[int] | None = None,
     authority: Iterable[str] | None = None,
     chunk_type: Iterable[str] | None = None,
@@ -267,13 +268,16 @@ async def hybrid_search(
     不满足条件的点照样被召回，那是最难发现的一类错误（结果看着有，其实不该有）。
     """
     name = name or collection_name()
+    # 候选深度由调用方传入（rerank 的候选数）：两路 prefetch 用同一个深度，
+    # 否则融合后的候选上限会被较小的一路卡住，扩大候选数就没有实际效果。
+    depth = max(1, int(prefetch_limit or PREFETCH_LIMIT))
     prefetch: list[dict[str, Any]] = [
-        {"query": list(dense), "using": DENSE_VECTOR, "limit": PREFETCH_LIMIT},
+        {"query": list(dense), "using": DENSE_VECTOR, "limit": depth},
     ]
     if sparse.get("indices"):
         prefetch.append({"query": {"indices": list(sparse["indices"]),
                                    "values": list(sparse["values"])},
-                         "using": SPARSE_VECTOR, "limit": PREFETCH_LIMIT})
+                         "using": SPARSE_VECTOR, "limit": depth})
 
     must: list[dict[str, Any]] = []
     acl = _acl_filter(allowed_meeting_ids)

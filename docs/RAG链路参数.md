@@ -26,7 +26,8 @@ qwen3.7-text-rerank（专用 cross-encoder 类，24 候选打分）
 | 稠密模型 / 维度 | `qwen3.7-text-embedding` / **1024**（`EMBEDDING_MODEL`、`EMBEDDING_DIM`） | `.env` → bootstrap 同步到 `ai_model_config` | 换模型/维度 = 换向量空间，必须重建（指纹含模型名与维度，自动触发） |
 | 稀疏臂 | 字符 bigram 次线性 TF + **IDF 由 Qdrant 按语料统计** | `services/kb_sparse.py`、`common/qdrant.py` | `modifier=idf` 是**建库时**的声明；换它要换 collection 名重建（代码会 fail-fast 而不是静默退化） |
 | 混合与融合 | 两路各 prefetch 24，服务端 **RRF**（`query.fusion=rrf`） | `common/qdrant.py` | 候选深度影响召回；RRF 免调权重 |
-| 重排 | `qwen3.7-text-rerank`（`RERANK_MODEL`；`RERANK_BASE_URL` 可指专属端点） | `services/model_factory.rerank_documents` | 每次检索一次 HTTP；实测 **平均 476ms、最大 2.35s**、约 5.4k token/次（24 候选） |
+| 重排 | `qwen3.7-text-rerank`（`RERANK_MODEL`；`RERANK_BASE_URL` 可指专属端点） | `services/model_factory.rerank_documents` | 每次检索一次 HTTP；24 候选实测 **平均 278.5ms、约 3.9k token/次、0.00195 元/次**（单价 500 微元/千） |
+| 候选深度 | **24**（`RERANK_CANDIDATES`，两路 prefetch 同步） | `services/kb_service.py` | 40 候选实测 precision +0.5pp（检不出），延迟 +36.5%、成本 +65.7%；保持 24 |
 | 重排开关 | 默认**开**（`KB_RERANK_ENABLED`） | `services/kb_service.py` | 关掉省延迟，但 context_precision 会掉 |
 | 截断 | **top-3**（`RERANK_TOP_K`） | 同上 | k 越大召回越宽、单条精度越低（见第二节四臂标定） |
 | 工具默认条数 | **5**（模型可自己要到 20，重排后仍截到 top-3） | `services/kb_tools.py` | 模型要更多也只会拿到 3 条；要更大就调 `RERANK_TOP_K` |
@@ -63,6 +64,13 @@ qwen 不再当裁判；旧读数只作历史对照，不与新读数相减。
 precision 77.3%（68/88）vs 关时的 81.0%（68/84）：有用条数一样，分母多了 4 条；
 MRR 0.870→0.889、nDCG 0.886→0.893、answer relevancy 96.3%→100%，但主指标未过成功线。
 因此 `KB_CONTEXTUAL_ENABLED=0`；要开就按 LEDGER 任务 3 的预注册重跑。
+
+**候选深度 24 vs 40（任务 6，2026-10-17）**：同一批 27 题、同一窄规则，只改
+`RERANK_CANDIDATES`。40 候选的 precision 75.8% vs 24 的 75.3%（+0.5pp，检不出），
+但 rerank 平均延迟 380ms vs 278.5ms（+36.5%）、输入 token 193,855 vs 117,021
+（+65.7%）、成本 0.0969 vs 0.0585 元（+65.7%）。**保持 24**。rerank 单价按
+`RERANK_INPUT_PRICE_MICRO_PER_1K=500`（公开价 0.5 元/百万输入 token，未核对本账号账单）
+计入 `ai_call_log.cost_micro`，不再显示"未定价"。
 
 **资料覆盖规则（任务 4，2026-10-17）**：系统提示词里加了一条**代码持有**的规则
 （`chat_service.SOURCE_COVERAGE_PROTOCOL`）：`list_facts` 的 `source_coverage`
