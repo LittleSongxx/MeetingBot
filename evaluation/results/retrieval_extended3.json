@@ -1,0 +1,632 @@
+{
+  "sample": 68,
+  "k_distribution": [
+    1,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "recall_at_k": 0.85,
+  "mrr": 0.7120098039215685,
+  "ndcg_at_k": 0.7558713793186734,
+  "per_case": [
+    {
+      "case_id": "q28",
+      "k": 3,
+      "recall": 0.0,
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "relevant_count": 0,
+      "sources_known": false
+    },
+    {
+      "case_id": "q29",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q30",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714575,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q31",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714575,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q32",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6934264036172708,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q33",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q34",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q35",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 3,
+      "sources_known": true
+    },
+    {
+      "case_id": "q36",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q37",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q38",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714575,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q39",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714575,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q40",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q41",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 3,
+      "sources_known": true
+    },
+    {
+      "case_id": "q42",
+      "k": 1,
+      "recall": 0.0,
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "relevant_count": 0,
+      "sources_known": false
+    },
+    {
+      "case_id": "q43",
+      "k": 1,
+      "recall": 0.0,
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "relevant_count": 0,
+      "sources_known": false
+    },
+    {
+      "case_id": "q44",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q45",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q46",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q47",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q48",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q49",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714575,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q50",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q51",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q52",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q53",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q54",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q55",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q56",
+      "k": 3,
+      "recall": 0.0,
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "relevant_count": 0,
+      "sources_known": false
+    },
+    {
+      "case_id": "q57",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6934264036172708,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q58",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q59",
+      "k": 5,
+      "recall": 0.0,
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "relevant_count": 0,
+      "sources_known": false
+    },
+    {
+      "case_id": "q60",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714575,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q61",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9197207891481876,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q62",
+      "k": 8,
+      "recall": 0.0,
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "relevant_count": 0,
+      "sources_known": false
+    },
+    {
+      "case_id": "q63",
+      "k": 4,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6934264036172708,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q64",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6934264036172708,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q65",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6934264036172708,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q66",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 3,
+      "sources_known": true
+    },
+    {
+      "case_id": "q67",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q68",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q69",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q70",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q71",
+      "k": 4,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6934264036172708,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q72",
+      "k": 5,
+      "recall": 1.0,
+      "mrr": 0.3333333333333333,
+      "ndcg": 0.5437713091520254,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q73",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q74",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9197207891481876,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q75",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q76",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q77",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714575,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q78",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q79",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714575,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q80",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6934264036172708,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q81",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9197207891481876,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q82",
+      "k": 3,
+      "recall": 0.0,
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "relevant_count": 0,
+      "sources_known": true
+    },
+    {
+      "case_id": "q83",
+      "k": 3,
+      "recall": 0.5,
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714575,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q84",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q85",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9197207891481876,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q86",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q87",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.3333333333333333,
+      "ndcg": 0.5,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q88",
+      "k": 5,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.7328286204777911,
+      "relevant_count": 3,
+      "sources_known": true
+    },
+    {
+      "case_id": "q89",
+      "k": 7,
+      "recall": 0.8,
+      "mrr": 0.5,
+      "ndcg": 0.6196686079396531,
+      "relevant_count": 3,
+      "sources_known": true
+    },
+    {
+      "case_id": "q90",
+      "k": 6,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.8529278650606567,
+      "relevant_count": 3,
+      "sources_known": true
+    },
+    {
+      "case_id": "q91",
+      "k": 4,
+      "recall": 0.0,
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "relevant_count": 0,
+      "sources_known": false
+    },
+    {
+      "case_id": "q92",
+      "k": 6,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.8772153153380493,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q93",
+      "k": 4,
+      "recall": 0.6666666666666666,
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714575,
+      "relevant_count": 1,
+      "sources_known": true
+    },
+    {
+      "case_id": "q94",
+      "k": 3,
+      "recall": 0.5,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 3,
+      "sources_known": true
+    },
+    {
+      "case_id": "q95",
+      "k": 6,
+      "recall": 0.3333333333333333,
+      "mrr": 0.25,
+      "ndcg": 0.43067655807339306,
+      "relevant_count": 1,
+      "sources_known": true
+    }
+  ],
+  "skipped": [],
+  "reading": "recall_at_k = 金标片段被本次检索（全部 k 条）覆盖的比例，**k 是模型自选的条数**，报数必须连 k 一起报；mrr = 第一条相关切片的排名倒数；ndcg_at_k = 二值增益的归一化折损累计增益。三者都由片段时间窗与金标片段号算得，**零模型调用**——判定模型换族/换思考开关都不会动它们。",
+  "not_measured": "切块粒度与金标片段是多对一关系（一个窗口盖住多句），因此这里是「覆盖」口径而不是「精确命中」；不能与判定式的 context recall 相减。"
+}
