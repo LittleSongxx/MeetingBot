@@ -272,9 +272,16 @@ def _product_switches(base_url: str, token: str) -> dict[str, Any]:
     except (CaptureError, KeyError) as error:
         return {"unavailable": str(error)[:200]}
     data = (status or {}).get("data") or {}
-    return {"model": data.get("model"),
-            "kb_rerank_enabled": data.get("kb_rerank_enabled"),
-            "kb_query_plan_enabled": data.get("kb_query_plan_enabled")}
+    return {
+        "model": data.get("model"),
+        "kb_rerank_enabled": data.get("kb_rerank_enabled"),
+        "kb_query_plan_enabled": data.get("kb_query_plan_enabled"),
+        # 检索漏斗参数：标定/对照实验的产物要能自证"这一臂跑的是什么配置"
+        "kb_chunk_target_chars": data.get("kb_chunk_target_chars"),
+        "rerank_top_k": data.get("rerank_top_k"),
+        "rerank_candidates": data.get("rerank_candidates"),
+        "qdrant_collection": data.get("qdrant_collection"),
+    }
 
 
 def _refs_from_answer(message: Mapping[str, Any]) -> list[int]:

@@ -32,11 +32,13 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import re
+import sys
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Iterable, Mapping
 
 EVALUATION_DIR = Path(__file__).resolve().parents[1]
 # 切片正文里的定位前缀（`[224s][张晨] …`）：它既是页面上"点回原句"的锚点，
@@ -221,5 +223,43 @@ def summarize(artifact: Mapping[str, Any] | None,
     }
 
 
+def main(argv: Iterable[str] | None = None) -> int:
+    """单独对一份产物算检索指标（零调用）。
+
+    存在的理由：标定实验一次产出多份 `chat_answers_<arm>.json`，它们不能都覆盖
+    标准产物 `chat_answers.json`——那样 L0 会分不清"当前标准跑"与"某一臂"。
+    这里按显式路径读，产物与读数一起留档。
+    """
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--artifact", type=Path, default=DEFAULT_ARTIFACT)
+    parser.add_argument("--qa-set", type=Path, default=DEFAULT_QA_SET)
+    parser.add_argument("--output", type=Path, default=None,
+                        help="把完整读数（含逐 case）写成 JSON；不传则只打印摘要")
+    args = parser.parse_args(list(argv) if argv is not None else None)
+
+    artifact = load_artifact(args.artifact)
+    if artifact is None:
+        print(f"读不到产物：{args.artifact}", file=sys.stderr)
+        return 2
+    try:
+        qa_set = json.loads(args.qa_set.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        print(f"读不到标注集：{args.qa_set}（{error}）", file=sys.stderr)
+        return 2
+    summary = summarize(artifact, qa_set)
+    compact = {key: value for key, value in summary.items()
+               if key not in ("per_case", "skipped", "reading", "not_measured")}
+    print(json.dumps(compact, ensure_ascii=False, indent=2))
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(json.dumps(summary, ensure_ascii=False, indent=2),
+                               encoding="utf-8")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
+
 __all__ = ["DEFAULT_ARTIFACT", "DEFAULT_QA_SET", "load_artifact", "segment_starts",
-           "evaluate_turn", "summarize"]
+           "evaluate_turn", "summarize", "main"]

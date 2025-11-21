@@ -8,7 +8,9 @@
 
 from __future__ import annotations
 
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -143,6 +145,29 @@ class SummarizeTest(unittest.TestCase):
         # 不合成总分
         self.assertNotIn("overall", summary)
         self.assertNotIn("score", summary)
+
+
+class CliTest(unittest.TestCase):
+    def test_reads_an_explicit_artifact_and_writes_the_reading(self):
+        """标定一臂一份产物：按显式路径读，不覆盖标准 chat_answers.json。"""
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            artifact = _artifact([{"start_second": 50, "end_second": 62}])
+            (root / "answers.json").write_text(json.dumps(artifact), encoding="utf-8")
+            (root / "qa.json").write_text(json.dumps(_qa()), encoding="utf-8")
+            output = root / "reading.json"
+            code = rm.main(["--artifact", str(root / "answers.json"),
+                            "--qa-set", str(root / "qa.json"),
+                            "--output", str(output)])
+            self.assertEqual(code, 0)
+            reading = json.loads(output.read_text(encoding="utf-8"))
+        self.assertEqual(reading["sample"], 1)
+        self.assertEqual(reading["recall_at_k"], 1.0)
+
+    def test_missing_artifact_is_a_readable_failure(self):
+        code = rm.main(["--artifact", "/nonexistent/answers.json",
+                        "--qa-set", str(EVALUATION_DIR / "gold" / "qa_seed.json")])
+        self.assertEqual(code, 2)
 
 
 if __name__ == "__main__":
