@@ -438,3 +438,69 @@ class EmbeddingShapeTest(unittest.IsolatedAsyncioTestCase):
             await model_factory.embed_texts(
                 self.config, ["甲"], biz_id=0, client=self._client(items))
         self.assertIn("没有向量字段", str(ctx.exception))
+
+
+class RerankClientTest(unittest.IsolatedAsyncioTestCase):
+    """专用 rerank 客户端：按协议字段解析、记一行账、失败也记账后抛出。
+
+    rerank 是 DashScope **原生**接口（compatible-mode 不提供它），因此它的 base 与
+    对话/嵌入不是同一条前缀——这条用测试钉住，避免以后被"统一 base_url"改坏。
+    """
+
+    async def asyncSetUp(self):
+        await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["models"]},
+                            use_tz=True, timezone="Asia/Shanghai")
+        await Tortoise.generate_schemas()
+        self.config = await AiModelConfig.create(
+            name="嵌入", model_type="EMBEDDING",
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            api_key="unit-test-key", model_name="qwen3.7-text-embedding", enabled=True)
+
+    async def asyncTearDown(self):
+        await Tortoise.close_connections()
+
+    def _client(self, status: int, body: dict):
+        calls: list[dict] = []
+
+        class _Response:
+            status_code = status
+            text = str(body)
+            def json(self): return body
+
+        class _Client:
+            async def post(self, url, json=None, headers=None):
+                calls.append({"url": url, "json": json, "headers": headers})
+                return _Response()
+            async def aclose(self): pass
+
+        return _Client(), calls
+
+    async def test_request_shape_and_ranking_order(self):
+        client, calls = self._client(200, {"output": {"results": [
+            {"index": 0, "relevance_score": 0.2}, {"index": 1, "relevance_score": 0.9}]},
+            "usage": {"total_tokens": 42}})
+        with mock.patch.dict("os.environ", {"RERANK_BASE_URL": "https://rerank.example/api/v1",
+                                            "RERANK_MODEL": "qwen3.7-text-rerank"}):
+            ranked = await model_factory.rerank_documents(
+                self.config, "灰度什么时候开始", ["甲", "乙"], biz_id=7, top_n=2, client=client)
+        self.assertEqual(ranked, [(1, 0.9), (0, 0.2)])
+        self.assertTrue(calls[0]["url"].endswith("/services/rerank/text-rerank/text-rerank"))
+        self.assertEqual(calls[0]["json"]["model"], "qwen3.7-text-rerank")
+        self.assertEqual(calls[0]["json"]["input"]["query"], "灰度什么时候开始")
+        self.assertEqual(calls[0]["headers"]["Authorization"], "Bearer unit-test-key")
+        log = await AiCallLog.get(biz_id=7)
+        self.assertEqual(log.call_type, "KB_RERANK")
+        self.assertEqual(log.model_name, "qwen3.7-text-rerank")
+        self.assertEqual((log.usage_json or {}).get("total_tokens"), 42)
+
+    async def test_http_error_is_logged_then_raised(self):
+        client, _ = self._client(500, {"error": "boom"})
+        with mock.patch.dict("os.environ", {"RERANK_BASE_URL": "https://rerank.example/api/v1"}), \
+                self.assertRaises(RuntimeError):
+            await model_factory.rerank_documents(self.config, "问", ["甲"], biz_id=8, client=client)
+        log = await AiCallLog.get(biz_id=8)
+        self.assertEqual(log.status, "FAILED")
+        self.assertIn("500", log.error_message or "")
+
+    async def test_empty_documents_short_circuit(self):
+        self.assertEqual(await model_factory.rerank_documents(self.config, "问", [], biz_id=9), [])

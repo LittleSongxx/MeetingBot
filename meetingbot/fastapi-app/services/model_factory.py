@@ -17,6 +17,7 @@ from time import perf_counter
 from typing import Any, AsyncIterator, Awaitable, Callable
 from uuid import uuid4
 
+import httpx
 import openai
 from common import metrics, providers
 from common.model_json import build_schema_instruction, parse_model_json
@@ -556,6 +557,114 @@ def make_model_caller(
         return message
 
     return call_model
+
+
+# --------------------------------------------------------------------------- #
+# 重排（检索后、进上下文前）
+# --------------------------------------------------------------------------- #
+
+# DashScope 原生 rerank 接口的固定路径（compatible-mode 不提供 rerank）
+RERANK_PATH = "/services/rerank/text-rerank/text-rerank"
+# 单次重排的文档上限：给再多既慢又贵，且模型对长列表的排序质量会掉（参数上限 500，
+# 但检索侧只会有几十条候选）。这是**请求形态**的约束，不是调优阈值。
+RERANK_MAX_DOCUMENTS = 50
+
+
+def rerank_model() -> str:
+    return os.getenv("RERANK_MODEL", "").strip() or "qwen3.7-text-rerank"
+
+
+def _rerank_base(config: AiModelConfig) -> str:
+    """rerank 的 API 根地址。
+
+    优先 `RERANK_BASE_URL`（可指向专属端点），否则退回 `DASHSCOPE_BASE_URL`，
+    最后才用配置里的 base_url 去掉 `/compatible-mode/v1`——**rerank 是 DashScope 原生
+    接口**，与对话/嵌入的 OpenAI 兼容前缀不是一条路。
+    """
+    explicit = (os.getenv("RERANK_BASE_URL") or "").strip().rstrip("/")
+    if explicit:
+        return explicit
+    native = (os.getenv("DASHSCOPE_BASE_URL") or "").strip().rstrip("/")
+    if native:
+        return native
+    base = (config.base_url or "").rstrip("/")
+    return base.replace("/compatible-mode/v1", "")
+
+
+async def rerank_documents(config: AiModelConfig, query: str, documents: list[str], *,
+                           biz_id: int, top_n: int | None = None,
+                           call_type: str = "KB_RERANK", client: Any = None) -> list[tuple[int, float]]:
+    """调专用 rerank 模型给候选打分，返回 `(原下标, 相关度)` 按分数降序。
+
+    为什么用专用模型而不是 LLM 排序：公开基准里专用 cross-encoder 类重排的
+    NDCG 与延迟都优于 LLM 重排（点式 LLM 甚至会把一阶段召回拖垮），成本也低一个量级。
+
+    记账口径与其它调用一致：**成功与失败各写一行 `ai_call_log`**，一行=一次真实请求；
+    `model_config_id` 用传入配置（检索侧用嵌入配置的归属，模型名写 rerank 模型本身）。
+    """
+    texts = [str(text or "") for text in documents][:RERANK_MAX_DOCUMENTS]
+    if not texts:
+        return []
+    limit = len(texts) if top_n is None else max(1, min(int(top_n), len(texts)))
+    payload = {
+        "model": rerank_model(),
+        "input": {"query": query, "documents": texts},
+        "parameters": {"return_documents": False, "top_n": limit},
+    }
+    url = _rerank_base(config) + RERANK_PATH
+    owns_client = client is None
+    if owns_client:
+        # httpx 没有 max_retries 参数（那是 openai SDK 的）；要关掉重试得走 transport。
+        # 这类参数名错误本地打桩测不出来（桩不构造真 client），只有真调用才暴露。
+        client = httpx.AsyncClient(
+            timeout=float(os.getenv("RERANK_TIMEOUT_SECONDS", "20")),
+            transport=httpx.AsyncHTTPTransport(retries=0))
+    started = perf_counter()
+    try:
+        response = await client.post(url, json=payload,
+                                     headers={"Authorization": f"Bearer {config.api_key}"})
+        elapsed_ms = int((perf_counter() - started) * 1000)
+        if response.status_code >= 400:
+            detail = f"rerank 返回 {response.status_code}：{response.text[:300]}"
+            raise RuntimeError(detail)
+        body = response.json()
+        results = ((body.get("output") or {}).get("results") or [])
+        ranked = [(int(item.get("index")), float(item.get("relevance_score") or 0.0))
+                  for item in results if isinstance(item, dict) and item.get("index") is not None]
+        if not ranked:
+            raise RuntimeError(f"rerank 返回里没有 results：{str(body)[:200]}")
+        # 按分数降序；未返回的文档（top_n 截断）不参与
+        ranked.sort(key=lambda pair: pair[1], reverse=True)
+        await AiCallLog.create(
+            request_id="AIC" + uuid4().hex.upper(),
+            call_type=call_type, biz_id=biz_id,
+            model_config_id=config.id, model_name=rerank_model(),
+            request_size=sum(len(text.encode("utf-8")) for text in texts) + len(query),
+            response_size=sum(len(str(pair[1])) for pair in ranked),
+            status="SUCCEEDED", elapsed_ms=elapsed_ms,
+            usage_json=body.get("usage") or {},
+            cost_micro=_cost_micro(config, body.get("usage") or {}),
+        )
+        _observe_call(config, call_type=call_type, status="SUCCEEDED",
+                      elapsed_ms=elapsed_ms, usage=body.get("usage") or {})
+        return ranked
+    except Exception as error:  # noqa: BLE001 - 记账后原样抛出，由调用方决定降级
+        elapsed_ms = int((perf_counter() - started) * 1000)
+        detail = (str(error) or type(error).__name__)[:1000]
+        await AiCallLog.create(
+            request_id="AIC" + uuid4().hex.upper(),
+            call_type=call_type, biz_id=biz_id,
+            model_config_id=config.id, model_name=rerank_model(),
+            request_size=sum(len(text.encode("utf-8")) for text in texts) + len(query),
+            response_size=0, status="FAILED", elapsed_ms=elapsed_ms,
+            error_message=detail,
+        )
+        _observe_call(config, call_type=call_type, status="FAILED",
+                      elapsed_ms=elapsed_ms, usage=None)
+        raise
+    finally:
+        if owns_client:
+            await client.aclose()
 
 
 # --------------------------------------------------------------------------- #

@@ -118,7 +118,11 @@ async def ensure_collection(dim: int, *, name: str | None = None) -> None:
         try:
             await _call("PUT", f"/collections/{name}", json={
                 "vectors": {DENSE_VECTOR: {"size": int(dim), "distance": "Cosine"}},
-                "sparse_vectors": {SPARSE_VECTOR: {}},
+                # sparse 加 `modifier: idf`：词法臂的分量由 Qdrant **按全语料文档频率**
+                # 在服务端算 IDF——这才是 BM25 的词法口径。客户端编码器只给次线性词频
+                # （见 `services/kb_sparse.py` 的说明），两边合起来才等价于 BM25 的
+                # (idf × tf 饱和) 形式；不给 modifier 就只是"词频加权"，长文档会系统性占优。
+                "sparse_vectors": {SPARSE_VECTOR: {"modifier": "idf"}},
             })
             await ensure_payload_indexes(name)
             return
@@ -130,12 +134,21 @@ async def ensure_collection(dim: int, *, name: str | None = None) -> None:
     # 已存在的库（老部署、或并发创建的另一方）：把索引补齐。后补索引拿不到
     # 过滤感知的 HNSW 边，但过滤本身仍然从索引受益——这条限制写在 ensure_payload_indexes 里
     await ensure_payload_indexes(name)
-    vectors = (existing.get("config") or {}).get("params", {}).get("vectors") or {}
+    params = (existing.get("config") or {}).get("params") or {}
+    vectors = params.get("vectors") or {}
     current = (vectors.get(DENSE_VECTOR) or {}).get("size")
     if current and int(current) != int(dim):
         raise QdrantError(
             f"collection {name} 的向量维度是 {current}，当前嵌入模型是 {dim} 维。"
             "换嵌入模型需要重建知识库（不要自动重建：旧向量可能还在用）")
+    # 稀疏臂的 IDF 是**建库时的配置**，事后改不了：没开的库会在不知情的情况下退化成
+    # "词频加权"。这里 fail-fast，而不是让检索静默变差。
+    sparse = params.get("sparse_vectors") or {}
+    modifier = (sparse.get(SPARSE_VECTOR) or {}).get("modifier")
+    if modifier != "idf":
+        raise QdrantError(
+            f"collection {name} 的稀疏向量没有启用 idf（当前 modifier={modifier!r}）；"
+            "BM25 口径要求建库时声明 modifier=idf，请换一个 collection 名重建")
 
 
 async def ensure_payload_indexes(name: str | None = None) -> list[str]:

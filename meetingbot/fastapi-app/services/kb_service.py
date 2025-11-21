@@ -129,7 +129,7 @@ async def transcript_chunks(task_id: int) -> tuple[list[chunking.Chunk], str]:
     for segment in segments:
         speaker = users.get(segment.speaker_user_id) or segment.speaker_label or "未知说话人"
         lines.append((segment.start_ms, segment.end_ms, speaker, segment.content))
-    chunks = chunking.chunk_transcript(lines)
+    chunks = chunking.chunk_transcript(lines, target_chars=chunking.target_chars())
     return chunks, content_fingerprint([c.text for c in chunks])
 
 
@@ -155,16 +155,21 @@ async def minutes_chunks(minutes_id: int) -> tuple[list[chunking.Chunk], str]:
 
 
 def content_fingerprint(texts: Sequence[str], *,
-                        payload_schema: int = PAYLOAD_SCHEMA_VERSION) -> str:
-    """内容指纹：切片集合变了就换指纹，据此判断要不要重建文档版本。
+                        payload_schema: int = PAYLOAD_SCHEMA_VERSION,
+                        embed_scope: str = "") -> str:
+    """内容指纹：切片集合或**写入形态**变了就换指纹，据此判断要不要重建文档版本。
 
-    **载荷结构版本也进指纹**，这一条是踩出来的：指纹原先只覆盖切片正文，
-    于是"给 payload 加一个字段"不会触发重建——旧 point 上根本没有那个新字段，
-    而查询侧一旦按它过滤，旧数据会被**静默漏掉**（过滤看起来生效了，只是少了点数据，
-    不报错、不告警）。把结构版本并进来之后，改结构 = 换指纹 = 下次索引自动重建。
+    `embed_scope` 覆盖"写到哪里、用什么模型写"——**这两个也必须进指纹**。
+    两次踩坑教出来的：
+    1. 指纹只覆盖正文时，"给 payload 加字段"不会触发重建 → 旧 point 缺字段 →
+       按它过滤会**静默漏掉**数据（不报错、不告警）；
+    2. 指纹不含**嵌入模型与 collection** 时，换模型/换库之后旧文档被判"内容未变化"
+       → 新库里根本没有它的向量，检索少一整个来源（同样不报错）。
+    把结构和作用域并进来之后，任一变化 = 换指纹 = 下次索引自动重建。
     """
     digest = hashlib.sha256()
     digest.update(f"payload-schema:{int(payload_schema)}\x00".encode())
+    digest.update(f"embed-scope:{embed_scope}\x00".encode())
     for text in texts:
         digest.update(text.encode("utf-8"))
         digest.update(b"\x00")
@@ -250,7 +255,12 @@ async def execute_kb_index(kb_task_id: int) -> None:
         # 官方口径也要求"建索引要在写入之前"（过滤感知的 HNSW 边只在建索引后生成）。
         await qdrant.ensure_collection(model_factory.embedding_dim())
 
-        chunks, fingerprint = await _load_source_chunks(task)
+        chunks, text_fingerprint = await _load_source_chunks(task)
+        # 写入形态进指纹：换嵌入模型/维度/collection 都要重建（否则新库里没有这些向量）
+        fingerprint = content_fingerprint(
+            [chunk.text for chunk in chunks],
+            embed_scope=f"{config.model_name}:{model_factory.embedding_dim()}"
+                        f"@{qdrant.collection_name()}")
         if not chunks:
             await _finish(task.id, chunk_count=0, embedded_count=0, stage="来源没有可索引的内容")
             return
@@ -325,6 +335,7 @@ async def _mark_failed(kb_task_id: int, detail: str) -> None:
 
 
 async def _load_source_chunks(task: KbIndexTask) -> tuple[list[chunking.Chunk], str]:
+    """装载来源切片；第二个返回值是**正文指纹**（调用方再并入写入形态）。"""
     if task.source_type == SOURCE_TRANSCRIPT:
         transcription = await TranscriptionTask.get_or_none(id=task.source_id)
         if transcription is None:
@@ -488,97 +499,65 @@ async def search_knowledge(
             origin=payload.get("origin"), source_id=payload.get("source_id"),
         ))
     if rerank_enabled() and len(hits) > 1:
-        hits = await _rerank(text, hits, limit=int(limit), biz_id=biz_id)
+        hits = await _rerank(text, hits, limit=int(limit), biz_id=biz_id, config=config)
     return hits
 
 
 # --------------------------------------------------------------------------- #
-# rerank（可选增强，默认关）
+# rerank（专用模型；开关见 KB_RERANK_ENABLED）
 # --------------------------------------------------------------------------- #
 
-# rerank 的调用类型（新调用类型必须登记 CALL_TYPE_OWNERSHIP，见 observability_service）
+# 重排的调用类型（新调用类型必须登记 CALL_TYPE_OWNERSHIP，见 observability_service）
 RERANK_CALL_TYPE = "KB_RERANK"
-# 先召回多少候选再重排。**一路召回可以宽，交给 LLM 重排的那一段要窄**：
-# 行业基准（见 docs/检索与路由：行业对齐.md 第三节）显示 LLM 重排的可用形态是
-# listwise 且只在小候选集（约 top 5–10）——点式打分未校准、候选一多就既慢又不准，
-# 甚至会把一阶段召回拖垮。因此：召回 24（= Qdrant 融合深度）→ 截到 10 交给模型。
+# 先召回多少候选再重排。取与 Qdrant 的 PREFETCH_LIMIT 同量级：再大也超出融合深度。
 RERANK_CANDIDATES = qdrant.PREFETCH_LIMIT
-RERANK_WINDOW = 10
 
-RERANK_SYSTEM = (
-    "你在给检索结果排序。给你一个问题与若干候选片段（各带编号）。"
-    "按「这段内容能不能回答这个问题」从强到弱排序，最相关的排最前。"
-    "只是提到关键词但答不了问题的排在后面。不要解释、不要改写内容。\n"
-    "排序只有两条规则：\n"
-    "1. 覆盖了问题要点的排在前面，只沾关键词的排在后面；\n"
-    "2. **分不出高低时保持原顺序**（原顺序来自检索的融合排名，是有信息的先验，"
-    "不要凭空打乱）——并列时用原编号从小到大。"
-)
-RERANK_SCHEMA = {
-    "type": "object",
-    "additionalProperties": False,
-    "properties": {"ranking": {"type": "array", "items": {"type": "integer"}}},
-    "required": ["ranking"],
-}
+
+def rerank_top_k() -> int:
+    """重排后交给生成模型的最大条数（**漏斗的截断口**）。
+
+    行业口径是"召回宽 → 重排 → **截到 top 3–5**"：一次问一两个事实时，8 条里
+    必然有一半是同会议同主题但答不了问题的窗口——那正是 context_precision 被拖低的
+    唯一原因（截断前实测 33–37%，条数越多越低）。可用 `RERANK_TOP_K` 覆盖。
+    """
+    raw = os.getenv("RERANK_TOP_K", "5").strip()
+    try:
+        return max(1, int(raw))
+    except ValueError as error:
+        raise ValueError("RERANK_TOP_K 必须为正整数") from error
 
 
 def rerank_enabled() -> bool:
-    """rerank 开关。**默认关**：新机制默认关是本仓的规矩（未实测就开默认，
-    等于把一个没量过的机制塞进主链路），要开就显式配 KB_RERANK_ENABLED=1。"""
-    return os.getenv("KB_RERANK_ENABLED", "").strip().lower() in {"1", "true", "yes", "on"}
+    """rerank 开关。默认**开**：专用重排是 RAG 的标准组件（recall 之后必然要收 precision），
+    延迟与成本的代价可测（`ai_call_log` 里有每次的 elapsed 与用量）。
+    要关就显式配 KB_RERANK_ENABLED=0。"""
+    return os.getenv("KB_RERANK_ENABLED", "1").strip().lower() not in {"0", "false", "no", "off"}
 
 
-async def _chat_config() -> AiModelConfig:
-    config = await AiModelConfig.filter(model_type="AGENT", enabled=True).order_by("-id").first()
-    if config is None:
-        raise KbError("没有启用中的 AGENT 用途模型配置，无法做重排")
-    return config
+async def _rerank(query: str, hits: list[Hit], *, limit: int, biz_id: int,
+                  config: AiModelConfig) -> list[Hit]:
+    """用专用 rerank 模型把候选按"能不能回答问题"重排，取前 limit 条。
 
+    为什么值得多一次请求：混合检索的 RRF 只看两路排名的融合，分不出"提到了"与"回答了"
+    ——实测 15% 的噪声全是**同会议同主题、但答不了该问题**的窗口。
 
-def _ranking_of(parsed: Any, size: int) -> list[int]:
-    """把模型给的排序整理成合法的下标序列：去重、剔除越界、补上没提到的。
-
-    **补全而不是丢弃**：模型只回了前几名是常态，剩下那些按原顺序接在后面——
-    否则"模型没提"会变成"这些候选被删掉了"，而它们本来是被召回的。
+    失败**绝不打断检索**：重排是增强，出错就按原顺序返回（与"索引失败不影响主流程"
+    同款判断——增强能力不该有能力把主链路弄挂）。
     """
-    ranking: list[int] = []
-    for item in (parsed or {}).get("ranking") or []:
-        try:
-            index = int(item) - 1          # 提示词里给的是 1 起的编号
-        except (TypeError, ValueError):
-            continue
-        if 0 <= index < size and index not in ranking:
-            ranking.append(index)
-    for index in range(size):
-        if index not in ranking:
-            ranking.append(index)
-    return ranking
-
-
-async def _rerank(query: str, hits: list[Hit], *, limit: int, biz_id: int) -> list[Hit]:
-    """用一次模型调用重排**靠前的那一段**候选，取前 limit 条。
-
-    为什么值得多一次调用：RRF 只看两路排名的融合，它分不出"提到了"与"回答了"——
-    实测 15% 的噪声全是**同会议同主题、但答不了该问题**的窗口。
-
-    两条边界（都来自行业基准，见 `docs/检索与路由：行业对齐.md` 第三节）：
-    - **只把前 `RERANK_WINDOW` 条交给模型**：LLM 重排的可靠区间是小候选集，
-      给全量既慢又不准；
-    - **失败或输出异常时按原顺序返回**：重排是增强，不该有能力把主链路弄挂
-      （与"索引失败不影响主流程"同款判断）。
-    """
-    window = min(len(hits), max(RERANK_WINDOW, int(limit)))
-    head, tail = hits[:window], hits[window:]
-    listing = "\n".join(
-        f"[{index}] {hit.text[:400]}" for index, hit in enumerate(head, start=1))
-    user = (f"【问题】\n{query}\n\n【候选片段（共 {len(head)} 条，请输出这 "
-            f"{len(head)} 条的完整排序）】\n{listing}\n\n请按格式输出 JSON。")
+    texts = [hit.text for hit in hits]
     try:
-        config = await _chat_config()
-        parsed = await model_factory.invoke_json(
-            config, RERANK_SYSTEM, user, RERANK_SCHEMA, RERANK_CALL_TYPE, biz_id, "重排模型")
+        ranked = await model_factory.rerank_documents(
+            config, query, texts, biz_id=biz_id, top_n=min(len(texts), max(int(limit), len(texts))),
+            call_type=RERANK_CALL_TYPE)
     except Exception:  # noqa: BLE001 - 重排失败不该让检索失败
         logger.exception("重排失败，按原顺序返回候选（biz_id=%s）", biz_id)
         return hits[:limit]
-    reordered = [head[index] for index in _ranking_of(parsed, len(head))] + tail
-    return reordered[:limit]
+    ordered = [hits[index] for index, _score in ranked if 0 <= index < len(hits)]
+    # 模型只回前 top_n 条时，剩下的按原顺序接在后面（它们本来就被召回了）
+    seen = {index for index, _score in ranked}
+    ordered.extend(hit for index, hit in enumerate(hits) if index not in seen)
+    # 漏斗的截断口：即使模型要了更多，也只把最相关的几条交给它（见 rerank_top_k）
+    return ordered[:min(int(limit), rerank_top_k())]
+
+
+# --------------------------------------------------------------------------- #
