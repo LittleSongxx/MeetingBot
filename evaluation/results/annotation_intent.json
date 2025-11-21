@@ -6,14 +6,13 @@
     "single_fact",
     "aggregation",
     "cross_meeting",
-    "procedure",
     "smalltalk"
   ],
   "criteria": [
     {
       "label": "single_fact",
-      "meaning": "问一个具体事实（时间、数值、负责人、某一条决定）",
-      "criterion": "答案是一句话能说清的一个事实，不需要罗列。例：发布公告的截止时间是什么"
+      "meaning": "问一个具体事实（时间、数值、负责人、某一条决定、流程解释）",
+      "criterion": "答案是一句话能说清的一个事实/一段流程，不需要罗列。例：发布公告的截止时间是什么"
     },
     {
       "label": "aggregation",
@@ -24,11 +23,6 @@
       "label": "cross_meeting",
       "meaning": "跨会议（本语料是跨两段录音）汇总",
       "criterion": "答案必须来自两段录音，或多场会议的比较/汇总。例：两段录音里的风险分别是什么"
-    },
-    {
-      "label": "procedure",
-      "meaning": "流程与机制解释：问「怎么处理」「流程是怎样的」「为什么这样做」",
-      "criterion": "答案描述的是一套流程、规则或机制，而不是单一事实或清单。例：资料更新时索引会怎么处理"
     },
     {
       "label": "smalltalk",
@@ -45,7 +39,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -57,7 +50,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -69,7 +61,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -81,7 +72,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -93,7 +83,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -105,7 +94,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -117,7 +105,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -129,7 +116,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -141,7 +127,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -153,7 +138,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -165,7 +149,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -177,7 +160,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -189,7 +171,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -201,7 +182,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -213,7 +193,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -225,7 +204,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -237,7 +215,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -249,7 +226,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -261,7 +237,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -273,7 +248,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -285,7 +259,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -297,7 +270,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -309,7 +281,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -321,7 +292,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -333,7 +303,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -345,7 +314,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -357,7 +325,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -369,7 +336,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -381,7 +347,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -393,7 +358,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -405,7 +369,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -417,7 +380,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -429,7 +391,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -441,7 +402,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -453,7 +413,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -465,7 +424,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -477,7 +435,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -489,7 +446,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -501,7 +457,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -513,7 +468,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -525,7 +479,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -537,7 +490,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -549,7 +501,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -561,7 +512,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -573,7 +523,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -585,7 +534,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -597,7 +545,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -609,7 +556,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -621,7 +567,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -633,7 +578,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -645,7 +589,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -657,7 +600,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -669,7 +611,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -681,7 +622,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -693,7 +633,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -705,7 +644,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -717,7 +655,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -729,7 +666,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -741,7 +677,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -753,7 +688,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -765,7 +699,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -777,7 +710,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -789,7 +721,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -801,7 +732,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -813,7 +743,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -825,7 +754,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -837,7 +765,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -849,7 +776,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -861,7 +787,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -873,7 +798,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -885,7 +809,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -897,7 +820,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -909,7 +831,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -921,7 +842,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -933,7 +853,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -945,7 +864,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -957,7 +875,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -969,7 +886,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -981,7 +897,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -993,7 +908,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1005,7 +919,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1017,7 +930,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1029,7 +941,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1041,7 +952,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1053,7 +963,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1065,7 +974,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1077,7 +985,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1089,7 +996,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1101,7 +1007,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1113,7 +1018,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1125,7 +1029,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1137,7 +1040,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1149,7 +1051,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1161,7 +1062,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1173,7 +1073,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1185,7 +1084,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1197,7 +1095,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1209,7 +1106,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1221,7 +1117,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
@@ -1233,151 +1128,6 @@
         "single_fact": null,
         "aggregation": null,
         "cross_meeting": null,
-        "procedure": null,
-        "smalltalk": null
-      },
-      "note": ""
-    },
-    {
-      "anonymous_id": "n01",
-      "question": "这次发布评审批准的预算金额是多少？",
-      "labels": {
-        "single_fact": null,
-        "aggregation": null,
-        "cross_meeting": null,
-        "procedure": null,
-        "smalltalk": null
-      },
-      "note": ""
-    },
-    {
-      "anonymous_id": "n02",
-      "question": "会上有没有讨论竞品的定价策略？",
-      "labels": {
-        "single_fact": null,
-        "aggregation": null,
-        "cross_meeting": null,
-        "procedure": null,
-        "smalltalk": null
-      },
-      "note": ""
-    },
-    {
-      "anonymous_id": "n03",
-      "question": "这次发布需要采购多少台服务器？",
-      "labels": {
-        "single_fact": null,
-        "aggregation": null,
-        "cross_meeting": null,
-        "procedure": null,
-        "smalltalk": null
-      },
-      "note": ""
-    },
-    {
-      "anonymous_id": "n04",
-      "question": "数据中心的机房在哪个城市？",
-      "labels": {
-        "single_fact": null,
-        "aggregation": null,
-        "cross_meeting": null,
-        "procedure": null,
-        "smalltalk": null
-      },
-      "note": ""
-    },
-    {
-      "anonymous_id": "n05",
-      "question": "会上提到的专利申请数量是多少？",
-      "labels": {
-        "single_fact": null,
-        "aggregation": null,
-        "cross_meeting": null,
-        "procedure": null,
-        "smalltalk": null
-      },
-      "note": ""
-    },
-    {
-      "anonymous_id": "n06",
-      "question": "海外市场的发布时间是什么时候？",
-      "labels": {
-        "single_fact": null,
-        "aggregation": null,
-        "cross_meeting": null,
-        "procedure": null,
-        "smalltalk": null
-      },
-      "note": ""
-    },
-    {
-      "anonymous_id": "n07",
-      "question": "客户投诉的官方电话是多少？",
-      "labels": {
-        "single_fact": null,
-        "aggregation": null,
-        "cross_meeting": null,
-        "procedure": null,
-        "smalltalk": null
-      },
-      "note": ""
-    },
-    {
-      "anonymous_id": "n08",
-      "question": "这次发布采用了哪种加密算法？",
-      "labels": {
-        "single_fact": null,
-        "aggregation": null,
-        "cross_meeting": null,
-        "procedure": null,
-        "smalltalk": null
-      },
-      "note": ""
-    },
-    {
-      "anonymous_id": "n09",
-      "question": "会上决定与哪家供应商签合同？",
-      "labels": {
-        "single_fact": null,
-        "aggregation": null,
-        "cross_meeting": null,
-        "procedure": null,
-        "smalltalk": null
-      },
-      "note": ""
-    },
-    {
-      "anonymous_id": "n10",
-      "question": "V2.0 的研发预算和人力投入是多少？",
-      "labels": {
-        "single_fact": null,
-        "aggregation": null,
-        "cross_meeting": null,
-        "procedure": null,
-        "smalltalk": null
-      },
-      "note": ""
-    },
-    {
-      "anonymous_id": "n11",
-      "question": "法务部门对发布时间的意见是什么？",
-      "labels": {
-        "single_fact": null,
-        "aggregation": null,
-        "cross_meeting": null,
-        "procedure": null,
-        "smalltalk": null
-      },
-      "note": ""
-    },
-    {
-      "anonymous_id": "n12",
-      "question": "会上有没有确定下一次发布评审的具体日期？",
-      "labels": {
-        "single_fact": null,
-        "aggregation": null,
-        "cross_meeting": null,
-        "procedure": null,
         "smalltalk": null
       },
       "note": ""
