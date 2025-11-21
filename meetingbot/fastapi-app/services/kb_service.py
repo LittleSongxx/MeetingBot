@@ -499,8 +499,12 @@ async def search_knowledge(
             origin=payload.get("origin"), source_id=payload.get("source_id"),
         ))
     if rerank_enabled() and len(hits) > 1:
-        hits = await _rerank(text, hits, limit=int(limit), biz_id=biz_id, config=config)
-    return hits
+        hits = await _rerank(text, hits, biz_id=biz_id, config=config)
+    # 去重放在重排之后、截断之前：相邻窗口会同时被召回并同时被重排选中，
+    # 它们占的是同一段话，交两段给生成模型只会让 context_precision 的分母虚高。
+    # 保留排序更靠前（重排分数更高）的一条，再按漏斗口径截断。
+    hits = _dedupe_overlapping(hits)
+    return hits[:min(int(limit), rerank_top_k())]
 
 
 # --------------------------------------------------------------------------- #
@@ -534,12 +538,15 @@ def rerank_enabled() -> bool:
     return os.getenv("KB_RERANK_ENABLED", "1").strip().lower() not in {"0", "false", "no", "off"}
 
 
-async def _rerank(query: str, hits: list[Hit], *, limit: int, biz_id: int,
+async def _rerank(query: str, hits: list[Hit], *, biz_id: int,
                   config: AiModelConfig) -> list[Hit]:
-    """用专用 rerank 模型把候选按"能不能回答问题"重排，取前 limit 条。
+    """用专用 rerank 模型把候选按"能不能回答问题"重排，返回**完整排序**。
 
     为什么值得多一次请求：混合检索的 RRF 只看两路排名的融合，分不出"提到了"与"回答了"
     ——实测 15% 的噪声全是**同会议同主题、但答不了该问题**的窗口。
+
+    截断不在这里做：去重必须先看到完整排序（相邻窗口都可能在候选里），
+    否则"先截 5 条再去重"会把 top-5 变成 top-4。截断统一在调用方一处完成。
 
     失败**绝不打断检索**：重排是增强，出错就按原顺序返回（与"索引失败不影响主流程"
     同款判断——增强能力不该有能力把主链路弄挂）。
@@ -547,17 +554,112 @@ async def _rerank(query: str, hits: list[Hit], *, limit: int, biz_id: int,
     texts = [hit.text for hit in hits]
     try:
         ranked = await model_factory.rerank_documents(
-            config, query, texts, biz_id=biz_id, top_n=min(len(texts), max(int(limit), len(texts))),
+            config, query, texts, biz_id=biz_id, top_n=len(texts),
             call_type=RERANK_CALL_TYPE)
     except Exception:  # noqa: BLE001 - 重排失败不该让检索失败
         logger.exception("重排失败，按原顺序返回候选（biz_id=%s）", biz_id)
-        return hits[:limit]
+        return hits
     ordered = [hits[index] for index, _score in ranked if 0 <= index < len(hits)]
     # 模型只回前 top_n 条时，剩下的按原顺序接在后面（它们本来就被召回了）
     seen = {index for index, _score in ranked}
     ordered.extend(hit for index, hit in enumerate(hits) if index not in seen)
-    # 漏斗的截断口：即使模型要了更多，也只把最相关的几条交给它（见 rerank_top_k）
-    return ordered[:min(int(limit), rerank_top_k())]
+    return ordered
+
+
+# --------------------------------------------------------------------------- #
+# 重叠窗口去重（同一段话只交一次）
+# --------------------------------------------------------------------------- #
+
+# 两个默认值不是拍出来的：切块是 500 字窗口 + 2 行重叠，实测相邻窗口的公共段
+# 约 36–43 秒；30 秒能把它们判成同一段话，又不会把"只是首尾相接"的窗口误合并。
+DEFAULT_DEDUPE_OVERLAP_SECONDS = 30
+DEFAULT_DEDUPE_OVERLAP_RATIO = 0.25
+
+
+def dedupe_enabled() -> bool:
+    """重叠去重开关。默认**关**——这是量出来的，不是保守。
+
+    在 300×3 的标定产物上做零调用反事实：默认阈值（30 秒、25%）删掉 10 条上下文，
+    **10 条全部被判"有用"**；precision 从 81.0% 降到 78.4%，recall@k 不变。
+    原因：相邻窗口共享的是一段话，但各自还带着只有自己才有的内容——它们不是
+    "同一段话交两遍"，而是"各有一段有用的话"。所以机制保留给确属重复的语料
+    （例如重叠比例接近 1 的切法），本语料不默认开。
+    """
+    return os.getenv("KB_DEDUPE_ENABLED", "0").strip().lower() not in {"0", "false", "no", "off"}
+
+
+def dedupe_overlap_seconds() -> int:
+    raw = os.getenv("KB_DEDUPE_OVERLAP_SECONDS", str(DEFAULT_DEDUPE_OVERLAP_SECONDS)).strip()
+    try:
+        value = int(raw)
+    except ValueError as error:
+        raise ValueError("KB_DEDUPE_OVERLAP_SECONDS 必须为非负整数") from error
+    return max(0, value)
+
+
+def dedupe_overlap_ratio() -> float:
+    raw = os.getenv("KB_DEDUPE_OVERLAP_RATIO", str(DEFAULT_DEDUPE_OVERLAP_RATIO)).strip()
+    try:
+        value = float(raw)
+    except ValueError as error:
+        raise ValueError("KB_DEDUPE_OVERLAP_RATIO 必须为 0–1 之间的小数") from error
+    if not 0.0 <= value <= 1.0:
+        raise ValueError("KB_DEDUPE_OVERLAP_RATIO 必须为 0–1 之间的小数")
+    return value
+
+
+def _window_ms(hit: Hit) -> tuple[int, int] | None:
+    if hit.start_ms is None or hit.end_ms is None:
+        return None
+    start, end = int(hit.start_ms), int(hit.end_ms)
+    return (start, end) if end > start else None
+
+
+def _same_recording(left: Hit, right: Hit) -> bool:
+    """两段窗口是否来自同一段录音。
+
+    `source_id` 是转写任务 id：一场会有两段录音时，两条时间轴都从 0 开始，
+    只比时间窗会把"上午 51 秒"与"下午 51 秒"误判成同一段话。缺来源身份时
+    **不去重**（判不了就不猜，宁可留一条重复，也不要把不同录音合并掉）。
+    """
+    if left.source_id is None or right.source_id is None:
+        return False
+    return left.meeting_id == right.meeting_id and int(left.source_id) == int(right.source_id)
+
+
+def _dedupe_overlapping(hits: list[Hit]) -> list[Hit]:
+    """去掉与已保留条目重叠到"同一段话"程度的窗口，保留排序更靠前的。
+
+    只处理带时间轴的转写窗口；纪要条目没有时间轴，不参与。规则是
+    **绝对重叠 ≥ 阈值 且 重叠占较短窗口的比例 ≥ 阈值**：前者避免把短窗口的
+    轻微重叠当重复，后者避免把两个长窗口在边界上的相接当重复。
+    """
+    if not dedupe_enabled() or len(hits) < 2:
+        return hits
+    min_overlap_ms = dedupe_overlap_seconds() * 1000
+    min_ratio = dedupe_overlap_ratio()
+    kept: list[Hit] = []
+    for hit in hits:
+        window = _window_ms(hit)
+        if window is None:
+            kept.append(hit)
+            continue
+        duplicate = False
+        for prior in kept:
+            prior_window = _window_ms(prior)
+            if prior_window is None or not _same_recording(hit, prior):
+                continue
+            overlap = min(window[1], prior_window[1]) - max(window[0], prior_window[0])
+            if overlap < min_overlap_ms:
+                continue
+            shorter = min(window[1] - window[0], prior_window[1] - prior_window[0])
+            if shorter <= 0 or overlap / shorter < min_ratio:
+                continue
+            duplicate = True
+            break
+        if not duplicate:
+            kept.append(hit)
+    return kept
 
 
 # --------------------------------------------------------------------------- #

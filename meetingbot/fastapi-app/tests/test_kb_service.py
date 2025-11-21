@@ -390,6 +390,76 @@ class RerankTest(_KbBase):
         self.assertEqual([hit.chunk_id for hit in hits], [5, 1, 2])
 
 
+class OverlapDedupeTest(unittest.TestCase):
+    """同一段话只交一次：相邻窗口会同时被召回并同时被重排选中。"""
+
+    @staticmethod
+    def _hit(chunk_id: int, start: int, end: int, *, source_id: int = 6,
+             score: float = 1.0) -> kb_service.Hit:
+        return kb_service.Hit(
+            chunk_id=chunk_id, score=score, text=f"窗口{chunk_id}", meeting_id=2,
+            authority="RAW", chunk_type="TRANSCRIPT_WINDOW", field=None, item_index=None,
+            speaker="张晨", start_ms=start, end_ms=end, document_id=1, origin=None,
+            source_id=source_id)
+
+    def test_overlapping_windows_keep_the_higher_ranked_one(self):
+        hits = [self._hit(1, 642_000, 763_000), self._hit(2, 720_000, 828_000)]
+        with patch.dict(os.environ, {"KB_DEDUPE_ENABLED": "1"}):
+            kept = kb_service._dedupe_overlapping(hits)      # noqa: SLF001 - 纯函数，直接测规则
+        self.assertEqual([hit.chunk_id for hit in kept], [1])
+
+    def test_a_short_touch_is_not_a_duplicate(self):
+        hits = [self._hit(1, 0, 120_000), self._hit(2, 100_000, 220_000)]  # 重叠 20s
+        with patch.dict(os.environ, {"KB_DEDUPE_ENABLED": "1"}):
+            kept = kb_service._dedupe_overlapping(hits)      # noqa: SLF001
+        self.assertEqual([hit.chunk_id for hit in kept], [1, 2])
+
+    def test_windows_from_different_recordings_are_not_deduped(self):
+        """两段录音的时间轴都从 0 开始：只比时间窗会把上午/下午的同一秒误合并。"""
+        hits = [self._hit(1, 642_000, 763_000, source_id=6),
+                self._hit(2, 720_000, 828_000, source_id=7)]
+        with patch.dict(os.environ, {"KB_DEDUPE_ENABLED": "1"}):
+            kept = kb_service._dedupe_overlapping(hits)      # noqa: SLF001
+        self.assertEqual([hit.chunk_id for hit in kept], [1, 2])
+
+    def test_disabled_by_default_after_the_zero_call_counterfactual(self):
+        """默认关是量出来的：300×3 下删掉的 10 条全部被判有用，precision 反而降。"""
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("KB_DEDUPE_ENABLED", None)
+            self.assertFalse(kb_service.dedupe_enabled())
+
+    def test_the_switch_can_turn_it_on(self):
+        hits = [self._hit(1, 642_000, 763_000), self._hit(2, 720_000, 828_000)]
+        with patch.dict(os.environ, {"KB_DEDUPE_ENABLED": "1"}):
+            kept = kb_service._dedupe_overlapping(hits)      # noqa: SLF001
+        self.assertEqual([hit.chunk_id for hit in kept], [1])
+
+
+class OverlapDedupeSearchTest(_KbBase):
+    async def test_search_dedupes_after_rerank_and_before_truncation(self):
+        raw = [
+            {"chunk_id": 1, "score": 0.9, "payload": {
+                "meeting_id": 1, "authority": "RAW", "chunk_type": "TRANSCRIPT_WINDOW",
+                "text": "第一段", "start_ms": 642_000, "end_ms": 763_000, "source_id": 6}},
+            {"chunk_id": 2, "score": 0.8, "payload": {
+                "meeting_id": 1, "authority": "RAW", "chunk_type": "TRANSCRIPT_WINDOW",
+                "text": "第二段", "start_ms": 720_000, "end_ms": 828_000, "source_id": 6}},
+            {"chunk_id": 3, "score": 0.7, "payload": {
+                "meeting_id": 1, "authority": "RAW", "chunk_type": "TRANSCRIPT_WINDOW",
+                "text": "第三段", "start_ms": 0, "end_ms": 60_000, "source_id": 6}},
+        ]
+        with patch.dict(os.environ, {"KB_RERANK_ENABLED": "1", "RERANK_TOP_K": "3",
+                                     "KB_DEDUPE_ENABLED": "1"}), \
+             patch.object(kb_service.model_factory, "embed_texts",
+                          AsyncMock(return_value=[[0.1] * 8])), \
+             patch.object(kb_service.qdrant, "hybrid_search", AsyncMock(return_value=raw)), \
+             patch.object(kb_service.model_factory, "rerank_documents",
+                          AsyncMock(return_value=[(0, 0.9), (1, 0.8), (2, 0.7)])):
+            hits = await kb_service.search_knowledge("灰度", allowed_meeting_ids=None, limit=3)
+        self.assertEqual([hit.chunk_id for hit in hits], [1, 3],
+                         "重叠的第二段应被丢掉，而不是把 top-3 变成两条再补一条无关的")
+
+
 class PayloadIndexTest(IndexTranscriptTest):
     """payload 索引：过滤性能的前提，且**必须在"跳过重建"的那条路径上也建**。
 
