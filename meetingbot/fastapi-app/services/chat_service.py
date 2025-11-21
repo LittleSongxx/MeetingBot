@@ -32,6 +32,7 @@ import json
 import logging
 import os
 import re
+from dataclasses import dataclass, field
 from typing import Any, AsyncIterator
 
 from common.prompts import render_prompt
@@ -333,6 +334,149 @@ def cross_recording_prefetch_k() -> int:
     return max(0, min(5, value))
 
 
+# 条件补搜的**强**标记：只认“两段/两场/各自/一致/上午对下午”。
+# 裸“分别”刻意不进来：扩展集里 q34/q56/q69/q72/q81 都是同一段录音里的多问句，
+# 补搜会把另一段录音的同主题窗口当噪声带进来。代价是漏掉 q88/q93/q94 三条真跨录音题
+# ——q88 已覆盖两段、q93 靠已确认纪要的事实答全、q94 的移动端缺口留给语义级判定，
+# 这是有意用覆盖换 precision（预注册里写死了）。
+_CROSS_RECORDING_STRONG = re.compile(r"两段|两场|各自|一致|上午.*下午|下午.*上午")
+
+
+def wants_cross_recording_supplement(question: str) -> bool:
+    """条件补搜是否适用于这个问句（弱标记不算，见上面的取舍）。"""
+    return bool(_CROSS_RECORDING_STRONG.search(str(question or "")))
+
+
+def cross_recording_supplement_k() -> int:
+    """缺失录音每段补搜 top-k（0=关，1–3 可配）。
+
+    与入口预检索的区别：预检索对每段各注 top-k，k=1/2/3 都把 cross precision
+    压到 51–60%；条件补搜只对“Agent 已检索过、仍缺一段”的题补，而且只补缺的那段。
+    默认关，等 cross8 预注册结果决定是否开。
+    """
+    raw = os.getenv("CROSS_RECORDING_SUPPLEMENT_K", "0").strip()
+    try:
+        value = int(raw)
+    except ValueError as error:
+        raise ValueError("CROSS_RECORDING_SUPPLEMENT_K 必须为 0–3 的整数") from error
+    return max(0, min(3, value))
+
+
+@dataclass
+class CrossRecordingState:
+    """一轮问答里的跨录音补搜状态（按轮新建，跨轮不共享）。
+
+    `tool_results` 是“已经看到结果的工具调用次数”，不是模型请求次数：失败重试
+    不该被当成两次独立检索。`covered` 累计本轮所有工具结果里的转写来源，
+    这样两个工具并发完成时也能看到彼此的覆盖。
+    """
+
+    question: str
+    scope: list[int]
+    task_ids: list[int]
+    k: int
+    covered: set[int] = field(default_factory=set)
+    tool_results: int = 0
+    attempted: bool = False
+
+
+async def _cross_recording_state(question: str, *, scope: list[int]) -> CrossRecordingState | None:
+    """只在“开关开、无预检索、强标记、会议限定、≥2 段成功录音”时建状态。
+
+    会话没有锁定会议时不做：补搜必须知道“缺的是哪一段”，跨会议的可见范围
+    可能是几十段录音，按会议枚举补搜会把无关内容带进来。
+    """
+    depth = cross_recording_supplement_k()
+    if depth <= 0 or not scope or not wants_cross_recording_supplement(question):
+        return None
+    if cross_recording_prefetch_k() > 0:
+        # 两种覆盖机制不叠加：入口已经按每段注入过，条件补搜只会重复。
+        return None
+    task_ids = [int(item) for item in await TranscriptionTask.filter(
+        meeting_id__in=scope, status="SUCCEEDED").order_by("id").values_list("id", flat=True)]
+    if len(task_ids) < 2:
+        return None
+    return CrossRecordingState(question=question, scope=list(scope),
+                               task_ids=task_ids, k=depth)
+
+
+def _transcript_sources(result: dict[str, Any], task_ids: list[int]) -> set[int]:
+    """这次工具结果覆盖了哪几段录音的**转写**。
+
+    只认两类：search_knowledge 的 TRANSCRIPT_WINDOW（带 source_id）与
+    get_transcript_excerpt 的 task_id。`list_facts` 的 fact、`MINUTES_ITEM` 切片
+    都没有转写归属（source_id 是纪要 id），不能算“查过这段录音”。
+    """
+    known = {int(task_id) for task_id in task_ids}
+    found: set[int] = set()
+    for hit in result.get("hits") or []:
+        if not isinstance(hit, dict) or hit.get("chunk_type") != "TRANSCRIPT_WINDOW":
+            continue
+        source_id = hit.get("source_id")
+        if source_id is not None and int(source_id) in known:
+            found.add(int(source_id))
+    task_id = result.get("task_id")
+    if task_id is not None and result.get("segments") and int(task_id) in known:
+        found.add(int(task_id))
+    return found
+
+
+async def maybe_supplement_cross_recording(
+        state: CrossRecordingState | None, actor: kb_tools.Actor,
+        registry: citations.CitationRegistry, result: dict[str, Any]) -> dict[str, Any]:
+    """在工具边界做“覆盖不足才补”的跨录音补搜（每轮最多一次）。
+
+    为什么等两次工具结果：第一次常常是录音清单或 get_minutes（q91），此时还没有
+    任何转写覆盖；如果立刻补，就会抢在 Agent 正常的两段检索之前注入。等它做过
+    两次工具调用，q90/q92/q95 的第二段检索已经完成，不需要补；q91/q89 才真的缺段。
+
+    为什么用原问题而不是模型上次的 query：模型上一次 query 可能只针对已覆盖的
+    那一段（q94 的“报表导出”就是），用它补另一段只会把同一边的证据再搜一遍。
+    """
+    if state is None or not result.get("ok"):
+        return result
+    state.tool_results += 1
+    state.covered |= _transcript_sources(result, state.task_ids)
+    required = min(2, len(state.task_ids))
+    if state.tool_results < 2 or state.attempted or len(state.covered) >= required:
+        return result
+    missing = [task_id for task_id in state.task_ids if task_id not in state.covered][:2]
+    if not missing:
+        return result
+    # 先置位再 await：同轮两个工具并发完成时，只有一个能进来补。
+    state.attempted = True
+    hits: list[dict[str, Any]] = []
+    searched: list[int] = []
+    for task_id in missing:
+        try:
+            found = await kb_service.search_knowledge(
+                state.question, allowed_meeting_ids=state.scope,
+                limit=state.k, source_ids=[task_id], biz_id=actor.biz_id)
+        except Exception:  # noqa: BLE001 - 补搜是增强，失败退回 Agent 自己的检索
+            logger.exception("跨录音条件补搜失败（task=%s），本轮不补这一段", task_id)
+            continue
+        searched.append(task_id)
+        hits.extend({**hit.as_citation(), "score": round(hit.score, 6)} for hit in found)
+    if not hits:
+        return result
+    annotated = registry.annotate("search_knowledge", {"ok": True, "hits": hits})
+    supplement = {
+        "reason": f"本轮检索当时只覆盖 {len(state.covered)}/{required} 段录音",
+        "covered_task_ids": sorted(state.covered),
+        "searched_task_ids": searched,
+        "hits_added": len(annotated.get("hits") or []),
+        "note": ("coverage_hits 是系统为未覆盖录音补搜的证据，可直接引用；"
+                 "回答仍需分别标注来源录音。"),
+    }
+    updated = dict(result)
+    updated["coverage_hits"] = annotated.get("hits") or []
+    updated["coverage_supplement"] = supplement
+    notice = str(updated.get("notice") or "").strip()
+    updated["notice"] = (notice + " " if notice else "") + supplement["note"]
+    state.covered |= _transcript_sources({"hits": updated["coverage_hits"]}, state.task_ids)
+    return updated
+
+
 async def _cross_recording_message(actor: kb_tools.Actor, registry: citations.CitationRegistry,
                                    question: str, *, scope: list[int],
                                    biz_id: int) -> SystemMessage | None:
@@ -523,12 +667,13 @@ async def maybe_summarize(session: ChatSession, *, model: Any = None) -> bool:
 # --------------------------------------------------------------------------- #
 
 
-def build_tools(actor: kb_tools.Actor, registry: citations.CitationRegistry) -> list[Any]:
+def build_tools(actor: kb_tools.Actor, registry: citations.CitationRegistry,
+                cross_state: CrossRecordingState | None = None) -> list[Any]:
     """把工具表包成 ToolNode 认的工具，同时挂上引用登记。
 
-    每个工具的实现在 `kb_tools` 里只有一份；这里只做三件事：把 Actor 绑进去、
-    把结果登记成引用、把结果序列化成 tool message。MCP 侧走的是同一条
-    `kb_tools.execute_tool`，只是没有引用登记（那边不产回答）。
+    每个工具的实现在 `kb_tools` 里只有一份；这里只做四件事：把 Actor 绑进去、
+    把结果登记成引用、按需做跨录音条件补搜、把结果序列化成 tool message。
+    MCP 侧走的是同一条 `kb_tools.execute_tool`，只是没有引用登记（那边不产回答）。
     """
     tools: list[Any] = []
     for spec in kb_tools.TOOL_SPECS:
@@ -536,16 +681,21 @@ def build_tools(actor: kb_tools.Actor, registry: citations.CitationRegistry) -> 
             name=spec.name,
             description=spec.description,
             args_schema=spec.arguments,
-            coroutine=_tool_runner(spec, actor, registry),
+            coroutine=_tool_runner(spec, actor, registry, cross_state),
         ))
     return tools
 
 
 def _tool_runner(spec: kb_tools.ToolSpec, actor: kb_tools.Actor,
-                 registry: citations.CitationRegistry):
+                 registry: citations.CitationRegistry,
+                 cross_state: CrossRecordingState | None = None):
     async def run(**kwargs: Any) -> str:
         result = await kb_tools.execute_tool(actor, spec.name, kwargs)
-        return kb_tools.tool_result_text(registry.annotate(spec.name, result))
+        # 先登记主结果、再补搜：补搜条目的 ref 排在主结果之后，编号顺序稳定。
+        result = registry.annotate(spec.name, result)
+        result = await maybe_supplement_cross_recording(
+            cross_state, actor, registry, result)
+        return kb_tools.tool_result_text(result)
 
     return run
 
@@ -585,7 +735,14 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         user, requested=list(session.scope_meeting_ids or []) or None,
         biz_id=assistant_row.id)
     registry = citations.CitationRegistry()
-    tools = build_tools(actor, registry)
+    # 跨录音条件补搜：状态构建要查一次录音表，失败只关掉增强，不打断主链路。
+    try:
+        cross_state = await _cross_recording_state(
+            text, scope=list(session.scope_meeting_ids or []))
+    except Exception:  # noqa: BLE001 - 增强能力不得把问答弄挂
+        logger.exception("跨录音条件补搜状态构建失败，本轮关闭补搜")
+        cross_state = None
+    tools = build_tools(actor, registry, cross_state)
     graph = chat_graph.build_chat_graph()
     budget = chat_graph.budget_from_env()
     recursion_limit = chat_graph.recursion_limit(budget)

@@ -398,13 +398,19 @@ def summarize_tool_result(name: str, result_text: str) -> str:
     if isinstance(result, dict) and result.get("ok") is False:
         return f"失败：{str(result.get('error') or '')[:60]}"
     key, unit = _COUNT_KEYS.get(name, ("", ""))
+    summary = "完成"
     if key and isinstance(result, dict):
         items = result.get(key)
         if isinstance(items, list):
-            return f"{len(items)} {unit}"
-    if name == "get_minutes" and isinstance(result, dict):
-        return "六字段纪要"
-    return "完成"
+            summary = f"{len(items)} {unit}"
+    elif name == "get_minutes" and isinstance(result, dict):
+        summary = "六字段纪要"
+    # 条件补搜的条目不在主结果数组里；不把这一笔写进摘要，页面会以为工具只做了
+    # 主检索（q91 的补搜正是回答依据）。
+    supplemental = result.get("coverage_hits") if isinstance(result, dict) else None
+    if isinstance(supplemental, list) and supplemental:
+        summary += f" + 补搜 {len(supplemental)} 条"
+    return summary
 
 
 def tool_trace(messages: list[Any]) -> list[dict[str, Any]]:

@@ -339,6 +339,11 @@ class ToolTraceTest(unittest.TestCase):
         self.assertEqual(trace[0]["summary"], "3 条事实")
         self.assertTrue(trace[0]["ok"])
 
+    def test_supplemental_hits_are_counted_in_the_summary(self):
+        text = '{"ok": true, "hits": [1, 2], "coverage_hits": [{"ref": 3}]}'
+        self.assertEqual(chat_graph.summarize_tool_result("search_knowledge", text),
+                         "2 条切片 + 补搜 1 条")
+
     def test_failed_tool_is_reported_as_failure(self):
         messages = [
             _ai("", calls=[_call("search_knowledge", {"query": "x"}, call_id="b1")]),

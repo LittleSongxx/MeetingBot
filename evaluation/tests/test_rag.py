@@ -49,6 +49,16 @@ def _answers() -> dict:
     }
 
 
+class ProductSwitchesTest(unittest.TestCase):
+    def test_cross_recording_supplement_is_captured(self):
+        payload = {"data": {"model": "qwen", "cross_recording_prefetch_k": 0,
+                            "cross_recording_supplement_k": 1}}
+        with mock.patch.object(rag, "_http_json", return_value=payload):
+            switches = rag._product_switches("http://example", "token")
+        self.assertEqual(switches["cross_recording_prefetch_k"], 0)
+        self.assertEqual(switches["cross_recording_supplement_k"], 1)
+
+
 class BuildPacketTest(unittest.TestCase):
     def test_answers_are_matched_by_question(self):
         packet = rag.build_packet(_qa_set(), _answers())
