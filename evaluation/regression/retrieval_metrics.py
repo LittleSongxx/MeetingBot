@@ -17,6 +17,10 @@
   所以"起点落进范围"是这里唯一可判定的关系。
 - **跨录音问题**（金标里带 `also_in`）现在可以评了：切片引用带上了 `source_id`
   （来源录音 id），每个来源各按自己的片段表映射。缺 `source_id` 的老产物仍按"判不了"跳过。
+- **录音覆盖**（`recording_coverage`）：只看"金标要求的每段录音，有没有至少一条
+  **带时间窗**的检索条目来自它"。它回答的是"两段都查了吗"，不是"金标片段都覆盖了吗"：
+  纪要 fact 与 `MINUTES_ITEM` 切片没有时间窗，不算转写覆盖；来源身份缺失时按下限记
+  （不假装覆盖）。
 - `recall@k`：金标片段里**被 top-k 覆盖**的比例（覆盖 = 至少一条相关切片进了前 k）。
   这里 k 取"这一次实际检索到的条数"（模型自选 limit，实测 1–10），因此它是
   "这次检索有没有盖住金标"，不是"固定 k 下的召回"——**报数时必须连 k 一起报**。
@@ -120,6 +124,38 @@ def case_sources(case: Mapping[str, Any]) -> list[tuple[int, list[int]]]:
     return pairs
 
 
+def recording_coverage(retrieved: Iterable[Mapping[str, Any]],
+                       case: Mapping[str, Any]) -> dict[str, Any]:
+    """金标要求的每段录音，有没有至少一条带时间窗的检索条目来自它。
+
+    与 `recall` 分开：`recall` 问"金标片段有没有被盖住"，这里问"两段录音有没有
+    都看过"。跨录音题的 failure 有两种：**没检索到那段**（这里 0/2）与
+    **检索到了但没引用/没答对**（recall 低）。混成一个数就不知道下一步该修哪。
+    """
+    expected = sorted({task_id for task_id, _ in case_sources(case)})
+    covered: set[int] = set()
+    for item in retrieved or []:
+        if _window(item) is None:
+            continue
+        source_id = item.get("source_id")
+        if source_id is None:
+            continue
+        value = int(source_id)
+        if value in expected:
+            covered.add(value)
+    return {
+        "expected_sources": expected,
+        "covered_sources": sorted(covered),
+        "missing_sources": sorted(set(expected) - covered),
+        "expected_count": len(expected),
+        "covered_count": len(covered),
+        "rate": (len(covered) / len(expected)) if expected else None,
+        "fully_covered": bool(expected) and covered == set(expected),
+        "source_identity_known": any(item.get("source_id") is not None
+                                     for item in (retrieved or [])),
+    }
+
+
 def evaluate_turn(turn: Mapping[str, Any], case: Mapping[str, Any],
                   sources: Mapping[str, Any]) -> dict[str, Any] | None:
     """一轮的检索侧读数。判不了（缺检索集/缺片段时间）返回 None。
@@ -159,6 +195,7 @@ def evaluate_turn(turn: Mapping[str, Any], case: Mapping[str, Any],
         "ndcg": (dcg / ideal) if ideal else None,
         "relevant_count": sum(1 for hit in relevant if hit),
         "sources_known": bool(scorable),
+        "recording_coverage": recording_coverage(retrieved, case),
     }
 
 
@@ -209,6 +246,10 @@ def summarize(artifact: Mapping[str, Any] | None,
             "skipped": skipped,
         }
     k_values = sorted({row["k"] for row in rows})
+    coverage_rows = [row["recording_coverage"] for row in rows
+                     if row.get("recording_coverage")]
+    covered_slots = sum(row["covered_count"] for row in coverage_rows)
+    expected_slots = sum(row["expected_count"] for row in coverage_rows)
     return {
         "sample": len(rows),
         "k_distribution": k_values,
@@ -216,6 +257,17 @@ def summarize(artifact: Mapping[str, Any] | None,
         "mrr": sum(row["mrr"] for row in rows) / len(rows),
         "ndcg_at_k": (sum(row["ndcg"] for row in rows if row["ndcg"] is not None)
                       / max(1, sum(1 for row in rows if row["ndcg"] is not None))),
+        # 录音覆盖与片段召回**分开报**：跨录音题要能区分"没查那段"与"查了没答对"。
+        "recording_coverage": {
+            "sample": len(coverage_rows),
+            "covered_slots": covered_slots,
+            "expected_slots": expected_slots,
+            "rate": (covered_slots / expected_slots) if expected_slots else None,
+            "fully_covered_cases": sum(1 for row in coverage_rows if row["fully_covered"]),
+            "reading": ("金标每段录音只要有一条带时间窗的检索条目来自它就算覆盖；"
+                        "纪要 fact / MINUTES_ITEM 没有时间窗，不算转写覆盖；"
+                        "来源身份缺失的条目不计覆盖（下限）。"),
+        },
         "per_case": rows,
         "skipped": skipped,
         "reading": ("recall_at_k = 金标片段被本次检索（全部 k 条）覆盖的比例，**k 是模型自选的"
@@ -223,7 +275,9 @@ def summarize(artifact: Mapping[str, Any] | None,
                     "ndcg_at_k = 二值增益的归一化折损累计增益。三者都由片段时间窗与金标片段号"
                     "算得，**零模型调用**——判定模型换族/换思考开关都不会动它们。"),
         "not_measured": ("切块粒度与金标片段是多对一关系（一个窗口盖住多句），因此这里是"
-                         "「覆盖」口径而不是「精确命中」；不能与判定式的 context recall 相减。"),
+                         "「覆盖」口径而不是「精确命中」；不能与判定式的 context recall 相减。"
+                         "recording_coverage 只看「每段录音有没有被检索到」，"
+                         "不评价段内相关性。"),
     }
 
 
@@ -266,4 +320,4 @@ if __name__ == "__main__":
 
 
 __all__ = ["DEFAULT_ARTIFACT", "DEFAULT_QA_SET", "load_artifact", "segment_starts",
-           "evaluate_turn", "summarize", "main"]
+           "recording_coverage", "evaluate_turn", "summarize", "main"]

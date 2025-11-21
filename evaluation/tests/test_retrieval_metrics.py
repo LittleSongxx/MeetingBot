@@ -121,6 +121,85 @@ class SourceAwareCoverageTest(unittest.TestCase):
         self.assertEqual(row["recall"], 1.0, "跨录音题：两段都覆盖才算全")
 
 
+class RecordingCoverageTest(unittest.TestCase):
+    """跨录音题要能分开回答两个问题：**两段都查了吗**（覆盖）与**片段都盖住了吗**（召回）。"""
+
+    SOURCES = {"2": {"task_ids": [6, 7], "segments": [
+        {"task_id": 6, "segment_no": 1, "start_ms": 0, "end_ms": 8_000},
+        {"task_id": 7, "segment_no": 1, "start_ms": 0, "end_ms": 3_000},
+    ]}}
+    CASE = {"id": "q91", "source": {"task_id": 6, "segments": [1]},
+            "also_in": {"task_id": 7, "segments": [1]}}
+
+    def test_counts_distinct_recordings_not_items(self):
+        retrieved = [
+            {"start_second": 0, "end_second": 8, "source_id": 6},
+            {"start_second": 100, "end_second": 120, "source_id": 6},
+        ]
+        row = rm.recording_coverage(retrieved, self.CASE)
+        self.assertEqual(row["covered_sources"], [6])
+        self.assertEqual(row["expected_sources"], [6, 7])
+        self.assertEqual(row["covered_count"], 1)
+        self.assertEqual(row["expected_count"], 2)
+        self.assertFalse(row["fully_covered"])
+
+    def test_both_recordings_covered(self):
+        retrieved = [
+            {"start_second": 0, "end_second": 8, "source_id": 6},
+            {"start_second": 0, "end_second": 3, "source_id": 7},
+        ]
+        row = rm.recording_coverage(retrieved, self.CASE)
+        self.assertTrue(row["fully_covered"])
+        self.assertEqual(row["rate"], 1.0)
+
+    def test_facts_and_minutes_chunks_do_not_count(self):
+        """纪要 fact 与无时间窗的 MINUTES_ITEM 不是转写覆盖。"""
+        retrieved = [
+            {"source_id": 6, "quote": "", "start_second": None, "end_second": None},
+            {"source_id": 6, "quote": "[decisions] 发布公告由赵敏负责",
+             "start_second": None, "end_second": None},
+        ]
+        row = rm.recording_coverage(retrieved, self.CASE)
+        self.assertEqual(row["covered_sources"], [])
+
+    def test_another_recordings_window_does_not_cover(self):
+        retrieved = [{"start_second": 0, "end_second": 8, "source_id": 7}]
+        row = rm.recording_coverage(retrieved, self.CASE)
+        self.assertEqual(row["covered_sources"], [7], "只覆盖第二段")
+
+    def test_missing_source_identity_is_a_lower_bound(self):
+        retrieved = [{"start_second": 0, "end_second": 8}]
+        row = rm.recording_coverage(retrieved, self.CASE)
+        self.assertFalse(row["source_identity_known"])
+        self.assertEqual(row["covered_sources"], [])
+
+    def test_summarize_aggregates_slots(self):
+        artifact = {"turns": [
+            {"question": "q1", "retrieved": [
+                {"start_second": 0, "end_second": 8, "source_id": 6}]},
+            {"question": "q2", "retrieved": [
+                {"start_second": 0, "end_second": 8, "source_id": 6},
+                {"start_second": 0, "end_second": 3, "source_id": 7}]},
+        ], "source_texts": self.SOURCES}
+        qa = {"cases": [
+            {"id": "q1", "question": "q1", "source": {"task_id": 6, "segments": [1]},
+             "also_in": {"task_id": 7, "segments": [1]}},
+            {"id": "q2", "question": "q2", "source": {"task_id": 6, "segments": [1]},
+             "also_in": {"task_id": 7, "segments": [1]}},
+        ]}
+        summary = rm.summarize(artifact, qa)
+        block = summary["recording_coverage"]
+        self.assertEqual(block["covered_slots"], 3)
+        self.assertEqual(block["expected_slots"], 4)
+        self.assertEqual(block["rate"], 0.75)
+        self.assertEqual(block["fully_covered_cases"], 1)
+
+    def test_no_source_cases_are_not_in_the_coverage_denominator(self):
+        artifact = _artifact([{"start_second": 50, "end_second": 62, "source_id": 6}])
+        summary = rm.summarize(artifact, _qa())
+        self.assertEqual(summary["recording_coverage"]["expected_slots"], 1)
+
+
 class SummarizeTest(unittest.TestCase):
     def test_no_sample_instead_of_zero(self):
         summary = rm.summarize(_artifact([], question="别的问题"), _qa())
