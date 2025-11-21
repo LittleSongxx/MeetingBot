@@ -3,43 +3,42 @@
   "paired": 50,
   "missing": [],
   "strict_accuracy": 0.6,
-  "acceptable_accuracy": 0.92,
+  "acceptable_accuracy": 0.88,
   "per_intent": {
     "cross_meeting": {
       "support": 8,
-      "strict_hits": 3,
-      "acceptable_hits": 7,
-      "strict_accuracy": 0.375,
-      "acceptable_accuracy": 0.875
+      "strict_hits": 5,
+      "acceptable_hits": 8,
+      "strict_accuracy": 0.625,
+      "acceptable_accuracy": 1.0
     },
     "single_fact": {
       "support": 25,
-      "strict_hits": 23,
-      "acceptable_hits": 23,
-      "strict_accuracy": 0.92,
-      "acceptable_accuracy": 0.92
+      "strict_hits": 22,
+      "acceptable_hits": 22,
+      "strict_accuracy": 0.88,
+      "acceptable_accuracy": 0.88
     },
     "aggregation": {
       "support": 17,
-      "strict_hits": 4,
-      "acceptable_hits": 16,
-      "strict_accuracy": 0.23529411764705882,
-      "acceptable_accuracy": 0.9411764705882353
+      "strict_hits": 3,
+      "acceptable_hits": 14,
+      "strict_accuracy": 0.17647058823529413,
+      "acceptable_accuracy": 0.8235294117647058
     }
   },
   "mismatches": [
     {
-      "case_id": "q90",
-      "intent": "cross_meeting",
-      "first_tool": "get_transcript_excerpt",
+      "case_id": "q12",
+      "intent": "single_fact",
+      "first_tool": "list_facts",
       "expected": "search_knowledge",
       "acceptable": [
-        "search_knowledge",
-        "list_facts"
+        "search_knowledge"
       ]
     },
     {
-      "case_id": "q12",
+      "case_id": "q13",
       "intent": "single_fact",
       "first_tool": "list_facts",
       "expected": "search_knowledge",
@@ -58,6 +57,26 @@
     },
     {
       "case_id": "q56",
+      "intent": "aggregation",
+      "first_tool": "get_minutes",
+      "expected": "list_facts",
+      "acceptable": [
+        "list_facts",
+        "search_knowledge"
+      ]
+    },
+    {
+      "case_id": "q60",
+      "intent": "aggregation",
+      "first_tool": "get_minutes",
+      "expected": "list_facts",
+      "acceptable": [
+        "list_facts",
+        "search_knowledge"
+      ]
+    },
+    {
+      "case_id": "q62",
       "intent": "aggregation",
       "first_tool": "get_minutes",
       "expected": "list_facts",
