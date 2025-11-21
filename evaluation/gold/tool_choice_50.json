@@ -1,0 +1,581 @@
+{
+  "name": "Agent 首轮工具选择诊断集（50 题；代理起草启发式，非人工金标）",
+  "discipline": "expected_first_tool 按意图/动作映射，是启发式不是人工金标；first-tool accuracy 只衡量第一步，不衡量多来源覆盖或最终答案正确性。",
+  "cases": [
+    {
+      "case_id": "q88",
+      "question": "发布公告与对外通稿分别由谁负责、什么时候完成？",
+      "intent": "cross_meeting",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge",
+        "list_facts"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q89",
+      "question": "两段录音里分别提到了哪些风险？",
+      "intent": "cross_meeting",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge",
+        "list_facts"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q90",
+      "question": "发布时间的结论在两段录音里一致吗？分别怎么说？",
+      "intent": "cross_meeting",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge",
+        "list_facts"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q91",
+      "question": "两段录音分别是上午还是下午的会、主题是什么？",
+      "intent": "cross_meeting",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge",
+        "list_facts"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q92",
+      "question": "灰度这件事在两段录音里分别讨论到什么？",
+      "intent": "cross_meeting",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge",
+        "list_facts"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q93",
+      "question": "测试回归与对外通稿分别由谁负责？",
+      "intent": "cross_meeting",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge",
+        "list_facts"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q94",
+      "question": "两个功能问题分别怎么解决？",
+      "intent": "cross_meeting",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge",
+        "list_facts"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q95",
+      "question": "两段录音里的验收/回归要求分别是什么？",
+      "intent": "cross_meeting",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge",
+        "list_facts"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q01",
+      "question": "这次灰度发布从什么时候开始、覆盖了多少用户？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q02",
+      "question": "灰度期间登录和核心下单链路的成功率是多少？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q03",
+      "question": "用户反馈最集中的两个问题是什么？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q04",
+      "question": "抽样检查了哪几类账号的权限？结论是什么？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q05",
+      "question": "移动端附件下载的问题为什么必须在发布前处理？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q06",
+      "question": "最近七天纪要和 agent 的调用成功率、平均耗时是多少？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q07",
+      "question": "两次模型调用失败的原因是什么？用户能做什么？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q08",
+      "question": "资料更新时知识索引会怎么处理？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q09",
+      "question": "转写和纪要生成的流程是怎样的？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q10",
+      "question": "正式发布前还要补充哪两组验收数据？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q11",
+      "question": "会议纪要处于什么状态时可以导出？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q12",
+      "question": "移动端附件下载任务的负责人、协作人和截止时间是什么？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q13",
+      "question": "发布回归测试的完成时间是什么？由谁负责？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q14",
+      "question": "发布公告任务包含哪些入口？负责人和截止时间是什么？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q15",
+      "question": "正式发布的时间是什么？前提条件是什么？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q16",
+      "question": "如果阻断任务没有完成，接下来会发生什么？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q17",
+      "question": "删除用户时会怎样处理已关联的业务记录？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q18",
+      "question": "首周复盘要看哪五项数据？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q19",
+      "question": "跨会议问答希望用户看到哪些引用信息？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q20",
+      "question": "知识索引构建期间资料变化，按会议决策应该怎么处理？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q21",
+      "question": "V2.0 计划内的需求验收情况如何？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q22",
+      "question": "报表导出在压测里暴露了什么问题？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q23",
+      "question": "报表导出问题最后决定怎么处理？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q24",
+      "question": "灰度分几步走？回滚能力如何？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q25",
+      "question": "灰度按用户 ID 取模的目的是什么？灰度期间盯哪些指标？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q26",
+      "question": "下午这场会定了哪些行动项和负责人？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q27",
+      "question": "对外通稿的定稿时间是什么？为什么要删掉一段内容？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q28",
+      "question": "这场会议预计持续多久、大概讨论几个议题？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q29",
+      "question": "新版本会议任务看板的访问量提升了多少？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q30",
+      "question": "任务完成凭证的上传率提升了多少？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q31",
+      "question": "灰度期间有没有发现数据丢失、权限越界或订单重复提交的问题？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q32",
+      "question": "后端接口在灰度期间有没有出现 500 错误？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q33",
+      "question": "会议转写、纪要任务、知识索引和 agent 运行记录保存在哪里？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q34",
+      "question": "切片和向量分别存在哪里？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q35",
+      "question": "今天的会议录音会被用来做什么？",
+      "intent": "single_fact",
+      "expected_first_tool": "search_knowledge",
+      "acceptable_first_tools": [
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q56",
+      "question": "这次会议的三个议题分别是什么？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q57",
+      "question": "运营建议增加哪两个发布后观察指标？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q58",
+      "question": "上线后一周内会按部门查看哪些数据？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q59",
+      "question": "会上提到的风险都有哪些？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q60",
+      "question": "9 月 1 日正式发布的范围包含哪些功能？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q61",
+      "question": "质量验证重点关注的三类边界场景是什么？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    },
+    {
+      "case_id": "q62",
+      "question": "会议最后的四条决策是什么？",
+      "intent": "aggregation",
+      "expected_first_tool": "list_facts",
+      "acceptable_first_tools": [
+        "list_facts",
+        "search_knowledge"
+      ],
+      "label_source": "agent_draft_heuristic",
+      "rule": "single_fact→search；aggregation→先列清单；cross_meeting→分别检索；smalltalk→不检索"
+    }
+  ]
+}
