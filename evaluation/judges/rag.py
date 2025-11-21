@@ -282,6 +282,7 @@ def _product_switches(base_url: str, token: str) -> dict[str, Any]:
         "rerank_candidates": data.get("rerank_candidates"),
         "kb_dedupe_enabled": data.get("kb_dedupe_enabled"),
         "kb_dedupe_overlap_seconds": data.get("kb_dedupe_overlap_seconds"),
+        "kb_contextual_enabled": data.get("kb_contextual_enabled"),
         "qdrant_collection": data.get("qdrant_collection"),
     }
 

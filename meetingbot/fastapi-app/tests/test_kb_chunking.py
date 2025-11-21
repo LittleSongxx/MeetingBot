@@ -152,3 +152,37 @@ class ChunkSizeConfigTest(unittest.TestCase):
             with mock.patch.dict("os.environ", {"KB_CHUNK_TARGET_CHARS": value}), \
                     self.assertRaises(ValueError):
                 kb_chunking.target_chars()
+
+
+class ContextualTextTest(unittest.TestCase):
+    """Contextual Retrieval 的纯函数：结构上下文只写定位信息，不改原文。"""
+
+    def test_transcript_header_carries_meeting_date_window_and_speaker(self):
+        chunk = kc.chunk_transcript(_segments(2), target_chars=200)[0]
+        header = kc.context_header(meeting_title="产品发布评审会议",
+                                   meeting_date="2026-09-10",
+                                   source_label="录音 6", chunk=chunk)
+        self.assertIn("会议：产品发布评审会议", header)
+        self.assertIn("日期：2026-09-10", header)
+        self.assertIn("录音：录音 6", header)
+        self.assertIn("时间：0:00–0:07", header)
+        self.assertIn("说话人：张涛", header)
+
+    def test_minutes_header_carries_field_instead_of_time(self):
+        chunk = kc.Chunk(chunk_no=0, chunk_type=kc.CHUNK_MINUTES_ITEM,
+                         text="[decisions] 上线时间定在十月", field="decisions")
+        header = kc.context_header(meeting_title="产品发布评审会议",
+                                   meeting_date=None,
+                                   source_label="人工确认纪要", chunk=chunk)
+        self.assertIn("来源：人工确认纪要", header)
+        self.assertIn("字段：decisions", header)
+        self.assertIn("日期：未知", header)
+        self.assertNotIn("时间：", header)
+
+    def test_embedding_text_keeps_the_original_last(self):
+        text = kc.embedding_text("[会议：甲｜日期：2026-09-10]",
+                                 "讨论灰度发布节奏", "[51s][张晨] 灰度从 8 月 20 日开始")
+        lines = text.splitlines()
+        self.assertEqual(lines[0], "[会议：甲｜日期：2026-09-10]")
+        self.assertEqual(lines[1], "[上下文] 讨论灰度发布节奏")
+        self.assertEqual(lines[-1], "[51s][张晨] 灰度从 8 月 20 日开始")

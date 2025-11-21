@@ -160,6 +160,7 @@ class ChatEndpointTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(data["kb_chunk_target_chars"], 300)
         self.assertEqual(data["rerank_top_k"], 3)
         self.assertFalse(data["kb_dedupe_enabled"])
+        self.assertFalse(data["kb_contextual_enabled"])
         self.assertEqual(data["qdrant_collection"], "funnel_test")
 
     async def test_stream_returns_sse_frames_with_anti_buffering_headers(self):

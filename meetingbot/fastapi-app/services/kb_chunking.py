@@ -173,6 +173,47 @@ def chunk_transcript(
     return chunks
 
 
+def _mmss(ms: int) -> str:
+    seconds = max(0, int(ms)) // 1000
+    return f"{seconds // 60}:{seconds % 60:02d}"
+
+
+def context_header(*, meeting_title: str, meeting_date: str | None,
+                   source_label: str, chunk: Chunk) -> str:
+    """给一段切片生成**结构上下文**（会议名/日期/时间窗/说话人/字段）。
+
+    这是 Contextual Retrieval 的规则部分：它不生成新事实，只把切片本来就有的
+    定位信息写进嵌入文本。引用回显仍然用 `chunk.text`——上下文句只进 `embed_text`，
+    否则引用在转写里就定位不到了。
+    """
+    parts = [f"会议：{meeting_title or '未命名会议'}",
+             f"日期：{meeting_date or '未知'}"]
+    if chunk.chunk_type == CHUNK_MINUTES_ITEM:
+        parts.extend([f"来源：{source_label or '人工确认纪要'}",
+                      f"字段：{chunk.field or '未标注'}"])
+    else:
+        if source_label:
+            parts.append(f"录音：{source_label}")
+        if chunk.start_ms is not None and chunk.end_ms is not None:
+            parts.append(f"时间：{_mmss(chunk.start_ms)}–{_mmss(chunk.end_ms)}")
+        if chunk.speaker:
+            parts.append(f"说话人：{chunk.speaker}")
+    return "[" + "｜".join(parts) + "]"
+
+
+def embedding_text(header: str, context_sentence: str, original: str) -> str:
+    """拼出真正送去嵌入的文本：结构上下文 + 一句主题上下文 + 原文。
+
+    顺序固定（结构 → 主题 → 原文）：嵌入模型对开头的条件词与实体更敏感，
+    而原文放在最后可以保持"这段到底说了什么"的完整语义。
+    """
+    parts = [header.strip()] if header.strip() else []
+    if context_sentence.strip():
+        parts.append(f"[上下文] {context_sentence.strip()}")
+    parts.append(original)
+    return "\n".join(parts)
+
+
 def _slot_text(value: Any) -> str:
     """类型化槽位的可读文本：`{text}` 或 `{text}（{normalized}）`。
 

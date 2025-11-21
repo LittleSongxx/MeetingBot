@@ -407,6 +407,7 @@ CREATE TABLE `kb_chunk`  (
   `chunk_no` int NOT NULL COMMENT '文档内顺序号',
   `chunk_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '切片类型：TRANSCRIPT_WINDOW转写窗口、MINUTES_ITEM纪要条目',
   `text` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '切片正文',
+  `embed_text` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '用于嵌入的文本（上下文+原文）；为空表示直接用 text',
   `speaker` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '说话人标签（转写窗口）',
   `start_ms` bigint NULL DEFAULT NULL COMMENT '起始毫秒（转写窗口）',
   `end_ms` bigint NULL DEFAULT NULL COMMENT '结束毫秒（转写窗口）',
