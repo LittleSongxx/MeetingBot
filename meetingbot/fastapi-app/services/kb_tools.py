@@ -231,9 +231,10 @@ class SearchKnowledgeArgs(BaseModel):
 
 
 class ListFactsArgs(BaseModel):
-    kind: Literal["decision", "pending_item", "risk", "meeting", "recording"] = Field(
+    kind: Literal["decision", "pending_item", "risk", "task", "meeting", "recording"] = Field(
         description="要查的事实类别：decision 决策 / pending_item 待办 / "
-                    "risk 风险 / meeting 会议清单 / recording 录音清单"
+                    "risk 风险 / **task 决策+待办（问某人负责的任务时用这个，避免只查一类漏掉）** / "
+                    "meeting 会议清单 / recording 录音清单"
                     "（哪几段录音、分别是什么时候的，用于「下午那场会」这类指代）")
     meeting_ids: list[int] | None = Field(
         default=None, description="限定在这些会议里查；超过权限范围的会被忽略")
@@ -271,11 +272,33 @@ class GetMinutesArgs(BaseModel):
                     "问待办只取 pending_items；不确定才留空取全部六字段。"
                     "一次把六字段全部当上下文会让无关条目占满窗口。",
     )
+    keywords: list[str] | None = Field(
+        default=None,
+        description="按关键词缩小列表字段（任一命中即可）。问「发布范围/某个主题/某功能」时"
+                    "**必须**把问题里的名词放进来，例如 [\"发布范围\", \"功能\"]；"
+                    "不要整字段返回。summary 不受 keywords 影响。",
+    )
+    limit: int = Field(
+        default=5, ge=1, le=50,
+        description="每个列表字段最多返回几条（默认 5）。问「最后 N 条/最近 N 条」时"
+                    "把 limit 设为 N，并把 order 设为 last；返回的 field_meta 会标出"
+                    "total/truncated，还有更多时可再取。",
+    )
+    order: Literal["first", "last"] = Field(
+        default="first",
+        description="列表字段的取法：first=从前往后（默认），last=从后往前。"
+                    "问「最后几条决策/最近几条」时用 last。",
+    )
 
-    @field_validator("fields", mode="before")
+    @field_validator("fields", "keywords", mode="before")
     @classmethod
     def _loose_fields(cls, value: Any) -> Any:
         return _loose(value, (list, type(None)))
+
+    @field_validator("limit", mode="before")
+    @classmethod
+    def _loose_limit(cls, value: Any) -> Any:
+        return _loose(value, int)
 
     @field_validator("minutes_id", "meeting_id", mode="before")
     @classmethod
@@ -412,8 +435,15 @@ async def _list_facts(actor: Actor, args: ListFactsArgs) -> dict[str, Any]:
     if args.kind == "recording":
         return await _list_recordings(allowed, args.limit)
 
-    field = {"decision": "decisions", "pending_item": "pending_items",
-             "risk": "risks"}[args.kind]
+    # `task` 把决策与待办一起查：问「某人负责的任务」时只查 pending_item 会漏掉
+    # 写在 decisions 里的任务（q42 的专项评审触发项就是 pending_item 的干扰项），
+    # 但工具不该猜用户指的是哪一类，所以给一个显式的合并类别。
+    fields = {
+        "decision": ("decisions",),
+        "pending_item": ("pending_items",),
+        "risk": ("risks",),
+        "task": ("decisions", "pending_items"),
+    }[args.kind]
     # 只查已确认纪要：草稿是模型产物，人还没拍板，不能当事实回答（同 kb_service 口径）
     query = MeetingMinutes.filter(status="CONFIRMED")
     query = _filter_meetings(query, allowed)
@@ -422,13 +452,17 @@ async def _list_facts(actor: Actor, args: ListFactsArgs) -> dict[str, Any]:
 
     facts: list[dict[str, Any]] = []
     for minutes in rows:
-        items = contracts.upgrade_output({field: getattr(minutes, f"{field}_json") or []})
-        for index, item in enumerate(items.get(field) or []):
-            if args.owner and not _owner_matches(item, args.owner):
-                continue
-            if args.keywords and not _keywords_match(item, args.keywords):
-                continue
-            facts.append(_fact(minutes, field, index, item, titles))
+        for field_name in fields:
+            items = contracts.upgrade_output(
+                {field_name: getattr(minutes, f"{field_name}_json") or []})
+            for index, item in enumerate(items.get(field_name) or []):
+                if args.owner and not _owner_matches(item, args.owner):
+                    continue
+                if args.keywords and not _keywords_match(item, args.keywords):
+                    continue
+                facts.append(_fact(minutes, field_name, index, item, titles))
+                if len(facts) >= args.limit:
+                    break
             if len(facts) >= args.limit:
                 break
         if len(facts) >= args.limit:
@@ -491,19 +525,48 @@ async def _get_minutes(actor: Actor, args: GetMinutesArgs) -> dict[str, Any]:
     # 与详情页、导出走同一个适配出口：这里不自己拼字符串
     presented = contracts.present_minutes_fields(
         contracts.upgrade_output(stored))
-    if args.fields:
-        presented = {name: presented[name] for name in args.fields if name in presented}
+    requested = args.fields or list(contracts.FIELD_ORDER)
+    selected = {name: presented[name] for name in requested if name in presented}
+    field_meta: dict[str, dict[str, int | bool]] = {}
+    for name, value in list(selected.items()):
+        if not isinstance(value, list):
+            continue
+        pairs = list(enumerate(value))
+        if args.keywords:
+            pairs = [(index, item) for index, item in pairs
+                     if _keywords_match(item, args.keywords)]
+        total = len(pairs)
+        pairs = pairs[-args.limit:] if args.order == "last" else pairs[:args.limit]
+        rendered: list[Any] = []
+        for index, item in pairs:
+            # **引用身份必须保留原始下标**：过滤/截断后如果重新 enumerate，
+            # ref 会指向另一条纪要条目（静默错位比丢条目更危险）。
+            if isinstance(item, dict):
+                item = {**item, "item_index": index}
+            rendered.append(item)
+        selected[name] = rendered
+        field_meta[name] = {"total": total, "returned": len(rendered),
+                            "truncated": total > len(rendered)}
     draft = minutes.status != "CONFIRMED"
+    notice = ("这是尚未确认的草稿，引用时必须说明是草稿。" if draft
+              else "这是人工确认过的纪要，可以直接作为会议事实引用。")
+    notice += (f" 列表字段每项最多返回 {args.limit} 条（order={args.order}）；"
+               "问最后 N 条用 order=\"last\" + limit=N，问某主题用 keywords 缩小；"
+               "field_meta 给出 total/returned/truncated。")
+    if any(meta["truncated"] for meta in field_meta.values()):
+        notice += " 还有更多条目未返回，需要时缩小 keywords 或调整 limit/order。"
+    if args.keywords and field_meta and not any(meta["total"] for meta in field_meta.values()):
+        notice += " keywords 没有命中任何列表条目；可换关键词或去掉 keywords。"
     return {
         "meeting": {"id": meeting.id, "title": meeting.title,
                     "start_time": _fmt(meeting.start_time)},
         "minutes_id": minutes.id,
         "authority": "DRAFT" if draft else "CONFIRMED",
         "fields_requested": args.fields,
+        "field_meta": field_meta,
         # 草稿的说明直接写进结果，模型引用时必须如实标注（"人拍板才算数"）
-        "notice": ("这是尚未确认的草稿，引用时必须说明是草稿。" if draft
-                   else "这是人工确认过的纪要，可以直接作为会议事实引用。"),
-        "fields": presented,
+        "notice": notice,
+        "fields": selected,
     }
 
 
@@ -609,10 +672,11 @@ TOOL_SPECS: tuple[ToolSpec, ...] = (
     ),
     ToolSpec(
         name="list_facts",
-        description="按类别查已确认纪要里的结构化事实：决策 / 待办 / 风险 / 会议清单。"
-                    "适合「有哪些待办/决策/风险」「这周开了哪些会」这类**清单**；"
-                    "**查单条事实（某个负责人/截止时间/某句话的原文出处）优先用 "
-                    "search_knowledge**，不要用本工具代替检索。"
+        description="按类别查已确认纪要里的结构化事实：决策 / 待办 / 风险 / task（决策+待办）"
+                    "/ 会议清单 / 录音清单。适合「有哪些待办/决策/风险」「这周开了哪些会」"
+                    "这类**清单**；**问某人负责的任务/截止时间用 kind=task**（同时查决策与"
+                    "待办，避免只查一类漏掉）；**查单条事实（某个负责人/截止时间/某句话的"
+                    "原文出处）优先用 search_knowledge**，不要用本工具代替检索。"
                     "需要时可用 keywords/owner/limit 缩小，避免一次把整类事实都当上下文。",
         arguments=ListFactsArgs,
         handler=_list_facts,
@@ -621,7 +685,10 @@ TOOL_SPECS: tuple[ToolSpec, ...] = (
         name="get_minutes",
         description="取某场会的纪要字段（摘要、议题、观点、决策、待办、风险，含证据）。"
                     "**按需传 fields**：问时长/议题只取 summary/topics，问待办只取 "
-                    "pending_items；不确定才取全部。一次取六字段会把无关条目塞满上下文。",
+                    "pending_items；不确定才取全部。一次取六字段会把无关条目塞满上下文。"
+                    "**问某主题/发布范围/功能时传 keywords**（从问题取名词）；"
+                    "**问最后 N 条/最近 N 条时传 order=last + limit=N**；"
+                    "列表字段默认每项最多 5 条，field_meta 会标 total/truncated。",
         arguments=GetMinutesArgs,
         handler=_get_minutes,
     ),

@@ -509,6 +509,50 @@ class MinutesCitationTest(unittest.TestCase):
         self.assertEqual(len(registry), 0)
 
 
+class InventoryCitationTest(unittest.TestCase):
+    """录音/会议清单也是可引用条目：不能所有行都合并成一个空引用。"""
+
+    def test_recording_facts_get_unique_refs_and_period_text(self):
+        registry = citations.CitationRegistry()
+        registry.annotate("list_facts", {"ok": True, "kind": "recording", "facts": [
+            {"task_id": 6, "meeting_id": 2, "meeting_title": "产品发布评审会议",
+             "recorded_at": "2026-09-10 09:00:00", "period": "上午"},
+            {"task_id": 7, "meeting_id": 2, "meeting_title": "产品发布评审会议",
+             "recorded_at": "2026-09-10 14:00:00", "period": "下午"},
+        ]})
+        self.assertEqual(len(registry), 2, "两段录音必须占两个编号，不能合并")
+        first, second = registry.get(1), registry.get(2)
+        self.assertIn("task 6", first.quote)
+        self.assertIn("上午", first.quote)
+        self.assertIn("task 7", second.quote)
+        self.assertIn("下午", second.quote)
+        self.assertEqual((first.task_id, first.source_id), (6, 6))
+        self.assertEqual(first.as_dict()["source_text"], first.quote)
+
+    def test_meeting_facts_get_unique_refs(self):
+        registry = citations.CitationRegistry()
+        registry.annotate("list_facts", {"ok": True, "kind": "meeting", "facts": [
+            {"meeting_id": 2, "title": "产品发布评审会议", "start_time": "2026-09-10 10:40:00"},
+            {"meeting_id": 3, "title": "另一场会", "start_time": "2026-09-11 10:00:00"},
+        ]})
+        self.assertEqual(len(registry), 2)
+        self.assertEqual(registry.get(1).meeting_id, 2)
+        self.assertEqual(registry.get(2).meeting_id, 3)
+
+    def test_filtered_minutes_item_keeps_original_item_index(self):
+        registry = citations.CitationRegistry()
+        registry.annotate("get_minutes", {
+            "ok": True, "meeting": {"id": 2, "title": "产品发布评审会议"},
+            "minutes_id": 3, "authority": "CONFIRMED",
+            "fields": {"decisions": [
+                {"content": {"text": "第九条决策"}, "item_index": 8,
+                 "evidence": [{"quote": "第九条决策原话"}]},
+            ]},
+        })
+        citation = registry.get(1)
+        self.assertEqual(citation.item_index, 8, "过滤后的引用必须指回原始条第 9 条")
+
+
 class FactSourceTextTest(unittest.TestCase):
     """事实条目的**完整正文**要进引用快照（判定者拿它核对槽位类断言）。
 

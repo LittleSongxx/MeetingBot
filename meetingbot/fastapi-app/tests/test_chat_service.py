@@ -426,6 +426,15 @@ class PromptTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("【资料覆盖规则】", prompt)
         self.assertIn("【引用规则】", prompt)
 
+    def test_missing_slot_rule_covers_duration_and_count(self):
+        """q28 的现场：工具只给议题标题，答案却直接说“没记录时长/数量”。
+
+        缺槽位回退规则必须覆盖时长/数量/时间点，而不只是负责人/截止时间。
+        """
+        protocol = chat_service.SOURCE_COVERAGE_PROTOCOL
+        for slot in ("负责人", "协作人", "截止时间", "时长", "数量", "时间点"):
+            self.assertIn(slot, protocol)
+
     async def test_database_template_wins_but_protocol_still_appended(self):
         from models import PromptTemplate
         await PromptTemplate.create(
