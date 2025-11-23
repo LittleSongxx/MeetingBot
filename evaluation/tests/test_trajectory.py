@@ -294,10 +294,10 @@ class GoldValidationTest(unittest.TestCase):
         for case in cross["cases"]:
             self.assertNotIn(case["case_id"], ids)
             ids.add(case["case_id"])
-            self.assertIn(case["label_source"], {"agent_draft", "agent_draft_enriched"})
+            self.assertIn(case["label_source"], {"agent_draft", "agent_draft_enriched", "agent_ai_reviewed"})
             self.assertFalse(case["human_checked"])
-            if case["label_source"] == "agent_draft_enriched":
-                self.assertTrue(case["expected_facts"], "补全草稿每题必须有 expected_facts")
+            if case["label_source"] != "agent_draft":
+                self.assertTrue(case["expected_facts"], "补全/复核草稿每题必须有 expected_facts")
                 self.assertIn("human_review", case["todo"])
             else:
                 self.assertEqual(case["expected_facts"], [])

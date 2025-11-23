@@ -1,7 +1,7 @@
 {
   "name": "Agent 轨迹金标 27 题（代理起草启发式；不是人工金标）",
   "purpose": "评测 Agent 一次问答的**工具轨迹**：首轮工具 strict/acceptable、工具调用集合 precision/recall/F1、必引率、强制工具覆盖率、禁止工具命中、pass^k。零模型调用，读 judges/rag.py --ask 产物。",
-  "label_source": "agent_draft_heuristic",
+  "label_source": "agent_draft_heuristic_with_ai_reviewed_labels",
   "human_checked": false,
   "discipline": "label_source=agent_draft_heuristic：意图与 required/acceptable 工具按问题文本启发式映射，不是人工金标；读数只用于方向回归，进入产品决策前须经人工确认。不报加权总分，逐项报并带样本量。",
   "source_sets": [
@@ -280,19 +280,25 @@
       "question": "用户反馈最集中的两个问题是什么？",
       "intent": "aggregation",
       "required_tools": [
-        "list_facts"
+        "search_knowledge"
       ],
       "acceptable_tools": [
-        "list_facts",
-        "search_knowledge"
+        "search_knowledge",
+        "list_facts"
       ],
       "forbidden_tools": [],
       "max_tool_calls": 6,
       "min_tool_calls": 1,
       "must_cite": true,
       "cross_meeting": false,
-      "label_source": "agent_draft_heuristic",
-      "rule": "aggregation→至少 list_facts 列已确认清单；允许 search_knowledge 补原文。"
+      "label_source": "agent_ai_reviewed",
+      "rule": "aggregation→至少 list_facts 列已确认清单；允许 search_knowledge 补原文。 | AI 复核修正：用户反馈集中在转写原话与纪要 topic summary 中；list_facts 只读 CONFIRMED 的结构化决策/待办，无法返回“用户反馈”这类叙述。",
+      "review": {
+        "reviewed_by": "agent",
+        "review_date": "2026-10-20",
+        "reason": "用户反馈集中在转写原话与纪要 topic summary 中；list_facts 只读 CONFIRMED 的结构化决策/待办，无法返回“用户反馈”这类叙述。",
+        "human_checked": false
+      }
     },
     {
       "case_id": "t12",
@@ -303,19 +309,25 @@
       "question": "最近七天纪要和 agent 的调用成功率、平均耗时是多少？",
       "intent": "aggregation",
       "required_tools": [
-        "list_facts"
+        "search_knowledge"
       ],
       "acceptable_tools": [
-        "list_facts",
-        "search_knowledge"
+        "search_knowledge",
+        "list_facts"
       ],
       "forbidden_tools": [],
       "max_tool_calls": 6,
       "min_tool_calls": 1,
       "must_cite": true,
       "cross_meeting": false,
-      "label_source": "agent_draft_heuristic",
-      "rule": "aggregation→至少 list_facts 列已确认清单；允许 search_knowledge 补原文。"
+      "label_source": "agent_ai_reviewed",
+      "rule": "aggregation→至少 list_facts 列已确认清单；允许 search_knowledge 补原文。 | AI 复核修正：成功率/平均耗时是运行观测数值，存在于转写原话；list_facts 不承载运行指标。",
+      "review": {
+        "reviewed_by": "agent",
+        "review_date": "2026-10-20",
+        "reason": "成功率/平均耗时是运行观测数值，存在于转写原话；list_facts 不承载运行指标。",
+        "human_checked": false
+      }
     },
     {
       "case_id": "t13",
@@ -395,19 +407,25 @@
       "question": "灰度分几步走？回滚能力如何？",
       "intent": "aggregation",
       "required_tools": [
-        "list_facts"
+        "search_knowledge"
       ],
       "acceptable_tools": [
-        "list_facts",
-        "search_knowledge"
+        "search_knowledge",
+        "list_facts"
       ],
       "forbidden_tools": [],
       "max_tool_calls": 6,
       "min_tool_calls": 1,
       "must_cite": true,
       "cross_meeting": false,
-      "label_source": "agent_draft_heuristic",
-      "rule": "aggregation→至少 list_facts 列已确认清单；允许 search_knowledge 补原文。"
+      "label_source": "agent_ai_reviewed",
+      "rule": "aggregation→至少 list_facts 列已确认清单；允许 search_knowledge 补原文。 | AI 复核修正：灰度步骤与回滚能力来自转写原话/纪要 topic；该会议纪要为 CONFIRMED 的部分不含完整灰度决策，list_facts 无法覆盖。",
+      "review": {
+        "reviewed_by": "agent",
+        "review_date": "2026-10-20",
+        "reason": "灰度步骤与回滚能力来自转写原话/纪要 topic；该会议纪要为 CONFIRMED 的部分不含完整灰度决策，list_facts 无法覆盖。",
+        "human_checked": false
+      }
     },
     {
       "case_id": "t17",
@@ -608,10 +626,9 @@
       "question": "报表导出问题最后决定怎么处理？",
       "intent": "state",
       "required_tools": [
-        "query_meeting_state"
+        "search_knowledge"
       ],
       "acceptable_tools": [
-        "query_meeting_state",
         "search_knowledge",
         "list_facts"
       ],
@@ -620,9 +637,15 @@
       "min_tool_calls": 1,
       "must_cite": true,
       "cross_meeting": false,
-      "label_source": "agent_draft_heuristic",
-      "rule": "state→先用 query_meeting_state 查已确认状态（上次待办/负责人/之前决定）；允许 search_knowledge 补原文。",
-      "note": "状态类：问「最后决定怎么处理」= 已确认结论/决策，先 query_meeting_state。"
+      "label_source": "agent_ai_reviewed",
+      "rule": "state→先用 query_meeting_state 查已确认状态（上次待办/负责人/之前决定）；允许 search_knowledge 补原文。 | AI 复核修正：报表导出处理决定在 DRAFT 纪要里，query_meeting_state 只返回 CONFIRMED 记忆/待办，无法返回该决定；必须检索转写或读纪要。",
+      "note": "状态类：问「最后决定怎么处理」= 已确认结论/决策，先 query_meeting_state。",
+      "review": {
+        "reviewed_by": "agent",
+        "review_date": "2026-10-20",
+        "reason": "报表导出处理决定在 DRAFT 纪要里，query_meeting_state 只返回 CONFIRMED 记忆/待办，无法返回该决定；必须检索转写或读纪要。",
+        "human_checked": false
+      }
     },
     {
       "case_id": "t26",
@@ -674,5 +697,6 @@
       "rule": "state→先用 query_meeting_state 查已确认状态（上次待办/负责人/之前决定）；允许 search_knowledge 补原文。",
       "note": "状态类：会议复述结论属于已确认结论，先 query_meeting_state。"
     }
-  ]
+  ],
+  "note": "4 条 heuristic 标签经 AI 对照数据复核修正（t11/t12/t16/t25）；human_checked=false，修正后读数不能与修正前直接比较。"
 }

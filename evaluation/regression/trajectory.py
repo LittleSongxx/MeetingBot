@@ -317,12 +317,21 @@ def validate_gold(gold: Mapping[str, Any]) -> dict[str, Any]:
             errors.append(f"{where}: min_tool_calls 必须是非负整数")
         if isinstance(max_calls, int) and isinstance(min_calls, int) and min_calls > max_calls:
             errors.append(f"{where}: min_tool_calls={min_calls} > max_tool_calls={max_calls}")
-        if str(case.get("label_source")) != "agent_draft_heuristic":
-            errors.append(f"{where}: label_source 必须是 agent_draft_heuristic")
+        label_source = str(case.get("label_source"))
+        if label_source not in {"agent_draft_heuristic", "agent_ai_reviewed"}:
+            errors.append(f"{where}: label_source 必须是 agent_draft_heuristic 或 agent_ai_reviewed")
+        reviewed = label_source == "agent_ai_reviewed"
+        if reviewed:
+            review = case.get("review") or {}
+            if not isinstance(review, Mapping) or review.get("human_checked") is not False:
+                errors.append(f"{where}: AI 复核标签必须带 review.human_checked=false")
         if not str(case.get("rule") or "").strip():
             errors.append(f"{where}: rule 为空")
-        # 意图 → required 的启发式规则（金标自身的口径）
-        if intent == "single_fact" and "search_knowledge" not in required:
+        # 意图 → required 的启发式规则（金标自身的口径）；AI 复核过的标签允许
+        # 按证据修正意图工具，所以跳过启发式硬规则（人工复核前仍标记未确认）。
+        if reviewed:
+            pass
+        elif intent == "single_fact" and "search_knowledge" not in required:
             errors.append(f"{where}: single_fact 要求 required 至少含 search_knowledge")
         elif intent == "aggregation" and "list_facts" not in required:
             errors.append(f"{where}: aggregation 要求 required 至少含 list_facts")
