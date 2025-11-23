@@ -1,0 +1,201 @@
+{
+  "reviewer": "independent-reviewer-2",
+  "reviewed_at": "2026-10-20",
+  "answers": [
+    {
+      "case_id": "cm01",
+      "verdict": "partial",
+      "reason": "两道核心事实均已答出：对外通稿刘颖负责、发布前一日18:00前定稿；发布公告赵敏牵头、周宁协作、9月1日9:00前。但把内部『发布公告』与对外『产品公告』混为一谈，虚构二者时间冲突，并声称发布公告负责人在转写中未点名（task6 seg51/58明确点名赵敏），属实质误导。",
+      "missing_or_wrong": "「两处信息存在不一致，需以哪份为准请进一步确认」「『发布公告』的负责人在转写中未单独点名」——task6 seg51「负责人赵敏，协作人周宁，截止时间为9月1日九点」、seg58「赵敏确认发布公告和部门通知任务9月1日九点完成」；另引用2023-09-01年份与录音recorded_at 2026-09-10矛盾（取自minutes deadline字段）。"
+    },
+    {
+      "case_id": "cm02",
+      "verdict": "partial",
+      "reason": "下午场风险答对；上午场只列4项风险（答案自称『提到4项风险』），漏掉第5项高风险：阻断任务未完成→8月31日17:00专项评审、可能调整发布时间（minutes id=3 risks_json共5项含4项HIGH；task6 seg68-70）。",
+      "missing_or_wrong": "「上午场…提到4项风险」应为5项（含4项高风险）；缺「阻断任务未按时完成将触发发布时间调整风险」（minutes 3 risks_json第5条；task6 seg69-70「…决定是否调整发布时间」「同时记录风险等级为高」）。"
+    },
+    {
+      "case_id": "cm03",
+      "verdict": "partial",
+      "reason": "两段原话引用正确（上午9月1日9:00；下午『V2.0按期发布、报表导出入口先隐藏』），但『是否一致』判断错误：下午『按原计划』即9月1日9:00发布，10:00是公告/通稿对外发布时刻，与9:00正式发布不矛盾；答案却称『不完全一致/存在口径差异』并建议再核对。",
+      "missing_or_wrong": "「两段录音对『发布时间』的表述不完全一致」「与上午场提到的9:00系统上线时间存在口径差异」——task7 seg47「V2.0按期发布，报表导出入口先隐藏」即按原计划；task7 seg39「发公告和通告一起都放在发布当天上午十点」是公告/通稿动作，不是发布时间。"
+    },
+    {
+      "case_id": "cm04",
+      "verdict": "correct",
+      "reason": "上午task6（2026-09-10 09:00，产品上线复盘与下阶段发布准备会议）与下午task7（14:00，V2.0产品发布评审）的时段、主题均判断正确，引用task6 seg1与task7 seg1-4。",
+      "missing_or_wrong": "无关键缺失；两段录音同属数据库meeting_id=2『产品发布评审会议』，与转写自述会议名并存，属语料命名不一致。"
+    },
+    {
+      "case_id": "cm05",
+      "verdict": "correct",
+      "reason": "上午灰度复盘数据（8/20起10%、8/26扩至30%、登录成功率99.8%、核心链路99.2%、看板+24%、凭证上传+18%）与下午灰度三阶段方案（10%→50%→全量、用户ID取模、回滚5分钟、三项盯盘指标与告警）均覆盖且正确。",
+      "missing_or_wrong": "无关键缺失；次要：把『会议纪要模型调用成功率98.6%』简写为『AI调用成功率98.6%』。"
+    },
+    {
+      "case_id": "cm06",
+      "verdict": "correct",
+      "reason": "测试回归陈琳/8月31日12:00前、对外通稿刘颖/发布前一日18:00前定稿均正确，并正确区分『发布公告』（赵敏）与『对外通稿』（刘颖）两项不同事项。",
+      "missing_or_wrong": "无关键缺失；次要：引用minutes的deadline年份2023与录音recorded_at 2026-09-10不一致（语料时间线问题）。"
+    },
+    {
+      "case_id": "cm07",
+      "verdict": "correct",
+      "reason": "正确区分两个问题分属上午task6与下午task7：移动端修复的责任人/协作人/截止/阻断事项，以及报表导出40+秒超时、12%失败率、异步方案、发布时隐藏入口、张涛本周五前完成等要点均对。",
+      "missing_or_wrong": "无关键缺失；次要：漏『在发布说明中写明处理结果』（task6 seg31）；『8月30日18:00前完成接口与前端验证』把今天下午完成验证与任务截止合并表述。"
+    },
+    {
+      "case_id": "cm08",
+      "verdict": "correct",
+      "reason": "上午回归范围/角色覆盖/交付物/8月31日12:00前截止、两组补充验收数据、阻断事项与专项评审机制均正确；下午17需求验收15个、剩余报表导出与消息推送免打扰、灰度盯盘指标与告警也正确。",
+      "missing_or_wrong": "无关键缺失；次要：未点明上午检查清单为10项；下午指标发言人在转写标为李悦、纪要观点归陈磊（语料标签不一致）。"
+    },
+    {
+      "case_id": "cm09",
+      "verdict": "correct",
+      "reason": "上午阻断事项、王工负责/陈琳协作、8月30日18:00、弱网提示与四类文件验证均正确；下午未提及移动端附件下载、仅讨论报表导出/灰度等符合转写，并如实说明检索范围限制。",
+      "missing_or_wrong": "无关键缺失；次要：『8月30日18:00前完成接口与前端验证』为合并表述；下午『未检索到』措辞偏保守（实为未提）。"
+    },
+    {
+      "case_id": "cm10",
+      "verdict": "correct",
+      "reason": "上午运营支持（赵敏负责/周宁协作、9月1日9:00前发布公告使用指引部门通知、五入口、两场答疑）与客服支持（周宁负责/赵敏协作、9月1日10:00前FAQ知识库、内容清单、记录会议/任务/agent编号）均正确；下午不涉及客服/运营支持任务的判断也对。",
+      "missing_or_wrong": "无关键缺失；次要：『灰度值班排班由陈磊（李悦）负责』表述混乱（task7 seg50纪要总结写陈磊，转写说话人标李悦）。"
+    },
+    {
+      "case_id": "cs01",
+      "verdict": "correct",
+      "reason": "已确认发布决策内容（9月1日9:00正式发布，范围含会议全生命周期、AI纪要与知识库问答）与seed memory id=1完全一致，并如实说明当前仅返回1条CONFIRMED决策。",
+      "missing_or_wrong": "无关键缺失；『由李月在会上提出并获同意』取自memory evidence_json的speaker=李月，转写中该总结由张晨说出，属证据字段标注差异。"
+    },
+    {
+      "case_id": "cs02",
+      "verdict": "partial",
+      "reason": "核心结论对（该条为未确认候选、不是已确认决策）；但遗漏对应的OPEN待办，且错误断言该安排『仅来源于转写』：seed action_item id=1（移动端修复，王工，2026-08-30 18:00，OPEN）存在，minutes id=3 decisions也含该条。",
+      "missing_or_wrong": "「此前关于该事项的安排…仅来源于上午场录音转写」「缺少该事项在已确认纪要（CONFIRMED）中的决策或待办记录」——seed action_item id=1状态OPEN（王工 2026-08-30 18:00）；minutes 3 decisions第2条即『移动端附件下载进度问题须在发布前修复…』。"
+    },
+    {
+      "case_id": "cs03",
+      "verdict": "correct",
+      "reason": "准确列出两条OPEN待办及负责人/截止：移动端修复（王工，2026-08-30 18:00）、两组补充验收（陈琳，2026-08-31 12:00），与seed action_item id=1/2一致，并正确引用『只返回CONFIRMED记忆与有效待办』口径。",
+      "missing_or_wrong": "无关键缺失（AI judge因state上下文只保留content、裁掉owner/deadline而误判『编造』，实际与seed一致）。"
+    },
+    {
+      "case_id": "cs04",
+      "verdict": "correct",
+      "reason": "正确答出偏好归属系统管理员（seed user id=1）且状态CONFIRMED（memory id=3，scope USER、kind PREFERENCE）。",
+      "missing_or_wrong": "无关键缺失；把USER级个人偏好说成『全局或系列级偏好』不准确（工具未暴露scope字段，owner_name=系统管理员已足够定位）。"
+    },
+    {
+      "case_id": "cs05",
+      "verdict": "correct",
+      "reason": "系列含2段录音：task6上午（2026-09-10 09:00，约15.9分钟）、task7下午（14:00，约4.5分钟），先后顺序正确；与list_facts(recording)返回及seed transcription_task 6/7一致。",
+      "missing_or_wrong": "无关键缺失（未逐一说明系列只关联1场会议，但已说明两段同属meeting_id=2且无其他录音）。"
+    },
+    {
+      "case_id": "cs06",
+      "verdict": "wrong",
+      "reason": "未回答题目：最近一次会议（下午task7，DRAFT纪要id=4）已形成三项结论——V2.0按期发布/报表导出入口隐藏、灰度10%→50%→全量分三天、通稿与产品公告发布前一日18:00前定稿；答案只说『资料不足/未查询到已确认conclusion』，还把草稿说成『可能存在』。",
+      "missing_or_wrong": "「资料不足…未查询到任何已人工确认的『结论（conclusion）』条目」——minutes id=4（DRAFT）summary/decisions明确三项结论；且该题在当前工具链下几乎不可达（get_minutes(meeting_id=2)优先返回CONFIRMED纪要3，草稿纪要4不进知识库、state只返CONFIRMED），gold期望事实与expected_tools『query_meeting_state』不符，需修题目/工具。"
+    },
+    {
+      "case_id": "cs07",
+      "verdict": "correct",
+      "reason": "正确说明仅见1条CONFIRMED发布决策、无后续替代/撤销记录，并严格区分『没有替代记录』与『内容一定未变化』，与seed memory id=1（supersedes_id空、valid_to空）一致。",
+      "missing_or_wrong": "无关键缺失（『无REPLACED/REVOKED条目』是基于工具返回范围的合理表述）。"
+    },
+    {
+      "case_id": "cs08",
+      "verdict": "correct",
+      "reason": "正确判定报表导出相关决定来自未确认纪要/转写、系列已确认决策中查无此条，不能当已确认事实；与minutes id=4（DRAFT）及seed仅1条CONFIRMED决策一致。",
+      "missing_or_wrong": "无关键缺失；『无法判断该决定是否已经确认生效』表述偏弱，按口径应直接说『未确认生效』；『工具集中没有针对未确认内容的查询接口』不完全准确（get_minutes可按minutes_id取草稿纪要）。"
+    },
+    {
+      "case_id": "cs09",
+      "verdict": "correct",
+      "reason": "直接给出正确原则：未确认候选不得当事实、只引用CONFIRMED/有效待办，并引用工具notice与开发者指令；符合seed中memory id=2为PROPOSED的状态口径。",
+      "missing_or_wrong": "无关键缺失（AI judge relevance=0与实际回答质量不符）。"
+    },
+    {
+      "case_id": "cs10",
+      "verdict": "partial",
+      "reason": "项目状态判断（发布前准备、2条OPEN待办）及两条待办的负责人/截止均正确；但漏掉已确认的核心发布决策（memory id=1：9月1日9:00正式发布及范围），未回答『下一步』围绕发布节点的时间安排。",
+      "missing_or_wrong": "缺『已确认：9月1日9:00正式发布AI智能会议助手与任务跟踪系统（发布范围…）』（seed memory id=1 CONFIRMED）；答案仅由OPEN待办推断『阻塞正式发布』，未给出发布日期/已确认决策。"
+    },
+    {
+      "case_id": "ct01",
+      "verdict": "correct",
+      "reason": "task6=2026-09-10 09:00上午、task7=14:00下午，上午先于下午，全部正确；与list_facts(recording)及seed一致。",
+      "missing_or_wrong": "无。"
+    },
+    {
+      "case_id": "ct02",
+      "verdict": "correct",
+      "reason": "关键时间节点完整：8月20日灰度开始10%、8月26日扩至30%、8月30日18:00移动端修复截止、8月31日12:00回归/补充验收截止、9月1日9:00正式发布，另补8月31日17:00条件触发专项评审；均与task6/task7、minutes 3、seed action items对上。",
+      "missing_or_wrong": "无关键缺失；次要：把2023年（minutes deadline字段）当作发布年份；对外通稿定稿日期可由『发布前一日』换算为8月31日却说未给出。"
+    },
+    {
+      "case_id": "ct03",
+      "verdict": "partial",
+      "reason": "先后关系答对（8月30日18:00早于9月1日9:00）；但『仅有转写原话（RAW）依据』判断错误：seed action_item id=1（王工，2026-08-30 18:00，OPEN）与minutes 3 decisions第2条均支撑；其工具调用用非子串query『移动端附件下载修复』导致状态查询0条。",
+      "missing_or_wrong": "「修复截止时间目前仅有转写原话（RAW）依据，query_meeting_state 未返回该条待办的已确认状态记录」——action_item id=1状态OPEN且由已确认纪要生成；查询0条原因是query『移动端附件下载修复』不是待办content『移动端附件下载进度问题须在发布前修复』的子串。"
+    },
+    {
+      "case_id": "ct04",
+      "verdict": "correct",
+      "reason": "三个时间点对应事项正确：8/30 18:00移动端修复（王工）、8/31 12:00补充验收+发布回归（陈琳）、8/31 17:00条件触发专项评审（张晨+王工），并标注条件触发。",
+      "missing_or_wrong": "无关键缺失；次要：未提『回归完成后在发布群提交测试结论和任务完成凭证』（task6 seg50）；把补充验收与回归合并表述，但两者同截止且均为陈琳。"
+    },
+    {
+      "case_id": "ct05",
+      "verdict": "correct",
+      "reason": "正确说明材料未给具体日历日期、无法严格判定先后，并给出关键依据（『挨得太近』风险、本周五前完成改造、灰度10%/50%/全量三天），未按字段顺序臆测。",
+      "missing_or_wrong": "无关键缺失；『报表导出异步化改造…并作为风险项监控』表述略混，风险实为『改造与灰度排期过近』。"
+    },
+    {
+      "case_id": "ct06",
+      "verdict": "partial",
+      "reason": "9:00正式发布答对；但把10:00公告/通稿与9:00前完成发布公告当成『口径不一致』：二者是不同事项（内部发布公告 vs 对外产品公告/通稿），10:00即对外同步发布时刻，答案未给出gold要求的第二项明确结论。",
+      "missing_or_wrong": "「同步发通稿/公告：资料存在口径不一致」「两者不一致且均未形成唯一权威版本」——task7 seg39『发公告和通告一起都放在发布当天上午十点』，minutes 3 decision『9月1日9:00前完成发布公告与部门通知』；两者非同一事项，不构成冲突。"
+    },
+    {
+      "case_id": "ct07",
+      "verdict": "correct",
+      "reason": "首周复盘（张晨，9月8日18:00前提交三维度评分报表及首周数据汇总）与首周运行日报（王工，发布首周每日17:00前汇总形成）均正确，对应minutes id=3 decisions第6/8条。",
+      "missing_or_wrong": "无。"
+    },
+    {
+      "case_id": "ct08",
+      "verdict": "partial",
+      "reason": "答出对外通稿与产品公告定稿；但漏掉同场明确的『通稿中删除报表导出相关描述』（task7 seg36-37、minutes 4 decision第3条），且把产品公告与『赵敏牵头发布公告』误作口径差异。",
+      "missing_or_wrong": "缺『通稿中删除报表导出相关描述』；「产品公告…与已确认纪要中『赵敏牵头发布公告』的记录存在口径差异」——发布公告为内部运营公告、产品公告为对外公告，是两件事（同cm01/ct06）。"
+    },
+    {
+      "case_id": "ct09",
+      "verdict": "partial",
+      "reason": "消息推送免打扰已修复/昨日回归通过正确；报表导出只讲异步方案、工期一周、张涛本周五前完成，漏掉关键时间线『发布时先隐藏入口，改造完成后再单独上线』（task7 seg19、minutes 4 decision第1条）。",
+      "missing_or_wrong": "缺『报表导出入口在发布时隐藏，待异步改造完成后再单独上线』（task7 seg19『报表导出这个功能在发布时先隐藏入口，等改造完成再单独放出来』）。"
+    },
+    {
+      "case_id": "ct10",
+      "verdict": "correct",
+      "reason": "灰度三阶段节奏（首日10%观察一天、次日50%、第三日全量，共三天）与回滚最快5分钟均正确，并如实说明缺具体日历日期，未混淆上午上一轮灰度复盘与下午新方案。",
+      "missing_or_wrong": "无关键缺失；次要：未明确区分上午8/20→30%属上一轮灰度复盘（本题问节奏/回滚，未误用）。"
+    }
+  ],
+  "summary": {
+    "correct": 20,
+    "partial": 9,
+    "wrong": 1,
+    "key_findings": [
+      "最严重事实错误 cs06：把『系列最近一次会议结论』答成『资料不足』。DRAFT纪要id=4已明确三项结论（V2.0按期发布/报表导出入口隐藏；灰度10%→50%→全量分三天；通稿与产品公告发布前一日18:00前定稿）。但该题还暴露评测设计问题：gold expected_facts依赖草稿纪要4，而草稿纪要不进知识库（kb_chunking口径）、query_meeting_state只返CONFIRMED、get_minutes(meeting_id=2)优先返回CONFIRMED纪要3，gold expected_tools只写query_meeting_state——期望事实在当前工具链下基本不可达，建议修gold/题目或给get_minutes增加按minutes_id/最新草稿取纪要能力。",
+      "风险清单漏项 cm02：上午只列4项风险，漏第5项高风险『阻断任务未完成→8月31日17:00专项评审、可能调整发布时间』（minutes 3 risks_json共5项含4项HIGH；task6 seg68-70），并自称『提到4项风险』。",
+      "发布时间口径误判（cm03、ct06，cm01/ct08同源）：把『9:00正式发布/9:00前完成内部发布公告』与『10:00对外通稿+产品公告同步发布』当成矛盾。实际是不同对象/动作，两段录音发布时间口径一致（下午『V2.0按原计划发布』即9月1日9:00）；该误判导致cm03、ct06、cm01、ct08四处答案自造『口径不一致』。",
+      "状态类『查不到=不存在』：cs02只查decision未查action_item，漏OPEN待办（王工8/30）；ct03用过长query『移动端附件下载修复』未命中action_item（content__contains为精确子串），误称『仅有RAW依据』；cs10只列OPEN待办、漏已确认的9/1 9:00发布决策；cs06/cs08也把可检索范围当成『不存在』。",
+      "必做内容漏项：ct08漏『通稿删除报表导出相关描述』；ct09漏『报表导出发布时隐藏入口、改造完成后再上线』；cm07漏『发布说明写明处理结果』（按次要计）；ct04漏『发布群提交测试结论和任务完成凭证』（按次要计）。",
+      "AI judge分数不可靠：state题的contexts只保留content文本，owner/deadline/status被裁掉，导致cs03/cs10被judge判『负责人/截止时间编造』而实际与seed一致；cs04（faithfulness/relevance 0）、cs09（0/0/0）、cs05（faith 0.2）答案本身正确；按judge分数排序会严重误伤状态题与短答案。",
+      "语料时间线自相矛盾：录音recorded_at=2026-09-10，但minutes deadline字段为2023-08-30/2023-09-01，seed action_item又为2026-08-30/2026-08-31；cm01/ct02/cm06等由此写出2023年或出现换算矛盾，建议统一语料时间线与gold年份口径。",
+      "总体：20 correct / 9 partial / 1 wrong。检索类（cm/ct）覆盖面总体较好，问题集中在三类——确认状态口径（PROPOSED vs OPEN action_item vs CONFIRMED）、9:00发布与10:00公告的关系、DRAFT纪要可达性；建议优先修cs06题目/gold、cm02风险清单与cm03/ct06的10:00口径，再复核ct08/ct09的必做内容漏项。"
+    ]
+  }
+}

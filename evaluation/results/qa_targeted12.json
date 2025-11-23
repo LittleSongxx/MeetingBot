@@ -1,0 +1,173 @@
+{
+  "qa_set_version": "cross_targeted_v1",
+  "name": "targeted12",
+  "cases": [
+    {
+      "id": "cm01",
+      "question": "发布公告与对外通稿分别由谁负责、什么时候完成？",
+      "expected_facts": [
+        "运营公告由赵敏牵头、周宁协作，9月1日9:00前完成",
+        "对外通稿由刘颖负责，发布前一日18:00前定稿"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "cm02",
+      "question": "两段录音里分别提到了哪些风险？",
+      "expected_facts": [
+        "上午会议识别5项风险（含4项高风险）：模型服务延迟、资料频繁更新、负责人分配不合理、删除用户受限、阻断任务延期",
+        "下午会议补充报表导出异步改造与灰度排期过近的风险"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "cm03",
+      "question": "发布时间的结论在两段录音里一致吗？分别怎么说？",
+      "expected_facts": [
+        "上午会议结论：9月1日9:00按计划正式发布",
+        "下午会议结论：V2.0按原计划发布，报表导出入口在发布时隐藏"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "cs02",
+      "question": "系列里移动端附件下载进度修复这件事，现在是已确认的决策还是未确认的候选？",
+      "expected_facts": [
+        "移动端附件下载修复在系列记忆中是PROPOSED候选，不是已确认决策",
+        "对应待办为OPEN状态"
+      ],
+      "intent": "series_state",
+      "source": {
+        "meeting_ids": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "cs03",
+      "question": "系列当前还开着哪些待办？负责人和截止时间分别是什么？",
+      "expected_facts": [
+        "OPEN待办：移动端附件下载修复（王工，8月30日18:00）",
+        "OPEN待办：发布前两组补充验收（陈琳，8月31日12:00）"
+      ],
+      "intent": "series_state",
+      "source": {
+        "meeting_ids": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "cs04",
+      "question": "系列里「回答先给结论，再给依据」这条偏好是谁的、是否已确认？",
+      "expected_facts": [
+        "scope=USER、kind=PREFERENCE，属于用户1，状态CONFIRMED"
+      ],
+      "intent": "series_state",
+      "source": {
+        "meeting_ids": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "cs06",
+      "question": "系列里最近一次会议形成的结论是什么？",
+      "expected_facts": [
+        "下午纪要三项结论：V2.0按期发布、报表导出入口隐藏",
+        "灰度三阶段：10%、50%、全量",
+        "对外通稿与产品公告在发布前一日18:00前定稿"
+      ],
+      "intent": "series_state",
+      "source": {
+        "meeting_ids": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "cs10",
+      "question": "项目现在处于什么状态？下一步要做什么？",
+      "expected_facts": [
+        "已确认：9月1日9:00正式发布",
+        "未完成：移动端附件下载修复与发布回归/补充验收待办"
+      ],
+      "intent": "series_state",
+      "source": {
+        "meeting_ids": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "ct03",
+      "question": "移动端附件下载修复的截止时间在正式发布之前还是之后？",
+      "expected_facts": [
+        "附件修复截止8月30日18:00，早于9月1日9:00正式发布"
+      ],
+      "intent": "temporal",
+      "source": {
+        "meeting_ids": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "ct06",
+      "question": "发布当天的时间安排是什么：几点正式发布、几点同步发通稿？",
+      "expected_facts": [
+        "9:00正式发布",
+        "10:00对外通稿与产品公告同步发布"
+      ],
+      "intent": "temporal",
+      "source": {
+        "meeting_ids": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "ct08",
+      "question": "发布前一日 18:00 之前必须完成什么？",
+      "expected_facts": [
+        "发布前一日18:00前完成对外通稿与产品公告定稿",
+        "通稿中删除报表导出相关描述"
+      ],
+      "intent": "temporal",
+      "source": {
+        "meeting_ids": [
+          2
+        ]
+      }
+    },
+    {
+      "id": "ct09",
+      "question": "两个功能问题（报表导出、消息推送免打扰）的处理时间线分别是什么？",
+      "expected_facts": [
+        "消息推送免打扰设置已修复并通过回归测试",
+        "报表导出在发布时隐藏入口，异步改造完成后单独上线"
+      ],
+      "intent": "temporal",
+      "source": {
+        "meeting_ids": [
+          2
+        ]
+      }
+    }
+  ]
+}

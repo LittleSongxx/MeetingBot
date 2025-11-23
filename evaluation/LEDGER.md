@@ -2111,22 +2111,23 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - 结论引用纪律：以上未运行项不得在简历/报告中写成"已提升/已下降"，只能写
   "已实现、已预注册、待测量"。
 
-### 7) AI 复核 + 优化复测（2026-10-20）
+### 7) 独立 Agent 代审 + 最终优化（2026-10-20，停止复现）
 
 完整报告：`evaluation/reports/2026-10-20_ai_review_and_optimization.md`。
-人工审核包：`evaluation/reports/cross_gold_human_review_30.csv`。
+独立审核：`evaluation/reports/independent_review_2026-10-20.json`、
+`independent_answer_review_final4_2026-10-20.json`。
 
-- **AI 复核 gold**：轨迹 4 条启发式标签按证据修正；跨会议 58 条事实
-  55 supported、3 partial 改写、0 unsupported；两者 `human_checked=false`。
-- **轨迹 27 题**：pre-review gold F1 0.7469（strict 18/27、required 23/27）；
-  AI-reviewed gold F1 0.8951（strict 22/27、required 27/27、forbidden 0）。
-  **差异含 gold 修正，不能写成产品提升**。
-- **pass^3（12×3）**：pre-review 10/12 = 83.3%；AI-reviewed 12/12 = 100%。
-  后者直接来自 2 条 aggregation 标签修正，不是独立泛化证据。
-- **跨会议 A/B（30×2，AI-reviewed draft-gold）**：recall 68.97% → 75.86%（+6.90pp），
-  precision 66.07% → 59.42%（−6.65pp）；未满足预注册门槛，保持规划关闭。
-- **注入/在线评测/成本路由**：注入 10/10、良性误报 0/20；在线评测 30 条
-  faithfulness 0.8967、relevance 0.9217、pass_rate 0.9667；成本路由 5 题试点
-  两模型均未定价、token 反而更高，路由已删除。
-- **累计**：产品 2,237 次调用、¥0.8634；token 级缓存命中 60.34%；外部 judge/审核约 450 次。
-- **人工审核前**：0.8951/100% 只能作为待复核草稿；确认 `human_checked=true` 后才可引用。
+- **gold 事实**：58 条 56 approve / 2 revise / 0 reject；修订已入 gold，
+  `label_source=independent_agent_reviewed`、`human_checked=false`。
+- **答案独立复核**：修复前 20 correct / 6 partial / 4 wrong；修复后
+  **21 correct / 9 partial / 0 wrong**。wrong 从 4 清零。
+- **修复**：series_id/meeting_id 混淆、include_proposed、get_minutes 草稿回退、
+  状态模糊匹配、偏好 owner_name、运行库与 seed 对齐。
+- **轨迹 27 题**：F1 **0.8272**、strict 19/27、acceptable 25/27、
+  required 25/27、forbidden 0。
+- **pass^3（12×3）**：12/12（AI 复核 gold；含标签修正，不能当独立泛化）。
+- **跨会议 A/B（单轮）**：recall 75.86% → 82.76%（+6.90pp），precision
+  69.81% → 68.38%（−1.43pp），单轮达阈值；但复现只跑臂 A，保持关闭。
+- **注入**：10/10、良性误报 0/20、泄露 0。
+- **累计**：产品 3,976 次调用、¥1.5422；不设调用上限。
+- **未完成**：A/B 复现臂 B、9 条 partial 答案、人工签名。
