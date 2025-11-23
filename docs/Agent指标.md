@@ -215,7 +215,7 @@ q28（先 get_minutes）、q56/q60/q62（先 get_minutes）。这些工具对问
 | 能力 | 主指标 | 次指标 | 说明 |
 |---|---|---|---|
 | 轨迹评测 | `tool_call_f1`（逐题工具集合 F1 均值） | first_tool strict/acceptable、must_cite 命中、forbidden 命中、pass^3 | 金标 27 题；pass^3 只跑 12 题×3 trial；不合成总分 |
-| 跨会议 RAG | `context_recall`（30 题） | context_precision、引用可定位率 | 系列范围开关 A/B；金标 expected_facts 目前是骨架，需人工补齐后才能作为正式读数 |
+| 跨会议 RAG | `context_recall`（30 题） | context_precision、引用可定位率 | 系列范围开关 A/B；金标 expected_facts 已由代理补成 AI draft（human_checked=false），人工复核前只能报 draft-gold |
 | 状态查询 | state 引用可定位率 | 只返回 CONFIRMED 的违规数（应为 0） | 待办状态以 `action_item` 为准；未确认候选不得进工具 |
 | 注入防护 | 规则检出率（30 条注入） | 良性误报率（20 条）、工具结果 trust 标记覆盖率 | 规则侧零调用：30/30 检出、0/20 误报；线上诱导率另测 |
 | 在线评测 | faithfulness / answer_relevancy 均值 | pass_rate（阈值 0.6）、失败样例数 | 管理员手动触发、单次 ≤50 判定；只做趋势，不替代离线评测 |
