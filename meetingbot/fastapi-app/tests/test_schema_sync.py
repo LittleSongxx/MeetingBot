@@ -13,6 +13,7 @@ datetime 与 datetime(6) 算同一族但精确度必须一致），不做逐字�
 
 from __future__ import annotations
 
+import ast
 import inspect
 import re
 import unittest
@@ -196,6 +197,125 @@ class SchemaSyncTest(unittest.TestCase):
                          + "\n  ".join(problems))
 
 
+MIGRATIONS_DIR = Path(__file__).resolve().parents[1] / "migrations" / "models"
+
+# 迁移 SQL 带缩进（部分文件整体缩进 8 格），且列类型里也有 `)`，
+# 所以建表块必须锚定在行首的收尾 `)` 上，不能匹配任意 `)`。
+_MIGRATION_CREATE_RE = re.compile(
+    r"^[ \t]*CREATE TABLE (?:IF NOT EXISTS )?`(?P<table>\w+)`\s*"
+    r"\((?P<body>.*?)^[ \t]*\)\s*(?:ENGINE|CHARACTER SET)",
+    re.S | re.I | re.M,
+)
+_MIGRATION_ALTER_RE = re.compile(
+    r"^[ \t]*ALTER TABLE `(?P<table>\w+)`\s*(?P<body>.*?);", re.S | re.I | re.M)
+_MIGRATION_COLUMN_RE = re.compile(r"^\s*`(?P<name>\w+)`\s+", re.M)
+_MIGRATION_ADD_COLUMN_RE = re.compile(r"ADD COLUMN `(?P<name>\w+)`", re.I)
+_MIGRATION_DROP_COLUMN_RE = re.compile(r"DROP COLUMN `(?P<name>\w+)`", re.I)
+
+
+def _upgrade_sql(path: Path) -> str:
+    """取迁移文件里 `upgrade()` 返回的 SQL，避开 `downgrade()` 的反向语句。"""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.AsyncFunctionDef) and node.name == "upgrade":
+            for stmt in node.body:
+                value = getattr(stmt, "value", None)
+                if isinstance(stmt, ast.Return) and isinstance(value, ast.Constant) \
+                        and isinstance(value.value, str):
+                    return value.value
+    return ""
+
+
+class MigrationChainTest(unittest.TestCase):
+    """按顺序重放迁移链，检查它最终建出的结构与 schema.sql 一致。
+
+    为什么需要它：`db/01-schema.sql`（空库）与 aerich 迁移链（存量库）是两条
+    建表路径。只比对"模型 ↔ schema.sql"看不见迁移链自身断裂：
+    - 历史事故一：迁移 4 要 `ALTER kb_chunk`，但基线迁移从没建过这三张 KB 表；
+    - 历史事故二：往基线迁移补 KB 建表时带上了 `embed_text`，
+      迁移 4 又 ADD 一次，全新库执行迁移链直接报 duplicate column。
+    这组用例不需要数据库：把每条迁移的 CREATE/ADD/DROP 按文件名顺序重放，
+    得到终态列集合，再与 schema.sql 比对。
+    """
+
+    def _replay(self) -> tuple[dict[str, set[str]], list[str]]:
+        paths = sorted(MIGRATIONS_DIR.glob("*.py"))
+        tables: dict[str, set[str]] = {}
+        problems: list[str] = []
+        for path in paths:
+            sql = _upgrade_sql(path)
+            events: list[tuple[int, str, str, object]] = []
+            for match in _MIGRATION_CREATE_RE.finditer(sql):
+                events.append((match.start(), "create", match.group("table"),
+                               set(_MIGRATION_COLUMN_RE.findall(match.group("body")))))
+            for match in _MIGRATION_ALTER_RE.finditer(sql):
+                # 7 号迁移的 DROP 在字符串里，由 information_schema 条件执行；
+                # 新库本来就没有该列，重放时不能按"必删"处理。
+                if path.name.startswith("7_"):
+                    continue
+                events.append((match.start(), "alter", match.group("table"),
+                               match.group("body")))
+            for _, kind, table, payload in sorted(events, key=lambda item: item[0]):
+                if kind == "create":
+                    if table in tables:
+                        problems.append(f"{path.name}：重复建表 {table}")
+                    tables[table] = set(payload)  # type: ignore[arg-type]
+                    continue
+                if table not in tables:
+                    problems.append(f"{path.name}：先 ALTER 后建表 {table}")
+                    continue
+                for column in _MIGRATION_ADD_COLUMN_RE.findall(payload):  # type: ignore[arg-type]
+                    if column in tables[table]:
+                        problems.append(f"{path.name}：{table}.{column} 重复添加")
+                    tables[table].add(column)
+                for column in _MIGRATION_DROP_COLUMN_RE.findall(payload):  # type: ignore[arg-type]
+                    if column not in tables[table]:
+                        problems.append(f"{path.name}：{table}.{column} 删除不存在的列")
+                    tables[table].discard(column)
+        tables.pop("aerich", None)  # aerich 自己的版本表不属于业务表
+        return tables, problems
+
+    def test_migration_files_are_ordered_and_unique(self):
+        versions = []
+        for path in MIGRATIONS_DIR.glob("*.py"):
+            match = re.match(r"(\d+)_", path.name)
+            self.assertIsNotNone(match, f"迁移文件名缺少序号：{path.name}")
+            versions.append(int(match.group(1)))
+        versions.sort()
+        self.assertEqual(versions, list(range(versions[0], versions[0] + len(versions))),
+                         "迁移文件序号必须从 0 连续递增")
+        self.assertEqual(len(versions), len(set(versions)), "迁移文件序号重复")
+
+    def test_alter_targets_exist_and_no_column_is_added_twice(self):
+        _, problems = self._replay()
+        self.assertEqual(problems, [], "迁移链顺序/列冲突：\n  " + "\n  ".join(problems))
+
+    def test_chain_end_state_matches_schema(self):
+        tables, problems = self._replay()
+        self.assertEqual(problems, [], "迁移链自身不一致，先修上面的用例")
+        schema = _parse_schema(SCHEMA_PATH)
+        self.assertEqual(sorted(set(tables) - set(schema)), [],
+                         "迁移链建了但 schema.sql 没有的表")
+        self.assertEqual(sorted(set(schema) - set(tables)), [],
+                         "schema.sql 有但迁移链没建的表")
+        mismatches = []
+        for table in sorted(set(tables) & set(schema)):
+            if tables[table] != set(schema[table]):
+                missing = sorted(set(schema[table]) - tables[table])
+                extra = sorted(tables[table] - set(schema[table]))
+                mismatches.append(f"{table}: 迁移链缺 {missing}，多 {extra}")
+        self.assertEqual(mismatches, [], "迁移链终态与 schema.sql 列不一致：\n  "
+                         + "\n  ".join(mismatches))
+
+    def test_cleanup_migration_drops_column_conditionally(self):
+        """新库没有 last_event_id，无条件 DROP 会让全新迁移链在最后一步失败。"""
+        sql = _upgrade_sql(MIGRATIONS_DIR / "7_20261018120000_runtime_cleanup.py")
+        self.assertIn("information_schema.COLUMNS", sql)
+        self.assertIn("@has_last_event_id", sql)
+        self.assertIn("DROP COLUMN `last_event_id`", sql)
+        self.assertIn("PREPARE stmt", sql)
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -263,32 +383,44 @@ class SeedInsertArityTest(unittest.TestCase):
         schema = _parse_schema(SCHEMA_PATH)
         return {table: len(columns) for table, columns in schema.items()}
 
-    def _inserts(self) -> list[tuple[int, str, int]]:
+    def _inserts(self) -> list[tuple[int, str, int, int]]:
+        """返回 (行号, 表, 实际值数, 期望值数)。
+
+        支持两种写法：
+        - 位置化 `INSERT INTO t VALUES (...)`：期望 = 表的全部列数；
+        - 显式列 `INSERT INTO t (a,b) VALUES (...)`：期望 = 列清单长度。
+          显式列允许省略有默认值的列（本例是 `span_id`），是更安全的写法。
+        """
         counts = self._column_counts()
-        rows: list[tuple[int, str, int]] = []
+        rows: list[tuple[int, str, int, int]] = []
         text = SEED_PATH.read_text(encoding="utf-8")
         for number, line in enumerate(text.splitlines(), start=1):
-            match = re.match(r"INSERT INTO `([A-Za-z0-9_]+)` VALUES \(", line)
+            match = re.match(
+                r"INSERT INTO `([A-Za-z0-9_]+)`(?: \(([^)]*)\))? VALUES \(", line)
             if not match:
                 continue
             table = match.group(1)
             if table not in counts:
                 continue
-            rows.append((number, table, len(_split_insert_values(line))))
+            declared = match.group(2)
+            expected = (
+                len([item for item in declared.split(",") if item.strip()])
+                if declared else counts[table]
+            )
+            rows.append((number, table, len(_split_insert_values(line)), expected))
         return rows
 
     def test_seed_inserts_match_the_declared_columns(self):
-        expected = self._column_counts()
         offenders = [
-            f"第 {number} 行 {table}: 值 {actual} 个，表 {expected[table]} 列"
-            for number, table, actual in self._inserts()
-            if actual != expected[table]
+            f"第 {number} 行 {table}: 值 {actual} 个，期望 {expected} 个"
+            for number, table, actual, expected in self._inserts()
+            if actual != expected
         ]
-        self.assertEqual(offenders, [], "演示数据的位置化 INSERT 与表结构不一致：" +
+        self.assertEqual(offenders, [], "演示数据的 INSERT 与列定义不一致：" +
                          "、".join(offenders))
 
     def test_seed_covers_every_table_that_has_rows(self):
         """有数据的表必须在种子里出现（防止"加了表忘了放演示数据"）。"""
-        tables = {table for _, table, _ in self._inserts()}
+        tables = {table for _, table, _, _ in self._inserts()}
         self.assertIn("ai_call_log", tables)
         self.assertIn("prompt_template", tables)

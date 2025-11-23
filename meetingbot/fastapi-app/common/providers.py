@@ -174,6 +174,8 @@ REASONING_BY_CALL_TYPE: dict[str, bool] = {
     "agent_refine": True,
     # 支撑复核是判定类任务：判"依据是否支撑这条意见"，开推理
     "agent_review_support": True,
+    # 跨族裁判（与支撑复核同一类判定任务）
+    "agent_judge": True,
     # 问答：这里是**交互式**调用，用户盯着屏幕等首字；而"选哪个工具、怎么措辞"
     # 不需要长链推理。实测同供应商关思考后延迟从 10.29s 降到 0.57s
     #（见 reasoning_is_billed_as_output），所以聊天一律关；若某部署的问答质量

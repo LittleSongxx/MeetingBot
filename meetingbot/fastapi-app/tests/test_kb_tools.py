@@ -310,7 +310,10 @@ class KbToolsDbTest(unittest.IsolatedAsyncioTestCase):
             result = await kb_tools.execute_tool(actor, "search_knowledge", {
                 "query": "下午这场会的行动项", "source_ids": [6]})
         self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[0]["source_types"], ("TRANSCRIPT",),
+                         "source_ids 必须同时限定来源类型，避免同号纪要混入")
         self.assertIsNone(calls[1].get("source_ids"), "放宽时不再按来源收窄")
+        self.assertIsNone(calls[1].get("source_types"), "放宽时不再按来源类型收窄")
         self.assertEqual(len(result["hits"]), 1)
         self.assertIn("去掉时间与来源限定重试", result["notice"])
 

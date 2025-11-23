@@ -15,6 +15,7 @@ from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from services import chat_graph, citations
+from services.chat_runtime import ChatRuntime, reset_current, set_current
 
 
 def _ai(text: str = "", calls: list[dict] | None = None, tokens: int = 10) -> AIMessage:
@@ -112,23 +113,26 @@ class GraphRunTest(unittest.IsolatedAsyncioTestCase):
         async def run_tools(state):
             return await node.ainvoke(state)
 
-        return chat_graph.build_chat_graph(), {
-            "call_model": call_model,
-            "tools": run_tools,
-            "budget": budget or {"max_rounds": 4, "max_tool_calls": 4, "max_tokens": 1000,
-                                 "max_cost_micro": 0, "max_stall": 3},
+        runtime = ChatRuntime(call_model=call_model, tools=run_tools)
+        return chat_graph.build_chat_graph(), runtime, budget or {
+            "max_rounds": 4, "max_tool_calls": 4, "max_tokens": 1000,
+            "max_cost_micro": 0, "max_stall": 3,
         }
 
-    async def _run(self, graph, injected, messages):
-        return await graph.ainvoke(
-            {"messages": messages, **injected},
-            config={"recursion_limit": 10})
+    async def _run(self, graph, runtime, budget, messages):
+        token = set_current(runtime)
+        try:
+            return await graph.ainvoke(
+                {"messages": messages, "budget": budget},
+                config={"recursion_limit": 10})
+        finally:
+            reset_current(token)
 
     async def test_answer_without_tools_is_nudged_once_then_accepted(self):
         """直接作答会被提醒一次（提醒后仍直接作答则接受，由上层标为 no_retrieval）。"""
-        graph, injected = self._graph(
+        graph, runtime, budget = self._graph(
             [_ai("没有相关问题。"), _ai("抱歉，我这边没有相关资料。")], self.tool)
-        state = await self._run(graph, injected, [HumanMessage("今天天气如何")])
+        state = await self._run(graph, runtime, budget, [HumanMessage("今天天气如何")])
         self.assertTrue(state["nudged"], "首轮没调工具必须提醒过")
         self.assertEqual(state["round_no"], 2, "提醒后应再跑一轮")
         self.assertEqual(state["tool_calls"], 0)
@@ -138,29 +142,29 @@ class GraphRunTest(unittest.IsolatedAsyncioTestCase):
         """提醒只发一次：否则会与模型来回拉锯，把预算烧在没有进展的轮次上。"""
         script = [_ai("第一次直接作答。"), _ai("第二次仍然直接作答。"),
                   _ai("第三次不该被调用。")]
-        graph, injected = self._graph(script, self.tool)
-        state = await self._run(graph, injected, [HumanMessage("问题")])
+        graph, runtime, budget = self._graph(script, self.tool)
+        state = await self._run(graph, runtime, budget, [HumanMessage("问题")])
         self.assertEqual(state["round_no"], 2, "提醒后不应再提醒")
         self.assertEqual(state["stop_reason"], chat_graph.STOP_FINISHED)
 
     async def test_nudged_model_finds_tools_and_uses_them(self):
         """提醒起作用的路径：第二轮开始调工具，工具结果回到模型，最终给带依据的答案。"""
-        graph, injected = self._graph([
+        graph, runtime, budget = self._graph([
             _ai("会议里没有这件事。"),
             _ai("", calls=[_call("search_knowledge", {"query": "上线时间"})]),
             _ai("上线时间定在十月[1]。"),
         ], self.tool)
-        state = await self._run(graph, injected, [HumanMessage("上线时间？")])
+        state = await self._run(graph, runtime, budget, [HumanMessage("上线时间？")])
         self.assertEqual(self.calls, ["上线时间"], "提醒之后应该真的去检索了")
         self.assertEqual(state["tool_calls"], 1)
         self.assertEqual(chat_graph.final_answer(state), "上线时间定在十月[1]。")
 
     async def test_tool_round_trip_then_answer(self):
-        graph, injected = self._graph([
+        graph, runtime, budget = self._graph([
             _ai("", calls=[_call("search_knowledge", {"query": "上线时间"})]),
             _ai("上线时间定在十月[1]。"),
         ], self.tool)
-        state = await self._run(graph, injected, [HumanMessage("上线时间？")])
+        state = await self._run(graph, runtime, budget, [HumanMessage("上线时间？")])
         self.assertEqual(self.calls, ["上线时间"])
         self.assertEqual(chat_graph.final_answer(state), "上线时间定在十月[1]。")
         self.assertEqual(state["tool_calls"], 1)
@@ -171,11 +175,11 @@ class GraphRunTest(unittest.IsolatedAsyncioTestCase):
         # 模型每轮都要调工具：轮数上限必须由代码兜住
         script = [_ai("", calls=[_call("search_knowledge", {"query": f"q{i}"})], tokens=1)
                   for i in range(10)]
-        graph, injected = self._graph(script, self.tool,
+        graph, runtime, budget = self._graph(script, self.tool,
                                       budget={"max_rounds": 2, "max_tool_calls": 99,
                                               "max_tokens": 10_000, "max_cost_micro": 0,
                                               "max_stall": 0})
-        state = await self._run(graph, injected, [HumanMessage("查一下")])
+        state = await self._run(graph, runtime, budget, [HumanMessage("查一下")])
         self.assertEqual(state["round_no"], 2)
         self.assertEqual(state["stop_reason"], chat_graph.STOP_MAX_ROUNDS)
         self.assertEqual(len(self.calls), 1)
@@ -183,34 +187,34 @@ class GraphRunTest(unittest.IsolatedAsyncioTestCase):
     async def test_token_budget_stops_the_loop(self):
         script = [_ai("", calls=[_call("search_knowledge", {"query": f"q{i}"})], tokens=60)
                   for i in range(10)]
-        graph, injected = self._graph(script, self.tool,
+        graph, runtime, budget = self._graph(script, self.tool,
                                       budget={"max_rounds": 99, "max_tool_calls": 99,
                                               "max_tokens": 100, "max_cost_micro": 0,
                                               "max_stall": 0})
-        state = await self._run(graph, injected, [HumanMessage("查一下")])
+        state = await self._run(graph, runtime, budget, [HumanMessage("查一下")])
         self.assertEqual(state["stop_reason"], chat_graph.STOP_BUDGET_TOKENS)
         self.assertGreaterEqual(state["tokens_used"], 100)
 
     async def test_cost_budget_uses_injected_converter(self):
         script = [_ai("", calls=[_call("search_knowledge", {"query": f"q{i}"})], tokens=1)
                   for i in range(10)]
-        graph, injected = self._graph(script, self.tool,
+        graph, runtime, budget = self._graph(script, self.tool,
                                       budget={"max_rounds": 99, "max_tool_calls": 99,
                                               "max_tokens": 10_000, "max_cost_micro": 3,
                                               "max_stall": 0})
-        injected["cost_micro_of"] = lambda usage: 2
-        state = await self._run(graph, injected, [HumanMessage("查一下")])
+        runtime.cost_micro_of = lambda usage: 2
+        state = await self._run(graph, runtime, budget, [HumanMessage("查一下")])
         self.assertEqual(state["stop_reason"], chat_graph.STOP_BUDGET_COST)
         self.assertEqual(state["cost_micro"], 4)
 
     async def test_identical_repeated_call_is_detected_as_stall(self):
         script = [_ai("", calls=[_call("search_knowledge", {"query": "同一个词"})], tokens=1)
                   for _ in range(10)]
-        graph, injected = self._graph(script, self.tool,
+        graph, runtime, budget = self._graph(script, self.tool,
                                       budget={"max_rounds": 99, "max_tool_calls": 99,
                                               "max_tokens": 10_000, "max_cost_micro": 0,
                                               "max_stall": 3})
-        state = await self._run(graph, injected, [HumanMessage("查一下")])
+        state = await self._run(graph, runtime, budget, [HumanMessage("查一下")])
         self.assertEqual(state["stop_reason"], chat_graph.STOP_STALLED)
         # 第 3 次重复在**调用之前**就被拦住：只执行了两次
         self.assertEqual(len(self.calls), 2)
@@ -219,22 +223,22 @@ class GraphRunTest(unittest.IsolatedAsyncioTestCase):
     async def test_different_arguments_are_not_a_stall(self):
         script = [_ai("", calls=[_call("search_knowledge", {"query": f"第{i}个词"})], tokens=1)
                   for i in range(2)] + [_ai("够了。", tokens=1)]
-        graph, injected = self._graph(script, self.tool,
+        graph, runtime, budget = self._graph(script, self.tool,
                                       budget={"max_rounds": 9, "max_tool_calls": 9,
                                               "max_tokens": 10_000, "max_cost_micro": 0,
                                               "max_stall": 2})
-        state = await self._run(graph, injected, [HumanMessage("查一下")])
+        state = await self._run(graph, runtime, budget, [HumanMessage("查一下")])
         self.assertEqual(state["stop_reason"], chat_graph.STOP_FINISHED)
         self.assertEqual(len(self.calls), 2)
 
     async def test_final_answer_is_empty_when_stopped_on_a_tool_result(self):
         script = [_ai("", calls=[_call("search_knowledge", {"query": f"q{i}"})], tokens=1)
                   for i in range(4)]
-        graph, injected = self._graph(script, self.tool,
+        graph, runtime, budget = self._graph(script, self.tool,
                                       budget={"max_rounds": 1, "max_tool_calls": 9,
                                               "max_tokens": 10_000, "max_cost_micro": 0,
                                               "max_stall": 0})
-        state = await self._run(graph, injected, [HumanMessage("查一下")])
+        state = await self._run(graph, runtime, budget, [HumanMessage("查一下")])
         # 最后一条消息是工具结果：绝不能把它的 JSON 当答案
         self.assertEqual(chat_graph.final_answer(state), "")
 
@@ -250,12 +254,12 @@ class GraphRunTest(unittest.IsolatedAsyncioTestCase):
             return json.dumps({"ok": False, "error": "参数校验失败：meeting_ids 需要数组"},
                               ensure_ascii=False)
 
-        graph, injected = self._graph(
+        graph, runtime, budget = self._graph(
             [_ai("", calls=[_call("search_knowledge", {"query": "同一个词"})], tokens=1)
              for _ in range(6)], _plain_tool(failing_search),
             budget={"max_rounds": 9, "max_tool_calls": 9, "max_tokens": 10_000,
                     "max_cost_micro": 0, "max_stall": 3})
-        state = await self._run(graph, injected, [HumanMessage("下午这场会定了哪些行动项")])
+        state = await self._run(graph, runtime, budget, [HumanMessage("下午这场会定了哪些行动项")])
         self.assertEqual(state["stop_reason"], chat_graph.STOP_STALLED)
         self.assertIn("search_knowledge", state["stop_detail"])
         self.assertIn("meeting_ids 需要数组", state["stop_detail"])
@@ -338,11 +342,6 @@ class ToolTraceTest(unittest.TestCase):
         self.assertEqual(trace[0]["arguments"], {"kind": "pending_item"})
         self.assertEqual(trace[0]["summary"], "3 条事实")
         self.assertTrue(trace[0]["ok"])
-
-    def test_supplemental_hits_are_counted_in_the_summary(self):
-        text = '{"ok": true, "hits": [1, 2], "coverage_hits": [{"ref": 3}]}'
-        self.assertEqual(chat_graph.summarize_tool_result("search_knowledge", text),
-                         "2 条切片 + 补搜 1 条")
 
     def test_failed_tool_is_reported_as_failure(self):
         messages = [

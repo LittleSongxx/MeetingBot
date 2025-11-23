@@ -10,7 +10,7 @@ import asyncio
 import json
 import os
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import httpx
 from api import chat as chat_api
@@ -150,10 +150,8 @@ class ChatEndpointTest(unittest.IsolatedAsyncioTestCase):
         """产物要能自证这一臂的窗口与 k：抓取进程与容器 env 是两个空间，
         从外面猜等于没有证据（标定实验的对照就靠这三个字段区分）。"""
         with patch.dict(os.environ, {"KB_CHUNK_TARGET_CHARS": "300",
-                                     "RERANK_TOP_K": "3",
-                                     "CROSS_RECORDING_SUPPLEMENT_K": "1",
-                                     "QDRANT_COLLECTION": "funnel_test"}), \
-                patch.object(chat_api.qdrant, "health", new=AsyncMock(return_value=True)), \
+                                     "RERANK_TOP_K": "3"}), \
+                patch.object(chat_api.pg_kb, "available", return_value=True), \
                 patch.object(chat_api.moderation, "status", return_value={"enabled": False}):
             response = await self.client.get("/chat/status", headers={"token": self.token})
         self.assertEqual(response.status_code, 200)
@@ -162,8 +160,8 @@ class ChatEndpointTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(data["rerank_top_k"], 3)
         self.assertFalse(data["kb_dedupe_enabled"])
         self.assertFalse(data["kb_contextual_enabled"])
-        self.assertEqual(data["cross_recording_supplement_k"], 1)
-        self.assertEqual(data["qdrant_collection"], "funnel_test")
+        self.assertEqual(data["pg_kb_table"], "kb.chunk_search")
+        self.assertTrue(data["vector_store_reachable"])
 
     async def test_stream_returns_sse_frames_with_anti_buffering_headers(self):
         created = await self.client.post("/chat/session", json={},
@@ -189,8 +187,13 @@ class ChatEndpointTest(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(response.headers["cache-control"], "no-cache")
                 body = "".join([chunk async for chunk in response.aiter_text()])
 
-        blocks = [block for block in body.strip().split("\n\n") if block.startswith("event: ")]
-        events = [block.split("\n")[0].removeprefix("event: ") for block in blocks]
+        # 新协议在 event 前多一行 `id:`（SSE 续传用），解析时按字段找而不是按首行
+        blocks = [block for block in body.strip().split("\n\n") if "event: " in block]
+        events = [
+            line.removeprefix("event: ")
+            for block in blocks for line in block.splitlines()
+            if line.startswith("event: ")
+        ]
         self.assertEqual(events, ["meta", "token", "token", "done"])
         payloads = [json.loads(block.split("data: ", 1)[1]) for block in blocks]
         self.assertEqual("".join(item["text"] for item in payloads if "text" in item),

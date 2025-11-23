@@ -143,13 +143,15 @@ async def add(payload: UserPayload, _: User = Depends(require_admin)):
         raise CustomException("角色参数错误")
     # 选中的部门必须存在且处于正常状态
     await validate_department(payload.department_id)
-    if payload.password and len(payload.password) < 6:
+    if not payload.password:
+        raise CustomException("请设置初始密码（至少6位）")
+    if len(payload.password) < 6:
         raise CustomException("密码至少需要6位")
     await User.create(
         # 来自弹窗账号输入框
         username=payload.username,
-        # 密码留空时用固定初始密码，员工登录后可在第 3 章自行修改；库里只存哈希
-        password=security.hash_password(payload.password or "123456"),
+        # 只接收管理员显式设置的初始密码；不再使用公开的固定默认密码
+        password=security.hash_password(payload.password),
         # 姓名留空时用账号填充，保证 name 字段非空
         name=payload.name or payload.username,
         # 头像地址由上传回调写入

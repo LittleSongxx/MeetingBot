@@ -59,15 +59,26 @@ async def account_dict(user: User, token: str | None = None) -> dict:
 async def login(account: Account, request: Request):
     # 限流：按用户名与来源 IP 各自累计失败次数，任一超阈值即临时拒绝（防在线爆破）
     client_ip = request.client.host if request.client else "unknown"
-    for kind, key in (("login-user", account.username or ""), ("login-ip", client_ip)):
+    # 用户名按归一化值计数：MySQL 的 username 比较不区分大小写，
+    # 用原始大小写做 key 会让 Admin/ADMIN 各自拿到一份失败额度。
+    username = (account.username or "").strip()
+    user_key = username.lower()
+    keys = (("login-user", user_key), ("login-ip", client_ip))
+    for kind, key in keys:
         if await ratelimit.is_blocked(kind, key):
+            left = await ratelimit.seconds_left(kind, key)
             raise CustomException(
-                f"尝试过于频繁，请约 {await ratelimit.seconds_left(kind, key) // 60} 分钟后再试")
+                f"尝试过于频繁，请约 {left // 60} 分钟后再试", "429",
+                headers={"Retry-After": str(max(1, left))})
+    if not username or account.password is None:
+        for kind, key in keys:
+            await ratelimit.record_failure(kind, key)
+        raise CustomException("请输入账号和密码")
     # 按页面输入的账号查询 user 表，账号不存在时 user 为 None
-    user = await User.get_or_none(username=account.username)
+    user = await User.get_or_none(username=username)
     # 账号不存在或密码不匹配时返回同一句提示，页面上看不出是账号错还是密码错
     if user is None or not security.verify_password(account.password, user.password):
-        for kind, key in (("login-user", account.username or ""), ("login-ip", client_ip)):
+        for kind, key in keys:
             await ratelimit.record_failure(kind, key)
         raise CustomException("账号或密码错误")
     # 迁移期：库中还是遗留明文时，登录成功即原位升级为 bcrypt 哈希
@@ -76,21 +87,24 @@ async def login(account: Account, request: Request):
     # 账号被管理员停用后 status 不是 NORMAL，即使密码正确也不放行
     if user.status != "NORMAL":
         raise CustomException("账号已被停用")
-    for kind, key in (("login-user", account.username or ""), ("login-ip", client_ip)):
-        await ratelimit.record_success(kind, key)
+    # 成功只清用户名计数：清 IP 计数会让“任意有效账号登录一次”重置整台机器的
+    # 失败窗口，等于给爆破者一个免费 reset。
+    await ratelimit.record_success("login-user", user_key)
     # 校验通过后签发 Token（含密码指纹 pv），并把用户信息和 Token 一起返回给前端
     return Result.success(await account_dict(user, create_token(user)))
 
 
 @api_router.post("/register")
 async def register(account: Account, request: Request):
-    # 自注册默认开放以保持既有部署行为；对外/生产部署应在 .env 里设
-    # REGISTER_ENABLED=false，改为管理员建号（内部会议系统的推荐形态）。
-    if (os.getenv("REGISTER_ENABLED", "true").strip().lower()) not in {"1", "true", "yes"}:
+    # 个人作品的默认值：关闭自助注册，账号由管理员建立（种子账号仍可直接登录）。
+    # 需要开放注册时显式设 REGISTER_ENABLED=true。
+    if (os.getenv("REGISTER_ENABLED", "false").strip().lower()) not in {"1", "true", "yes"}:
         raise CustomException("当前未开放自助注册，请联系管理员开通账号")
     client_ip = request.client.host if request.client else "unknown"
     if await ratelimit.is_blocked("register-ip", client_ip):
-        raise CustomException("注册尝试过于频繁，请稍后再试")
+        left = await ratelimit.seconds_left("register-ip", client_ip)
+        raise CustomException("注册尝试过于频繁，请稍后再试", "429",
+                              headers={"Retry-After": str(max(1, left))})
     await ratelimit.record_failure("register-ip", client_ip)
     # 账号或密码为空时不建账号。前端虽然有非空校验，后端仍然独立校验一次
     if not account.username or not account.password:
@@ -116,7 +130,7 @@ async def register(account: Account, request: Request):
         # 新账号直接可用，登录时的状态校验会放行
         status="NORMAL",
     )
-    await ratelimit.record_success("register-ip", client_ip)
+    # 成功注册不清零：否则“成功一次 + 失败几次”可以无限重置注册限流。
     # 注册不返回数据，前端只根据 code 判断成功与否
     return Result.success()
 
@@ -124,6 +138,8 @@ async def register(account: Account, request: Request):
 @api_router.put("/updatePassword")
 async def update_password(account: Account, current_user: User = Depends(get_current_user)):
     # 用页面“原密码”输入框的值和数据库里的密码比对，不符时不允许改（兼容遗留明文）
+    if not account.password:
+        raise CustomException("请输入原密码")
     if not security.verify_password(account.password, current_user.password):
         raise CustomException("原密码错误")
     # 新密码不能为空。前端有非空校验，后端独立再校验一次

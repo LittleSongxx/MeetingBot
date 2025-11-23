@@ -7,12 +7,12 @@
 """
 
 import asyncio
-import logging
 
+from common import metrics, tracing
 from services.task_queue import run_worker
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
+metrics.setup_logging()
+tracing.setup_tracing()
 
 if __name__ == "__main__":
     asyncio.run(run_worker())

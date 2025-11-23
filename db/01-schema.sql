@@ -104,12 +104,14 @@ CREATE TABLE `ai_call_log`  (
   `usage_json` json NULL COMMENT '模型返回的usage统计',
   `cost_micro` bigint NOT NULL DEFAULT 0 COMMENT '本次调用成本（微元，1e-6 元），按调用时的单价与真实用量算出',
   `trace_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '链路追踪ID（同一次业务操作的多次调用共享）',
+  `span_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '本次调用在 trace 中的 span ID',
   `error_message` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '调用失败原因',
   `create_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '调用时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_ai_call_request_id`(`request_id` ASC) USING BTREE,
   INDEX `idx_ai_call_type_time`(`call_type` ASC, `create_time` ASC) USING BTREE,
   INDEX `idx_ai_call_biz_id`(`biz_id` ASC) USING BTREE,
+  INDEX `idx_ai_call_trace`(`trace_id` ASC) USING BTREE,
   INDEX `idx_ai_call_model_time_status`(`model_config_id` ASC, `create_time` ASC, `status` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 33 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = 'AI模型调用日志表' ROW_FORMAT = Dynamic;
 
@@ -120,7 +122,7 @@ DROP TABLE IF EXISTS `ai_model_config`;
 CREATE TABLE `ai_model_config`  (
   `id` int NOT NULL AUTO_INCREMENT COMMENT 'AI模型配置ID',
   `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '配置名称',
-  `model_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'TRANSCRIPTION' COMMENT 'TRANSCRIPTION、MINUTES、AGENT、SPEAKER',
+  `model_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'TRANSCRIPTION' COMMENT 'TRANSCRIPTION、MINUTES、AGENT、SPEAKER、EMBEDDING、JUDGE',
   `provider` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'OPENAI_COMPATIBLE' COMMENT '服务商类型：OPENAI_COMPATIBLE',
   `base_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '兼容OpenAI协议的API基础地址',
   `api_key` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '模型服务API Key',
@@ -389,7 +391,7 @@ CREATE TABLE `kb_document`  (
   `chunk_count` int NOT NULL DEFAULT 0 COMMENT '切片数',
   `embed_model` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '嵌入模型名',
   `embed_dim` int NOT NULL DEFAULT 0 COMMENT '向量维度',
-  `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'SUCCEEDED' COMMENT '状态：SUCCEEDED、FAILED',
+  `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'SUCCEEDED' COMMENT '状态：BUILDING、SUCCEEDED、FAILED',
   `error_message` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '失败原因',
   `create_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE,
@@ -402,7 +404,7 @@ CREATE TABLE `kb_document`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `kb_chunk`;
 CREATE TABLE `kb_chunk`  (
-  `id` int NOT NULL AUTO_INCREMENT COMMENT '切片ID（同时是 Qdrant 里的 point id）',
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '切片ID（同时是 PG 向量行的主键）',
   `document_id` int NOT NULL COMMENT '所属知识库文档ID',
   `meeting_id` int NOT NULL COMMENT '所属会议ID',
   `chunk_no` int NOT NULL COMMENT '文档内顺序号',
@@ -423,6 +425,31 @@ CREATE TABLE `kb_chunk`  (
   UNIQUE INDEX `uk_kb_chunk_no`(`document_id` ASC, `chunk_no` ASC) USING BTREE,
   INDEX `idx_kb_chunk_meeting`(`meeting_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '知识库切片表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for kb_index_outbox
+-- ----------------------------
+DROP TABLE IF EXISTS `kb_index_outbox`;
+CREATE TABLE `kb_index_outbox`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '期望状态ID',
+  `meeting_id` int NOT NULL COMMENT '来源所属会议ID',
+  `source_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'TRANSCRIPT转写 / MINUTES纪要',
+  `source_id` int NOT NULL COMMENT '来源ID（转写任务或纪要ID）',
+  `desired_state` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'INDEX' COMMENT '期望状态：INDEX可索引 / DELETE应清理',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/PROCESSING/DONE/FAILED',
+  `version` int NOT NULL DEFAULT 1 COMMENT '同一来源每次状态变化递增；worker只处理最新版本',
+  `attempts` int NOT NULL DEFAULT 0 COMMENT '已尝试次数',
+  `last_error` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '最近一次失败原因',
+  `available_at` datetime(6) NULL DEFAULT NULL COMMENT '下次可处理时间（退避）',
+  `started_at` datetime(6) NULL DEFAULT NULL COMMENT '本次处理开始时间',
+  `finished_at` datetime(6) NULL DEFAULT NULL COMMENT '本次处理结束时间',
+  `create_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `update_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_kb_outbox_source`(`source_type` ASC, `source_id` ASC) USING BTREE,
+  INDEX `idx_kb_outbox_status_available`(`status` ASC, `available_at` ASC) USING BTREE,
+  INDEX `idx_kb_outbox_meeting`(`meeting_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '知识库索引期望状态表（outbox）' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for chat_session
@@ -460,9 +487,16 @@ CREATE TABLE `chat_message`  (
   `stop_reason` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '结束原因：finished、max_rounds、budget_tokens、budget_cost、budget_tools、stalled',
   `error_message` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '本轮失败原因',
   `token_count` int NOT NULL DEFAULT 0 COMMENT '本轮 token 用量',
+  `run_status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'FINISHED' COMMENT '本轮生命周期：RUNNING/FINISHED/FAILED/INTERRUPTED',
+  `thread_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT 'LangGraph checkpoint thread ID',
+  `checkpoint_id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '最后一次 LangGraph checkpoint ID',
+  `trace_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '本轮共享的链路追踪ID',
+  `charged_tokens` int NOT NULL DEFAULT 0 COMMENT '已记入配额的token数（恢复时幂等）',
   `create_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_chat_message_session`(`session_id` ASC) USING BTREE
+  INDEX `idx_chat_message_session`(`session_id` ASC) USING BTREE,
+  INDEX `idx_chat_message_run_status`(`run_status` ASC) USING BTREE,
+  INDEX `idx_chat_message_trace`(`trace_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '知识问答消息表' ROW_FORMAT = Dynamic;
 
 SET FOREIGN_KEY_CHECKS = 1;

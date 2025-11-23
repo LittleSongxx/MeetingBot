@@ -66,6 +66,11 @@ export interface ChatMessageInfo {
   tools: ChatToolCall[]
   /** 非正常结束时给用户的提示（后端按 stop_reason 生成） */
   notice?: string
+  /** 本轮生命周期：RUNNING / FINISHED / FAILED / INTERRUPTED */
+  run_status?: string
+  thread_id?: string | null
+  checkpoint_id?: string | null
+  trace_id?: string | null
 }
 
 export interface ChatStatus {
@@ -86,6 +91,10 @@ export type ChatStreamEvent =
       model: string
       scope_meeting_ids: number[]
       question: string
+      trace_id?: string
+      thread_id?: string
+      resumed?: boolean
+      answer_prefix?: string
     }
   | { type: 'token'; text: string }
   | { type: 'tool_start'; name: string; call_id: string; arguments: Record<string, unknown> }
@@ -154,16 +163,27 @@ interface RawEventPayload {
 export async function streamChat(options: {
   sessionId: number
   question: string
+  resumeMessageId?: number
+  lastEventId?: string
   signal?: AbortSignal
   onEvent: (event: ChatStreamEvent) => void
+  onEventId?: (id: string) => void
 }): Promise<void> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json;charset=utf-8',
+    token: authToken(),
+  }
+  if (options.lastEventId) headers['Last-Event-ID'] = options.lastEventId
+  const body: Record<string, unknown> = {
+    session_id: options.sessionId,
+    question: options.question,
+  }
+  // 正常提问不带恢复字段，保持与原协议一致的载荷（也便于抓取侧复现）
+  if (options.resumeMessageId != null) body.resume_message_id = options.resumeMessageId
   const response = await fetch(`${import.meta.env.VITE_BASE_URL || ''}/chat/stream`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json;charset=utf-8',
-      token: authToken(),
-    },
-    body: JSON.stringify({ session_id: options.sessionId, question: options.question }),
+    headers,
+    body: JSON.stringify(body),
     signal: options.signal,
   })
   if (!response.ok) {
@@ -179,7 +199,9 @@ export async function streamChat(options: {
   }
   if (!response.body) throw new Error('服务端没有返回响应体')
 
+  let terminal = false
   for await (const raw of parseSseStream(response.body)) {
+    if (raw.id) options.onEventId?.(raw.id)
     const payload = parseJsonData<RawEventPayload>(raw)
     if (!payload) continue
     switch (raw.event) {
@@ -214,12 +236,18 @@ export async function streamChat(options: {
           model: String(payload.model ?? ''),
           scope_meeting_ids: (payload.scope_meeting_ids as number[]) ?? [],
           question: String(payload.question ?? ''),
+          trace_id: payload.trace_id ? String(payload.trace_id) : undefined,
+          thread_id: payload.thread_id ? String(payload.thread_id) : undefined,
+          resumed: Boolean(payload.resumed),
+          answer_prefix: payload.answer_prefix ? String(payload.answer_prefix) : undefined,
         })
         break
       case 'done':
+        terminal = true
         options.onEvent({ ...(payload as object), type: 'done' } as ChatStreamEvent)
         break
       case 'error':
+        terminal = true
         options.onEvent({
           type: 'error',
           message: String(payload.message ?? '问答失败'),
@@ -230,5 +258,9 @@ export async function streamChat(options: {
         // 未知事件名：忽略而不是报错——服务端新增事件类型时老前端不该崩
         break
     }
+  }
+  if (!terminal) {
+    // 代理超时/后端重启可能只发半段就 EOF；不能把截断答案当正常完成。
+    throw new Error('连接中断，回答可能不完整')
   }
 }

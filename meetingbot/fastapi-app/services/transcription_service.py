@@ -3,12 +3,14 @@ import os
 import shutil
 import subprocess
 import tempfile
+from datetime import timedelta
 from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
 import httpx
-from api.meeting_material import MATERIAL_DIR
+from common import tracing
+from common.paths import MATERIAL_DIR
 from common.times import now
 from models import (
     AiCallLog,
@@ -17,6 +19,7 @@ from models import (
     TranscriptionTask,
     TranscriptSegment,
 )
+from tortoise.transactions import in_transaction
 
 # ---------------------------------------------------------------------------
 # 转写引擎选择（`TRANSCRIPTION_ENGINE`，默认 dashscope）：
@@ -128,6 +131,7 @@ async def create_call_log(
 ):
     # 每个转写任务的一次引擎调用对应 ai_call_log 表的一行
     await AiCallLog.create(
+        **tracing.call_fields(),
         # 调用唯一编号，AIC 前缀加 32 位十六进制随机串
         request_id="AIC" + uuid4().hex.upper(),
         # 固定为 TRANSCRIPTION，第 17 章按它区分调用类型
@@ -502,22 +506,23 @@ async def execute_transcription(task_id: int):
                     for segment in all_segments
                 ]
             )
-            await TranscriptionTask.filter(id=task.id).update(
-                status="SUCCEEDED",
-                stage="转写完成",
-                progress=100,
-                # 模型返回的整段时长（片段最大结束时间兜底）
-                total_duration_ms=duration_ms,
-                # 整体文本供第 14 章纪要自检审查读取
-                full_text=full_text,
-                error_message=None,
-                finished_at=now(),
-            )
-            # 转写成功即入知识库（RAW 权威级）：索引失败不影响转写结果，
-            # 所以走"尽力而为"的后台排程，见 kb_service.schedule_kb_index_in_background
-            from services import kb_service
-            kb_service.schedule_kb_index_in_background(
-                kb_service.SOURCE_TRANSCRIPT, task.id, task.meeting_id, task.initiator_id)
+            # 状态与 INDEX 期望状态同事务：转写成功但索引事件没落库的窗口消失。
+            async with in_transaction():
+                await TranscriptionTask.filter(id=task.id).update(
+                    status="SUCCEEDED",
+                    stage="转写完成",
+                    progress=100,
+                    # 模型返回的整段时长（片段最大结束时间兜底）
+                    total_duration_ms=duration_ms,
+                    # 整体文本供第 14 章纪要自检审查读取
+                    full_text=full_text,
+                    error_message=None,
+                    finished_at=now(),
+                )
+                from services import kb_outbox, kb_service
+                await kb_outbox.mark_source_state(
+                    kb_service.SOURCE_TRANSCRIPT, task.id, task.meeting_id,
+                    kb_outbox.STATE_INDEX)
     except Exception as error:
         # 任何一步失败都把任务标成 FAILED 并记下原因，页面上出现“重试”按钮
         await TranscriptionTask.filter(id=task.id).update(
@@ -543,12 +548,18 @@ def cancel_transcription(task_id: int):
 
 
 async def recover_transcription_tasks():
-    """兜底扫尾：重新入队"建了行但 workflow 没启动"的任务。
+    """兜底扫尾：回收崩溃留下的 PROCESSING，并补投 PENDING。
 
-    正常的崩溃恢复由 Temporal 原生完成（workflow 自动续跑）；这里只覆盖
-    API 写行与 start_workflow 之间的窄窗口——行是非终态而队列里没有它。
+    `execute_transcription` 只认 PENDING；进程在任务执行中被杀时行会停在
+    PROCESSING，单靠 Temporal 重试无法重新抢占。超过一次 activity 超时仍未完成
+    的 PROCESSING 视为进程已经不在（单副本演示部署口径）。
     """
     from services import task_queue
-    ids = await TranscriptionTask.filter(status__in=["PENDING", "PROCESSING"]).values_list("id", flat=True)
+    stale_before = now() - timedelta(minutes=10)
+    await TranscriptionTask.filter(
+        status="PROCESSING", started_at__lt=stale_before,
+    ).update(status="PENDING", stage="上次执行中断，等待重试",
+             error_message="检测到未完成的任务，重新入队", finished_at=None)
+    ids = await TranscriptionTask.filter(status="PENDING").values_list("id", flat=True)
     for task_id in ids:
         await task_queue.enqueue(task_queue.KIND_TRANSCRIPTION, task_id, (task_id,))

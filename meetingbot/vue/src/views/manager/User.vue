@@ -114,7 +114,7 @@
           <el-input
             v-model="data.form.password"
             show-password
-            placeholder="不填写时默认密码为123456"
+            placeholder="请输入至少6位初始密码"
           ></el-input>
         </el-form-item>
         <!-- 头像上传。el-upload 不走 Axios 实例，所以要自己把登录 Token 放进 headers -->

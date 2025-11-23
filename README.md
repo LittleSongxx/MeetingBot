@@ -2,7 +2,7 @@
 
 **一场会开完，纪要已经能用了。**
 
-录音或视频传进来，MeetingBot 负责剩下的：转写（谁说了什么）→ 六字段结构化纪要 → Agent 对着原文自检一遍 → 人工确认归档 → 进知识库可检索可问答（答案带可点回的引用）。FastAPI + Vue 3 + MySQL + Qdrant + LangGraph + Temporal + MCP，Docker Compose 一条命令起全套。
+录音或视频传进来，MeetingBot 负责剩下的：转写（谁说了什么）→ 六字段结构化纪要 → Agent 对着原文自检一遍 → 人工确认归档 → 进知识库可检索可问答（答案带可点回的引用）。FastAPI + Vue 3 + MySQL + PostgreSQL（pgvector + ParadeDB BM25 + checkpoint）+ LangGraph + Temporal + MCP，Docker Compose 一条命令起全套。
 
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-asyncio-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -11,7 +11,7 @@
 [![MySQL 8](https://img.shields.io/badge/MySQL-8-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-agent-1C3C3C?style=flat-square)](https://github.com/langchain-ai/langgraph)
 [![Temporal](https://img.shields.io/badge/Temporal-durable--execution-00B4A0?style=flat-square)](https://temporal.io/)
-[![Qdrant](https://img.shields.io/badge/Qdrant-hybrid%20search-DC244C?style=flat-square)](https://qdrant.tech/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector%20%2B%20BM25%20%2B%20checkpoint-336791?style=flat-square&logo=postgresql&logoColor=white)](https://www.paradedb.com/)
 [![MCP](https://img.shields.io/badge/MCP-streamable%20HTTP-000000?style=flat-square)](https://modelcontextprotocol.io/)
 [![docker compose](https://img.shields.io/badge/docker--compose-7%20services-2496ED?style=flat-square&logo=docker&logoColor=white)](compose.yaml)
 [![license](https://img.shields.io/badge/license-MIT-3DA639?style=flat-square)](LICENSE)
@@ -38,7 +38,7 @@
 
 ![运行观测](docs/assets/screenshots/observability.png)
 
-**⑥ 知识问答**：转写成功自动建索引、纪要确认后权威入库；用户在「知识问答」页提问，检索走 Qdrant 混合检索（dense + sparse，服务端 RRF 融合），回答逐 token 流式渲染，引用编号可点回原会议原句。同一组工具也通过 MCP（`/mcp`）暴露给外部客户端——**一个工具层、两种传输**。
+**⑥ 知识问答**：转写成功自动建索引、纪要确认后权威入库；用户在「知识问答」页提问，检索走 PostgreSQL pgvector dense + ParadeDB BM25（应用层 RRF 融合；PG 不可用时本轮没有检索依据，由 no_retrieval 闸标注），回答逐 token 流式渲染，引用编号可点回原会议原句。同一组工具也通过 MCP（`/mcp`）暴露给外部客户端——**一个工具层、两种传输**。
 
 ![知识问答](docs/assets/screenshots/chat.png)
 
@@ -70,10 +70,11 @@
 ## 知识库：人拍板的内容才进库
 
 - 摄入挂在已有状态迁移上：转写成功 → 索引全文（RAW）；**纪要确认 → 索引权威条目（CONFIRMED），草稿永不进库**
-- 切片：转写按片段边界聚合成重叠窗口（目标 300 字、重叠 2 句），纪要按条目切；切片 id 同时是向量库 point id，不做第二套编号
-- 混合检索：稠密向量 + 稀疏词法（字符 bigram）各召回一批，由 Qdrant 在服务端做 RRF 融合——RRF 只看排名，规避两路分数量纲不同
+- 切片：转写按片段边界聚合成重叠窗口（目标 300 字、重叠 2 句），纪要按条目切；切片 id 同时是 PG 向量行主键，不做第二套编号
+- 混合检索：PostgreSQL 里的 pgvector dense 与 ParadeDB BM25（中文 jieba 分词）各召回一批，在应用层做 RRF；RRF 只看排名，规避两路分数量纲不同。PG 不可用时检索不可用，并在 `/chat/status` 如实报告
+- 索引生命周期：MySQL 状态变更写 outbox，后台 reconcile 同步 PG 派生索引；检索再按 MySQL 状态兜底，取消确认/删除后的旧切片不会交给模型
 - **权限过滤发生在检索层**：`None`＝不过滤（管理员）、空列表＝无可见会议，两种语义分开，混用即越权
-- 幂等三层：workflow id、任务条件抢占、内容指纹；嵌入失败重试只补没嵌过的切片（不为已成功的部分重复付费）
+- 幂等三层：workflow id、任务条件抢占、内容指纹；内容未变时跳过重建，失败任务保留已嵌入切片与错误原因，手动重建时不会重复处理已成功的来源
 
 ## 问答：一个工具层，两种传输
 
@@ -101,15 +102,15 @@ flowchart LR
         backend[backend :19091<br/>FastAPI + Tortoise ORM]
         agent[LangGraph<br/>纪要反思环 + 问答环]
         temporal[temporal :7233<br/>持久执行 / 幂等防双跑]
-        db[(MySQL 8)]
-        qdrant[(Qdrant<br/>混合检索)]
-        redis[(Redis<br/>限流与预算计数)]
+        db[(MySQL 8<br/>业务真源)]
+        postgres[(PostgreSQL<br/>pgvector + BM25 + checkpoint)]
+        redis[(Redis<br/>限流/预算 + 事件流)]
     end
     UI --> web --> backend
     backend --> db
     backend --> temporal
     backend --> agent
-    backend --> qdrant
+    backend --> postgres
     backend --> redis
     backend -->|OpenAI 兼容| LLM[Qwen / 任意兼容模型]
     backend -->|文件转写| ASR[云 ASR]
@@ -120,7 +121,7 @@ flowchart LR
 |---|---|
 | 转写链路 | 上传 → Temporal 提交任务 → ASR → 分段落库 →（可选）说话人建议 → 自动建索引 |
 | 纪要链路 | 转写就绪 → 单遍长上下文生成 → 契约校验 →（可选）自检反思环 → 人工确认 → 导出 + 权威入库 |
-| 问答链路 | 提问 → 检索（Qdrant 混合）或结构化查询 → 带引用回答 → 逐 token 流式渲染 → 引用点回原句 |
+| 问答链路 | 提问 → 检索（PostgreSQL pgvector dense + ParadeDB BM25，应用层 RRF）或结构化查询 → 带引用回答 → 逐 token 流式渲染 → 引用点回原句；PostgreSQL checkpoint 支持断线续跑 |
 
 转写 / 纪要 / 自检 / 索引四类长任务全部走 Temporal 持久执行：workflow id 幂等防双跑、崩溃自动续跑，**每类任务一个队列、并发上限各自可配**（一类打满不影响另一类）。链路里每一环都能在代码里指到，详细分层与"五处统一串联"见 [docs/架构.md](docs/架构.md)。
 
@@ -129,11 +130,11 @@ flowchart LR
 - **后端**：Python 3.12 · FastAPI · Tortoise ORM · Pydantic v2 · LangChain / LangGraph · MCP SDK
 - **调度**：Temporal（durable execution，四类长任务，按类型分队列）
 - **前端**：Vue 3 · Vite 5 · TypeScript（strict，`vue-tsc` 进 CI）· Element Plus · ECharts · markdown-it + DOMPurify
-- **数据**：MySQL 8（18 张表，建库脚本含种子数据）+ Qdrant（混合检索）+ Redis（限流与预算计数，故障时 fail-open）
+- **数据**：MySQL 8（业务真源，19 张表）+ PostgreSQL（pgvector dense + ParadeDB BM25 + LangGraph checkpoint）+ Redis（限流/预算 + 对话事件流，故障时 fail-open）
 - **模型**：OpenAI 兼容接口（默认 Qwen3.8-Max + Qwen-Audio ASR），ASR 引擎可切换云端 / 本地侧车
 - **部署**：Docker Compose 七服务 · FFmpeg · nginx
-- **安全**：bcrypt 哈希 · JWT 密码指纹（改密即吊销）· 集中式滑动窗口限流（标准 429 头）· 内容审核三层 · 服务端 MIME + nosniff · 统一权限口径
-- **可观测**：标准库 JSON 日志 · Prometheus `/metrics` · OTel GenAI 语义 span（OTLP 默认关闭）
+- **安全**：bcrypt 哈希 · JWT 密码指纹（改密即吊销）· 集中式滑动窗口限流（标准 429 头）· 内容审核三层 · 服务端 MIME + nosniff · 统一权限口径 · 工具内权限判定
+- **可观测**：标准库 JSON 日志 · Prometheus `/metrics` · 应用级 trace_id + OTel GenAI span（OTLP 默认关闭）
 
 ```
 meetingbot/
@@ -150,7 +151,7 @@ evaluation/                          # 评测体系（与产品代码物理隔�
 ├── LEDGER.md                        # 结论账本：可引用结论 + 撤回记录
 ├── asr/ benchmarks/ judges/ gate/ gold/ regression/ lib/ tests/
 scripts/                             # compose.sh · 本地 ASR 侧车 · 索引脚本
-docs/                                # 架构.md（五处统一串联）· 容量模型.md · 问答链路分析.md
+docs/                                # 架构.md（五处统一串联）· 容量模型.md · 问答链路分析.md · 运行时与索引一致性.md
 docs/assets/                         # logo 与 README 实拍截图
 ```
 
@@ -160,14 +161,17 @@ docs/assets/                         # logo 与 README 实拍截图
 cp meetingbot/fastapi-app/.env.example meetingbot/fastapi-app/.env
 # 编辑 .env，至少填：
 #   MYSQL_PASSWORD / MYSQL_ROOT_PASSWORD   数据库口令
+#   PG_PASSWORD                            PostgreSQL（pgvector/BM25/checkpoint）口令
 #   JWT_SECRET                             openssl rand -hex 32
 #   DASHSCOPE_API_KEY                      模型密钥（不填服务也能起，调用会失败但页面可逛）
 #   APP_ADMIN_PASSWORD                     管理员初始密码
 
-./scripts/compose.sh up -d --build       # 七服务全起（db / backend / web / qdrant / redis / temporal ×2）
+./scripts/compose.sh up -d --build       # 七服务全起（db / postgres / redis / backend / web / temporal ×2）
 ```
 
-配置统一从 `meetingbot/fastapi-app/.env` 读取（密钥不进根目录、不进镜像、不进版本控制）。种子数据带示例会议、转写、纪要与模型配置；管理员账号见 `.env` 的 `APP_ADMIN_USERNAME / APP_ADMIN_PASSWORD`（首次启动自动建号）。
+配置统一从 `meetingbot/fastapi-app/.env` 读取（密钥不进根目录、不进镜像、不进版本控制）。种子数据带示例会议、转写、纪要与模型配置；管理员账号见 `.env` 的 `APP_ADMIN_USERNAME / APP_ADMIN_PASSWORD`（首次启动建号/改密）。
+
+> `APP_ADMIN_PASSWORD` 留空时会沿用种子账号 `admin/admin`，仅供本地演示；公网部署必须设置强密码，并保持 `REGISTER_ENABLED=false`。
 
 | 入口 | 地址 |
 |---|---|
@@ -181,8 +185,8 @@ cp meetingbot/fastapi-app/.env.example meetingbot/fastapi-app/.env
 
 ```bash
 make -C evaluation smoke    # 零调用回归：契约不变量 / 证据可定位率 / 问答引用不变量 / 可靠性复算
-make -C evaluation test     # 评测侧单测（223 项）
-cd meetingbot/fastapi-app && .venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # 产品侧单测（405 项）
+make -C evaluation test     # 评测侧单测（293 项）
+cd meetingbot/fastapi-app && .venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # 产品侧单测（576 项）
 cd meetingbot/vue && npm ci && npm run type-check && npm run lint && npm run test   # 前端：类型 / lint / 单测
 ```
 
@@ -202,7 +206,7 @@ cd meetingbot/vue && npm ci && npm run type-check && npm run lint && npm run tes
 | 问答质量与成本 | 「知识问答」页（引用卡片）+「运行观测」页（成本趋势与排行） |
 | 限流参数 | `CHAT_ASK_LIMIT_PER_USER` / `CHAT_ASK_LIMIT_PER_IP` / `CHAT_DAILY_TOKEN_BUDGET`（见 `docs/容量模型.md`） |
 | 内容审核 | 配 `MODERATION_WORDS` / `MODERATION_WORDS_FILE`；未配置时 `/chat/status` 会如实报告"未启用" |
-| 部署细节与红线 | [DEPLOYMENT.md](DEPLOYMENT.md)（单 worker 约束、密钥泄露处置、索引修复） |
+| 部署细节与红线 | [DEPLOYMENT.md](DEPLOYMENT.md)（多副本与限流口径、密钥泄露处置、索引修复） |
 
 ## 决策记录
 
@@ -222,7 +226,7 @@ cd meetingbot/vue && npm ci && npm run type-check && npm run lint && npm run tes
 ## 这个仓库里没有的东西
 
 - **没有语料与音频**：AliMeeting / VCSum 评测语料与会议音频不入库（体积与数据集许可），脚本按清单复得；评测证据与运行账本在库。
-- **没有外部基础设施依赖**：Qdrant 与 Redis 都在 compose 里（前者不映射宿主端口，后者只做计数）；模型走 OpenAI 兼容接口，换供应商只改 `.env`。Redis 故障时限流与预算闸 fail-open（放行并记日志），不阻断业务。
+- **没有外部基础设施依赖**：PostgreSQL / Redis 都在 compose 里（不映射宿主端口）；模型走 OpenAI 兼容接口；换供应商除改 `.env` 外，还要求该供应商支持 `MINUTES/AGENT/SPEAKER` 的 strict `json_schema`（启动时会校验）。Redis 故障时限流与预算闸 fail-open（放行并记日志），不阻断业务；PG 不可用时检索不可用（由 no_retrieval 闸标注）、checkpoint 不启用（已落库消息不受影响）。
 - **没有内置敏感词表**：合规口径取决于部署地与业务，词表由 `MODERATION_WORDS` / `MODERATION_WORDS_FILE` 提供；未配置时审核如实报"未启用"。
 - **没有密钥**：`.env` 与任何密钥都不在版本控制内，仓库只有 `.env.example`。
 - **没有个人资料与生成式架构图目录**：仓库只含项目代码、评测资产与实拍截图。

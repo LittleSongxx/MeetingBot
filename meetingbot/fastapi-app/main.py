@@ -29,6 +29,7 @@ async def lifespan(app: FastAPI):
     # 但主力路径应为约束解码——启动即校验，配置漂移当场暴露而不是运行期偶发。
     from common import providers
     from models import AiModelConfig
+    from services import chat_checkpoint, chat_events, kb_outbox, pg_kb
     from services.agent_service import recover_agent_runs
     from services.kb_service import recover_kb_index_tasks
     from services.minutes_service import recover_minutes_tasks
@@ -41,29 +42,57 @@ async def lifespan(app: FastAPI):
                 "主力模型请使用支持约束解码的供应商（当前策略 "
                 f"{strategy}，仅靠 re-ask 兜底）")
 
+    # PG 同时承载检索索引与 checkpoint：不可用时检索关闭、checkpoint 不启用，
+    # 但不阻断服务启动（无检索依据的问答由 no_retrieval 闸标注）。
+    await pg_kb.init()
+    await chat_checkpoint.init()
     # 兜底扫尾：重新入队"建了行但 workflow 未启动"的任务（写行与 start_workflow
     # 之间的窄窗口）。正常崩溃续跑由 Temporal 原生完成，不经过这里。
     await recover_transcription_tasks()
     await recover_minutes_tasks()
     await recover_agent_runs()
     await recover_kb_index_tasks()
+    await kb_outbox.reconcile_all()
     # MCP 的会话管理器要由**父应用**的 lifespan 进入：子应用的 lifespan 在挂载后
     # 不会被执行，少了这一步第一次调用就会报"session manager 没启动"。
     async with mcp_server.session_manager():
-        # yield 之后服务才开始接收请求，本项目在关闭阶段没有要做的事，所以 yield 后面没有代码
-        yield
+        try:
+            yield
+        finally:
+            await chat_events.close()
+            await chat_checkpoint.close()
+            await pg_kb.close()
 
 
 # 把生命周期钩子交给 FastAPI，应用实例一创建就带上启动时的恢复动作
 app = FastAPI(lifespan=lifespan)
 
+
+@app.middleware("http")
+async def trace_middleware(request: Request, call_next):
+    """给每个 HTTP 请求一个应用级 trace id，并在响应头回传。
+
+    OTel 未启用时它仍然有效：模型/工具调用把同一个 id 落 ai_call_log，
+    排查一次请求时不必依赖外部 trace 后端。
+    """
+    trace_id = (request.headers.get("X-Trace-Id") or "").strip() or tracing.new_trace_id()
+    token = tracing.set_trace_id(trace_id)
+    try:
+        response = await call_next(request)
+    finally:
+        tracing.reset_trace_id(token)
+    response.headers["X-Trace-Id"] = trace_id
+    return response
+
 # 跨域配置 CORS
-# CORS 来源由 CORS_ALLOW_ORIGINS 控制（逗号分隔）；缺省 "*" 仅为保持本地开发行为，
-# 对外部署应在 .env 收紧为实际前端来源（同源反代部署甚至可以留空）。
-_cors = os.getenv("CORS_ALLOW_ORIGINS", "*").strip()
+# 未设置 CORS_ALLOW_ORIGINS 时保持本地开发的 "*"；显式设为空串表示
+# “同源部署、不允许跨域”，不能再被 `or ["*"]` 静默放大成通配符。
+_cors_env = os.getenv("CORS_ALLOW_ORIGINS")
+_cors = ["*"] if _cors_env is None else [
+    item.strip() for item in _cors_env.split(",") if item.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in _cors.split(",") if o.strip()] or ["*"],
+    allow_origins=_cors,
     allow_methods=["*"],
     allow_headers=["*"],
 )

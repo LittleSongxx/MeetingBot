@@ -90,6 +90,8 @@ CALL_TYPE_OWNERSHIP: dict[str, str] = {
     "AGENT_REVIEW": "AGENT",
     "AGENT_REFINE": "AGENT",
     "AGENT_REVIEW_SUPPORT": "AGENT",
+    # 跨族裁判（JUDGE 未配置时回退 AGENT；调用类型仍如实区分）
+    "AGENT_JUDGE": "AGENT",
     # 问答与知识库：新调用类型必须在这里登记，否则员工看不到自己的调用
     #（登记表漏一行的表现是"观测页少一块"，而不是报错，很容易漏）
     "CHAT": "CHAT",

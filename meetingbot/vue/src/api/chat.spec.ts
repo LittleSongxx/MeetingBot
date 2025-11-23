@@ -14,6 +14,9 @@ function responseOf(chunks: string[], init: Partial<Response> = {}): Response {
   return { ok: true, status: 200, body, json: async () => ({}), ...init } as unknown as Response
 }
 
+const DONE =
+  'event: done\ndata: {"message_id":9,"stop_reason":"finished","notice":"","tokens":{"total_tokens":1},"citations":[],"tool_calls":0,"unknown_refs":[]}\n\n'
+
 describe('streamChat', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -55,7 +58,7 @@ describe('streamChat', () => {
 
   it('请求带上登录 token 与 JSON 载荷', async () => {
     localStorage.setItem('xm-user', JSON.stringify({ id: 1, token: 'tok-123' }))
-    const fetchMock = vi.fn().mockResolvedValue(responseOf([]))
+    const fetchMock = vi.fn().mockResolvedValue(responseOf([DONE]))
     vi.stubGlobal('fetch', fetchMock)
 
     await streamChat({ sessionId: 7, question: '问', onEvent: () => {} })
@@ -87,18 +90,35 @@ describe('streamChat', () => {
     const frames = [
       'event: heartbeat_v2\ndata: {"x":1}\n\n',
       'event: token\ndata: {"text":"ok"}\n\n',
+      DONE,
     ]
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(responseOf(frames)))
     const events: ChatStreamEvent[] = []
     await streamChat({ sessionId: 1, question: '问', onEvent: (event) => events.push(event) })
-    expect(events).toEqual([{ type: 'token', text: 'ok' }])
+    expect(events).toEqual([
+      { type: 'token', text: 'ok' },
+      expect.objectContaining({ type: 'done' }),
+    ])
   })
 
   it('坏帧被跳过，好帧照常送达', async () => {
-    const frames = ['event: token\ndata: {坏}\n\n', 'event: token\ndata: {"text":"好"}\n\n']
+    const frames = ['event: token\ndata: {坏}\n\n', 'event: token\ndata: {"text":"好"}\n\n', DONE]
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(responseOf(frames)))
     const events: ChatStreamEvent[] = []
     await streamChat({ sessionId: 1, question: '问', onEvent: (event) => events.push(event) })
-    expect(events).toEqual([{ type: 'token', text: '好' }])
+    expect(events).toEqual([
+      { type: 'token', text: '好' },
+      expect.objectContaining({ type: 'done' }),
+    ])
+  })
+
+  it('没有 done/error 的 EOF 视为连接中断', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(responseOf(['event: token\ndata: {"text":"半"}'])),
+    )
+    await expect(streamChat({ sessionId: 1, question: '问', onEvent: () => {} })).rejects.toThrow(
+      '连接中断',
+    )
   })
 })

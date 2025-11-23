@@ -9,14 +9,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from common import access, qdrant
+from common import access
 from common.auth import get_current_user, require_admin
 from common.exception_handler import CustomException
 from common.result import Result
 from fastapi import APIRouter, Depends
 from models import KbChunk, KbDocument, KbIndexTask, User
 from pydantic import BaseModel, Field
-from services import kb_service
+from services import kb_service, pg_kb
 
 from api.meeting import get_accessible_meeting
 
@@ -31,8 +31,8 @@ class IndexPayload(BaseModel):
 
 
 class SearchPayload(BaseModel):
-    query: str
-    limit: int = 8
+    query: str = Field(min_length=1, max_length=2000)
+    limit: int = Field(default=8, ge=1, le=20)
     meeting_ids: list[int] | None = Field(
         default=None, description="限定在这些会议内检索；留空表示当前用户可见的全部会议")
     authority: list[str] | None = Field(
@@ -58,8 +58,9 @@ async def status(current_user: User = Depends(get_current_user)):
     from models import AiModelConfig
     embedding = await AiModelConfig.filter(model_type="EMBEDDING", enabled=True).order_by("-id").first()
     return Result.success({
-        "vector_store_reachable": await qdrant.health(),
-        "collection": qdrant.collection_name(),
+        "vector_store_reachable": pg_kb.available(),
+        "pg_table": pg_kb.table_name(),
+        "vector_dim": pg_kb.dimension(),
         "embedding_model": embedding.model_name if embedding else None,
         "embedding_configured": embedding is not None,
         "document_count": await KbDocument.filter(status="SUCCEEDED").count(),
@@ -131,7 +132,7 @@ async def search(payload: SearchPayload, current_user: User = Depends(get_curren
             authority=payload.authority)
     except kb_service.KbError as error:
         raise CustomException(str(error)) from error
-    except qdrant.QdrantError as error:
+    except pg_kb.PgKbError as error:
         raise CustomException(f"检索失败：{error}") from error
     return Result.success({
         "hits": [{**hit.as_citation(), "score": round(hit.score, 6)} for hit in hits],
