@@ -9,7 +9,9 @@ from langchain_core.messages import HumanMessage
 from models import AiModelConfig, PromptTemplate
 
 from services import (
+    model_config,
     moderation,
+    prompt_injection,
 )
 
 logger = logging.getLogger("meetingbot.chat")
@@ -46,6 +48,16 @@ SOURCE_COVERAGE_PROTOCOL = (
 )
 
 
+STATE_PROTOCOL = (
+    "\n\n【状态查询规则】\n"
+    "1. 问「上次定了什么/还有哪些待办/谁负责/项目现在什么状态」时，先调 "
+    "query_meeting_state；它只返回人工确认过的决策、结论、待办与个人偏好。\n"
+    "2. 待办状态以工具返回的 status/owner/deadline 为准，不要按会议上下文猜；"
+    "未确认的记忆候选不得当作事实。\n"
+    "3. 引用状态条目时写 [n]；跨系列问题先确认系列，再用系列范围检索。"
+)
+
+
 CITATION_PROTOCOL = (
     "\n\n【引用规则】\n"
     "1. 工具返回的每条内容都带 ref 编号；引用它必须写方括号编号，例如 [1]，"
@@ -77,10 +89,10 @@ SUMMARY_SCHEMA = {
 
 
 async def get_model_config() -> AiModelConfig:
-    config = await AiModelConfig.filter(model_type="AGENT", enabled=True).order_by("-id").first()
-    if config is None:
-        raise ChatError("没有启用中的 AGENT 用途模型配置，请先在「AI模型配置」里启用一个")
-    return config
+    try:
+        return await model_config.resolve_route("CHAT", "AGENT")
+    except model_config.ModelConfigError as error:
+        raise ChatError("没有启用中的 CHAT/AGENT 用途模型配置，请先在「AI模型配置」里启用一个") from error
 
 
 async def get_system_prompt() -> str:
@@ -93,8 +105,9 @@ async def get_system_prompt() -> str:
     body = (template.system_prompt if template else "") or DEFAULT_SYSTEM_PROMPT
     # 内容审核的第二层：生成约束。未配置词表时它返回空串（不留一句空话）。
     # 资料覆盖规则放在引用协议之前：引用协议始终是最后一块结构性约束。
-    return (body.strip() + SOURCE_COVERAGE_PROTOCOL + CITATION_PROTOCOL
-            + moderation.prompt_constraints())
+    return (body.strip() + SOURCE_COVERAGE_PROTOCOL + STATE_PROTOCOL
+            + prompt_injection.system_guards()
+            + CITATION_PROTOCOL + moderation.prompt_constraints())
 
 
 async def question_message(question: str) -> HumanMessage:

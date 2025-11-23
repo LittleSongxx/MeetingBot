@@ -1,7 +1,7 @@
 # MeetingBot 评测入口（四层，见 README.md 的评测宪法）
 PY ?= ../meetingbot/fastapi-app/.venv/bin/python
 
-.PHONY: smoke deep gate gold rag test
+.PHONY: smoke deep gate gold rag test trajectory
 
 # L0 零调用回归：契约不变量、证据可定位率、可靠性复算。每次改动必跑。
 smoke:
@@ -38,6 +38,24 @@ rag:
 gold:
 	@echo "  $(PY) gold/annotation.py   # 构建 120 条人工标注包（CSV+指南，可直接发众包）"
 	@echo "  $(PY) gold/judge_calibration.py --authorized-llm-calls N  # 裁判跨族校准"
+
+# Agent 轨迹评测（零模型调用）：工具集合/首轮 strict/必引/pass^k。
+# 无产物时只做金标校验并如实报"无样本"（安全，可随时跑）。
+# 有产物时（pass^k 需同一配置重复抓 k 次，按 trial 次序传 k 份产物）：
+#   $(PY) regression/trajectory.py --artifact results/t1.json --artifact results/t2.json \
+#       --artifact results/t3.json --k 3 --output results/trajectory_report.json
+# 裁判抽检回填表（零调用）：
+#   $(PY) gold/judge_spotcheck.py --artifact results/chat_answers.json --sample 20 \
+#       --output results/judge_spotcheck_20.csv
+# 回填后算 Cohen's kappa：
+#   $(PY) gold/judge_spotcheck.py --score results/judge_spotcheck_20.csv \
+#       --output results/judge_spotcheck_20.score.json
+trajectory:
+	$(PY) regression/trajectory.py --gold gold/trajectory_27.json
+	@echo "有产物时（pass^k 需同一配置重复抓 k 次，按 trial 次序传 k 份产物）："
+	@echo "  $(PY) regression/trajectory.py --artifact results/t1.json --artifact results/t2.json --artifact results/t3.json --k 3 --output results/trajectory_report.json"
+	@echo "裁判抽检回填表（零调用）: $(PY) gold/judge_spotcheck.py --artifact results/chat_answers.json --sample 20 --output results/judge_spotcheck_20.csv"
+	@echo "回填后算 Cohen's kappa: $(PY) gold/judge_spotcheck.py --score results/judge_spotcheck_20.csv --output results/judge_spotcheck_20.score.json"
 
 # 评测代码自身单测（零调用）
 test:

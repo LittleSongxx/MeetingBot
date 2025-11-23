@@ -8,6 +8,8 @@ from models import (
     AgentStep,
     AiCallLog,
     AiModelConfig,
+    ChatMessage,
+    Meeting,
     MeetingMinutes,
     TranscriptionTask,
     User,
@@ -62,7 +64,7 @@ async def employee_ai_log_ids(user_id: int) -> dict[str, set[int]]:
     因此键也分得开（CHAT 是助手消息 id，CHAT_SESSION 是会话 id——它们数值上可能
     撞车，混进同一个集合就成了张冠李戴的可见性）。
     """
-    from models import ChatMessage, ChatSession, KbIndexTask
+    from models import ChatSession, KbIndexTask
 
     session_ids = set(await ChatSession.filter(user_id=user_id).values_list("id", flat=True))
     return {
@@ -79,6 +81,8 @@ async def employee_ai_log_ids(user_id: int) -> dict[str, set[int]]:
         "CHAT_SESSION": session_ids,
         # 知识库索引：嵌入批次的 biz_id 存的是索引任务ID
         "KB": set(await KbIndexTask.filter(initiator_id=user_id).values_list("id", flat=True)),
+        # 管理员专属调用（在线评测）：员工永远不可见
+        "ADMIN": set(),
     }
 
 
@@ -105,6 +109,8 @@ CALL_TYPE_OWNERSHIP: dict[str, str] = {
     "KB_RERANK": "CHAT",
     # 查询规划（相对时间/指代改写 + 意图）：同样归到这条问答
     "KB_QUERY_PLAN": "CHAT",
+    # 在线评测判定：管理员手动触发，biz_id 是运行ID；员工不可见
+    "ONLINE_EVAL_JUDGE": "ADMIN",
 }
 
 
@@ -114,7 +120,7 @@ def employee_can_see_log(log: AiCallLog, owned: dict[str, set[int]]) -> bool:
     if owner_key is None:
         # 其余调用类型（第 9 章的 SPEAKER_MATCH）不在员工的观测范围内
         return False
-    return log.biz_id in owned[owner_key]
+    return log.biz_id in owned.get(owner_key, set())
 
 
 async def build_observability(current_user: User, date_from: str | None, date_to: str | None, model_config_id: int | None) -> dict:
@@ -316,4 +322,121 @@ async def build_observability(current_user: User, date_from: str | None, date_to
         "agent_status": [{"status": status, "count": agent_status[status]} for status in ["RUNNING", "WAITING_CONFIRMATION", "SUCCEEDED", "REJECTED", "FAILED", "INTERRUPTED"]],
         "step_ranking": step_ranking,
         "recent_failures": recent_failures,
+    }
+
+
+def _cache_tokens(usage: dict | None) -> tuple[int, int]:
+    """从 usage_json 里取（输入 token, 命中缓存 token）。
+
+    供应商字段不统一：LangChain 归一后常见 input_token_details.cache_read，
+    OpenAI 兼容层可能给 prompt_tokens_details.cached_tokens 或
+    cache_read_input_tokens。没有上报时返回 0，页面显示"未上报"，不估算。
+    """
+    usage = usage or {}
+    input_tokens = int(usage.get("input_tokens") or usage.get("prompt_tokens") or 0)
+    cached = 0
+    details = usage.get("input_token_details") or {}
+    if isinstance(details, dict):
+        cached = int(details.get("cache_read") or details.get("cached_tokens") or 0)
+    prompt_details = usage.get("prompt_tokens_details") or {}
+    if isinstance(prompt_details, dict):
+        cached = max(cached, int(prompt_details.get("cached_tokens") or 0))
+    cached = max(cached, int(usage.get("cache_read_input_tokens") or 0))
+    return input_tokens, max(0, min(cached, input_tokens))
+
+
+async def build_cost_report(date_from: str | None, date_to: str | None) -> dict:
+    """成本与缓存看板（管理员）：按会议、按问答轮、命中缓存分别归因。
+
+    口径：成本来自 `ai_call_log.cost_micro`（未定价配置按 0 并单独计数）；
+    单场纪要成本 = MINUTES 调用 + 该纪要关联的 Agent 自检调用，按 minutes_id
+    映射到 meeting_id；问答轮成本 = CHAT 调用按助手消息 id 聚合。
+    """
+    _, _, start_time, end_time = parse_date_range(date_from, date_to)
+    logs = await AiCallLog.filter(
+        create_time__gte=start_time, create_time__lt=end_time).order_by("create_time", "id")
+
+    minutes_ids: set[int] = set()
+    run_ids: set[int] = set()
+    for log in logs:
+        call = log.call_type or ""
+        if call.startswith("MINUTES"):
+            minutes_ids.add(int(log.biz_id))
+        elif call.startswith("AGENT_"):
+            run_ids.add(int(log.biz_id))
+    run_to_minutes = {
+        int(run_id): int(minutes_id)
+        for run_id, minutes_id in await AgentRun.filter(id__in=list(run_ids) or [-1])
+        .values_list("id", "minutes_id")
+    }
+    minutes_to_meeting = {
+        int(minutes_id): int(meeting_id)
+        for minutes_id, meeting_id in await MeetingMinutes.filter(
+            id__in=list(minutes_ids | set(run_to_minutes.values())) or [-1])
+        .values_list("id", "meeting_id")
+    }
+    meeting_titles = {
+        int(mid): title for mid, title in await Meeting.filter(
+            id__in=list(set(minutes_to_meeting.values())) or [-1]).values_list("id", "title")
+    }
+    by_meeting: dict[int, dict] = {}
+    for log in logs:
+        call = log.call_type or ""
+        # 只在对应 ID 空间里映射：CHAT 的 biz_id 是助手消息 id，数值上可能与
+        # run_id 撞车；混用会把问答成本算到会议头上（同 employee_ai_log_ids 的教训）。
+        if call.startswith("MINUTES"):
+            minutes_id = int(log.biz_id)
+        elif call.startswith("AGENT_"):
+            minutes_id = run_to_minutes.get(int(log.biz_id))
+        else:
+            continue
+        meeting_id = minutes_to_meeting.get(int(minutes_id)) if minutes_id is not None else None
+        if meeting_id is None:
+            continue
+        bucket = by_meeting.setdefault(int(meeting_id), {
+            "meeting_id": int(meeting_id),
+            "meeting_title": meeting_titles.get(int(meeting_id)) or f"会议 {meeting_id}",
+            "cost_micro": 0, "call_count": 0,
+        })
+        bucket["cost_micro"] += int(log.cost_micro or 0)
+        bucket["call_count"] += 1
+
+    chat_cost = 0
+    chat_calls = 0
+    chat_turns: set[int] = set()
+    cache_hit = 0
+    cache_input = 0
+    priced_config_ids = {
+        row["id"]: (int(row["input_price_micro_per_1k"] or 0),
+                    int(row["output_price_micro_per_1k"] or 0))
+        for row in await AiModelConfig.filter(
+            id__in=list({int(log.model_config_id) for log in logs}) or [-1]).values(
+            "id", "input_price_micro_per_1k", "output_price_micro_per_1k")
+    }
+    unpriced = 0
+    for log in logs:
+        if not any(priced_config_ids.get(int(log.model_config_id), (0, 0))):
+            unpriced += 1
+        input_tokens, cached = _cache_tokens(log.usage_json)
+        cache_input += input_tokens
+        cache_hit += cached
+        if (log.call_type or "") == "CHAT":
+            chat_cost += int(log.cost_micro or 0)
+            chat_calls += 1
+            chat_turns.add(int(log.biz_id))
+
+    return {
+        "by_meeting": sorted(by_meeting.values(), key=lambda item: item["cost_micro"],
+                             reverse=True)[:20],
+        "by_turn": {
+            "turn_count": len(chat_turns), "call_count": chat_calls,
+            "avg_cost_micro": round(chat_cost / len(chat_turns), 2) if chat_turns else None,
+            "avg_calls": round(chat_calls / len(chat_turns), 2) if chat_turns else None,
+        },
+        "cache": {
+            "hit_tokens": cache_hit, "input_tokens": cache_input,
+            "rate": round(cache_hit / cache_input, 4) if cache_input else None,
+            "reported": cache_input > 0,
+        },
+        "unpriced_count": unpriced,
     }

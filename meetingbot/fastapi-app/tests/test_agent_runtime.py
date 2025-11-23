@@ -144,12 +144,13 @@ class ResumeAnswerTest(unittest.TestCase):
 
 
 class RuntimeFacadeTest(unittest.TestCase):
-    def test_tool_registry_is_the_four_tool_source(self):
+    def test_tool_registry_is_the_five_tool_source(self):
         registry = ToolRegistry()
-        self.assertEqual(len(registry.specs), 4)
+        self.assertEqual(len(registry.specs), 5)
         self.assertEqual(
             {spec.name for spec in registry.specs},
-            {"search_knowledge", "list_facts", "get_minutes", "get_transcript_excerpt"},
+            {"search_knowledge", "list_facts", "get_minutes", "get_transcript_excerpt",
+             "query_meeting_state"},
         )
 
     def test_guardrail_chain_keeps_annotation_semantics(self):

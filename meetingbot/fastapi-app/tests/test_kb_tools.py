@@ -55,9 +55,10 @@ class NarrowScopeTest(unittest.TestCase):
 class ToolRegistryTest(unittest.TestCase):
     """工具数量与形状是架构承诺的一部分（3–5 个；schema 由参数模型派生）。"""
 
-    def test_exactly_four_tools(self):
+    def test_five_tools(self):
         self.assertEqual([spec.name for spec in kb_tools.TOOL_SPECS], [
-            "search_knowledge", "list_facts", "get_minutes", "get_transcript_excerpt"])
+            "search_knowledge", "list_facts", "get_minutes", "get_transcript_excerpt",
+            "query_meeting_state"])
 
     def test_openai_schema_is_derived_from_argument_model(self):
         tool = kb_tools.openai_tools()[0]

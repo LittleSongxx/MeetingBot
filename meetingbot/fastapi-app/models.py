@@ -77,6 +77,9 @@ class Meeting(Model):
     status = fields.CharField(max_length=30, default="SCHEDULED")
     # 对应 meeting.cancel_reason
     cancel_reason = fields.CharField(max_length=500, null=True)
+    # 对应 meeting.series_id：会议所属系列（周会/项目例会）。为空表示尚未归类。
+    # 系列只用于记忆归属与检索范围收窄，不改变会议可见性（可见性仍由 access 判定）。
+    series_id = fields.IntField(null=True)
     # 对应 meeting.create_time
     create_time = fields.DatetimeField(auto_now_add=True)
     # 对应 meeting.update_time
@@ -85,8 +88,36 @@ class Meeting(Model):
     class Meta:
         # 指定这个模型映射到数据库的 meeting 表
         table = "meeting"
-        # 对应 scripts/indexes.sql 的二级索引（列表页可见性收窄）
-        indexes = [("creator_id",), ("host_id",)]
+        # 对应 scripts/indexes.sql 的二级索引（列表页可见性收窄、系列筛选）
+        indexes = [("creator_id",), ("host_id",), ("series_id",)]
+
+
+class MeetingSeries(Model):
+    """会议系列：周会、项目例会等重复性会议的容器。
+
+    一个会议最多属于一个系列（`meeting.series_id`）。系列不授予任何权限：
+    系列可见 = 该系列下至少一场会议对用户可见；系列编辑 = 创建人或管理员。
+    """
+
+    # 对应 meeting_series.id
+    id = fields.IntField(pk=True)
+    # 对应 meeting_series.name：系列名称（例如「产品发布周会」）
+    name = fields.CharField(max_length=255)
+    # 对应 meeting_series.description
+    description = fields.TextField(null=True)
+    # 对应 meeting_series.cadence：WEEKLY / BIWEEKLY / MONTHLY / IRREGULAR
+    cadence = fields.CharField(max_length=30, default="IRREGULAR")
+    # 对应 meeting_series.owner_id：系列负责人（默认创建人）
+    owner_id = fields.IntField()
+    # 对应 meeting_series.status：ACTIVE / ARCHIVED
+    status = fields.CharField(max_length=20, default="ACTIVE")
+    # 对应 meeting_series.create_time / update_time
+    create_time = fields.DatetimeField(auto_now_add=True)
+    update_time = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "meeting_series"
+        indexes = [("owner_id",), ("status",)]
 
 
 class MeetingParticipant(Model):
@@ -175,6 +206,32 @@ class AiModelConfig(Model):
 
     class Meta:
         table = "ai_model_config"
+
+
+class ModelRoute(Model):
+    """调用类型/用途 → 模型配置的路由。
+
+    路由为空或目标配置不可用时回退到原用途（例如 CHAT → AGENT）。默认不建路由，
+    所有流量走原用途；成本实验达标后才建议开启。
+    """
+
+    # 对应 model_route.id
+    id = fields.IntField(pk=True)
+    # 对应 model_route.route_key：MINUTES / AGENT / SPEAKER / CHAT / CHAT_SUMMARY /
+    # KB_QUERY_PLAN / KB_CONTEXTUALIZE
+    route_key = fields.CharField(max_length=50, unique=True)
+    # 对应 model_route.model_config_id
+    model_config_id = fields.IntField()
+    # 对应 model_route.enabled
+    enabled = fields.BooleanField(default=True)
+    # 对应 model_route.note
+    note = fields.CharField(max_length=500, null=True)
+    # 对应 model_route.create_time / update_time
+    create_time = fields.DatetimeField(auto_now_add=True)
+    update_time = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "model_route"
 
 
 class TranscriptionTask(Model):
@@ -373,6 +430,118 @@ class MeetingMinutes(Model):
         indexes = [("meeting_id",), ("created_by",)]
         # 一个转写任务只保留一份纪要，重新生成时覆盖原来那条
         unique_together = (("source_task_id",),)
+
+
+class MeetingMemory(Model):
+    """已确认的长期记忆：系列级决策/结论 + 用户级偏好。
+
+    只有 CONFIRMED 状态对外可见；PROPOSED 是待人工确认的候选。
+    待办不在本表重复存：待办统一由 `action_item` 承载，工具层合并返回。
+    """
+
+    # 对应 meeting_memory.id
+    id = fields.IntField(pk=True)
+    # 对应 meeting_memory.scope_type：SERIES（系列级）/ USER（用户级）
+    scope_type = fields.CharField(max_length=20)
+    # 对应 meeting_memory.scope_id：series_id 或 user_id
+    scope_id = fields.IntField()
+    # 对应 meeting_memory.kind：DECISION / CONCLUSION / PREFERENCE
+    kind = fields.CharField(max_length=20)
+    # 对应 meeting_memory.content
+    content = fields.TextField()
+    # 对应 meeting_memory.normalized：归一化文本，用于去重与冲突检测
+    normalized = fields.TextField(null=True)
+    # 对应 meeting_memory.source_type：MINUTES / MANUAL
+    source_type = fields.CharField(max_length=20, default="MANUAL")
+    # 对应 meeting_memory.source_id：纪要ID或手工记录ID
+    source_id = fields.IntField(null=True)
+    # 对应 meeting_memory.source_meeting_id
+    source_meeting_id = fields.IntField(null=True)
+    # 对应 meeting_memory.evidence_json：证据片段（quote/start_ms/end_ms/speaker）
+    evidence_json = fields.JSONField(null=True)
+    # 对应 meeting_memory.status：PROPOSED / CONFIRMED / REJECTED / EXPIRED / SUPERSEDED
+    status = fields.CharField(max_length=20, default="PROPOSED")
+    # 对应 meeting_memory.supersedes_id：本条替代的旧记忆
+    supersedes_id = fields.IntField(null=True)
+    # 对应 meeting_memory.valid_from / valid_to：生效与失效时间
+    valid_from = fields.DatetimeField(null=True)
+    valid_to = fields.DatetimeField(null=True)
+    # 对应 meeting_memory.created_by / confirmed_by / confirmed_time
+    created_by = fields.IntField()
+    confirmed_by = fields.IntField(null=True)
+    confirmed_time = fields.DatetimeField(null=True)
+    # 对应 meeting_memory.create_time / update_time
+    create_time = fields.DatetimeField(auto_now_add=True)
+    update_time = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "meeting_memory"
+        indexes = [("scope_type", "scope_id", "status"), ("kind",),
+                   ("source_type", "source_id"), ("supersedes_id",)]
+
+
+class ActionItem(Model):
+    """会议待办：从已确认纪要的 pending_items 生成，可跨会议结转。"""
+
+    # 对应 action_item.id
+    id = fields.IntField(pk=True)
+    # 对应 action_item.series_id / meeting_id / minutes_id
+    series_id = fields.IntField(null=True)
+    meeting_id = fields.IntField()
+    minutes_id = fields.IntField(null=True)
+    # 对应 action_item.source_field / source_index：来源纪要字段与条目序号
+    source_field = fields.CharField(max_length=30, null=True)
+    source_index = fields.IntField(null=True)
+    # 对应 action_item.content
+    content = fields.TextField()
+    # 对应 action_item.owner_user_id / owner_name：匹配到员工时落用户ID，否则保留文本
+    owner_user_id = fields.IntField(null=True)
+    owner_name = fields.CharField(max_length=100, null=True)
+    # 对应 action_item.deadline / deadline_text：解析出的时间与原文期限
+    deadline = fields.DatetimeField(null=True)
+    deadline_text = fields.CharField(max_length=200, null=True)
+    # 对应 action_item.status：OPEN / DONE / BLOCKED / CANCELLED
+    status = fields.CharField(max_length=20, default="OPEN")
+    # 对应 action_item.evidence_json
+    evidence_json = fields.JSONField(null=True)
+    # 对应 action_item.dedupe_key：同一系列内去重用的稳定键
+    dedupe_key = fields.CharField(max_length=64, null=True)
+    # 对应 action_item.last_seen_meeting_id：最后一次在哪个会议被提及（结转）
+    last_seen_meeting_id = fields.IntField(null=True)
+    # 对应 action_item.created_by
+    created_by = fields.IntField()
+    # 对应 action_item.create_time / update_time
+    create_time = fields.DatetimeField(auto_now_add=True)
+    update_time = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "action_item"
+        indexes = [("series_id", "status"), ("meeting_id",),
+                   ("owner_user_id",), ("dedupe_key",)]
+
+
+class ActionItemEvent(Model):
+    """待办变更留痕：状态/负责人/期限/结转各写一行。"""
+
+    # 对应 action_item_event.id
+    id = fields.IntField(pk=True)
+    # 对应 action_item_event.action_item_id
+    action_item_id = fields.IntField()
+    # 对应 action_item_event.event_type：CREATE / STATUS / OWNER / DEADLINE / CARRY_OVER
+    event_type = fields.CharField(max_length=30)
+    # 对应 action_item_event.from_value / to_value
+    from_value = fields.CharField(max_length=200, null=True)
+    to_value = fields.CharField(max_length=200, null=True)
+    # 对应 action_item_event.note
+    note = fields.TextField(null=True)
+    # 对应 action_item_event.actor_id
+    actor_id = fields.IntField()
+    # 对应 action_item_event.create_time
+    create_time = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "action_item_event"
+        indexes = [("action_item_id", "create_time")]
 
 
 class AgentRun(Model):
@@ -647,6 +816,9 @@ class ChatSession(Model):
     title = fields.CharField(max_length=255, default="新对话")
     # 对应 chat_session.scope_meeting_ids：本次对话限定的会议集合，空数组表示不限定
     scope_meeting_ids = fields.JSONField(default=list)
+    # 对应 chat_session.scope_series_ids：按系列限定。每轮按当前可见会议展开，
+    # 保留"权限收回后旧会话自然看不到"的实时性；与 scope_meeting_ids 取并集。
+    scope_series_ids = fields.JSONField(default=list)
     # 对应 chat_session.summary 与 summary_upto_message_id：
     # 滑窗之外的历史压成一段摘要（会话记忆的第二层），水位线记它覆盖到哪条消息为止，
     # 于是"哪些消息已经进过摘要"不必再猜——没有水位线就只能整段重算或重复计入
@@ -722,4 +894,54 @@ class ChatMessage(Model):
         indexes = [("session_id",), ("run_status",), ("trace_id",)]
 
 
+class OnlineEvalRun(Model):
+    """一次在线评测运行（管理员手动触发，单次 ≤50 条）。"""
 
+    # 对应 online_eval_run.id
+    id = fields.IntField(pk=True)
+    # 对应 online_eval_run.triggered_by / sample_size / model_config_id
+    triggered_by = fields.IntField()
+    sample_size = fields.IntField(default=0)
+    model_config_id = fields.IntField()
+    # 对应 online_eval_run.status：RUNNING / DONE / FAILED
+    status = fields.CharField(max_length=20, default="RUNNING")
+    # 对应 online_eval_run.started_at / finished_at
+    started_at = fields.DatetimeField(auto_now_add=True)
+    finished_at = fields.DatetimeField(null=True)
+    # 对应 online_eval_run.summary_json：聚合指标与失败样例摘要
+    summary_json = fields.JSONField(null=True)
+    # 对应 online_eval_run.error_message
+    error_message = fields.TextField(null=True)
+    # 对应 online_eval_run.update_time
+    update_time = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "online_eval_run"
+        indexes = [("status", "started_at")]
+
+
+class OnlineEvalCase(Model):
+    """在线评测的单条结果：一轮问答的忠实度/相关性判定。"""
+
+    # 对应 online_eval_case.id
+    id = fields.IntField(pk=True)
+    # 对应 online_eval_case.run_id / chat_message_id
+    run_id = fields.IntField()
+    chat_message_id = fields.IntField()
+    # 对应 online_eval_case.question / answer
+    question = fields.TextField()
+    answer = fields.TextField()
+    # 对应 online_eval_case.citations_json / tools_json
+    citations_json = fields.JSONField(null=True)
+    tools_json = fields.JSONField(null=True)
+    # 对应 online_eval_case.scores_json：faithfulness / answer_relevancy 等
+    scores_json = fields.JSONField(null=True)
+    # 对应 online_eval_case.judge_model / error_message
+    judge_model = fields.CharField(max_length=100, null=True)
+    error_message = fields.TextField(null=True)
+    # 对应 online_eval_case.create_time
+    create_time = fields.DatetimeField(auto_now_add=True)
+
+    class Meta:
+        table = "online_eval_case"
+        indexes = [("run_id",), ("chat_message_id",)]

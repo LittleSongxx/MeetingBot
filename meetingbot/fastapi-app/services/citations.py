@@ -32,6 +32,8 @@ CITATION_PATTERN = re.compile(r"\[(\d{1,3})\]")
 KIND_CHUNK = "chunk"
 KIND_FACT = "fact"
 KIND_SEGMENT = "segment"
+# 记忆/待办状态（query_meeting_state）：它也是可点击引用，来源是纪要证据
+KIND_STATE = "state"
 
 
 @dataclass(frozen=True)
@@ -54,6 +56,15 @@ class Citation:
     # 只有起点算不出覆盖范围。
     end_second: int | None = None
     authority: str | None = None
+    # 状态类引用的当前状态（CONFIRMED/OPEN/DONE...），页面用 chip 展示
+    status: str | None = None
+    # 状态类引用（query_meeting_state）的展示字段：决策/待办/偏好卡片直接用
+    state_type: str | None = None
+    state_id: int | None = None
+    owner_name: str | None = None
+    deadline_text: str | None = None
+    series_id: int | None = None
+    series_name: str | None = None
     # 条目/切片的**完整正文**。与 `quote` 的区别是刻意的：quote 要能落回原文
     # （所以事实条目优先取证据原句），而这一份是"判定者拿来核对的上下文"——
     # 事实条目的类型化槽位（负责人/截止时间/风险等级）只在这里，缺了它判定者
@@ -70,6 +81,9 @@ class Citation:
         """去重身份。同一条内容的两个来源编号相同。"""
         if self.kind == KIND_CHUNK:
             return (self.kind, self.chunk_id)
+        if self.kind == KIND_STATE:
+            # 记忆/待办没有切片 id；用（会议 + 证据原句）做身份，同一句只占一个编号
+            return (self.kind, self.meeting_id, self.quote)
         if self.kind == KIND_FACT:
             # 纪要条目按 minutes_id + field + item_index；录音/会议清单没有 minutes_id，
             # 过去三者全为 None，导致所有清单行被合并成同一个空引用（q91 的 [1]）。
@@ -90,6 +104,13 @@ class Citation:
         }
         if self.source_text:
             data["source_text"] = self.source_text
+        if self.status:
+            data["status"] = self.status
+        for name in ("state_type", "state_id", "owner_name", "deadline_text",
+                     "series_id", "series_name"):
+            value = getattr(self, name)
+            if value is not None:
+                data[name] = value
         for name in ("chunk_id", "minutes_id", "field", "item_index", "task_id", "segment_no",
                      "source_id"):
             value = getattr(self, name)
@@ -156,6 +177,13 @@ class CitationRegistry:
                 start_second=item.get("start_second"),
                 end_second=item.get("end_second"),
                 authority=item.get("authority"),
+                status=item.get("status"),
+                state_type=item.get("state_type"),
+                state_id=item.get("state_id"),
+                owner_name=item.get("owner_name"),
+                deadline_text=item.get("deadline_text"),
+                series_id=item.get("series_id"),
+                series_name=item.get("series_name"),
                 source_text=item.get("source_text"),
                 source_id=item.get("source_id"),
                 task_id=item.get("task_id"),
@@ -234,6 +262,7 @@ _ITEMS_KEY: dict[str, str | None] = {
     "list_facts": "facts",
     "get_transcript_excerpt": "segments",
     "get_minutes": None,
+    "query_meeting_state": "items",
 }
 
 
@@ -310,6 +339,41 @@ def _from_segments(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citatio
     return pairs
 
 
+def _from_state(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation]]:
+    """记忆/待办：每条带来源会议与证据原句，引用可回到纪要证据。"""
+    pairs: list[tuple[dict[str, Any], Citation]] = []
+    for item in result.get("items") or []:
+        if not isinstance(item, dict):
+            continue
+        evidence = item.get("evidence")
+        quote = ""
+        if isinstance(evidence, dict):
+            quote = str(evidence.get("quote") or "").strip()
+        elif isinstance(evidence, list):
+            for entry in evidence:
+                if isinstance(entry, dict) and str(entry.get("quote") or "").strip():
+                    quote = str(entry["quote"]).strip()
+                    break
+        content = str(item.get("content") or "").strip()
+        pairs.append((item, Citation(
+            ref=0, kind=KIND_STATE,
+            meeting_id=int(item.get("source_meeting_id") or item.get("meeting_id") or 0),
+            quote=quote or content,
+            meeting_title=str(item.get("meeting_title") or ""),
+            minutes_id=item.get("minutes_id"), field=item.get("field"),
+            item_index=item.get("item_index"),
+            status=str(item.get("status") or "") or None,
+            state_type=(str(item.get("kind") or "").upper() or None),
+            state_id=item.get("state_id"),
+            owner_name=item.get("owner_name"),
+            deadline_text=item.get("deadline_text"),
+            series_id=item.get("series_id"),
+            series_name=item.get("series_name"),
+            source_text=content or quote,
+        )))
+    return pairs
+
+
 def _from_minutes(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation]]:
     """整份纪要：逐个条目登记（六字段里的条目本身就是可引用的最小单位）。
 
@@ -359,6 +423,7 @@ _EXTRACTORS: dict[str, Callable[[dict[str, Any]], list[tuple[dict[str, Any], Cit
     "list_facts": _from_facts,
     "get_transcript_excerpt": _from_segments,
     "get_minutes": _from_minutes,
+    "query_meeting_state": _from_state,
 }
 
 

@@ -19,7 +19,7 @@ from models import (
     User,
 )
 from pydantic import BaseModel
-from services import contracts
+from services import contracts, model_config
 from services.agent_service import (
     cancel_agent_run,
     dump_final_result,
@@ -241,7 +241,10 @@ async def start(payload: RunPayload, current_user: User = Depends(get_current_us
     ).exists():
         raise CustomException("该纪要已有自检在运行或等待确认，请先处理")
     # 取当前启用的自检模型，整次运行都用这一条配置
-    config = await AiModelConfig.filter(model_type="AGENT", enabled=True).order_by("-id").first()
+    try:
+        config = await model_config.resolve_route("AGENT", "AGENT")
+    except model_config.ModelConfigError:
+        config = None
     if config is None or not config.api_key:
         raise CustomException("请先由管理员启用纪要自检模型配置")
     # 审查和重写两条模板缺一不可，缺了就别开始跑，免得跑到一半才失败

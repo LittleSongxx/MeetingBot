@@ -1,6 +1,7 @@
 from common.prompts import render_prompt
-from models import AiModelConfig, Meeting, MeetingParticipant, PromptTemplate, TranscriptSegment, User
+from models import Meeting, MeetingParticipant, PromptTemplate, TranscriptSegment, User
 
+from services import model_config
 from services.model_factory import invoke_json
 
 # 说话人证据采样：按标签分组节选，而不是截取整段转写的前 N 条。
@@ -82,7 +83,10 @@ async def build_transcript_text(task_id: int) -> str:
 async def suggest_speakers(task_id: int, meeting_id: int, user_id: int) -> list[dict]:
     """调一次模型，给每个说话人标签推荐一位参会人员。结果只是建议，写不写库由人决定。"""
     # 说话人匹配有自己的模型用途，管理员可以给它单独挑一个模型
-    config = await AiModelConfig.filter(model_type="SPEAKER", enabled=True).order_by("-id").first()
+    try:
+        config = await model_config.resolve_route("SPEAKER", "SPEAKER")
+    except model_config.ModelConfigError:
+        config = None
     if config is None or not config.api_key:
         raise RuntimeError("请先由管理员启用说话人匹配模型配置")
     # 第 10 章维护的 SPEAKER_MATCH 模板，被停用时直接提示

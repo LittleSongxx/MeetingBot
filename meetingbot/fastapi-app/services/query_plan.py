@@ -34,7 +34,7 @@ from typing import Any, Mapping, Sequence
 
 from models import AiModelConfig
 
-from services import model_factory
+from services import model_config, model_factory
 
 logger = logging.getLogger("meetingbot.query_plan")
 
@@ -246,10 +246,10 @@ def _intent_label(intent: str) -> str:
 
 
 async def _chat_config() -> AiModelConfig:
-    config = await AiModelConfig.filter(model_type="AGENT", enabled=True).order_by("-id").first()
-    if config is None:
-        raise RuntimeError("没有启用中的 AGENT 用途模型配置，无法做查询规划")
-    return config
+    try:
+        return await model_config.resolve_route("KB_QUERY_PLAN", "AGENT")
+    except model_config.ModelConfigError as error:
+        raise RuntimeError("没有启用中的 KB_QUERY_PLAN/AGENT 用途模型配置，无法做查询规划") from error
 
 
 def scope_lines(meetings: Sequence[Mapping[str, Any]], recordings: Sequence[Mapping[str, Any]],

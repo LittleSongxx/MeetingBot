@@ -14,12 +14,12 @@
         style="width: 180px; margin-right: 10px"
         placeholder="请选择模型用途"
       >
-        <el-option label="音视频转写" value="TRANSCRIPTION"></el-option>
-        <el-option label="会议纪要" value="MINUTES"></el-option>
-        <el-option label="纪要自检" value="AGENT"></el-option>
-        <el-option label="说话人匹配" value="SPEAKER"></el-option>
-        <el-option label="向量嵌入" value="EMBEDDING"></el-option>
-        <el-option label="跨族裁判" value="JUDGE"></el-option>
+        <el-option
+          v-for="item in MODEL_TYPE_OPTIONS"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        ></el-option>
       </el-select>
       <el-button type="info" plain @click="search">查询</el-button>
       <el-button type="warning" plain style="margin-left: 10px" @click="reset">重置</el-button>
@@ -73,6 +73,46 @@
       />
     </div>
 
+    <!-- 模型路由：调用类型 → 模型配置；未配置的类型回退到原用途模型 -->
+    <div class="card route-card">
+      <div class="route-head">
+        <div>
+          <span class="route-title">模型路由</span>
+          <span class="route-tip">
+            按调用类型指定模型配置；未配置或已停用的类型回退到原用途模型
+          </span>
+        </div>
+        <el-button type="primary" plain @click="handleAddRoute">新增路由</el-button>
+      </div>
+      <el-table
+        stripe
+        :data="routeData.list"
+        v-loading="routeData.loading"
+        empty-text="还没有模型路由，全部调用使用原用途模型"
+      >
+        <el-table-column label="调用类型" width="170">
+          <template #default="scope">{{ modelRouteText(scope.row.route_key) }}</template>
+        </el-table-column>
+        <el-table-column label="模型配置" min-width="220">
+          <template #default="scope">{{ routeLabel(scope.row) }}</template>
+        </el-table-column>
+        <el-table-column label="状态" width="100">
+          <template #default="scope">
+            <el-tag :type="scope.row.enabled ? 'success' : 'info'">
+              {{ scope.row.enabled ? '已启用' : '未启用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="note" label="备注" min-width="200" show-overflow-tooltip />
+        <el-table-column label="操作" width="140" fixed="right">
+          <template #default="scope">
+            <el-button link type="primary" @click="handleEditRoute(scope.row)">编辑</el-button>
+            <el-button link type="danger" @click="delRoute(scope.row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
     <el-dialog title="AI模型配置" v-model="data.formVisible" width="48%" destroy-on-close>
       <el-form
         ref="formRef"
@@ -88,12 +128,12 @@
         <!-- 模型用途下拉框，写入 data.form.model_type；change 时联动填默认模型名和超时秒数 -->
         <el-form-item label="模型用途" prop="model_type">
           <el-select v-model="data.form.model_type" style="width: 100%" @change="changeModelType">
-            <el-option label="音视频转写" value="TRANSCRIPTION"></el-option>
-            <el-option label="会议纪要" value="MINUTES"></el-option>
-            <el-option label="纪要自检" value="AGENT"></el-option>
-            <el-option label="说话人匹配" value="SPEAKER"></el-option>
-            <el-option label="向量嵌入" value="EMBEDDING"></el-option>
-            <el-option label="跨族裁判" value="JUDGE"></el-option>
+            <el-option
+              v-for="item in MODEL_TYPE_OPTIONS"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            ></el-option>
           </el-select>
         </el-form-item>
         <!-- 服务协议只读，切换用途时由 changeModelType 自动填，转写和另外两类不是同一种协议 -->
@@ -158,6 +198,60 @@
         <el-button type="primary" @click="save">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 新增/编辑模型路由 -->
+    <el-dialog title="模型路由" v-model="routeData.visible" width="480px" destroy-on-close>
+      <el-form
+        ref="routeFormRef"
+        :model="routeData.form"
+        :rules="routeData.rules"
+        label-width="90px"
+      >
+        <el-form-item label="调用类型" prop="route_key">
+          <el-select
+            v-model="routeData.form.route_key"
+            style="width: 100%"
+            :disabled="Boolean(routeData.form.id)"
+          >
+            <el-option
+              v-for="item in availableRouteKeys"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            ></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="模型配置" prop="model_config_id">
+          <el-select
+            v-model="routeData.form.model_config_id"
+            filterable
+            style="width: 100%"
+            placeholder="请选择模型配置"
+          >
+            <el-option
+              v-for="item in routeData.options"
+              :key="item.id"
+              :label="optionLabel(item)"
+              :value="item.id"
+            ></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="启用">
+          <el-switch v-model="routeData.form.enabled"></el-switch>
+          <span class="route-switch-tip">关闭后该调用类型回退到原用途模型</span>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input
+            v-model="routeData.form.note"
+            placeholder="例如：成本实验，观察一周后再决定是否保留"
+          ></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="routeData.visible = false">取消</el-button>
+        <el-button type="primary" @click="saveRoute">确定</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -165,6 +259,22 @@
 import { computed, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox, type FormRules } from 'element-plus'
 import request, { type PageData } from '@/utils/request'
+import {
+  addModelRoute,
+  deleteModelRoute,
+  listAiModelOptions,
+  listModelRoutes,
+  updateModelRoute,
+  type AiModelOption,
+  type AiModelRoute,
+  type AiModelRoutePayload,
+} from '@/api/aiModel'
+import {
+  MODEL_ROUTE_OPTIONS,
+  MODEL_TYPE_OPTIONS,
+  modelRouteText,
+  modelTypeText,
+} from '@/constants/label'
 
 // 表格行来自 /aiModel/selectPage 返回的 ai_model_config；api_key 是后端做过掩码的字符串
 interface AiModelRow {
@@ -269,16 +379,6 @@ const load = () => {
     })
 }
 
-const modelTypeText = (value) =>
-  ({
-    TRANSCRIPTION: '音视频转写',
-    MINUTES: '会议纪要',
-    AGENT: '纪要自检',
-    SPEAKER: '说话人匹配',
-    EMBEDDING: '向量嵌入',
-    JUDGE: '跨族裁判',
-  })[value] || value
-
 // 微元（1e-6 元）→ 元，去掉多余的 0；成本在库里是整数微元，展示时才换算
 const formatMicro = (value: number) => {
   const micro = Number(value || 0)
@@ -325,6 +425,13 @@ const MODEL_DEFAULTS = {
     base_url: 'https://api.deepseek.com',
     model_name: 'deepseek-flash',
     timeout_seconds: 180,
+    provider: 'OPENAI_COMPATIBLE',
+  },
+  // 低成本模型：模型路由的回退目标（会话摘要、检索改写等不要求强模型的调用）
+  CHEAP: {
+    base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model_name: 'qwen-turbo',
+    timeout_seconds: 120,
     provider: 'OPENAI_COMPATIBLE',
   },
 }
@@ -430,5 +537,173 @@ const reset = () => {
   load()
 }
 
+// ---- 模型路由：列表 + 表单 ----
+
+interface AiModelRouteForm {
+  id?: number
+  route_key: string
+  model_config_id?: number
+  enabled: boolean
+  note: string
+}
+
+const routeFormRef = ref()
+
+const routeData = reactive({
+  list: [] as AiModelRoute[],
+  options: [] as AiModelOption[],
+  visible: false,
+  loading: false,
+  form: {} as AiModelRouteForm,
+  rules: {
+    route_key: [{ required: true, message: '请选择调用类型', trigger: 'change' }],
+    model_config_id: [{ required: true, message: '请选择模型配置', trigger: 'change' }],
+  } as FormRules,
+})
+
+/** 新增时只列还没用过的调用类型：route_key 在库里有唯一约束。 */
+const availableRouteKeys = computed(() => {
+  if (routeData.form.id) return MODEL_ROUTE_OPTIONS
+  const used = new Set(routeData.list.map((item) => item.route_key))
+  return MODEL_ROUTE_OPTIONS.filter((item) => !used.has(item.value))
+})
+
+const optionLabel = (item: AiModelOption) =>
+  `${item.name} / ${item.model_name}${item.enabled ? '' : '（未启用）'}`
+
+/** 路由行的模型名：优先按配置 id 找配置名称，找不到时用后端联表带出的 model_name。 */
+const routeLabel = (raw: unknown) => {
+  const row = raw as AiModelRoute
+  const option = routeData.options.find((item) => item.id === row.model_config_id)
+  if (option) return optionLabel(option)
+  return row.model_name || `配置 #${row.model_config_id}`
+}
+
+const loadRoutes = () => {
+  routeData.loading = true
+  listModelRoutes()
+    .then((res) => {
+      routeData.list = res.data || []
+    })
+    .catch(() => {
+      // 错误提示由 request 拦截器统一弹出
+    })
+    .finally(() => (routeData.loading = false))
+}
+
+const loadRouteOptions = () => {
+  if (routeData.options.length) return
+  listAiModelOptions()
+    .then((res) => {
+      routeData.options = res.data?.list || []
+      // 老配置列表里没有 model_name 的兜底展示
+      routeData.options = routeData.options.map((item) => ({
+        ...item,
+        name: item.name || `配置 #${item.id}`,
+      }))
+    })
+    .catch(() => {})
+}
+
+const handleAddRoute = () => {
+  routeData.form = { route_key: '', model_config_id: undefined, enabled: true, note: '' }
+  routeData.visible = true
+  loadRouteOptions()
+}
+
+const handleEditRoute = (raw: unknown) => {
+  const row = raw as AiModelRoute
+  routeData.form = {
+    id: row.id,
+    route_key: row.route_key,
+    model_config_id: row.model_config_id,
+    enabled: row.enabled,
+    note: row.note || '',
+  }
+  routeData.visible = true
+  loadRouteOptions()
+}
+
+const saveRoute = () => {
+  routeFormRef.value.validate((valid: boolean) => {
+    if (!valid) return
+    // 表单校验保证 model_config_id 有值；收窄成 number 再提交
+    const modelConfigId = routeData.form.model_config_id
+    if (typeof modelConfigId !== 'number') return
+    const payload: AiModelRoutePayload = {
+      route_key: routeData.form.route_key,
+      model_config_id: modelConfigId,
+      enabled: routeData.form.enabled,
+      note: routeData.form.note || null,
+    }
+    const action = routeData.form.id
+      ? updateModelRoute(routeData.form.id, payload)
+      : addModelRoute(payload)
+    action
+      .then((res) => {
+        if (res.code === '200') {
+          ElMessage.success('保存成功')
+          routeData.visible = false
+          loadRoutes()
+        } else {
+          ElMessage.error(res.msg)
+        }
+      })
+      .catch(() => {})
+  })
+}
+
+const delRoute = (raw: unknown) => {
+  const row = raw as AiModelRoute
+  ElMessageBox.confirm(
+    `确定删除「${modelRouteText(row.route_key)}」的模型路由吗？删除后回退到原用途模型。`,
+    '删除路由',
+    { type: 'warning' },
+  )
+    .then(() => deleteModelRoute(row.id))
+    .then((res) => {
+      if (res.code === '200') {
+        ElMessage.success('删除成功')
+        loadRoutes()
+      } else {
+        ElMessage.error(res.msg)
+      }
+    })
+    .catch(() => {})
+}
+
 load()
+loadRouteOptions()
+loadRoutes()
 </script>
+
+<style scoped>
+.route-card {
+  margin-top: 10px;
+}
+
+.route-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.route-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: rgba(17, 24, 39, 0.9);
+}
+
+.route-tip {
+  font-size: 12px;
+  color: rgba(17, 24, 39, 0.45);
+  margin-left: 12px;
+}
+
+.route-switch-tip {
+  margin-left: 10px;
+  font-size: 12px;
+  color: rgba(17, 24, 39, 0.55);
+}
+</style>

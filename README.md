@@ -2,7 +2,7 @@
 
 **一场会开完，纪要已经能用了。**
 
-录音或视频传进来，MeetingBot 负责剩下的：转写（谁说了什么）→ 六字段结构化纪要 → Agent 对着原文自检一遍 → 人工确认归档 → 进知识库可检索可问答（答案带可点回的引用）。FastAPI + Vue 3 + MySQL + PostgreSQL（pgvector + ParadeDB BM25 + checkpoint）+ LangGraph + Temporal + MCP，Docker Compose 一条命令起全套。
+录音或视频传进来，MeetingBot 负责剩下的：转写（谁说了什么）→ 六字段结构化纪要 → Agent 对着原文自检一遍 → 人工确认归档 → 进知识库可检索可问答（答案带可点回的引用）。会议可以归入系列，确认后的决策/待办进入系列级长期记忆与看板；问答按会议或系列收窄，工具只读、人拍板才算数。FastAPI + Vue 3 + MySQL + PostgreSQL（pgvector + ParadeDB BM25 + checkpoint）+ LangGraph + Temporal + MCP，Docker Compose 一条命令起全套。
 
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-asyncio-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -78,17 +78,29 @@
 
 ## 问答：一个工具层，两种传输
 
-- 单 Agent + 四工具（检索 / 结构化事实 / 取纪要 / 取转写原文）：业界建议 3–5 个，每多一个都降低选择可靠性
+- 单 Agent + 五工具（检索 / 结构化事实 / 取纪要 / 取转写原文 / 查已确认状态）：业界建议 3–5 个，每多一个都降低选择可靠性
 - 事实类问题走**具名参数查询**，不做自由文本转 SQL（那同时带来注入面与幻觉 SQL）
 - 三道硬闸由代码兜住：最大轮数、token/成本预算、停滞检测——终止由模型判定，上限必须由代码守
 - 回答逐 token 经 SSE 推送（`astream_events` v2，15 秒心跳，反代禁用缓冲），引用编号由宿主分配、答案写 `[n]`，页面渲染成可点回原句的卡片
+- **状态查询**：`query_meeting_state` 只返回人工确认过的决策/结论、有效待办与本人偏好；待办状态以 `action_item` 为准，未确认候选不得当事实
+- **注入防护**：转写/材料/工具结果一律标注为 `trust=untrusted`，指令层级写进系统提示；命中只加警示与留痕，不改证据原文（否则引用无法定位）
 - **MCP**：同一组工具以 streamable HTTP 挂在 `/mcp`（stateless），鉴权复用同一个 JWT 校验（含密码指纹），权限判在工具内部——所以中间件（限流/追踪）随父应用自动继承，也不存在"MCP 侧忘了判权"这条路
+
+## 系列、记忆与待办：跨会议的事实层
+
+- **系列**：一场会最多归入一个系列（周会/项目例会）；系列可见 = 旗下至少一场会可见，编辑 = 负责人或管理员。支持手动归类与「建议系列」（相似标题 + 参会人重叠 + 主持人，只建议不自动写）
+- **记忆**：系列级决策/结论 + 用户级偏好，分 PROPOSED → CONFIRMED；只有确认后的条目进入问答工具；同 scope/kind 冲突时由人选择「替代」，旧条标 SUPERSEDED 并保留有效期
+- **待办**：确认纪要的待办条目自动生成，同一系列内按归一化文本去重/结转；状态 OPEN/DONE/BLOCKED/CANCELLED 只能在页面改，每次变更写 `action_item_event` 留痕
+- **范围**：问答可按会议或按系列建会话；系列只存 id，每轮按当前可见会议展开，权限收回后旧会话自然看不到新内容
+- **Agent 只读**：没有写工具；"改状态/确认记忆"只发生在页面，工具只负责查
 
 ## 观测：每次调用都记账
 
 - 每次模型调用写一行 `ai_call_log`：调用类型、耗时、Token、失败原因——「一行 = 一次真实调用」
 - 失败分类器把超时 / 连接 / 限流 / 服务端错误分开，重试策略只对瞬态错误生效
 - 观测页按天汇总趋势、成功率与模型排行，员工视角按业务归属过滤
+- 在线评测（管理员手动触发、单次 ≤50 条）用 JUDGE 模型给最近回答打忠实度/相关性，结果只做趋势与回归输入，不替代离线评测
+- 成本看板按会议归因、按问答轮均摊，缓存命中只报供应商上报的 `cache_read`/`cached_tokens`；模型路由为空时行为与改造前一致，路由默认关闭
 
 ## 架构
 
@@ -185,8 +197,8 @@ cp meetingbot/fastapi-app/.env.example meetingbot/fastapi-app/.env
 
 ```bash
 make -C evaluation smoke    # 零调用回归：契约不变量 / 证据可定位率 / 问答引用不变量 / 可靠性复算
-make -C evaluation test     # 评测侧单测（293 项）
-cd meetingbot/fastapi-app && .venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # 产品侧单测（576 项）
+make -C evaluation test     # 评测侧单测（330 项）
+cd meetingbot/fastapi-app && .venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # 产品侧单测（615 项）
 cd meetingbot/vue && npm ci && npm run type-check && npm run lint && npm run test   # 前端：类型 / lint / 单测
 ```
 

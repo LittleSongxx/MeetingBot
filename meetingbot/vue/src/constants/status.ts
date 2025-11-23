@@ -70,3 +70,61 @@ export const INVITATION_STATUS_TEXT = (status) =>
 // 参会角色（Meeting 详情）
 export const PARTICIPANT_ROLE_TEXT = (role) =>
   ({ CREATOR: '创建人', HOST: '主持人', PARTICIPANT: '参会人' })[role] || role
+
+// 状态机 F：会议系列（MeetingSeries 页面）
+export const SERIES_STATUS = make({
+  ACTIVE: ['进行中', 'success'],
+  ARCHIVED: ['已归档', 'info'],
+})
+
+// 系列周期：不是状态机，但页面下拉与表格需要同一套中文名
+export const SERIES_CADENCE = make({
+  WEEKLY: ['每周', ''],
+  BIWEEKLY: ['每两周', ''],
+  MONTHLY: ['每月', ''],
+  IRREGULAR: ['不定期', ''],
+})
+
+// 状态机 G：待办（ActionItems 页面 / ActionItemBoard 组件）
+export const ACTION_ITEM_STATUS = make({
+  OPEN: ['待处理', 'warning'],
+  DONE: ['已完成', 'success'],
+  BLOCKED: ['受阻', 'danger'],
+  CANCELLED: ['已取消', 'info'],
+})
+
+// 状态机 H：长期记忆（Memory 页面 / MemoryReview 组件）
+export const MEMORY_STATUS = make({
+  PROPOSED: ['待确认', 'warning'],
+  CONFIRMED: ['已确认', 'success'],
+  REJECTED: ['已拒绝', 'info'],
+  EXPIRED: ['已过期', 'info'],
+  SUPERSEDED: ['已被替代', 'info'],
+})
+
+// 记忆类型与作用域：下拉选项与卡片标签共用
+export const MEMORY_KIND = make({
+  DECISION: ['决策', 'primary'],
+  CONCLUSION: ['结论', 'success'],
+  PREFERENCE: ['偏好', 'warning'],
+})
+
+export const MEMORY_SCOPE = make({
+  SERIES: ['会议系列', 'primary'],
+  USER: ['个人偏好', 'warning'],
+})
+
+const MEMORY_SOURCE_TEXT_MAP: Record<string, string> = {
+  MINUTES: '会议纪要',
+  MANUAL: '人工录入',
+}
+
+export const MEMORY_SOURCE_TEXT = (source?: string) =>
+  (source && MEMORY_SOURCE_TEXT_MAP[source]) || source || ''
+
+// 状态机 I：在线评测运行（Observability 页面 / OnlineEvalPanel 组件）
+export const ONLINE_EVAL_STATUS = make({
+  RUNNING: ['评测中', 'warning'],
+  DONE: ['已完成', 'success'],
+  FAILED: ['评测失败', 'danger'],
+})

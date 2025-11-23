@@ -59,6 +59,8 @@
               <span>会议中心</span>
             </template>
             <el-menu-item index="/manager/meeting">会议管理</el-menu-item>
+            <el-menu-item index="/manager/series">会议系列</el-menu-item>
+            <el-menu-item index="/manager/actionItems">待办事项</el-menu-item>
             <el-menu-item index="/manager/meetingMaterial">会议资料</el-menu-item>
             <el-menu-item index="/manager/transcription">转写任务</el-menu-item>
             <el-menu-item index="/manager/meetingMinutes">会议纪要</el-menu-item>
@@ -70,6 +72,7 @@
             </template>
             <!-- 知识问答：检索 + 带引用回答，入口放在智能助手组里 -->
             <el-menu-item index="/manager/chat">知识问答</el-menu-item>
+            <el-menu-item index="/manager/memory">长期记忆</el-menu-item>
             <el-menu-item index="/manager/agent">纪要自检</el-menu-item>
             <el-menu-item index="/manager/observability">运行观测</el-menu-item>
           </el-sub-menu>

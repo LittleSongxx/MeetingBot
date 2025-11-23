@@ -168,12 +168,14 @@ CREATE TABLE `meeting`  (
   `host_id` int NOT NULL COMMENT '主持人用户ID',
   `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'SCHEDULED' COMMENT '状态：SCHEDULED待开始、IN_PROGRESS进行中、FINISHED已结束、CANCELLED已取消',
   `cancel_reason` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '取消原因',
+  `series_id` int NULL DEFAULT NULL COMMENT '所属会议系列ID（为空表示尚未归类）',
   `create_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
   `update_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_meeting_no`(`meeting_no` ASC) USING BTREE,
   INDEX `idx_meeting_creator_id`(`creator_id` ASC) USING BTREE,
   INDEX `idx_meeting_host_id`(`host_id` ASC) USING BTREE,
+  INDEX `idx_meeting_series`(`series_id` ASC) USING BTREE,
   INDEX `idx_meeting_status_start_time`(`status` ASC, `start_time` ASC) USING BTREE,
   INDEX `idx_meeting_start_creator_status`(`start_time` ASC, `creator_id` ASC, `status` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会议表' ROW_FORMAT = Dynamic;
@@ -460,6 +462,7 @@ CREATE TABLE `chat_session`  (
   `user_id` int NOT NULL COMMENT '会话归属用户ID',
   `title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '新对话' COMMENT '会话标题（首次提问前若干字）',
   `scope_meeting_ids` json NOT NULL COMMENT '本次对话限定的会议ID数组，空数组表示不限（权限仍按用户实时判定）',
+  `scope_series_ids` json NOT NULL COMMENT '本次对话限定的系列ID数组；每轮按当前可见会议展开，权限仍实时判定',
   `summary` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '滑窗之外历史的滚动摘要',
   `summary_upto_message_id` int NOT NULL DEFAULT 0 COMMENT '摘要已覆盖到的消息ID（水位线）',
   `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ACTIVE' COMMENT '状态：ACTIVE、DELETED',
@@ -498,5 +501,158 @@ CREATE TABLE `chat_message`  (
   INDEX `idx_chat_message_run_status`(`run_status` ASC) USING BTREE,
   INDEX `idx_chat_message_trace`(`trace_id` ASC) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '知识问答消息表' ROW_FORMAT = Dynamic;
+
+
+-- ----------------------------
+-- Table structure for meeting_series
+-- ----------------------------
+DROP TABLE IF EXISTS `meeting_series`;
+CREATE TABLE `meeting_series`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '系列ID',
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '系列名称',
+  `description` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '系列说明',
+  `cadence` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'IRREGULAR' COMMENT '周期：WEEKLY/BIWEEKLY/MONTHLY/IRREGULAR',
+  `owner_id` int NOT NULL COMMENT '系列负责人用户ID',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE/ARCHIVED',
+  `create_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `update_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_series_owner`(`owner_id` ASC) USING BTREE,
+  INDEX `idx_series_status`(`status` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会议系列表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for meeting_memory
+-- ----------------------------
+DROP TABLE IF EXISTS `meeting_memory`;
+CREATE TABLE `meeting_memory`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '记忆ID',
+  `scope_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'SERIES/USER',
+  `scope_id` int NOT NULL COMMENT '系列ID或用户ID',
+  `kind` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'DECISION/CONCLUSION/PREFERENCE',
+  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '记忆正文',
+  `normalized` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '归一化文本（去重/冲突检测）',
+  `source_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'MANUAL' COMMENT 'MINUTES/MANUAL',
+  `source_id` int NULL DEFAULT NULL COMMENT '纪要ID或手工记录ID',
+  `source_meeting_id` int NULL DEFAULT NULL COMMENT '来源会议ID',
+  `evidence_json` json NULL COMMENT '证据片段（quote/start_ms/end_ms/speaker）',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PROPOSED' COMMENT 'PROPOSED/CONFIRMED/REJECTED/EXPIRED/SUPERSEDED',
+  `supersedes_id` int NULL DEFAULT NULL COMMENT '被本条替代的旧记忆ID',
+  `valid_from` datetime(6) NULL DEFAULT NULL COMMENT '生效时间',
+  `valid_to` datetime(6) NULL DEFAULT NULL COMMENT '失效时间',
+  `created_by` int NOT NULL COMMENT '创建人用户ID',
+  `confirmed_by` int NULL DEFAULT NULL COMMENT '确认人用户ID',
+  `confirmed_time` datetime(6) NULL DEFAULT NULL COMMENT '确认时间',
+  `create_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `update_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_memory_scope_status`(`scope_type` ASC, `scope_id` ASC, `status` ASC) USING BTREE,
+  INDEX `idx_memory_kind`(`kind` ASC) USING BTREE,
+  INDEX `idx_memory_source`(`source_type` ASC, `source_id` ASC) USING BTREE,
+  INDEX `idx_memory_supersedes`(`supersedes_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '长期记忆表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for action_item
+-- ----------------------------
+DROP TABLE IF EXISTS `action_item`;
+CREATE TABLE `action_item`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '待办ID',
+  `series_id` int NULL DEFAULT NULL COMMENT '所属系列ID',
+  `meeting_id` int NOT NULL COMMENT '来源会议ID',
+  `minutes_id` int NULL DEFAULT NULL COMMENT '来源纪要ID',
+  `source_field` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '来源字段（pending_items）',
+  `source_index` int NULL DEFAULT NULL COMMENT '来源条目序号',
+  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '待办内容',
+  `owner_user_id` int NULL DEFAULT NULL COMMENT '负责人用户ID（匹配到员工时）',
+  `owner_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '负责人原文（未匹配时）',
+  `deadline` datetime(6) NULL DEFAULT NULL COMMENT '解析出的截止时间',
+  `deadline_text` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '期限原文',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'OPEN' COMMENT 'OPEN/DONE/BLOCKED/CANCELLED',
+  `evidence_json` json NULL COMMENT '证据片段',
+  `dedupe_key` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '系列内去重键',
+  `last_seen_meeting_id` int NULL DEFAULT NULL COMMENT '最后一次被提及的会议ID',
+  `created_by` int NOT NULL COMMENT '创建人用户ID',
+  `create_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `update_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_action_series_status`(`series_id` ASC, `status` ASC) USING BTREE,
+  INDEX `idx_action_meeting`(`meeting_id` ASC) USING BTREE,
+  INDEX `idx_action_owner`(`owner_user_id` ASC) USING BTREE,
+  INDEX `idx_action_dedupe`(`dedupe_key` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会议待办表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for action_item_event
+-- ----------------------------
+DROP TABLE IF EXISTS `action_item_event`;
+CREATE TABLE `action_item_event`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '事件ID',
+  `action_item_id` int NOT NULL COMMENT '待办ID',
+  `event_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'CREATE/STATUS/OWNER/DEADLINE/CARRY_OVER',
+  `from_value` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '变更前',
+  `to_value` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '变更后',
+  `note` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '备注',
+  `actor_id` int NOT NULL COMMENT '操作人用户ID',
+  `create_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_action_event_item_time`(`action_item_id` ASC, `create_time` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '待办变更事件表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for model_route
+-- ----------------------------
+DROP TABLE IF EXISTS `model_route`;
+CREATE TABLE `model_route`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '路由ID',
+  `route_key` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '路由键',
+  `model_config_id` int NOT NULL COMMENT '目标模型配置ID',
+  `enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否启用',
+  `note` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '备注',
+  `create_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `update_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_model_route_key`(`route_key` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '模型路由表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for online_eval_run
+-- ----------------------------
+DROP TABLE IF EXISTS `online_eval_run`;
+CREATE TABLE `online_eval_run`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '运行ID',
+  `triggered_by` int NOT NULL COMMENT '触发人用户ID',
+  `sample_size` int NOT NULL DEFAULT 0 COMMENT '样本数',
+  `model_config_id` int NOT NULL COMMENT '判定模型配置ID',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'RUNNING' COMMENT 'RUNNING/DONE/FAILED',
+  `started_at` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '开始时间',
+  `finished_at` datetime(6) NULL DEFAULT NULL COMMENT '结束时间',
+  `summary_json` json NULL COMMENT '聚合指标与失败样例',
+  `error_message` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '失败原因',
+  `update_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_online_eval_status_time`(`status` ASC, `started_at` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '在线评测运行表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for online_eval_case
+-- ----------------------------
+DROP TABLE IF EXISTS `online_eval_case`;
+CREATE TABLE `online_eval_case`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '结果ID',
+  `run_id` int NOT NULL COMMENT '运行ID',
+  `chat_message_id` int NOT NULL COMMENT '被评测的助手消息ID',
+  `question` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '问题',
+  `answer` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '回答',
+  `citations_json` json NULL COMMENT '引用快照',
+  `tools_json` json NULL COMMENT '工具轨迹',
+  `scores_json` json NULL COMMENT '判定分数',
+  `judge_model` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '判定模型',
+  `error_message` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '失败原因',
+  `create_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_online_case_run`(`run_id` ASC) USING BTREE,
+  INDEX `idx_online_case_message`(`chat_message_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '在线评测结果表' ROW_FORMAT = Dynamic;
 
 SET FOREIGN_KEY_CHECKS = 1;

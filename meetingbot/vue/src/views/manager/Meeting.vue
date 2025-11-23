@@ -21,6 +21,21 @@
           :value="item.value"
         ></el-option>
       </el-select>
+      <!-- 系列筛选：与会议表单的系列下拉同源，清空表示全部系列 -->
+      <el-select
+        v-model="data.seriesId"
+        clearable
+        filterable
+        style="width: 190px; margin-right: 10px"
+        placeholder="全部系列"
+      >
+        <el-option
+          v-for="item in data.seriesOptions"
+          :key="item.id"
+          :label="item.name"
+          :value="item.id"
+        ></el-option>
+      </el-select>
       <!-- 视图下拉框，写入 data.viewType，决定后端按哪种范围过滤 -->
       <el-select v-model="data.viewType" style="width: 170px; margin-right: 10px">
         <!-- “全部会议”只对管理员出现，员工看不到这个选项 -->
@@ -40,6 +55,10 @@
         <el-table-column prop="meeting_no" label="会议编号" width="210" />
         <!-- show-overflow-tooltip 让超长主题以省略号显示，鼠标悬停看全文 -->
         <el-table-column prop="title" label="会议主题" min-width="180" show-overflow-tooltip />
+        <!-- 所属系列：未归类的会议显示占位符 -->
+        <el-table-column label="会议系列" width="140" show-overflow-tooltip>
+          <template #default="scope">{{ scope.row.series_name || '-' }}</template>
+        </el-table-column>
         <el-table-column prop="start_time" label="开始时间" width="175" />
         <el-table-column prop="end_time" label="结束时间" width="175" />
         <el-table-column prop="location" label="地点" min-width="140" show-overflow-tooltip />
@@ -65,6 +84,14 @@
               type="primary"
               @click="handleEdit(scope.row.id)"
               >编辑</el-button
+            >
+            <!-- 建议系列：按历史会议内容推荐候选系列，并给出可核对的理由 -->
+            <el-button
+              v-if="data.user.role === 'ADMIN' || scope.row.creator_id === data.user.id"
+              link
+              type="primary"
+              @click="openSuggest(scope.row)"
+              >建议系列</el-button
             >
             <!-- 待开始的会议可以“开始” -->
             <el-button
@@ -126,6 +153,23 @@
         <!-- 会议主题，必填，写入 data.form.title -->
         <el-form-item label="会议主题" prop="title">
           <el-input v-model="data.form.title" placeholder="请输入会议主题"></el-input>
+        </el-form-item>
+        <!-- 所属系列，选填；留空表示暂不归类 -->
+        <el-form-item label="会议系列">
+          <el-select
+            v-model="data.form.series_id"
+            clearable
+            filterable
+            style="width: 100%"
+            placeholder="请选择会议系列（可留空）"
+          >
+            <el-option
+              v-for="item in data.seriesOptions"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            ></el-option>
+          </el-select>
         </el-form-item>
         <el-row :gutter="16">
           <el-col :span="12">
@@ -224,6 +268,9 @@
         <el-descriptions-item label="会议主题" :span="2">{{
           data.detail.title
         }}</el-descriptions-item>
+        <el-descriptions-item label="会议系列">{{
+          data.detail.series_name || '-'
+        }}</el-descriptions-item>
         <el-descriptions-item label="开始时间">{{ data.detail.start_time }}</el-descriptions-item>
         <el-descriptions-item label="结束时间">{{ data.detail.end_time }}</el-descriptions-item>
         <el-descriptions-item label="创建人">{{ data.detail.creator_name }}</el-descriptions-item>
@@ -256,6 +303,39 @@
         </el-table-column>
       </el-table>
     </el-dialog>
+
+    <!-- 建议系列：为这场会议推荐候选系列 -->
+    <el-dialog title="建议系列" v-model="data.suggestVisible" width="620px" destroy-on-close>
+      <div class="suggest-tip">
+        会议「{{ data.suggestMeetingTitle }}」可能属于以下系列（按历史内容相似度排序）。
+        归入系列会写回会议，只有仍可编辑（待开始）的会议能改。
+      </div>
+      <div v-loading="data.suggestLoading">
+        <div v-if="data.suggestions.length" class="suggest-list">
+          <div
+            v-for="candidate in data.suggestions"
+            :key="candidate.series_id"
+            class="suggest-item"
+          >
+            <div class="suggest-head">
+              <span class="suggest-name">{{ candidate.name }}</span>
+              <span class="suggest-score">相似度 {{ formatPercent(candidate.score) }}</span>
+              <el-button link type="primary" @click="applySuggestion(candidate)">
+                归入该系列
+              </el-button>
+            </div>
+            <ul v-if="candidate.reasons?.length" class="suggest-reasons">
+              <li v-for="(reason, index) in candidate.reasons" :key="index">{{ reason }}</li>
+            </ul>
+          </div>
+        </div>
+        <el-empty
+          v-else-if="data.suggested"
+          description="没有找到合适的候选系列"
+          :image-size="60"
+        />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -265,6 +345,14 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { h } from 'vue'
 import request from '@/utils/request'
 import type { PageData } from '@/utils/request'
+import {
+  assignMeetingToSeries,
+  seriesOptions,
+  suggestSeries,
+  type SeriesOption,
+  type SeriesSuggestionCandidate,
+} from '@/api/series'
+import { formatPercent } from '@/utils/format'
 import { MEETING_STATUS, INVITATION_STATUS_TEXT, PARTICIPANT_ROLE_TEXT } from '@/constants/status'
 import router from '@/router/index'
 
@@ -287,6 +375,9 @@ interface MeetingItem {
   // 编辑弹窗回填主持人下拉框；canManage 用它判断当前用户是不是主持人
   host_id: number
   host_name: string | null
+  // 所属会议系列；未归类时为 null
+  series_id: number | null
+  series_name: string | null
   // 接口返回的状态码，交给 MEETING_STATUS 翻中文、取标签颜色
   status: string
   // 只有取消过的会议才有值，详情弹窗据此决定那一行是否渲染
@@ -332,6 +423,8 @@ interface MeetingForm {
   host_id?: number
   participant_ids?: number[]
   agenda?: string | null
+  // 所属系列；清空时归一化成 null 再提交
+  series_id?: number | null
 }
 
 // 删除确认框里的连带数据统计（/meeting/deletePreview/{meeting_id} 返回）
@@ -375,6 +468,18 @@ interface MeetingPageState {
   status: MeetingStatusFilter
   // 顶部视图下拉框。管理员默认看全部会议，员工默认看我的会议
   viewType: MeetingViewType
+  // 顶部系列筛选；null 表示全部系列
+  seriesId: number | null
+  // 会议表单/系列筛公共的系列下拉选项
+  seriesOptions: SeriesOption[]
+  // 建议系列弹窗
+  suggestVisible: boolean
+  suggestMeetingId: number | null
+  suggestMeetingTitle: string
+  suggestLoading: boolean
+  // 是否已经拿到过一次建议结果（用来区分"还没查"与"查了没有候选"）
+  suggested: boolean
+  suggestions: SeriesSuggestionCandidate[]
   // 当前页码
   pageNum: number
   // 每页条数
@@ -410,6 +515,17 @@ const data = reactive<MeetingPageState>({
   status: '',
   // 顶部视图下拉框。管理员默认看全部会议，员工默认看我的会议
   viewType: user.role === 'ADMIN' ? 'ALL' : 'MY',
+  // 顶部系列筛选（空表示全部）
+  seriesId: null,
+  // 系列下拉选项
+  seriesOptions: [],
+  // 建议系列弹窗
+  suggestVisible: false,
+  suggestMeetingId: null,
+  suggestMeetingTitle: '',
+  suggestLoading: false,
+  suggested: false,
+  suggestions: [],
   // 当前页码
   pageNum: 1,
   // 每页条数
@@ -476,6 +592,8 @@ const load = () => {
         status: data.status,
         // 视图下拉框的值，决定后端的数据范围
         view_type: data.viewType,
+        // 系列筛选；清空后可能是空串，转成 undefined 让 Axios 不拼这个参数
+        series_id: typeof data.seriesId === 'number' ? data.seriesId : undefined,
         // 当前页码
         page_num: data.pageNum,
         // 每页条数
@@ -503,13 +621,68 @@ const loadCandidates = () => {
   })
 }
 
+/** 系列下拉选项与候选人一样按需加载：不进弹窗就不发这个请求 */
+const loadSeriesOptions = () => {
+  if (data.seriesOptions.length) return
+  seriesOptions()
+    .then((res) => {
+      data.seriesOptions = res.data || []
+    })
+    .catch(() => {})
+}
+
+/** 打开"建议系列"弹窗并立即请求推荐：候选择序与理由都由后端算好 */
+const openSuggest = (row) => {
+  data.suggestMeetingId = row.id
+  data.suggestMeetingTitle = row.title
+  data.suggestions = []
+  data.suggested = false
+  data.suggestVisible = true
+  data.suggestLoading = true
+  suggestSeries(row.id)
+    .then((res) => {
+      data.suggestions = res.data?.candidates || []
+      data.suggested = true
+    })
+    .catch(() => {
+      data.suggestions = []
+    })
+    .finally(() => (data.suggestLoading = false))
+}
+
+/** 应用建议：复用会议更新接口把 series_id 写进会议 */
+const applySuggestion = (candidate: SeriesSuggestionCandidate) => {
+  const meetingId = data.suggestMeetingId
+  if (!meetingId) return
+  ElMessageBox.confirm(`确定把这场会议归入系列“${candidate.name}”吗？`, '应用建议', {
+    type: 'warning',
+  })
+    .then(() => assignMeetingToSeries(meetingId, candidate.series_id))
+    .then((res) => {
+      if (res.code === '200') {
+        ElMessage.success('已归入系列')
+        data.suggestVisible = false
+        load()
+      } else {
+        ElMessage.error(res.msg)
+      }
+    })
+    .catch(() => {})
+}
+
 const handleAdd = () => {
   // 新表单没有 id，保存时走新增分支
   // 主持人默认是自己，参会人员默认也把自己放进去
-  data.form = { host_id: data.user.id, participant_ids: [data.user.id] }
+  data.form = {
+    host_id: data.user.id,
+    participant_ids: [data.user.id],
+    // 新建时默认不归类；清空下拉框时也回到 null
+    series_id: null,
+  }
   data.formVisible = true
-  // 打开弹窗时才拉候选人列表
+  // 打开弹窗时才拉候选人列表与系列选项
   loadCandidates()
+  loadSeriesOptions()
 }
 
 const handleEdit = (id: number) => {
@@ -519,8 +692,11 @@ const handleEdit = (id: number) => {
     if (res.code === '200') {
       // 深拷贝一份作为表单模型，弹窗里的改动不影响表格
       data.form = JSON.parse(JSON.stringify(res.data))
+      // 老接口可能还不返回 series_id：显式补 null，保证下拉框受控
+      if (typeof data.form.series_id !== 'number') data.form.series_id = null
       data.formVisible = true
       loadCandidates()
+      loadSeriesOptions()
     } else {
       ElMessage.error(res.msg)
     }
@@ -533,10 +709,15 @@ const save = () => {
     if (!valid) {
       return
     }
+    // 系列清空时 v-model 可能是空串：归一化成 null，避免后端把空串当 int 解析
+    const payload = {
+      ...data.form,
+      series_id: typeof data.form.series_id === 'number' ? data.form.series_id : null,
+    }
     // 有 id 走编辑，没有 id 走新增
     const action = data.form.id
-      ? request.put('/meeting/update', data.form)
-      : request.post('/meeting/add', data.form)
+      ? request.put('/meeting/update', payload)
+      : request.post('/meeting/add', payload)
     action.then((res) => {
       if (res.code === '200') {
         ElMessage.success('保存成功')
@@ -677,10 +858,61 @@ const reset = () => {
   data.status = ''
   // 视图回到各自角色的默认值，而不是清空
   data.viewType = data.user.role === 'ADMIN' ? 'ALL' : 'MY'
+  // 系列筛选回到全部
+  data.seriesId = null
   // 回到第一页
   data.pageNum = 1
   load()
 }
 
+loadSeriesOptions()
 load()
+
+// 从系列页/待办页带 meetingId 进来时，直接打开这场会议的详情
+const meetingIdParam = Number(router.currentRoute.value.query.meetingId)
+if (Number.isFinite(meetingIdParam) && meetingIdParam > 0) showDetail(meetingIdParam)
 </script>
+
+<style scoped>
+.suggest-tip {
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.55);
+  margin-bottom: 12px;
+}
+
+.suggest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.suggest-item {
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.suggest-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.suggest-name {
+  font-weight: 600;
+  color: rgba(17, 24, 39, 0.9);
+}
+
+.suggest-score {
+  font-size: 12px;
+  color: #409eff;
+}
+
+.suggest-reasons {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: rgba(17, 24, 39, 0.6);
+  line-height: 1.7;
+}
+</style>

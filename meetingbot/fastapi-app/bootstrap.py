@@ -52,6 +52,18 @@ async def main():
         ]
         # 跨族裁判是可选用途：只有显式给了 JUDGE_MODEL 才建配置；
         # 未配置时产品侧 resolve("JUDGE", fallback="AGENT") 自动回退。
+        cheap_model = (os.getenv("CHEAP_MODEL") or "").strip()
+        if cheap_model:
+            specs.append((
+                "CHEAP",
+                (os.getenv("CHEAP_API_KEY") or "").strip() or llm_key,
+                "OPENAI_COMPATIBLE",
+                (os.getenv("CHEAP_BASE_URL") or llm_url).rstrip("/"),
+                cheap_model,
+                int(os.getenv("CHEAP_TIMEOUT_SECONDS", "300")),
+                int(os.getenv("CHEAP_INPUT_PRICE_MICRO_PER_1K", "0")),
+                int(os.getenv("CHEAP_OUTPUT_PRICE_MICRO_PER_1K", "0")),
+            ))
         judge_model = (os.getenv("JUDGE_MODEL") or "").strip()
         if judge_model:
             specs.append((

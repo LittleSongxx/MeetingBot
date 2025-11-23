@@ -86,6 +86,7 @@ async def _persist_turn(assistant_row: ChatMessage, *, answer: str, stop_reason:
                         entity_note: str = "",
                         moderation_verdict: Any = None,
                         plan: dict[str, Any] | None = None,
+                        security: dict[str, Any] | None = None,
                         run_status: str = "FINISHED",
                         thread_id: str | None = None,
                         checkpoint_id: str | None = None,
@@ -97,6 +98,13 @@ async def _persist_turn(assistant_row: ChatMessage, *, answer: str, stop_reason:
     # 干脆不写引用（27 题回归 q27 变成 0 引用）。
     history = await _history_citations(assistant_row.session_id, assistant_row.id)
     used, unknown = _resolve_unknown_refs(answer, registry, history)
+    moderation_snapshot = (moderation_verdict.as_dict()
+                          if moderation_verdict is not None else None)
+    if security:
+        # 注入防护留痕与审核共用一列：两者都是"这一轮的安全扫描结果"，
+        # 页面/排障读同一个出口；不新增列，避免又一份会漂移的真相。
+        moderation_snapshot = dict(moderation_snapshot or {})
+        moderation_snapshot["security"] = security
     stored = {
         "citations": {
             "used": used,
@@ -113,8 +121,7 @@ async def _persist_turn(assistant_row: ChatMessage, *, answer: str, stop_reason:
         citations_json=stored["citations"], tools_json=stored["tools"],
         # 审核留痕：没命中时也写一行（enabled/matched=false），
         # 这样"这次扫过了没命中"与"这次根本没扫"在库里能分开
-        moderation_json=(moderation_verdict.as_dict() if moderation_verdict is not None
-                         else None),
+        moderation_json=moderation_snapshot,
         token_count=tokens["total_tokens"],
         # 失败原因优先；没有失败时，实体核查的标注也留在这里（页面按警告渲染），
         # 但 stop_reason 仍是 finished——标注不是失败

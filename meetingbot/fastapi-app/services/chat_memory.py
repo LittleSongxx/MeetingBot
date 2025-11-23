@@ -8,17 +8,17 @@ from typing import Any
 
 from common import access
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from models import ChatMessage, ChatSession, Meeting, User
+from models import ActionItem, ChatMessage, ChatSession, Meeting, MeetingSeries, User
 from tortoise.expressions import Q
 
 from services import (
+    model_config,
     model_factory,
 )
 from services.chat_prompts import (
     SUMMARY_CALL_TYPE,
     SUMMARY_SCHEMA,
     SUMMARY_SYSTEM_PROMPT,
-    get_model_config,
     get_system_prompt,
 )
 from services.chat_sessions import MESSAGE_ASSISTANT, MESSAGE_USER
@@ -67,6 +67,22 @@ async def build_memory(session: ChatSession, user: User, *,
     """
     system = await get_system_prompt()
     messages: list[Any] = [SystemMessage(system)]
+    # 系列范围：只给"系列 + 会议数 + 未完成待办数"这种高信号小上下文；
+    # 具体条目仍走 query_meeting_state 工具按需取，避免每轮把记忆全塞进来。
+    series_scope = list(session.scope_series_ids or [])
+    if series_scope:
+        visible_series = await access.visible_series_ids(user, requested=series_scope)
+        visible_ids = series_scope if visible_series is None else visible_series
+        if visible_ids:
+            series_rows = await MeetingSeries.filter(id__in=visible_ids)
+            names = "、".join(f"{row.name}（id={row.id}）" for row in series_rows)
+            meeting_count = await Meeting.filter(series_id__in=visible_ids).count()
+            open_actions = await ActionItem.filter(
+                series_id__in=visible_ids, status="OPEN").count()
+            messages.append(SystemMessage(
+                f"本次对话限定在这些系列内：{names}；共 {meeting_count} 场会，"
+                f"其中未完成待办 {open_actions} 条。跨会议问题优先用 "
+                "query_meeting_state 查已确认决策/待办，再检索原文。"))
     scope = list(session.scope_meeting_ids or [])
     if scope:
         # 范围是建会话时的快照；权限可能后来被收回，标题也不能再进上下文
@@ -169,7 +185,11 @@ async def maybe_summarize(session: ChatSession, *, biz_id: int | None = None) ->
     if overflow < max(MIN_SUMMARY_BATCH, summary_threshold() - keep):
         return False
     batch = rows[:overflow]
-    config = await get_model_config()
+    try:
+        config = await model_config.resolve_route("CHAT_SUMMARY", "AGENT")
+    except model_config.ModelConfigError:
+        logger.exception("会话 %s 的摘要模型不可用，本轮跳过摘要", session.id)
+        return False
     transcript = _summary_transcript(batch)
     prompt = (f"已有摘要：\n{session.summary or '（无）'}\n\n新增对话：\n{transcript}\n\n"
               "请输出合并后的摘要。")

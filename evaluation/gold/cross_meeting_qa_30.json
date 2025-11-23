@@ -1,0 +1,801 @@
+{
+  "name": "系列 / 跨会议 / 时间推理问答骨架 30 题（代理起草，未人工复核）",
+  "purpose": "P0 系列/长期记忆能力的问答骨架：先固定问题与 provenance，expected_facts/证据片段留空并标 todo，由人工对照转写与纪要补齐后再进判定。",
+  "label_source": "agent_draft",
+  "human_checked": false,
+  "discipline": "全部问题由代理起草、未经人工复核；expected_facts 一律为空，禁止把骨架当金标直接报准确率。人工补齐 expected_facts 与证据段落后，按 judges/rag.py 或 trajectory 口径评测。",
+  "corpus": {
+    "seed": "db/02-seed.sql 的产品发布评审会：meeting_id=2，两段录音（transcription_task 6=上午场、7=下午场）；系列 meeting_series id=1（产品发布评审系列）",
+    "series": [
+      {
+        "series_id": 1,
+        "name": "产品发布评审系列",
+        "meeting_ids": [
+          2
+        ],
+        "recordings": [
+          {
+            "task_id": 6,
+            "slot": "上午",
+            "recorded_at": "2026-09-10 09:00:00"
+          },
+          {
+            "task_id": 7,
+            "slot": "下午",
+            "recorded_at": "2026-09-10 14:00:00"
+          }
+        ]
+      }
+    ],
+    "real_content_note": "问题只引用种子会议/纪要/系列数据里真实存在的主题；expected_facts 不预填，避免编造答案。"
+  },
+  "intent_taxonomy": {
+    "cross_meeting": "需要两段录音/两场会分别取证后汇总",
+    "series_state": "查系列/个人已确认状态（决策/待办/偏好），应先用 query_meeting_state",
+    "temporal": "需要按时间顺序/先后关系推理（可跨两段录音）"
+  },
+  "todo": "每一题：人工对照转写与纪要补 expected_facts 与证据片段号（evidence_segments），确认 required_meetings/required_series 后把 human_checked 置 true；在此之前本集不能作为金标报准确率。",
+  "counts": {
+    "cross_meeting": 10,
+    "series_state": 10,
+    "temporal": 10
+  },
+  "cases": [
+    {
+      "case_id": "cm01",
+      "question": "发布公告与对外通稿分别由谁负责、什么时候完成？",
+      "intent": "cross_meeting",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 2,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：上午录音（task 6）定运营公告责任人，下午录音（task 7）定对外通稿责任人；两段各检索一次才能答全。"
+    },
+    {
+      "case_id": "cm02",
+      "question": "两段录音里分别提到了哪些风险？",
+      "intent": "cross_meeting",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 2,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：上午纪要的风险清单（含 4 项高风险）与下午纪要的报表导出改造风险。"
+    },
+    {
+      "case_id": "cm03",
+      "question": "发布时间的结论在两段录音里一致吗？分别怎么说？",
+      "intent": "cross_meeting",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 2,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：上午录音明确 9 月 1 日 9:00 发布；下午录音说 V2.0 按原计划时间发布（需核对两处口径）。"
+    },
+    {
+      "case_id": "cm04",
+      "question": "两段录音分别是上午还是下午的会、主题分别是什么？",
+      "intent": "cross_meeting",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 2,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：task 6 上午「产品上线复盘与下阶段发布准备」；task 7 下午「V2.0 产品发布评审」。"
+    },
+    {
+      "case_id": "cm05",
+      "question": "灰度这件事在两段录音里分别讨论到什么？",
+      "intent": "cross_meeting",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 2,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：上午灰度数据复盘（8/20 起、10%→30%、成功率）；下午灰度三阶段与回滚方案。"
+    },
+    {
+      "case_id": "cm06",
+      "question": "测试回归与对外通稿分别由谁负责？",
+      "intent": "cross_meeting",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 2,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：上午回归测试负责人（陈琳，8/31 12:00 前）；下午对外通稿负责人（刘颖）。"
+    },
+    {
+      "case_id": "cm07",
+      "question": "移动端附件下载与报表导出这两个问题，分别在哪段录音里讨论、怎么处理？",
+      "intent": "cross_meeting",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 2,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：移动端附件下载问题在上午录音（灰度反馈 + 发布前修复要求）；报表导出压测问题与异步改造方案在下午录音。两段各检索一次才能答全。"
+    },
+    {
+      "case_id": "cm08",
+      "question": "两段录音里的验收/回归要求分别是什么？",
+      "intent": "cross_meeting",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 2,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：上午两组补充验收（≥30 分钟真实录音、多角色说话人）与回归测试；下午 15/17 需求验收状态。"
+    },
+    {
+      "case_id": "cm09",
+      "question": "移动端附件下载问题在两段录音里分别是什么状态和安排？",
+      "intent": "cross_meeting",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 2,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：上午灰度反馈问题 + 发布前修复要求；下午纪要未见该问题的后续更新（作答时应如实说未提）。"
+    },
+    {
+      "case_id": "cm10",
+      "question": "客服支持与运营支持在两段录音里分别有什么安排？",
+      "intent": "cross_meeting",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 2,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：上午客服知识库/运营公告与观察指标；下午对外通稿与产品公告协同。"
+    },
+    {
+      "case_id": "cs01",
+      "question": "产品发布评审系列里，已经人工确认的发布决策是什么？",
+      "intent": "series_state",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "required_series": [
+        1
+      ],
+      "expected_tools": [
+        "query_meeting_state",
+        "search_knowledge"
+      ],
+      "min_tool_calls": 1,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：种子数据的 series 1 有一条 CONFIRMED 的 DECISION（9 月 1 日 9:00 发布）；expected_facts 待人工补全。"
+    },
+    {
+      "case_id": "cs02",
+      "question": "系列里移动端附件下载进度修复这件事，现在是已确认的决策还是未确认的候选？",
+      "intent": "series_state",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "required_series": [
+        1
+      ],
+      "expected_tools": [
+        "query_meeting_state"
+      ],
+      "min_tool_calls": 1,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：种子里该条 memory 状态为 PROPOSED（候选），不得当作已确认事实；对应待办 action_item 为 OPEN。"
+    },
+    {
+      "case_id": "cs03",
+      "question": "系列当前还开着哪些待办？负责人和截止时间分别是什么？",
+      "intent": "series_state",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "required_series": [
+        1
+      ],
+      "expected_tools": [
+        "query_meeting_state"
+      ],
+      "min_tool_calls": 1,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：种子里两条 OPEN action_item（王工 8/30 18:00、陈琳 8/31 12:00）。"
+    },
+    {
+      "case_id": "cs04",
+      "question": "系列里「回答先给结论，再给依据」这条偏好是谁的、是否已确认？",
+      "intent": "series_state",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "required_series": [
+        1
+      ],
+      "expected_tools": [
+        "query_meeting_state"
+      ],
+      "min_tool_calls": 1,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：种子里 scope=USER 的 PREFERENCE（CONFIRMED）；答题应说明来源与确认状态。"
+    },
+    {
+      "case_id": "cs05",
+      "question": "这个系列包含哪几段录音？它们的时间顺序是什么？",
+      "intent": "series_state",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "required_series": [
+        1
+      ],
+      "expected_tools": [
+        "query_meeting_state",
+        "search_knowledge"
+      ],
+      "min_tool_calls": 1,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：系列 1 只有会议 2，会议 2 下两段录音：task 6（上午）、task 7（下午）。"
+    },
+    {
+      "case_id": "cs06",
+      "question": "系列里最近一次会议形成的结论是什么？",
+      "intent": "series_state",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "required_series": [
+        1
+      ],
+      "expected_tools": [
+        "query_meeting_state"
+      ],
+      "min_tool_calls": 1,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：下午纪要（task 7）的三项结论；时间先后按录音/纪要时间判定。"
+    },
+    {
+      "case_id": "cs07",
+      "question": "系列里发布决策有没有被后续会议替代或修改？",
+      "intent": "series_state",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "required_series": [
+        1
+      ],
+      "expected_tools": [
+        "query_meeting_state"
+      ],
+      "min_tool_calls": 1,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：种子里该 DECISION 的 supersedes_id 为空、无替代记录；答题应区分「没有替代记录」与「确认没有变化」。"
+    },
+    {
+      "case_id": "cs08",
+      "question": "系列里报表导出相关的决定是否已经确认生效？",
+      "intent": "series_state",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "required_series": [
+        1
+      ],
+      "expected_tools": [
+        "query_meeting_state",
+        "search_knowledge"
+      ],
+      "min_tool_calls": 1,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：下午纪要（DRAFT）决定发布时隐藏报表导出入口；系列已确认记忆里目前没有该条，答题应如实说「未确认」并补原文出处。"
+    },
+    {
+      "case_id": "cs09",
+      "question": "系列里未确认的候选记忆应该怎么处理、能不能直接当作事实回答？",
+      "intent": "series_state",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "required_series": [
+        1
+      ],
+      "expected_tools": [
+        "query_meeting_state"
+      ],
+      "min_tool_calls": 1,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：产品规则「只返回 CONFIRMED 记忆」；此为行为约束题，expected_facts 留空。"
+    },
+    {
+      "case_id": "cs10",
+      "question": "项目现在处于什么状态？下一步要做什么？",
+      "intent": "series_state",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "required_series": [
+        1
+      ],
+      "expected_tools": [
+        "query_meeting_state",
+        "search_knowledge"
+      ],
+      "min_tool_calls": 1,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：系列已确认发布决策 + 两条 OPEN 待办；答题应分「已确认」「未完成」两类陈述。"
+    },
+    {
+      "case_id": "ct01",
+      "question": "上午会和下午会分别是在什么时间开的？谁先谁后？",
+      "intent": "temporal",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 2,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：task 6 录音时间 2026-09-10 09:00；task 7 录音时间 2026-09-10 14:00。"
+    },
+    {
+      "case_id": "ct02",
+      "question": "从灰度开始到正式发布，中间有哪些关键时间节点？",
+      "intent": "temporal",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 2,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：8/20 灰度开始→8/26 扩到 30%→8/30 附件修复截止→8/31 回归/专项评审→9/1 9:00 发布。"
+    },
+    {
+      "case_id": "ct03",
+      "question": "移动端附件下载修复的截止时间在正式发布之前还是之后？",
+      "intent": "temporal",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "query_meeting_state",
+        "search_knowledge"
+      ],
+      "min_tool_calls": 1,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：附件修复截止 8/30 18:00，早于 9/1 9:00 发布；需要同时用待办状态与原文核对。"
+    },
+    {
+      "case_id": "ct04",
+      "question": "8月30日18:00、8月31日12:00、8月31日17:00 这三个时间点分别对应什么事项？",
+      "intent": "temporal",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 2,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：附件修复截止、回归测试提交凭证、阻断任务未完成时的专项评审。"
+    },
+    {
+      "case_id": "ct05",
+      "question": "下午会里，报表导出异步改造和灰度发布排期哪个先、哪个后？",
+      "intent": "temporal",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 1,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：下午纪要「改造与灰度排期过近」的风险陈述与三项行动项期限；需按原文说明相对顺序，不按字段顺序猜。"
+    },
+    {
+      "case_id": "ct06",
+      "question": "发布当天的时间安排是什么：几点正式发布、几点同步发通稿？",
+      "intent": "temporal",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "query_meeting_state",
+        "search_knowledge"
+      ],
+      "min_tool_calls": 2,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：9:00 正式发布（上午决策/系列已确认记忆）；10:00 对外通稿与产品公告同步发布（下午）。"
+    },
+    {
+      "case_id": "ct07",
+      "question": "首周复盘和首周运行日报分别在什么时间提交？",
+      "intent": "temporal",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 1,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：首周复盘 9/8 18:00 前（张晨）；首周运行日报发布首周每日 17:00 前（王工）。"
+    },
+    {
+      "case_id": "ct08",
+      "question": "发布前一日 18:00 之前必须完成什么？",
+      "intent": "temporal",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 1,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：下午纪要：对外通稿及产品公告定稿（删除报表导出描述）。"
+    },
+    {
+      "case_id": "ct09",
+      "question": "两个功能问题（报表导出、消息推送免打扰）的处理时间线分别是什么？",
+      "intent": "temporal",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 1,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：消息推送免打扰已修复并回归通过；报表导出异步改造 5 个工作日、发布时隐藏入口、改造完成后单独上线。"
+    },
+    {
+      "case_id": "ct10",
+      "question": "灰度三个阶段的时间节奏是什么？回滚需要多久？",
+      "intent": "temporal",
+      "required_meetings": [
+        2
+      ],
+      "required_recordings": [
+        6,
+        7
+      ],
+      "expected_tools": [
+        "search_knowledge"
+      ],
+      "min_tool_calls": 1,
+      "expected_facts": [],
+      "label_source": "agent_draft",
+      "human_checked": false,
+      "todo": [
+        "expected_facts",
+        "evidence_segments"
+      ],
+      "note": "依据：下午纪要：首日 10%、次日 50%、第三日全量；回滚 5 分钟内切回旧版。"
+    }
+  ]
+}
