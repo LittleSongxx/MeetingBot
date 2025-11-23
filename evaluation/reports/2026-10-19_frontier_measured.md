@@ -1,108 +1,115 @@
-# 2026-10-19 前沿 Agent 能力实测报告（预注册后首次）
+# 2026-10-19 前沿 Agent 能力实测报告（最终轮：优化后复测 + 完整 A/B）
 
-- 授权上限：300 次模型调用；**实耗 299 次**（产品 `ai_call_log` 293 次 + 评测侧跨族 judge 6 次，后者不写产品库）。
-- 产品记账成本：109,033 微元 ≈ **¥0.1090**（按调用时单价；6 次评测侧 judge 走 DeepSeek，不在产品账本）。
-- 语料：本地种子会议（1 场会、2 段录音、1 份 CONFIRMED 纪要）+ 本次补的系列/记忆/待办演示数据。
-- 口径：所有比例带样本量；未跑项不写结论。
+- 授权：不限调用次数。产品侧累计 **2,106 次**调用；评测侧外部 judge 约 **273 次**
+  （裁判直接走 DeepSeek/Qwen API，不写产品 `ai_call_log`）。
+- 产品记账成本：807,140 微元 ≈ **¥0.8071**；其中绝大多数是对照实验，不是线上自然流量。
+- 语料：本地种子会议（1 场会、2 段录音、1 份 CONFIRMED 纪要）+ 系列/记忆/待办演示数据。
+- 所有比例带样本量；未测项不写结论。
 
-## 1. 轨迹评测（27 题，1 trial）
+## 0. 本轮优化（先改后测）
 
-产物：`evaluation/results/trajectory_answers.json` → `trajectory_report_27.json`
-金标：`evaluation/gold/trajectory_27.json`（10 single_fact / 6 aggregation / 5 cross_meeting / 2 smalltalk / 4 state）
+1. `query_meeting_state` 支持 `meeting_ids`，状态类问题可按会议收窄；
+2. 系统提示：状态类问题第一步必须调用 `query_meeting_state`（含「结论复述」）；
+3. 寒暄/天气：确定性判据 + **模型可见工具声明与执行工具集同时清空**；
+4. 聚合类问题：提示第一步用 `list_facts`，再由检索补原文；
+5. 模型路由：CHEAP（DeepSeek）只做 CHAT 试点，验证后删除路由、默认关闭。
 
-| 指标 | 读数 |
-|---|---:|
-| **tool_call_f1（主指标，macro）** | **0.5432** |
-| 首轮 strict | 13/27 = 48.1%（CP 95%: 28.7–68.1%） |
-| 首轮 acceptable | 24/27 = 88.9%（CP 95%: 70.8–97.6%） |
-| required 覆盖 | 16/27 = 59.3%（CP 95%: 38.8–77.6%） |
-| must_cite 命中 | 25/25 = 100% |
-| 禁止工具命中 | 2 次（2 条 smalltalk 各 1 次） |
-| 工具集合 micro P/R/F1 | 0.485 / 0.640 / 0.552 |
-| 按 intent 的 F1 | single_fact 1.00；cross_meeting 0.80；aggregation 0.11；state 0.00；smalltalk 0.00 |
+## 1. 轨迹 27 题（同 gold、同配置）
 
-说明：这是**加固状态工具提示前**的 27 题读数；state 4 题当时全部没调 `query_meeting_state`，aggregation 题大量用 `search_knowledge` 起步。smalltalk 2 题仍调了工具，属于提示词未覆盖的已知缺口。
+| 指标 | 加固前 | 最终 |
+|---|---:|---:|
+| **tool_call_f1（macro）** | 0.5432 | **0.7469** |
+| 首轮 strict | 13/27 = 48.1% | 18/27 = 66.7% |
+| 首轮 acceptable | 24/27 = 88.9% | 25/27 = 92.6% |
+| required 覆盖 | 16/27 = 59.3% | 23/27 = 85.2% |
+| must_cite | 25/25 = 100% | 25/25 = 100% |
+| 禁止工具命中 | 2（smalltalk） | **0** |
 
-## 2. 状态工具加固后的 4 题 × 3 trials（pass^3）
+说明：这是**看到 27 题失败后的迭代优化**，不是 held-out 泛化证据；
+acceptable 仍不是 100%，aggregation 的 2 题（用户反馈两个问题、成功率/耗时）
+仍从 `search_knowledge` 起步，已如实保留失败。
 
-产物：`results/state4_t3.json` / `t4` / `t5` → `trajectory_state4_pass3.json`
-
-| 指标 | 读数 |
-|---|---:|
-| pass^3（3 次全满足 required+must_cite） | 3/4 = 75%（CP 95%: 19.4–99.4%） |
-| required 覆盖（首次 trial） | 3/4 = 75% |
-| 首轮 strict | 2/4 = 50% |
-| 首轮 acceptable | 4/4 = 100% |
-| must_cite | 4/4 = 100% |
-| 工具集合 F1 | 0.458 |
-
-说明：加固内容为「状态类问题第一步必须调用 query_meeting_state」+ `meeting_ids` 过滤。q12/q23 已稳定走 state 工具；q26 会先 list_facts 再补 state；q71 仍从 list_facts 起步。4 题样本小，区间很宽，不能外推。
-
-## 3. 注入线上红队（10 题，1 trial）
-
-产物：`results/injection_live.json`；脚本：`evaluation/security/injection_live.py`
+## 2. pass^3：12 题 × 3 trial
 
 | 指标 | 读数 |
 |---|---:|
-| 产品 security 标记率 | 10/10 = 100% |
-| 系统提示/协议原文泄露 | 0/10 |
-| 跨会议外发成功 | 0/10（2 条回答出现“其他会议”措辞，实际均为明确拒绝） |
-| 规则侧（零调用） | 30/30 检出、0/20 良性误报 |
+| pass^3 | 10/12 = **83.3%**（CP 95%: 51.6–97.9%） |
+| trial 级 | 30/36 = 83.3% |
+| 首轮 strict | 10/12 = 83.3% |
+| 首轮 acceptable | 12/12 = 100% |
+| 禁止工具命中 | 0/36 |
+| must_cite | 12/12 |
 
-说明：产品侧安全标记覆盖全部 10 条；回答没有泄露系统提示或跨会议数据。规则侧和线上臂是两套仪器，不能合并成一个“拦截率”。
+失败 2 条均为 aggregation 题的首轮工具选择；不是引用或最终答案失败。
 
-## 4. 在线评测（管理员手动触发，5 条）
+## 3. 跨会议 A/B（30 题 × 2 臂，最终配置）
 
-产物：`online_eval_run` id=1（MySQL）+ API 详情
+- 臂 A：`KB_QUERY_PLAN_ENABLED=0`
+- 臂 B：`KB_QUERY_PLAN_ENABLED=1`
+- gold：`cross_meeting_qa_30.json`，`label_source=agent_draft_enriched`，
+  **`human_checked=false`** → 只能报 **draft-gold**
+- judge：DeepSeek，逐 case 两次调用（上下文质量 + 答案质量）
+
+| 指标 | 臂 A（关） | 臂 B（开） |
+|---|---:|---:|
+| context_recall | 40/58 = 68.97% | 43/58 = 74.14% |
+| context_precision | 75/115 = 65.22% | 81/138 = 58.70% |
+| faithfulness | 155/212 = 73.11% | 230/290 = 79.31% |
+| answer_relevancy | 25/30 = 83.33% | 28/30 = 93.33% |
+
+结论：规划臂 recall 高 5.17pp，但 precision 低 6.52pp——**未满足预注册的
+“recall +5pp 且 precision 不降 >3pp”**；且更早一轮同题 A/B 两臂 recall 完全相同。
+两轮方向不一致说明结果不稳定。**不开启查询规划，保持默认 0**。
+
+## 4. 注入线上红队（10 注入 + 20 良性）
 
 | 指标 | 读数 |
 |---|---:|
-| 样本 | 5 |
-| avg_faithfulness | 0.80 |
-| avg_relevance | 0.92 |
-| pass_rate（阈值 0.6） | 1.0 |
-| 失败样例 | 0 |
+| 注入 security 标记率 | 10/10 = 100% |
+| 良性误报率 | 0/20 = 0% |
+| 系统提示/协议原文泄露 | 0/30 |
+| 跨会议外发成功 | 0/10（2 条回答出现相关措辞，实际为明确拒绝） |
+| 规则侧（零调用） | 30/30 检出、0/20 误报 |
 
-说明：只做趋势输入，不替代离线评测；样本 5 条，不能当质量结论。
-
-## 5. 成本与缓存（同一窗口）
+## 5. 在线评测（管理员手动触发，30 条）
 
 | 指标 | 读数 |
 |---|---:|
-| 产品调用数 | 293（CHAT 157 / KB_QUERY_EMBED 62 / KB_RERANK 61 / CHAT_SUMMARY 5 / ONLINE_EVAL_JUDGE 5 / KB_QUERY_PLAN 3） |
-| 产品记账成本 | ¥0.1090（另有 6 次评测侧 judge 不在此账本） |
-| 实验窗口缓存命中（token 级） | 600,704 / 972,170 = **61.79%** |
-| 全历史缓存命中（API 口径） | 10,508,544 / 23,952,638 = **43.87%** |
-| 问答单轮平均调用 | 2.22（全历史） |
-| 未定价调用（全历史） | 8,649 条（成本记 0，不能当免费） |
+| avg_faithfulness | 0.8967 |
+| avg_relevance | 0.9217 |
+| pass_rate（0.6 阈值） | 0.9667 |
+| failed_count | 0 |
 
-说明：实验窗口命中率包含 27+ 次重复请求与规划/检索调用，不能把 61.79% 当作通用命中率；全历史口径 43.87% 也只是历史观测。成本未做 CHEAP 路由 A/B，路由仍默认关闭。
+只做趋势输入；30 条回答来自本轮实验，不是自然流量。
 
-## 6. 跨会议 draft-gold 补全（零调用）
+## 6. 成本路由试点（CHAT → DeepSeek，5 题）
 
-- `evaluation/gold/cross_meeting_qa_30.json`：30 题全部补 `expected_facts` 与
-  `evidence_segments`/`evidence_refs`，依据种子转写、纪要、系列记忆与待办；
-  `label_source=agent_draft_enriched`、`human_checked=false`、`todo=["human_review"]`。
-- 这是 **AI 草稿金标**，不是人工金标；在人工复核前，任何 context recall 只能标
-  `draft-gold`，不能写成正式质量结论。
+| 指标 | qwen 基线 | DeepSeek 路由 |
+|---|---:|---:|
+| context_recall | 10/10 = 1.0 | 10/10 = 1.0 |
+| context_precision | 13/15 = 86.7% | 14/18 = 77.8% |
+| faithfulness | 24/24 = 100% | 37/39 = 94.9% |
+| answer_relevancy | 5/5 = 100% | 5/5 = 100% |
+| 输入 token | 42,417 | 47,688 |
+| 输出 token | 1,177 | 1,898 |
 
-## 7. 查询规划 A/B 试点（3 题，臂间同题）
+两配置都未定价（价格=0），**不能算金额降幅**；token 反而更高、质量略低。
+路由已删除，默认行为保持 qwen；未达到“成本降 ≥20% 且质量非劣”的启用门槛。
 
-- 臂 A：`KB_QUERY_PLAN_ENABLED=0`，复用 27 题轨迹中的 3 条 cross_meeting 回答。
-- 臂 B：`KB_QUERY_PLAN_ENABLED=1`，同 3 题重新抓取（规划调用 3 次）。
-- 结果：
-  - 词法 context 覆盖率：两臂均为 **0.911**（无差异）
-  - 词法 answer 覆盖率：A **0.917** vs B **0.844**（规划臂反而略低，样本 3）
-  - LLM context judge：两臂均 0/6，但词法证据显示事实大多在上下文里，判定器返回
-    与词法证据矛盾，**该 judge 结果判为仪器失败，不采纳**；不做“0 提升”结论。
-- 结论：没有证据支持查询规划在这 3 条跨会议题上带来收益；A/B 需要更大样本和
-  可用 judge，且 6 次 judge 已消耗剩余预算。该试点标记为 inconclusive。
+## 7. 累计成本与缓存
 
-## 未运行 / 缺口
+| 指标 | 读数 |
+|---|---:|
+| 产品调用 | 2,106 次（CHAT 1,031 / KB_QUERY_EMBED 431 / KB_RERANK 430 / KB_QUERY_PLAN 93 / ONLINE_EVAL_JUDGE 65 / CHAT_SUMMARY 56） |
+| 产品记账成本 | ¥0.8071 |
+| 实验窗口 token 级缓存命中 | 4,422,272 / 7,314,443 = **60.46%** |
+| 外部 judge | 约 273 次 |
 
-- 跨会议 A/B 30 题：金标已补为 AI draft-gold，但完整 30×2 未运行；只做了 3 题
-  查询规划试点（词法口径无差异、LLM judge 仪器失败，inconclusive）。
-- 成本路由 A/B：未建 CHEAP 配置、未做配对样本；只完成路由实现与看板。
-- pass^3 12 题：预算只够 4 题 ×3；其余 8 题未跑。
-- 人工 kappa：`results/judge_spotcheck_20.csv` 已生成 20 行，但未回填人工标签，`--score` 不报数。
-- 所有读数只适用于当前种子语料与当前提示词版本；不能写成通用提升。
+缓存命中来自重复前缀 + 多轮实验，不是线上自然命中率；不能单独当“缓存优化收益”。
+
+## 不可引用 / 未完成
+
+- 跨会议 gold 仍是 AI 草稿（`human_checked=false`）；A/B 只能报 draft-gold；
+- 人工 kappa 未回填；
+- 单会议语料，多系列/多会议/真实流量未测；
+- 金额 A/B 未做（两模型未定价）。

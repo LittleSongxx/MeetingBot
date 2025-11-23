@@ -25,6 +25,7 @@ from services import (
     moderation,
     prompt_injection,
     query_plan,
+    smalltalk,
 )
 from services.agent_runtime import GuardrailChain
 from services.chat_memory import build_memory, maybe_summarize
@@ -140,6 +141,13 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     registry = citations.CitationRegistry.from_dicts(
         saved_citations.get("all") or saved_citations.get("used") or [])
     tools = build_tools(actor, registry)
+    # 寒暄/天气这类问题不需要工具，也不该产生引用。系统提示已写明，但实测仍会
+    # 调一次 list_facts；这里用高置信规则同时清空**模型可见的工具声明**与执行
+    # 工具集，保证"不该调就不调"不是靠模型自觉。
+    model_tools: list[dict[str, Any]] = kb_tools.openai_tools()
+    if smalltalk.is_smalltalk(text):
+        model_tools = []
+        tools = []
     graph = chat_graph.build_chat_graph(chat_checkpoint.get_checkpointer())
     budget = chat_graph.budget_from_env()
     recursion_limit = chat_graph.recursion_limit(budget)
@@ -216,7 +224,7 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         state_in = None
     runtime = ChatRuntime(
         call_model=model_factory.make_model_caller(
-            config, tools=kb_tools.openai_tools(), call_type=CHAT_CALL_TYPE,
+            config, tools=model_tools, call_type=CHAT_CALL_TYPE,
             biz_id=assistant_row.id, label="问答模型", model=model,
             # 首轮强制检索：能力允许时用 tool_choice="required"（供应商 × 推理开关
             # 的判定在 model_factory 里），判不了就退回图里的"提醒"路径。

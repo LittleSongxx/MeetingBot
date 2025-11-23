@@ -48,10 +48,19 @@ SOURCE_COVERAGE_PROTOCOL = (
 )
 
 
+AGGREGATION_PROTOCOL = (
+    "\n\n【聚合类问题的工具选择】\n"
+    "问「有哪些/分别是什么/清单/汇总/几个/两组/三项/哪些入口」时，第一步用 list_facts "
+    "拉结构化事实；只有 list_facts 缺槽位或需要原文依据时，再用 search_knowledge。"
+    "不要先用 search_knowledge 拉清单。"
+)
+
+
 STATE_PROTOCOL = (
     "\n\n【状态查询规则】\n"
-    "1. 问「上次定了什么/还有哪些待办/谁负责/协作人是谁/截止时间/项目现在什么状态」时，"
-    "**第一步必须调用 query_meeting_state**；它只返回人工确认过的决策、结论、待办与个人偏好。"
+    "1. 问「上次定了什么/最后复述了哪些结论/还有哪些待办/谁负责/协作人是谁/"
+    "截止时间/项目现在什么状态」时，**第一步必须调用 query_meeting_state**；"
+    "它只返回人工确认过的决策、结论、待办与个人偏好。"
     "只有该工具缺少原文依据时，才继续用 search_knowledge 补查；不要先用 list_facts 代替。\n"
     "2. 待办状态以工具返回的 status/owner/deadline 为准，不要按会议上下文猜；"
     "未确认的记忆候选不得当作事实。\n"
@@ -108,8 +117,8 @@ async def get_system_prompt() -> str:
     body = (template.system_prompt if template else "") or DEFAULT_SYSTEM_PROMPT
     # 内容审核的第二层：生成约束。未配置词表时它返回空串（不留一句空话）。
     # 资料覆盖规则放在引用协议之前：引用协议始终是最后一块结构性约束。
-    return (body.strip() + SOURCE_COVERAGE_PROTOCOL + STATE_PROTOCOL
-            + prompt_injection.system_guards()
+    return (body.strip() + SOURCE_COVERAGE_PROTOCOL + AGGREGATION_PROTOCOL
+            + STATE_PROTOCOL + prompt_injection.system_guards()
             + CITATION_PROTOCOL + moderation.prompt_constraints())
 
 

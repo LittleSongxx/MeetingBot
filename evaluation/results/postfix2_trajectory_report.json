@@ -1,0 +1,2708 @@
+{
+  "sample": 27,
+  "gold_cases": 27,
+  "artifact_count": 1,
+  "k": 3,
+  "missing": [],
+  "trial_counts": {
+    "min": 1,
+    "max": 1,
+    "mean": 1.0,
+    "questions_with_k_trials": 0,
+    "sum_trials": 27,
+    "note": "每份 --artifact 视为一次 trial；同一配置的重复运行才是重复性。"
+  },
+  "first_tool": {
+    "sample": 27,
+    "strict": {
+      "successes": 15,
+      "total": 27,
+      "rate": 0.5555555555555556,
+      "clopper_pearson_95": [
+        0.35326423032201637,
+        0.7452011933682625
+      ],
+      "wilson_95": [
+        0.3731302451322448,
+        0.72414141822977
+      ]
+    },
+    "acceptable": {
+      "successes": 23,
+      "total": 27,
+      "rate": 0.8518518518518519,
+      "clopper_pearson_95": [
+        0.6626891359757661,
+        0.9581126035262328
+      ],
+      "wilson_95": [
+        0.6752131457218702,
+        0.9408407222375568
+      ]
+    },
+    "per_intent": {
+      "aggregation": {
+        "support": 6,
+        "first_tool_strict": {
+          "successes": 0,
+          "total": 6,
+          "rate": 0.0,
+          "clopper_pearson_95": [
+            0.0,
+            0.4592581264399006
+          ],
+          "wilson_95": [
+            0.0,
+            0.39033428790216534
+          ]
+        },
+        "first_tool_acceptable": {
+          "successes": 5,
+          "total": 6,
+          "rate": 0.8333333333333334,
+          "clopper_pearson_95": [
+            0.358765421002329,
+            0.9957892554855106
+          ],
+          "wilson_95": [
+            0.43649717781352987,
+            0.9699466302516935
+          ]
+        },
+        "tool_set": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "matched_required": 0,
+          "used_total": 7,
+          "required_total": 6
+        },
+        "required_coverage": {
+          "successes": 0,
+          "total": 6,
+          "rate": 0.0,
+          "clopper_pearson_95": [
+            0.0,
+            0.4592581264399006
+          ],
+          "wilson_95": [
+            0.0,
+            0.39033428790216534
+          ]
+        },
+        "pass_k": {
+          "successes": 0,
+          "total": 0,
+          "rate": null,
+          "clopper_pearson_95": null,
+          "wilson_95": null
+        },
+        "must_cite": {
+          "successes": 6,
+          "total": 6,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.540741873560104,
+            1.0
+          ],
+          "wilson_95": [
+            0.6096657120978346,
+            1.0
+          ]
+        }
+      },
+      "cross_meeting": {
+        "support": 5,
+        "first_tool_strict": {
+          "successes": 0,
+          "total": 5,
+          "rate": 0.0,
+          "clopper_pearson_95": [
+            0.0,
+            0.5218237501049816
+          ],
+          "wilson_95": [
+            0.0,
+            0.43448246478317476
+          ]
+        },
+        "first_tool_acceptable": {
+          "successes": 2,
+          "total": 5,
+          "rate": 0.4,
+          "clopper_pearson_95": [
+            0.052744950526317086,
+            0.853367200365327
+          ],
+          "wilson_95": [
+            0.11762077423264783,
+            0.769275718723987
+          ]
+        },
+        "tool_set": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6666666666666666,
+          "matched_required": 5,
+          "used_total": 10,
+          "required_total": 5
+        },
+        "required_coverage": {
+          "successes": 5,
+          "total": 5,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.4781762498950216,
+            1.0
+          ],
+          "wilson_95": [
+            0.5655175352168251,
+            1.0
+          ]
+        },
+        "pass_k": {
+          "successes": 0,
+          "total": 0,
+          "rate": null,
+          "clopper_pearson_95": null,
+          "wilson_95": null
+        },
+        "must_cite": {
+          "successes": 5,
+          "total": 5,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.4781762498950216,
+            1.0
+          ],
+          "wilson_95": [
+            0.5655175352168251,
+            1.0
+          ]
+        }
+      },
+      "single_fact": {
+        "support": 10,
+        "first_tool_strict": {
+          "successes": 10,
+          "total": 10,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.6915028921812354,
+            1.0
+          ],
+          "wilson_95": [
+            0.7224672001371107,
+            0.9999999999999999
+          ]
+        },
+        "first_tool_acceptable": {
+          "successes": 10,
+          "total": 10,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.6915028921812354,
+            1.0
+          ],
+          "wilson_95": [
+            0.7224672001371107,
+            0.9999999999999999
+          ]
+        },
+        "tool_set": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "matched_required": 10,
+          "used_total": 10,
+          "required_total": 10
+        },
+        "required_coverage": {
+          "successes": 10,
+          "total": 10,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.6915028921812354,
+            1.0
+          ],
+          "wilson_95": [
+            0.7224672001371107,
+            0.9999999999999999
+          ]
+        },
+        "pass_k": {
+          "successes": 0,
+          "total": 0,
+          "rate": null,
+          "clopper_pearson_95": null,
+          "wilson_95": null
+        },
+        "must_cite": {
+          "successes": 10,
+          "total": 10,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.6915028921812354,
+            1.0
+          ],
+          "wilson_95": [
+            0.7224672001371107,
+            0.9999999999999999
+          ]
+        }
+      },
+      "smalltalk": {
+        "support": 2,
+        "first_tool_strict": {
+          "successes": 2,
+          "total": 2,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.15811388300841844,
+            1.0
+          ],
+          "wilson_95": [
+            0.34238022750665303,
+            1.0
+          ]
+        },
+        "first_tool_acceptable": {
+          "successes": 2,
+          "total": 2,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.15811388300841844,
+            1.0
+          ],
+          "wilson_95": [
+            0.34238022750665303,
+            1.0
+          ]
+        },
+        "tool_set": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "matched_required": 0,
+          "used_total": 0,
+          "required_total": 0
+        },
+        "required_coverage": {
+          "successes": 2,
+          "total": 2,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.15811388300841844,
+            1.0
+          ],
+          "wilson_95": [
+            0.34238022750665303,
+            1.0
+          ]
+        },
+        "pass_k": {
+          "successes": 0,
+          "total": 0,
+          "rate": null,
+          "clopper_pearson_95": null,
+          "wilson_95": null
+        }
+      },
+      "state": {
+        "support": 4,
+        "first_tool_strict": {
+          "successes": 3,
+          "total": 4,
+          "rate": 0.75,
+          "clopper_pearson_95": [
+            0.19412044968324194,
+            0.9936905367902902
+          ],
+          "wilson_95": [
+            0.30064184258240184,
+            0.9544127391902995
+          ]
+        },
+        "first_tool_acceptable": {
+          "successes": 4,
+          "total": 4,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.39763536438352276,
+            1.0
+          ],
+          "wilson_95": [
+            0.5101091635454027,
+            1.0
+          ]
+        },
+        "tool_set": {
+          "precision": 0.5,
+          "recall": 0.75,
+          "f1": 0.5833333333333333,
+          "matched_required": 3,
+          "used_total": 7,
+          "required_total": 4
+        },
+        "required_coverage": {
+          "successes": 3,
+          "total": 4,
+          "rate": 0.75,
+          "clopper_pearson_95": [
+            0.19412044968324194,
+            0.9936905367902902
+          ],
+          "wilson_95": [
+            0.30064184258240184,
+            0.9544127391902995
+          ]
+        },
+        "pass_k": {
+          "successes": 0,
+          "total": 0,
+          "rate": null,
+          "clopper_pearson_95": null,
+          "wilson_95": null
+        },
+        "must_cite": {
+          "successes": 4,
+          "total": 4,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.39763536438352276,
+            1.0
+          ],
+          "wilson_95": [
+            0.5101091635454027,
+            1.0
+          ]
+        }
+      }
+    }
+  },
+  "tool_set": {
+    "sample": 27,
+    "first_trial_per_question": true,
+    "tool_retries_counted_once": true,
+    "micro": {
+      "matched_required": 18,
+      "used_total": 34,
+      "required_total": 25,
+      "precision": 0.5294117647058824,
+      "recall": 0.72,
+      "f1": 0.6101694915254237
+    },
+    "macro": {
+      "precision": 0.6111111111111112,
+      "recall": 0.7407407407407407,
+      "f1": 0.654320987654321,
+      "note": "逐题等权平均；required 为空的题按「不调工具=1，调了=0」计"
+    },
+    "per_intent": {
+      "aggregation": {
+        "support": 6,
+        "first_tool_strict": {
+          "successes": 0,
+          "total": 6,
+          "rate": 0.0,
+          "clopper_pearson_95": [
+            0.0,
+            0.4592581264399006
+          ],
+          "wilson_95": [
+            0.0,
+            0.39033428790216534
+          ]
+        },
+        "first_tool_acceptable": {
+          "successes": 5,
+          "total": 6,
+          "rate": 0.8333333333333334,
+          "clopper_pearson_95": [
+            0.358765421002329,
+            0.9957892554855106
+          ],
+          "wilson_95": [
+            0.43649717781352987,
+            0.9699466302516935
+          ]
+        },
+        "tool_set": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "matched_required": 0,
+          "used_total": 7,
+          "required_total": 6
+        },
+        "required_coverage": {
+          "successes": 0,
+          "total": 6,
+          "rate": 0.0,
+          "clopper_pearson_95": [
+            0.0,
+            0.4592581264399006
+          ],
+          "wilson_95": [
+            0.0,
+            0.39033428790216534
+          ]
+        },
+        "pass_k": {
+          "successes": 0,
+          "total": 0,
+          "rate": null,
+          "clopper_pearson_95": null,
+          "wilson_95": null
+        },
+        "must_cite": {
+          "successes": 6,
+          "total": 6,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.540741873560104,
+            1.0
+          ],
+          "wilson_95": [
+            0.6096657120978346,
+            1.0
+          ]
+        }
+      },
+      "cross_meeting": {
+        "support": 5,
+        "first_tool_strict": {
+          "successes": 0,
+          "total": 5,
+          "rate": 0.0,
+          "clopper_pearson_95": [
+            0.0,
+            0.5218237501049816
+          ],
+          "wilson_95": [
+            0.0,
+            0.43448246478317476
+          ]
+        },
+        "first_tool_acceptable": {
+          "successes": 2,
+          "total": 5,
+          "rate": 0.4,
+          "clopper_pearson_95": [
+            0.052744950526317086,
+            0.853367200365327
+          ],
+          "wilson_95": [
+            0.11762077423264783,
+            0.769275718723987
+          ]
+        },
+        "tool_set": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6666666666666666,
+          "matched_required": 5,
+          "used_total": 10,
+          "required_total": 5
+        },
+        "required_coverage": {
+          "successes": 5,
+          "total": 5,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.4781762498950216,
+            1.0
+          ],
+          "wilson_95": [
+            0.5655175352168251,
+            1.0
+          ]
+        },
+        "pass_k": {
+          "successes": 0,
+          "total": 0,
+          "rate": null,
+          "clopper_pearson_95": null,
+          "wilson_95": null
+        },
+        "must_cite": {
+          "successes": 5,
+          "total": 5,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.4781762498950216,
+            1.0
+          ],
+          "wilson_95": [
+            0.5655175352168251,
+            1.0
+          ]
+        }
+      },
+      "single_fact": {
+        "support": 10,
+        "first_tool_strict": {
+          "successes": 10,
+          "total": 10,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.6915028921812354,
+            1.0
+          ],
+          "wilson_95": [
+            0.7224672001371107,
+            0.9999999999999999
+          ]
+        },
+        "first_tool_acceptable": {
+          "successes": 10,
+          "total": 10,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.6915028921812354,
+            1.0
+          ],
+          "wilson_95": [
+            0.7224672001371107,
+            0.9999999999999999
+          ]
+        },
+        "tool_set": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "matched_required": 10,
+          "used_total": 10,
+          "required_total": 10
+        },
+        "required_coverage": {
+          "successes": 10,
+          "total": 10,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.6915028921812354,
+            1.0
+          ],
+          "wilson_95": [
+            0.7224672001371107,
+            0.9999999999999999
+          ]
+        },
+        "pass_k": {
+          "successes": 0,
+          "total": 0,
+          "rate": null,
+          "clopper_pearson_95": null,
+          "wilson_95": null
+        },
+        "must_cite": {
+          "successes": 10,
+          "total": 10,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.6915028921812354,
+            1.0
+          ],
+          "wilson_95": [
+            0.7224672001371107,
+            0.9999999999999999
+          ]
+        }
+      },
+      "smalltalk": {
+        "support": 2,
+        "first_tool_strict": {
+          "successes": 2,
+          "total": 2,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.15811388300841844,
+            1.0
+          ],
+          "wilson_95": [
+            0.34238022750665303,
+            1.0
+          ]
+        },
+        "first_tool_acceptable": {
+          "successes": 2,
+          "total": 2,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.15811388300841844,
+            1.0
+          ],
+          "wilson_95": [
+            0.34238022750665303,
+            1.0
+          ]
+        },
+        "tool_set": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "matched_required": 0,
+          "used_total": 0,
+          "required_total": 0
+        },
+        "required_coverage": {
+          "successes": 2,
+          "total": 2,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.15811388300841844,
+            1.0
+          ],
+          "wilson_95": [
+            0.34238022750665303,
+            1.0
+          ]
+        },
+        "pass_k": {
+          "successes": 0,
+          "total": 0,
+          "rate": null,
+          "clopper_pearson_95": null,
+          "wilson_95": null
+        }
+      },
+      "state": {
+        "support": 4,
+        "first_tool_strict": {
+          "successes": 3,
+          "total": 4,
+          "rate": 0.75,
+          "clopper_pearson_95": [
+            0.19412044968324194,
+            0.9936905367902902
+          ],
+          "wilson_95": [
+            0.30064184258240184,
+            0.9544127391902995
+          ]
+        },
+        "first_tool_acceptable": {
+          "successes": 4,
+          "total": 4,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.39763536438352276,
+            1.0
+          ],
+          "wilson_95": [
+            0.5101091635454027,
+            1.0
+          ]
+        },
+        "tool_set": {
+          "precision": 0.5,
+          "recall": 0.75,
+          "f1": 0.5833333333333333,
+          "matched_required": 3,
+          "used_total": 7,
+          "required_total": 4
+        },
+        "required_coverage": {
+          "successes": 3,
+          "total": 4,
+          "rate": 0.75,
+          "clopper_pearson_95": [
+            0.19412044968324194,
+            0.9936905367902902
+          ],
+          "wilson_95": [
+            0.30064184258240184,
+            0.9544127391902995
+          ]
+        },
+        "pass_k": {
+          "successes": 0,
+          "total": 0,
+          "rate": null,
+          "clopper_pearson_95": null,
+          "wilson_95": null
+        },
+        "must_cite": {
+          "successes": 4,
+          "total": 4,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.39763536438352276,
+            1.0
+          ],
+          "wilson_95": [
+            0.5101091635454027,
+            1.0
+          ]
+        }
+      }
+    },
+    "primary_metric": "tool_call_f1",
+    "tool_call_f1": 0.654320987654321
+  },
+  "must_cite": {
+    "sample": 25,
+    "citations_present": {
+      "successes": 25,
+      "total": 25,
+      "rate": 1.0,
+      "clopper_pearson_95": [
+        0.8628148284692849,
+        1.0
+      ],
+      "wilson_95": [
+        0.8668077490609515,
+        0.9999999999999999
+      ]
+    },
+    "note": "只统计 must_cite=true 的题的第一次 trial。"
+  },
+  "required_coverage": {
+    "sample": 27,
+    "covered": {
+      "successes": 20,
+      "total": 27,
+      "rate": 0.7407407407407407,
+      "clopper_pearson_95": [
+        0.5371512577238382,
+        0.8888554371545576
+      ],
+      "wilson_95": [
+        0.5532142868544692,
+        0.8682962543809281
+      ]
+    },
+    "per_intent": {
+      "aggregation": {
+        "successes": 0,
+        "total": 6,
+        "rate": 0.0,
+        "clopper_pearson_95": [
+          0.0,
+          0.4592581264399006
+        ],
+        "wilson_95": [
+          0.0,
+          0.39033428790216534
+        ]
+      },
+      "cross_meeting": {
+        "successes": 5,
+        "total": 5,
+        "rate": 1.0,
+        "clopper_pearson_95": [
+          0.4781762498950216,
+          1.0
+        ],
+        "wilson_95": [
+          0.5655175352168251,
+          1.0
+        ]
+      },
+      "single_fact": {
+        "successes": 10,
+        "total": 10,
+        "rate": 1.0,
+        "clopper_pearson_95": [
+          0.6915028921812354,
+          1.0
+        ],
+        "wilson_95": [
+          0.7224672001371107,
+          0.9999999999999999
+        ]
+      },
+      "smalltalk": {
+        "successes": 2,
+        "total": 2,
+        "rate": 1.0,
+        "clopper_pearson_95": [
+          0.15811388300841844,
+          1.0
+        ],
+        "wilson_95": [
+          0.34238022750665303,
+          1.0
+        ]
+      },
+      "state": {
+        "successes": 3,
+        "total": 4,
+        "rate": 0.75,
+        "clopper_pearson_95": [
+          0.19412044968324194,
+          0.9936905367902902
+        ],
+        "wilson_95": [
+          0.30064184258240184,
+          0.9544127391902995
+        ]
+      }
+    }
+  },
+  "forbidden": {
+    "trials": 27,
+    "cases_with_hits": 0,
+    "hits": 0,
+    "details": []
+  },
+  "tool_budget": {
+    "trials": 27,
+    "cases_over_budget": 0,
+    "trials_over_budget": 0,
+    "details": [],
+    "note": "max_tool_calls 是预算口径，单独报；pass 不因超预算改判。"
+  },
+  "pass_k": {
+    "k": 3,
+    "evaluated_cases": 0,
+    "passed": 0,
+    "rate": null,
+    "clopper_pearson_95": null,
+    "insufficient_trials": [
+      {
+        "case_id": "t01",
+        "trials": 1
+      },
+      {
+        "case_id": "t02",
+        "trials": 1
+      },
+      {
+        "case_id": "t03",
+        "trials": 1
+      },
+      {
+        "case_id": "t04",
+        "trials": 1
+      },
+      {
+        "case_id": "t05",
+        "trials": 1
+      },
+      {
+        "case_id": "t06",
+        "trials": 1
+      },
+      {
+        "case_id": "t07",
+        "trials": 1
+      },
+      {
+        "case_id": "t08",
+        "trials": 1
+      },
+      {
+        "case_id": "t09",
+        "trials": 1
+      },
+      {
+        "case_id": "t10",
+        "trials": 1
+      },
+      {
+        "case_id": "t11",
+        "trials": 1
+      },
+      {
+        "case_id": "t12",
+        "trials": 1
+      },
+      {
+        "case_id": "t13",
+        "trials": 1
+      },
+      {
+        "case_id": "t14",
+        "trials": 1
+      },
+      {
+        "case_id": "t15",
+        "trials": 1
+      },
+      {
+        "case_id": "t16",
+        "trials": 1
+      },
+      {
+        "case_id": "t17",
+        "trials": 1
+      },
+      {
+        "case_id": "t18",
+        "trials": 1
+      },
+      {
+        "case_id": "t19",
+        "trials": 1
+      },
+      {
+        "case_id": "t20",
+        "trials": 1
+      },
+      {
+        "case_id": "t21",
+        "trials": 1
+      },
+      {
+        "case_id": "t22",
+        "trials": 1
+      },
+      {
+        "case_id": "t23",
+        "trials": 1
+      },
+      {
+        "case_id": "t24",
+        "trials": 1
+      },
+      {
+        "case_id": "t25",
+        "trials": 1
+      },
+      {
+        "case_id": "t26",
+        "trials": 1
+      },
+      {
+        "case_id": "t27",
+        "trials": 1
+      }
+    ],
+    "trial_level": {
+      "trials": 27,
+      "passed": 20,
+      "rate": 0.7407407407407407
+    },
+    "single_trial_reference": {
+      "successes": 20,
+      "total": 27,
+      "rate": 0.7407407407407407,
+      "clopper_pearson_95": [
+        0.5371512577238382,
+        0.8888554371545576
+      ],
+      "wilson_95": [
+        0.5532142868544692,
+        0.8682962543809281
+      ]
+    },
+    "per_intent": {
+      "aggregation": {
+        "support": 6,
+        "first_tool_strict": {
+          "successes": 0,
+          "total": 6,
+          "rate": 0.0,
+          "clopper_pearson_95": [
+            0.0,
+            0.4592581264399006
+          ],
+          "wilson_95": [
+            0.0,
+            0.39033428790216534
+          ]
+        },
+        "first_tool_acceptable": {
+          "successes": 5,
+          "total": 6,
+          "rate": 0.8333333333333334,
+          "clopper_pearson_95": [
+            0.358765421002329,
+            0.9957892554855106
+          ],
+          "wilson_95": [
+            0.43649717781352987,
+            0.9699466302516935
+          ]
+        },
+        "tool_set": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "matched_required": 0,
+          "used_total": 7,
+          "required_total": 6
+        },
+        "required_coverage": {
+          "successes": 0,
+          "total": 6,
+          "rate": 0.0,
+          "clopper_pearson_95": [
+            0.0,
+            0.4592581264399006
+          ],
+          "wilson_95": [
+            0.0,
+            0.39033428790216534
+          ]
+        },
+        "pass_k": {
+          "successes": 0,
+          "total": 0,
+          "rate": null,
+          "clopper_pearson_95": null,
+          "wilson_95": null
+        },
+        "must_cite": {
+          "successes": 6,
+          "total": 6,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.540741873560104,
+            1.0
+          ],
+          "wilson_95": [
+            0.6096657120978346,
+            1.0
+          ]
+        }
+      },
+      "cross_meeting": {
+        "support": 5,
+        "first_tool_strict": {
+          "successes": 0,
+          "total": 5,
+          "rate": 0.0,
+          "clopper_pearson_95": [
+            0.0,
+            0.5218237501049816
+          ],
+          "wilson_95": [
+            0.0,
+            0.43448246478317476
+          ]
+        },
+        "first_tool_acceptable": {
+          "successes": 2,
+          "total": 5,
+          "rate": 0.4,
+          "clopper_pearson_95": [
+            0.052744950526317086,
+            0.853367200365327
+          ],
+          "wilson_95": [
+            0.11762077423264783,
+            0.769275718723987
+          ]
+        },
+        "tool_set": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6666666666666666,
+          "matched_required": 5,
+          "used_total": 10,
+          "required_total": 5
+        },
+        "required_coverage": {
+          "successes": 5,
+          "total": 5,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.4781762498950216,
+            1.0
+          ],
+          "wilson_95": [
+            0.5655175352168251,
+            1.0
+          ]
+        },
+        "pass_k": {
+          "successes": 0,
+          "total": 0,
+          "rate": null,
+          "clopper_pearson_95": null,
+          "wilson_95": null
+        },
+        "must_cite": {
+          "successes": 5,
+          "total": 5,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.4781762498950216,
+            1.0
+          ],
+          "wilson_95": [
+            0.5655175352168251,
+            1.0
+          ]
+        }
+      },
+      "single_fact": {
+        "support": 10,
+        "first_tool_strict": {
+          "successes": 10,
+          "total": 10,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.6915028921812354,
+            1.0
+          ],
+          "wilson_95": [
+            0.7224672001371107,
+            0.9999999999999999
+          ]
+        },
+        "first_tool_acceptable": {
+          "successes": 10,
+          "total": 10,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.6915028921812354,
+            1.0
+          ],
+          "wilson_95": [
+            0.7224672001371107,
+            0.9999999999999999
+          ]
+        },
+        "tool_set": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "matched_required": 10,
+          "used_total": 10,
+          "required_total": 10
+        },
+        "required_coverage": {
+          "successes": 10,
+          "total": 10,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.6915028921812354,
+            1.0
+          ],
+          "wilson_95": [
+            0.7224672001371107,
+            0.9999999999999999
+          ]
+        },
+        "pass_k": {
+          "successes": 0,
+          "total": 0,
+          "rate": null,
+          "clopper_pearson_95": null,
+          "wilson_95": null
+        },
+        "must_cite": {
+          "successes": 10,
+          "total": 10,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.6915028921812354,
+            1.0
+          ],
+          "wilson_95": [
+            0.7224672001371107,
+            0.9999999999999999
+          ]
+        }
+      },
+      "smalltalk": {
+        "support": 2,
+        "first_tool_strict": {
+          "successes": 2,
+          "total": 2,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.15811388300841844,
+            1.0
+          ],
+          "wilson_95": [
+            0.34238022750665303,
+            1.0
+          ]
+        },
+        "first_tool_acceptable": {
+          "successes": 2,
+          "total": 2,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.15811388300841844,
+            1.0
+          ],
+          "wilson_95": [
+            0.34238022750665303,
+            1.0
+          ]
+        },
+        "tool_set": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "matched_required": 0,
+          "used_total": 0,
+          "required_total": 0
+        },
+        "required_coverage": {
+          "successes": 2,
+          "total": 2,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.15811388300841844,
+            1.0
+          ],
+          "wilson_95": [
+            0.34238022750665303,
+            1.0
+          ]
+        },
+        "pass_k": {
+          "successes": 0,
+          "total": 0,
+          "rate": null,
+          "clopper_pearson_95": null,
+          "wilson_95": null
+        }
+      },
+      "state": {
+        "support": 4,
+        "first_tool_strict": {
+          "successes": 3,
+          "total": 4,
+          "rate": 0.75,
+          "clopper_pearson_95": [
+            0.19412044968324194,
+            0.9936905367902902
+          ],
+          "wilson_95": [
+            0.30064184258240184,
+            0.9544127391902995
+          ]
+        },
+        "first_tool_acceptable": {
+          "successes": 4,
+          "total": 4,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.39763536438352276,
+            1.0
+          ],
+          "wilson_95": [
+            0.5101091635454027,
+            1.0
+          ]
+        },
+        "tool_set": {
+          "precision": 0.5,
+          "recall": 0.75,
+          "f1": 0.5833333333333333,
+          "matched_required": 3,
+          "used_total": 7,
+          "required_total": 4
+        },
+        "required_coverage": {
+          "successes": 3,
+          "total": 4,
+          "rate": 0.75,
+          "clopper_pearson_95": [
+            0.19412044968324194,
+            0.9936905367902902
+          ],
+          "wilson_95": [
+            0.30064184258240184,
+            0.9544127391902995
+          ]
+        },
+        "pass_k": {
+          "successes": 0,
+          "total": 0,
+          "rate": null,
+          "clopper_pearson_95": null,
+          "wilson_95": null
+        },
+        "must_cite": {
+          "successes": 4,
+          "total": 4,
+          "rate": 1.0,
+          "clopper_pearson_95": [
+            0.39763536438352276,
+            1.0
+          ],
+          "wilson_95": [
+            0.5101091635454027,
+            1.0
+          ]
+        }
+      }
+    },
+    "criterion": "同一题前 k 次 trial 全部满足 required 覆盖 + must_cite 才记 pass；禁止工具命中与 max_tool_calls 超限另报，不混入 pass。",
+    "reading": "每题 trial 数 = 该 question 在传入产物里出现的次数；没有足够 trial 的题不进 pass^k 分母。single_trial_reference 只是单 trial 参考读数，不是 pass^k。"
+  },
+  "per_case": [
+    {
+      "case_id": "t01",
+      "question": "这次灰度发布从什么时候开始、覆盖了多少用户？",
+      "intent": "single_fact",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "search_knowledge",
+        "strict": true,
+        "acceptable": true,
+        "used_tools": [
+          "search_knowledge"
+        ],
+        "tool_calls": 1,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "search_knowledge"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "search_knowledge"
+        ],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "citations": 2,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 4,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t02",
+      "question": "灰度期间登录和核心下单链路的成功率是多少？",
+      "intent": "single_fact",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "search_knowledge",
+        "strict": true,
+        "acceptable": true,
+        "used_tools": [
+          "search_knowledge"
+        ],
+        "tool_calls": 1,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "search_knowledge"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "search_knowledge"
+        ],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "citations": 2,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 4,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t03",
+      "question": "移动端附件下载的问题为什么必须在发布前处理？",
+      "intent": "single_fact",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "search_knowledge",
+        "strict": true,
+        "acceptable": true,
+        "used_tools": [
+          "search_knowledge"
+        ],
+        "tool_calls": 1,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "search_knowledge"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "search_knowledge"
+        ],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "citations": 3,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 4,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t04",
+      "question": "两次模型调用失败的原因是什么？用户能做什么？",
+      "intent": "single_fact",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "search_knowledge",
+        "strict": true,
+        "acceptable": true,
+        "used_tools": [
+          "search_knowledge"
+        ],
+        "tool_calls": 1,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "search_knowledge"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "search_knowledge"
+        ],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "citations": 3,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 4,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t05",
+      "question": "会议纪要处于什么状态时可以导出？",
+      "intent": "single_fact",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "search_knowledge",
+        "strict": true,
+        "acceptable": true,
+        "used_tools": [
+          "search_knowledge"
+        ],
+        "tool_calls": 1,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "search_knowledge"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "search_knowledge"
+        ],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "citations": 3,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 4,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t06",
+      "question": "正式发布的时间是什么？前提条件是什么？",
+      "intent": "single_fact",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "search_knowledge",
+        "strict": true,
+        "acceptable": true,
+        "used_tools": [
+          "search_knowledge"
+        ],
+        "tool_calls": 1,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "search_knowledge"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "search_knowledge"
+        ],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "citations": 2,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 4,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t07",
+      "question": "知识索引构建期间资料变化，按会议决策应该怎么处理？",
+      "intent": "single_fact",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "search_knowledge",
+        "strict": true,
+        "acceptable": true,
+        "used_tools": [
+          "search_knowledge"
+        ],
+        "tool_calls": 1,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "search_knowledge"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "search_knowledge"
+        ],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "citations": 3,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 4,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t08",
+      "question": "报表导出在压测里暴露了什么问题？",
+      "intent": "single_fact",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "search_knowledge",
+        "strict": true,
+        "acceptable": true,
+        "used_tools": [
+          "search_knowledge"
+        ],
+        "tool_calls": 1,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "search_knowledge"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "search_knowledge"
+        ],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "citations": 2,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 4,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t09",
+      "question": "逾期的任务负责人会在哪里看到提醒？",
+      "intent": "single_fact",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "search_knowledge",
+        "strict": true,
+        "acceptable": true,
+        "used_tools": [
+          "search_knowledge"
+        ],
+        "tool_calls": 1,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "search_knowledge"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "search_knowledge"
+        ],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "citations": 3,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 4,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t10",
+      "question": "容量评估结论是什么？现有机器能扛多少日活、预计发布后多少？",
+      "intent": "single_fact",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "search_knowledge",
+        "strict": true,
+        "acceptable": true,
+        "used_tools": [
+          "search_knowledge"
+        ],
+        "tool_calls": 1,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "search_knowledge"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "search_knowledge"
+        ],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "citations": 3,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 4,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t11",
+      "question": "用户反馈最集中的两个问题是什么？",
+      "intent": "aggregation",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "search_knowledge",
+        "strict": false,
+        "acceptable": true,
+        "used_tools": [
+          "search_knowledge"
+        ],
+        "tool_calls": 1,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "list_facts"
+        ],
+        "missing_required": [
+          "list_facts"
+        ],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": false,
+        "matched_required": [],
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "citations": 3,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 6,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": false
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          false
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t12",
+      "question": "最近七天纪要和 agent 的调用成功率、平均耗时是多少？",
+      "intent": "aggregation",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "search_knowledge",
+        "strict": false,
+        "acceptable": true,
+        "used_tools": [
+          "search_knowledge"
+        ],
+        "tool_calls": 1,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "list_facts"
+        ],
+        "missing_required": [
+          "list_facts"
+        ],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": false,
+        "matched_required": [],
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "citations": 3,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 6,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": false
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          false
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t13",
+      "question": "正式发布前还要补充哪两组验收数据？",
+      "intent": "aggregation",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "search_knowledge",
+        "strict": false,
+        "acceptable": true,
+        "used_tools": [
+          "search_knowledge"
+        ],
+        "tool_calls": 1,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "list_facts"
+        ],
+        "missing_required": [
+          "list_facts"
+        ],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": false,
+        "matched_required": [],
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "citations": 3,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 6,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": false
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          false
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t14",
+      "question": "发布公告任务包含哪些入口？负责人和截止时间是什么？",
+      "intent": "aggregation",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "query_meeting_state",
+        "strict": false,
+        "acceptable": false,
+        "used_tools": [
+          "query_meeting_state",
+          "search_knowledge"
+        ],
+        "tool_calls": 2,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "list_facts"
+        ],
+        "missing_required": [
+          "list_facts"
+        ],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": false,
+        "matched_required": [],
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "citations": 3,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 6,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": false
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          false
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t15",
+      "question": "首周复盘要看哪五项数据？",
+      "intent": "aggregation",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "search_knowledge",
+        "strict": false,
+        "acceptable": true,
+        "used_tools": [
+          "search_knowledge"
+        ],
+        "tool_calls": 1,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "list_facts"
+        ],
+        "missing_required": [
+          "list_facts"
+        ],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": false,
+        "matched_required": [],
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "citations": 3,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 6,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": false
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          false
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t16",
+      "question": "灰度分几步走？回滚能力如何？",
+      "intent": "aggregation",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "search_knowledge",
+        "strict": false,
+        "acceptable": true,
+        "used_tools": [
+          "search_knowledge"
+        ],
+        "tool_calls": 1,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "list_facts"
+        ],
+        "missing_required": [
+          "list_facts"
+        ],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": false,
+        "matched_required": [],
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "citations": 3,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 6,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": false
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          false
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t17",
+      "question": "发布公告与对外通稿分别由谁负责、什么时候完成？",
+      "intent": "cross_meeting",
+      "cross_meeting": true,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "query_meeting_state",
+        "strict": false,
+        "acceptable": false,
+        "used_tools": [
+          "query_meeting_state",
+          "search_knowledge"
+        ],
+        "tool_calls": 2,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "search_knowledge"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 2,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "search_knowledge"
+        ],
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6666666666666666,
+        "citations": 3,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 8,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t18",
+      "question": "发布时间的结论在两段录音里一致吗？分别怎么说？",
+      "intent": "cross_meeting",
+      "cross_meeting": true,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "list_facts",
+        "strict": false,
+        "acceptable": true,
+        "used_tools": [
+          "list_facts",
+          "search_knowledge"
+        ],
+        "tool_calls": 3,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "search_knowledge"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 2,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "search_knowledge"
+        ],
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6666666666666666,
+        "citations": 4,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 8,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t19",
+      "question": "两段录音分别是上午还是下午的会、主题是什么？",
+      "intent": "cross_meeting",
+      "cross_meeting": true,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "list_facts",
+        "strict": false,
+        "acceptable": true,
+        "used_tools": [
+          "list_facts",
+          "search_knowledge"
+        ],
+        "tool_calls": 3,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "search_knowledge"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 2,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "search_knowledge"
+        ],
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6666666666666666,
+        "citations": 4,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 8,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t20",
+      "question": "灰度这件事在两段录音里分别讨论到什么？",
+      "intent": "cross_meeting",
+      "cross_meeting": true,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "get_transcript_excerpt",
+        "strict": false,
+        "acceptable": false,
+        "used_tools": [
+          "get_transcript_excerpt",
+          "search_knowledge"
+        ],
+        "tool_calls": 3,
+        "failed_tool_calls": [
+          "get_transcript_excerpt"
+        ],
+        "required_tools": [
+          "search_knowledge"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 2,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "search_knowledge"
+        ],
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6666666666666666,
+        "citations": 6,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 8,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t21",
+      "question": "两段录音里的验收/回归要求分别是什么？",
+      "intent": "cross_meeting",
+      "cross_meeting": true,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "get_transcript_excerpt",
+        "strict": false,
+        "acceptable": false,
+        "used_tools": [
+          "get_transcript_excerpt",
+          "search_knowledge"
+        ],
+        "tool_calls": 3,
+        "failed_tool_calls": [
+          "get_transcript_excerpt"
+        ],
+        "required_tools": [
+          "search_knowledge"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 2,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "search_knowledge"
+        ],
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6666666666666666,
+        "citations": 6,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 8,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t22",
+      "question": "你好，你能帮我做什么？",
+      "intent": "smalltalk",
+      "cross_meeting": false,
+      "must_cite": false,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": null,
+        "strict": true,
+        "acceptable": true,
+        "used_tools": [],
+        "tool_calls": 0,
+        "failed_tool_calls": [],
+        "required_tools": [],
+        "missing_required": [],
+        "min_tool_calls": 0,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "citations": 0,
+        "must_cite": false,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 0,
+        "within_budget": true,
+        "stop_reason": "no_retrieval",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t23",
+      "question": "帮我看看今天天气怎么样？",
+      "intent": "smalltalk",
+      "cross_meeting": false,
+      "must_cite": false,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": null,
+        "strict": true,
+        "acceptable": true,
+        "used_tools": [],
+        "tool_calls": 0,
+        "failed_tool_calls": [],
+        "required_tools": [],
+        "missing_required": [],
+        "min_tool_calls": 0,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "citations": 0,
+        "must_cite": false,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 0,
+        "within_budget": true,
+        "stop_reason": "no_retrieval",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t24",
+      "question": "移动端附件下载任务的负责人、协作人和截止时间是什么？",
+      "intent": "state",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "query_meeting_state",
+        "strict": true,
+        "acceptable": true,
+        "used_tools": [
+          "query_meeting_state"
+        ],
+        "tool_calls": 1,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "query_meeting_state"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "query_meeting_state"
+        ],
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "citations": 1,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 6,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t25",
+      "question": "报表导出问题最后决定怎么处理？",
+      "intent": "state",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "query_meeting_state",
+        "strict": true,
+        "acceptable": true,
+        "used_tools": [
+          "query_meeting_state",
+          "search_knowledge"
+        ],
+        "tool_calls": 2,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "query_meeting_state"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "query_meeting_state"
+        ],
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6666666666666666,
+        "citations": 3,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 6,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t26",
+      "question": "下午这场会定了哪些行动项和负责人？",
+      "intent": "state",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "list_facts",
+        "strict": false,
+        "acceptable": true,
+        "used_tools": [
+          "list_facts",
+          "search_knowledge"
+        ],
+        "tool_calls": 2,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "query_meeting_state"
+        ],
+        "missing_required": [
+          "query_meeting_state"
+        ],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": false,
+        "matched_required": [],
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "citations": 4,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 6,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": false
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          false
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    },
+    {
+      "case_id": "t27",
+      "question": "下午的会最后复述了哪三条结论？",
+      "intent": "state",
+      "cross_meeting": false,
+      "must_cite": true,
+      "trials": 1,
+      "has_trial": true,
+      "first_trial": {
+        "first_tool": "query_meeting_state",
+        "strict": true,
+        "acceptable": true,
+        "used_tools": [
+          "query_meeting_state",
+          "search_knowledge"
+        ],
+        "tool_calls": 2,
+        "failed_tool_calls": [],
+        "required_tools": [
+          "query_meeting_state"
+        ],
+        "missing_required": [],
+        "min_tool_calls": 1,
+        "min_calls_ok": true,
+        "no_tools_ok": true,
+        "required_ok": true,
+        "matched_required": [
+          "query_meeting_state"
+        ],
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 0.6666666666666666,
+        "citations": 3,
+        "must_cite": true,
+        "citation_ok": true,
+        "forbidden_hits": [],
+        "max_tool_calls": 6,
+        "within_budget": true,
+        "stop_reason": "finished",
+        "pass": true
+      },
+      "pass_k": {
+        "k": 3,
+        "evaluated": false,
+        "passed": null,
+        "trial_passes": [
+          true
+        ],
+        "reason": "trial 数不足：1 < k=3"
+      }
+    }
+  ],
+  "reading": "口径：首轮工具 strict=首轮工具∈required_tools（无 required 的题要求不调工具）；acceptable=首轮工具∈acceptable_tools。工具集合 P/R/F1 取每题第一次 trial，同一工具多次只算一次。必引率只统计 must_cite 题。pass^k 要求前 k 次 trial 全部满足 required 覆盖+must_cite；不足 k 次单列。禁止工具与预算单独报。所有比例带 Clopper-Pearson 95% 区间（Wilson 一并给）。零模型调用。",
+  "not_measured": "不评工具执行成功率（tools[].ok）、不评检索内容相关性、不评最终答案正确性；跨会议「两段都查」用 min_tool_calls+工具集合近似，未逐段核验来源。",
+  "zero_model_calls": true,
+  "gold_validation": {
+    "ok": true,
+    "cases": 27,
+    "by_intent": {
+      "aggregation": 6,
+      "cross_meeting": 5,
+      "single_fact": 10,
+      "smalltalk": 2,
+      "state": 4
+    },
+    "known_tools": [
+      "get_minutes",
+      "get_transcript_excerpt",
+      "list_facts",
+      "query_meeting_state",
+      "search_knowledge"
+    ],
+    "errors": [],
+    "warnings": []
+  }
+}
