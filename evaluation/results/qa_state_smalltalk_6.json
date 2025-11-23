@@ -1,0 +1,97 @@
+{
+  "qa_set_version": 2,
+  "name": "state_smalltalk_6",
+  "corpus": "db/02-seed.sql 的种子会议：两段录音（task 6 上午产品发布评审、task 7 下午 V2.0 发布评审）",
+  "cases": [
+    {
+      "id": "q96",
+      "question": "你好，你能帮我做什么？",
+      "expected_facts": [],
+      "intent": "smalltalk",
+      "intent_source": "agent_draft",
+      "case_source": "agent_draft"
+    },
+    {
+      "id": "q100",
+      "question": "帮我看看今天天气怎么样？",
+      "expected_facts": [],
+      "intent": "smalltalk",
+      "intent_source": "agent_draft",
+      "case_source": "agent_draft"
+    },
+    {
+      "id": "q12",
+      "question": "移动端附件下载任务的负责人、协作人和截止时间是什么？",
+      "expected_facts": [
+        "负责人是王工",
+        "协作人是陈琳",
+        "截止时间为 8 月 30 日 18 点"
+      ],
+      "source": {
+        "task_id": 6,
+        "segments": [
+          47,
+          56
+        ]
+      },
+      "intent": "single_fact",
+      "intent_source": "agent_draft"
+    },
+    {
+      "id": "q23",
+      "question": "报表导出问题最后决定怎么处理？",
+      "expected_facts": [
+        "发布时先隐藏报表导出入口",
+        "等异步改造完成再单独放出来",
+        "发布时间不变"
+      ],
+      "source": {
+        "task_id": 7,
+        "segments": [
+          19,
+          47
+        ]
+      },
+      "intent": "single_fact",
+      "intent_source": "agent_draft"
+    },
+    {
+      "id": "q26",
+      "question": "下午这场会定了哪些行动项和负责人？",
+      "expected_facts": [
+        "张涛负责报表导出异步化改造，本周五前完成",
+        "陈磊明天下班前提交灰度值班排班表",
+        "刘颖负责通稿定稿"
+      ],
+      "source": {
+        "task_id": 7,
+        "segments": [
+          49,
+          50
+        ]
+      },
+      "intent": "aggregation",
+      "intent_source": "agent_draft"
+    },
+    {
+      "id": "q71",
+      "question": "下午的会最后复述了哪三条结论？",
+      "expected_facts": [
+        "V2.0 按期发布，报表导出入口先隐藏",
+        "灰度按 10%、50%、全量分三天走",
+        "对外通稿和产品公告在发布前一日下午六点前定稿"
+      ],
+      "intent": "aggregation",
+      "intent_source": "agent_draft",
+      "case_source": "agent_draft",
+      "source": {
+        "task_id": 7,
+        "segments": [
+          47,
+          48,
+          49
+        ]
+      }
+    }
+  ]
+}
