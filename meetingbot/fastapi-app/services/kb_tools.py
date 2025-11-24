@@ -346,9 +346,8 @@ class QueryMeetingStateArgs(BaseModel):
                     "会议 id 可从 list_facts(kind=meeting) 或上下文拿到）")
     series_id: int | None = Field(
         default=None,
-        description="限定系列主键。**系列 id 与会议 id 是不同命名空间**："
-                    "例如系列1包含会议2时，series_id=1、meeting_id=2；"
-                    "不确定就先不传范围或先 list_facts(kind=meeting)")
+        description="限定系列主键。**系列 id 与会议 id 是不同命名空间**，"
+                    "不要把会议 id 当系列 id；不确定就先不传范围或先 list_facts(kind=meeting)")
     status: Literal["open", "done", "all"] = Field(
         default="open",
         description="仅对 action_item 有意义：open 未完成 / done 已完成 / all 全部")

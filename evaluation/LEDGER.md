@@ -2130,3 +2130,12 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - **注入**：10/10、良性 0/20、泄露 0。
 - **累计**：产品 4,319 次调用、¥1.6624；不设上限。
 - **未完成**：9 条 partial、人工签名；独立 Agent 代审不是人工。
+
+### 8) 泛化 holdout（2026-10-20，未用于调参）
+
+- `evaluation/gold/holdout_generalization_20.json`：20 题/32 条事实，先移除具体案例式
+  prompt 表述后**只跑一次**；独立子 Agent 复核 30 approve / 2 revise / 0 reject。
+- 读数：context_recall **96.88%**、context_precision 60.66%、faithfulness **89.83%**、
+  answer_relevancy 95.0%。
+- 纪律：holdout 不用于选择 prompt/模型/参数；后续修改必须另建 dev 集，否则该读数作废。
+- 解读边界：单会议语料、AI 起草并独立复核的事实、`human_checked=false`；不能当人工金标。
