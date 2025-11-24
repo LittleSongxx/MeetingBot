@@ -331,3 +331,22 @@ e04 是典型：检索同时有“四类账号”(115s) 和“管理员和员工
 - r1 cross10：recall 100%、precision 61.67%、faithfulness 86.96%、relevance 100%
 - 该读数只能当一次观测，不能当方差/稳定性估计
 - 多轮 P0 需要更小的固定题集（例如 6 题）或后台任务队列，不能再占用主会话数十分钟
+
+## 21. P0 多轮测量完成（fresh session × 3）
+
+之前多轮跑不完的根因是：同一 session 连问 6–30 题，历史越来越长，单题延迟不断上升。
+改成 **每个问题新建 session** 后，3 题 ×3 轮顺利完成。
+
+新增脚本：`evaluation/benchmarks/ask_fresh_sessions.py`（只走产品 HTTP）。
+
+cross3，3 轮：
+
+| trial | recall | precision | faithfulness | relevancy |
+|---|---:|---:|---:|---:|
+| 1 | 100% | 63.16% | 87.88% | 100% |
+| 2 | 100% | 63.16% | 85.71% | 100% |
+| 3 | 100% | **52.63%** | 96.55% | 100% |
+
+- recall/relevancy 稳定；**precision 一轮就波动 10.5pp**，faithfulness 波动 10.8pp。
+- 这证明了之前“单轮 +17pp 就上线”的风险：小样本指标噪声很大，必须看多轮和 CI。
+- 仍只有 3 题，不能当总体方差；下一步应扩到 6 题×3 轮。

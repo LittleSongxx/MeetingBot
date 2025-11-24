@@ -2288,3 +2288,11 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - 条件化证据提示 v3 独立盲评：两臂均 19 correct/1 partial/0 wrong，e04 两臂仍同错，
   提示无可辨识效果；`KB_EVIDENCE_HINT_ENABLED` 默认 0。
 - 下一步 P0：6 题固定小集 + 后台队列跑 3 轮；P2/P3 尚未实施。
+
+### 21) P0 多轮测量完成（fresh session ×3，2026-10-20）
+
+- 根因：同 session 连问，历史增长导致延迟上升；改为每题新建 session。
+- 新脚本 `evaluation/benchmarks/ask_fresh_sessions.py`；cross3 ×3 完成。
+- 读数：precision 63.16/63.16/52.63%；faithfulness 87.88/85.71/96.55%；
+  recall 100% 稳定；relevancy 100%。
+- 结论：小样本单轮噪声很大（precision 一轮 10.5pp），后续至少 6 题×3 轮 + 配对 CI。

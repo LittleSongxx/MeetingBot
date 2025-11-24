@@ -118,3 +118,11 @@
 2. 做 e04 的**条件化 claim-evidence 校验**原型；在 e04 + cross30 上回归。
 3. 新建 unseen-meeting holdout F；独立复核后再看是否值得上线。
 4. 给 chat/embedding 配真实单价，否则成本指标永远不可用。
+
+## 6. P0 执行方式进展（2026-10-20）
+
+- 多轮跑不完的根因不是模型，而是“同一 session 连问”，历史导致单题延迟上升。
+- 已新增 `evaluation/benchmarks/ask_fresh_sessions.py`：每题新建 session。
+- cross3 ×3 已完成；precision 波动 10.5pp，说明小样本单轮不可作为上线依据。
+- 后续 P0 固定 6 题×3 轮，用该 runner 跑；P2 parent-child / P3 claim verification
+  在 P0 口径稳定后再比较。
