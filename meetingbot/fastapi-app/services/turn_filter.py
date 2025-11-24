@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from typing import Any, Awaitable, Callable
 
 from services import citations
@@ -18,6 +19,10 @@ _ITEM_KEYS = {"hits": "hits", "facts": "facts", "items": "items"}
 
 def enabled() -> bool:
     return os.getenv("KB_TURN_FILTER_ENABLED", "0").strip().lower() not in {"0", "false", "no", "off"}
+
+
+def evidence_hint_enabled() -> bool:
+    return os.getenv("KB_EVIDENCE_HINT_ENABLED", "0").strip().lower() not in {"0", "false", "no", "off"}
 
 
 def _text_of(message: Any) -> str:
@@ -55,6 +60,30 @@ def collect_entries(messages: list[Any]) -> list[dict[str, Any]]:
                                 "item_index": item_index, "ref": int(item["ref"]),
                                 "text": str(text)})
     return entries
+
+
+COUNT_PATTERN = re.compile(r"([一二三四五六七八九十两\d]+)\s*(类|种|项|个|入口)")
+CONFLICT_QUESTION_PATTERN = re.compile(r"几类|哪几类|哪些类别|几项|哪几项|几个|多少|哪些入口|几种")
+
+
+def conflict_hint(question: str, messages: list[Any]) -> str | None:
+    """只在“问题问数量/类别且上下文出现多个计数口径”时给一次定向提示。
+
+    这不是全局规则：不满足条件完全不加提示，避免上次“具体性提示”那种全局回归。
+    """
+    if not CONFLICT_QUESTION_PATTERN.search(question or ""):
+        return None
+    entries = collect_entries(messages)
+    if len(entries) < 2:
+        return None
+    counts = set()
+    for entry in entries:
+        counts.update(match[0] for match in COUNT_PATTERN.findall(entry["text"]))
+    if len(counts) < 2:
+        return None
+    return ("本轮工具结果包含多个数量/范围口径。回答前请核对：问题问的对象或场景对应"
+            "哪一条来源；优先采用直接回答该对象的精确条目，不要把范围更宽的相似条目"
+            "当答案；若多个口径都真实存在，并列说明并各自引用。")
 
 
 def apply_keep(messages: list[Any], entries: list[dict[str, Any]],
@@ -104,4 +133,4 @@ async def filter_messages(messages: list[Any], question: str,
 
 
 __all__ = ["TURN_FILTER_CALL_TYPE", "enabled", "collect_entries", "apply_keep",
-           "filter_messages"]
+           "filter_messages", "conflict_hint"]

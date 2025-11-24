@@ -2272,3 +2272,11 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - 策略报告：`evaluation/reports/2026-10-20_optimization_strategy.md`。
 - 后续：先扩 unseen-meeting holdout + 多轮 + 盲评；再做条件化 evidence 校验/
   parent-child/query decomposition；不再用全局 prompt 修单题。
+
+### 19) 条件化证据冲突提示原型（2026-10-20）
+
+- failure taxonomy：9 条 partial 主要是证据选择/跨工具覆盖/关键条目缺失；纯 retrieval miss 0。
+- 条件化提示：仅“问题问数量/类别 + 上下文出现多个计数口径”时追加一句；默认 0。
+- e04 修好；holdout E hint on：recall 88.24→97.06、precision 73.02→78.33、
+  faithfulness 89.58→95.92、relevance 90→100；cross10 基本不变。
+- 仍未默认开启：需要独立盲评 + 完整 cross30 回归；避免再次把 judge 读数当答案质量。
