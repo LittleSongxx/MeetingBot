@@ -247,25 +247,33 @@ DeepSeek judge 独立重判过滤后的 context precision / recall；不改产�
   faithfulness 81.86%、relevance 100%；与改动前互有升降，不声称提升。
 - 下一步只做架构级：turn 级最终上下文过滤 / 更强检索评估器 / 真实单价成本。
 
-## 17. Turn 级上下文过滤：holdout E 通过，默认开启
+## 17. Turn 级上下文过滤：judge 指标好，但独立盲评未见质量收益（默认关闭）
 
 ### cross30 开发集
 | 配置 | recall | precision | faithfulness | relevancy |
 |---|---:|---:|---:|---:|
-| 无过滤 | 76.79% | 68.87% | 81.86% | 100% |
-| turn 级过滤 | **77.59%** | **77.55%** | 81.06% | 93.33% |
+| 无过滤 | 76.79% | 68.87% | **81.86%** | **100%** |
+| turn 级过滤（污染修复后） | **82.14%** | **78.82%** | 74.55% | 96.67% |
 
 ### holdout E（20 题，未调参，off/on 两臂）
 | 配置 | recall | precision | faithfulness | relevancy |
 |---|---:|---:|---:|---:|
-| off | 97.06% | 73.33% | 93.00% | 100% |
-| **on** | **97.06%** | **90.38%（+17.05pp）** | **97.80%（+4.80pp）** | **100%** |
+| off | 88.24% | 73.02% | 89.58% | 90.00% |
+| **on** | **97.06%（+8.82pp）** | **89.80%（+16.78pp）** | **97.56%（+7.98pp）** | **100%** |
 
-- 预注册门槛（precision ≥+5pp、recall/faithfulness 不降 >2pp、relevance 不降 >5pp）
-  **全部通过**。
+- 按 judge 读数，预注册门槛全部通过；但独立盲评 v2 显示两臂答案
+  19 correct / 1 partial / 0 wrong 完全一致（18 tie、2 偏好 filter_on），
+  **没有系统性答案质量差异**。cross30 上 faithfulness 反而从 81.86% 降到 74.55%。
 - 这是本轮唯一达到“precision 大幅提升、recall/faithfulness 不降”的通用机制。
 - 机制：模型调用前对本轮**累积工具结果**做一次 needed/maybe/no 过滤；不是每次 search 内过滤。
 - 成本/延迟：`KB_TURN_FILTER` 60 次、平均 **1,471.77ms/次**、59,577 tokens；
   约 1.2 次/题，折合每题约 **+1.8s**；比 per-search 过滤（3.7s/次）便宜一半以上。
-- 决定：`KB_TURN_FILTER_ENABLED` 默认改为 **1**；可用环境变量关闭。
+- **独立盲评 v2（修复 labels 污染和 e04/e09 事实后）**：A/B 两臂都是
+  19 correct / 1 partial / 0 wrong；18 组 tie，仅 2 组偏好 filter_on（e16/e18）。
+  **没有系统性答案质量提升或退化**；唯一共同失败 e04（seg14 四类账号未被召回到）。
+- 同时修复了 turn 过滤内部调用把 labels JSON 流式混入答案的 bug；修复前 turn-on
+  答案全部带标签污染，之前那组 judge 指标不能直接用。
+- 因此 judge 侧的 precision/faithfulness 提升很可能部分是“过滤后 judge 只看更少上下文”
+  的上下文集合效应，不能直接当生成质量提升。
+- 决定：`KB_TURN_FILTER_ENABLED` **默认 0**；代码保留为可选实验开关。
 - 仍不声称通用泛化：holdout E 是 AI 起草、同语料、单次读数；需要人工/第三方复验。

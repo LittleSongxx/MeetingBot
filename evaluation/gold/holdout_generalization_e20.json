@@ -55,7 +55,7 @@
       "question": "权限验证覆盖哪几类账号？",
       "intent": "holdout_e",
       "expected_facts": [
-        "产品研发、测试、运营、客户支持四类账号"
+        "管理员、会议创建人、主持人、普通参会人员四类账号"
       ],
       "source_task_ids": [
         6
@@ -124,20 +124,21 @@
     },
     {
       "case_id": "e09",
-      "question": "首周运行日报要汇总哪些数据？",
+      "question": "首周复盘要分析哪几类数据？",
       "intent": "holdout_e",
       "expected_facts": [
         "会议创建数量与总时长",
         "转写成功率与平均耗时",
         "任务完成率与逾期率",
-        "RAG问答与Agent运行质量"
+        "RAG问答调用量、Agent运行次数、工具调用成功率、人工确认次数"
       ],
       "source_task_ids": [
         3
       ],
       "label_source": "holdout_agent_draft",
       "human_checked": false,
-      "do_not_tune": true
+      "do_not_tune": true,
+      "note": "原题面“首周运行日报”与事实口径不一致，独立复核后改为“首周复盘”。"
     },
     {
       "case_id": "e10",
