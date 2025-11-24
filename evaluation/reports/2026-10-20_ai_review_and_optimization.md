@@ -377,3 +377,17 @@ cross3，3 轮：
 - 默认关闭 `KB_PARENT_CONTEXT_ENABLED=0`；代码保留为实验开关。
 - 结论：parent-child 不能只拼长文本，必须保留 child 引用身份、parent 仅作阅读上下文，
   否则 citation/ref 与上下文分母都会失真。
+
+### P2 第二版：child 引用 + parent_text 阅读字段（仍未通过）
+- 修正第一版：child 的 text/quote 不变，另加 `parent_text`（±30s 相邻窗口）作为阅读材料。
+- cross6 对比 P0 mean：
+
+| 配置 | recall | precision | faithfulness | relevancy |
+|---|---:|---:|---:|---:|
+| P0 mean | 97.22% | 64.23% | 90.75% | 100% |
+| parent_text | **50.00%** | **15.30%** | 77.60% | 66.67% |
+
+- 仍然全面退化：即使不替换 child 文本，parent_text 进入工具结果后污染上下文/答案选择。
+- 结论：在当前 agent/tool 架构里，parent 上下文不能直接塞进检索结果；如果要做，
+  应作为独立阅读层并在答案生成后再合并，而不是放进 citation/tool payload。
+- 默认保持 `KB_PARENT_CONTEXT_ENABLED=0`。

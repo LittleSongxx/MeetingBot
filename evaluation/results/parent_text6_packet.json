@@ -1,0 +1,2838 @@
+{
+  "packet_version": 1,
+  "purpose": "轴 5 检索与回答：context precision/recall、faithfulness、answer relevancy",
+  "qa_set": "cross6",
+  "qa_set_discipline": null,
+  "case_count": 6,
+  "answered_case_count": 6,
+  "cases": [
+    {
+      "case_id": "cm01",
+      "question": "发布公告与对外通稿分别由谁负责、什么时候完成？",
+      "expected_facts": [
+        "运营公告由赵敏牵头、周宁协作，9月1日9:00前完成",
+        "对外通稿由刘颖负责，发布前一日18:00前定稿"
+      ],
+      "unanswerable": false,
+      "answer": "",
+      "contexts": [],
+      "context_source": "citations",
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [],
+          "facts": [
+            {
+              "index": 1,
+              "found": false,
+              "in_context": null
+            },
+            {
+              "index": 2,
+              "found": false,
+              "in_context": null
+            }
+          ],
+          "missing_facts": [
+            1,
+            2
+          ]
+        },
+        "answer": {
+          "claims": [],
+          "answered": false,
+          "why": "检索上下文为空，回答也为空，未提供任何负责人或完成时间信息。"
+        }
+      }
+    },
+    {
+      "case_id": "cm02",
+      "question": "两段录音里分别提到了哪些风险？",
+      "expected_facts": [
+        "上午会议识别5项风险（含4项高风险）：模型服务延迟、资料频繁更新、负责人分配不合理、删除用户受限、阻断任务延期",
+        "下午会议补充报表导出异步改造与灰度排期过近的风险"
+      ],
+      "unanswerable": false,
+      "answer": "### 结论\n两段录音中明确提到的风险点如下：\n\n- **上午场录音（task_id=6）**：提到2项风险相关表述\n    1. 移动端在网络较弱时附件下载进度未及时刷新，会影响发布当天的支持成本 [38][49][53]。\n    2. 外部模型服务短暂超时导致AI纪要/Agent调用失败（系统已记录失败原因并支持重试）[38][55][56]。\n- **下午场录音（task_id=7）**：提到1项风险相关表述\n    1. 报表导出接口在压测中暴露性能风险：单用户导出3个月数据耗时40+秒、超过网关30秒超时；500并发下该接口失败率达12% [8][16][17][18]。\n\n> ⚠️ 资料不足说明：search_knowledge 按 source_ids 检索“风险”时报错（'TranscriptSegment' object has no attribute 'speaker'），无法对两段录音做关键词召回；上述结论仅基于 get_transcript_excerpt 返回的转写片段（且均被 truncated），可能遗漏未出现在已摘录窗口内的其他风险表述。如需完整清单，需修复检索或分段取全量转写后再核对。\n\n### 依据\n- 录音清单显示两段录音均属会议「产品发布评审会议」（meeting_id=2）：上午场 task_id=6（2026-09-10 09:00）、下午场 task_id=7（2026-09-10 14:00）[1][2]。\n- 上午场转写片段中，张晨在 96–103s 提到“移动端在网络较弱时，附件下载进度没有及时刷新”[49]；在 144–156s 补充“移动端附件下载的体验问题会影响发布当天的支持成本，需要在正式发布前完成处理”[53]；在 193–206s 提到“两次失败都来自外部模型服务短暂超时……用户可以从失败状态发起重试”[55][56]。\n- 下午场转写片段中，张晨在 35–45s 说明“单个用户导出三个月的数据接口要跑四十多秒，超过了网关30秒的超时限制”[16][17]；在 46–52s 补充“压了500并发，这个接口的失败率到了12%”[18]。\n- 已确认纪要里该会议共登记5条风险 [3][4][5][6][7]，但因 search_knowledge 报错且转写摘录被截断，无法将上述录音原话与纪要条目逐条对应；本回答仅陈述录音片段中**明确说出**的风险点，不推断未摘录到的内容。",
+      "contexts": [
+        {
+          "ref": 1,
+          "kind": "fact",
+          "meeting_id": 2,
+          "text": "录音 task 7 · 2026-09-10 14:00:00 · 下午"
+        },
+        {
+          "ref": 2,
+          "kind": "fact",
+          "meeting_id": 2,
+          "text": "录音 task 6 · 2026-09-10 09:00:00 · 上午"
+        },
+        {
+          "ref": 3,
+          "kind": "fact",
+          "meeting_id": 2,
+          "text": "模型服务延迟波动导致纪要生成与Agent运行等待时间延长，影响用户体验。；等级：HIGH"
+        },
+        {
+          "ref": 4,
+          "kind": "fact",
+          "meeting_id": 2,
+          "text": "会议资料频繁更新导致知识索引长期处于‘需要重建’状态，影响检索时效性与一致性。；等级：MEDIUM"
+        },
+        {
+          "ref": 5,
+          "kind": "fact",
+          "meeting_id": 2,
+          "text": "任务负责人分配不合理风险：Agent仅提供建议，最终由用户确认，存在人为误配可能；无技术强制校验机制。；等级：HIGH"
+        },
+        {
+          "ref": 6,
+          "kind": "fact",
+          "meeting_id": 2,
+          "text": "删除用户时若关联历史业务记录（会议、任务、转写、纪要、问答、Agent运行、质量评价），系统将阻止删除操作，影响账号生命周期管理。；等级：HIGH"
+        },
+        {
+          "ref": 7,
+          "kind": "fact",
+          "meeting_id": 2,
+          "text": "阻断任务未按时完成将触发发布时间调整风险；等级：HIGH"
+        },
+        {
+          "ref": 8,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "各位下午好，今天的产品发布评审会现在开始。"
+        },
+        {
+          "ref": 9,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "今天要出三个结论，V2.0能不能按期发布？"
+        },
+        {
+          "ref": 10,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "灰度怎么放？"
+        },
+        {
+          "ref": 11,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "还有对外通稿什么时候定稿？"
+        },
+        {
+          "ref": 12,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "先请王敏说一下功能验收的情况。"
+        },
+        {
+          "ref": 13,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "好的，V2.0计划内的17个需求已经验收通过15个，剩下两个，一个是报表导出，一个是消息推送的免打扰设置。"
+        },
+        {
+          "ref": 14,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "消息推送这个已经修完了，昨天回归通过报表导出。"
+        },
+        {
+          "ref": 15,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "还有问题我让张涛详细说一下报表导。"
+        },
+        {
+          "ref": 16,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "出的问题在压测里暴露出来了。"
+        },
+        {
+          "ref": 17,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "单个用户导出三个月的数据接口要跑四十多秒，超过了网关30秒的超时限制。"
+        },
+        {
+          "ref": 18,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "我们压了500并发，这个接口的失败率到了12%，其他接口都是正常的。"
+        },
+        {
+          "ref": 19,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "四十多秒确实不能接受，有没有办法在发布前解决？"
+        },
+        {
+          "ref": 20,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "有两个方案，一是加缓存，把常用的时间范围预生成，但覆盖不全，用户选个冷门区间还是慢。"
+        },
+        {
+          "ref": 21,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "二是改成异步任务，用户点导出之后先返回一个任务号，后台跑完了再通知他下载这个方案彻底一些。"
+        },
+        {
+          "ref": 22,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "从用户体验看，异步方案更好导出本来就是个低频操作，等一会儿可以接受卡在那转圈40秒反而更差。"
+        },
+        {
+          "ref": 23,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "异步方案要改多久？"
+        },
+        {
+          "ref": 24,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "涉及三个服务，导出服务、任务调度，还有消息通知。"
+        },
+        {
+          "ref": 25,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "开发两天，连调一天，测试两天，加起来一周。"
+        },
+        {
+          "ref": 26,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "那就定一步方案发布时间不变，报表导出这个功能在发布时先隐藏入口，等改造完成再单独放出来。"
+        },
+        {
+          "ref": 27,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "明白，我这边今天就拆任务。"
+        },
+        {
+          "ref": 28,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "陈磊说一下灰度和容量。"
+        },
+        {
+          "ref": 29,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "容量这块没问题。"
+        },
+        {
+          "ref": 30,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "现在的机器配置扛刀日活8万枚压力我们预估发布后日或是5万左右。"
+        },
+        {
+          "ref": 31,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "灰度方案我建议分三步，第一天放10%观察一天，第二天到50%，第三天全量回滚预案也准备好了，数据库改动都是加字段向后兼容，回滚步需要动数据，最快五分钟能切回旧版本。"
+        },
+        {
+          "ref": 32,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第一天10%是按什么维度切？"
+        },
+        {
+          "ref": 33,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "挨用户ID取魔，保证同一个用户每次都落在同一边，不会一会儿新版。"
+        },
+        {
+          "ref": 34,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "一会儿旧版。"
+        },
+        {
+          "ref": 35,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "灰度期间我们需要盯哪些指标？"
+        },
+        {
+          "ref": 36,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "主要看接口错误率、平均响应时间，还有核心链路的转化率。"
+        },
+        {
+          "ref": 37,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "这三个我配了告警，超过阈值会。"
+        },
+        {
+          "ref": 38,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "各位同事上午好，现在开始产品上线复盘与下阶段发布准备会议。"
+        },
+        {
+          "ref": 39,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "我是本次会议主持人李月。"
+        },
+        {
+          "ref": 40,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "今天会议预计持续45分钟，主要讨论三个议题。"
+        },
+        {
+          "ref": 41,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第一，上一轮产品灰度发布的数据复盘。"
+        },
+        {
+          "ref": 42,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第二，9月1日正式发布的功能范围和风险。"
+        },
+        {
+          "ref": 43,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第三，明确发布前后的任务负责人、协作人和完成期限。"
+        },
+        {
+          "ref": 44,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "请大家围绕事实数据和可执行动作发言，会议结束后会形成纪要和任务清单。"
+        },
+        {
+          "ref": 45,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "先请产品负责人张晨介绍灰度发布情况。"
+        },
+        {
+          "ref": 46,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "张晨本次灰度从8月20日开始覆盖10%的活跃用户，到8月26日扩大到30%，整体登录成功率为99.8%，核心下单链路成功率为99.2%。"
+        },
+        {
+          "ref": 47,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "新版本的会议任务看板访问量比旧入口提升了24%，任务完成凭证上传率提升了18%。"
+        },
+        {
+          "ref": 48,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "用户反馈最集中的问题有两个，第一部分用户不知道如何从会议纪要进入任务草稿。"
+        },
+        {
+          "ref": 49,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第二，移动端在网络较弱时，附件下载进度没有及时刷新。"
+        },
+        {
+          "ref": 50,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "张晨继续说明，从买点和客服工单看，目前没有发现数据丢失、权限越界或订单重复提交的问题。"
+        },
+        {
+          "ref": 51,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "我们已经抽样检查了管理员、会议创建人、主持人、普通参会人员四类账号。"
+        },
+        {
+          "ref": 52,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "管理员可以查看企业会议数据，员工只可以看到自己创建、主持或参与的会议任务，负责人、创建人和协作人可以查看相关任务权限范围与预期一致。"
+        },
+        {
+          "ref": 53,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "不过移动端附件下载的体验问题会影响发布当天的支持成本，需要在正式发布前完成处理。"
+        },
+        {
+          "ref": 54,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "主持人李月请后端负责人王工补充服务和数据情况，王工，后端接口在灰度期间没有出现500错误。"
+        },
+        {
+          "ref": 55,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "AI 纪要、转写、问答和agent运行的调用日志都已经进入观测中心，最近七天的会议纪要模型调用成功率为98.6%，平均耗时为7.8秒，agent工具调用成功率为97.9%。"
+        },
+        {
+          "ref": 56,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "两次失败都来自外部模型服务短暂超时，系统已保存失败原因和耗时，用户可以从失败状态发起重试。"
+        },
+        {
+          "ref": 57,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "王工继续数据库方面，会议转写、纪要任务、知识索引和agent运行记录都保存在my sql知识库，切片保存在知识库切片表里，向量存进独立的向量库。"
+        },
+        {
+          "ref": 58,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "我们检查了长会议的转写和纪要生成流程，音频会按时长切分，转写完成后生成带时间轴的片段，纪要由整场转写一次生成，不再分段总结再合并；生成后由 agent 对着原文自检一遍。"
+        },
+        {
+          "ref": 59,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "对于资料更新，知识索引会标记为需要重建，旧版本仍保持可检索，直到新版本完成切换。"
+        },
+        {
+          "ref": 60,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "主持人李月，请测试负责人陈琳介绍质量验证情况。"
+        },
+        {
+          "ref": 61,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "陈琳目前已完成会议创建，参会人员维护录音和视频资料上传转写，发起说话人匹配、纪要修订、确认任务草稿、确认任务延期转交re问答agent人工确认和运行中断恢复的主流程验证。"
+        },
+        {
+          "ref": 62,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "我们重点关注了三类边界场景，第一，会议参与人访问不属于自己的会议资料时，接口会返回，没有会议访问权限。"
+        },
+        {
+          "ref": 63,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第二，纪要处于生成中或失败状态时不能导出，只有草稿和已确认版本可以导出word或pdf。"
+        },
+        {
+          "ref": 64,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第三，已完成任务不能再修改进度、延期转交或发送提醒，陈琳继续还需要在正式发布前补充两组验收数据，第一组是至少30分钟的真实会议录音，用于验证长音频切分、异步进度和整场转写的单遍纪要生成。"
+        },
+        {
+          "ref": 65,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第二组是包含多个角色发言的会议内容，用于检查说话人标签与员工身份的匹配效果。"
+        },
+        {
+          "ref": 66,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "今天的会议录音将作为演示素材之一，内容会包含产品研发、测试、运营和客户支持角色的发言。"
+        },
+        {
+          "ref": 67,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "主持人李月，下面讨论9月1日正式发布范围，张晨产品侧建议按既定范围发布，发布内容包括会议创建和状态流转、会议资料管理、音视频转写、AI纪要、任务跟踪、会议知识库react agent数据分析、运行观测和质量评价。"
+        }
+      ],
+      "context_source": "retrieved",
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": false,
+              "why": "仅标注录音时间，无风险内容"
+            },
+            {
+              "index": 2,
+              "useful": false,
+              "why": "仅标注录音时间，无风险内容"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "上午会议风险：模型服务延迟，高风险"
+            },
+            {
+              "index": 4,
+              "useful": true,
+              "why": "上午会议风险：资料频繁更新，中风险"
+            },
+            {
+              "index": 5,
+              "useful": true,
+              "why": "上午会议风险：负责人分配不合理，高风险"
+            },
+            {
+              "index": 6,
+              "useful": true,
+              "why": "上午会议风险：删除用户受限，高风险"
+            },
+            {
+              "index": 7,
+              "useful": true,
+              "why": "上午会议风险：阻断任务延期，高风险"
+            },
+            {
+              "index": 8,
+              "useful": false,
+              "why": "下午会议开场白，无风险信息"
+            },
+            {
+              "index": 9,
+              "useful": false,
+              "why": "会议议题，无具体风险"
+            },
+            {
+              "index": 10,
+              "useful": false,
+              "why": "会议议题，无具体风险"
+            },
+            {
+              "index": 11,
+              "useful": false,
+              "why": "会议议题，无具体风险"
+            },
+            {
+              "index": 12,
+              "useful": false,
+              "why": "会议流程安排，无风险信息"
+            },
+            {
+              "index": 13,
+              "useful": false,
+              "why": "功能验收进度，非风险"
+            },
+            {
+              "index": 14,
+              "useful": false,
+              "why": "消息推送修复情况，非风险"
+            },
+            {
+              "index": 15,
+              "useful": false,
+              "why": "过渡语句，无风险信息"
+            },
+            {
+              "index": 16,
+              "useful": false,
+              "why": "引出报表导出问题，未说明风险"
+            },
+            {
+              "index": 17,
+              "useful": true,
+              "why": "报表导出超时问题，属下午会议风险"
+            },
+            {
+              "index": 18,
+              "useful": true,
+              "why": "压测失败率12%，属报表导出风险"
+            },
+            {
+              "index": 19,
+              "useful": false,
+              "why": "讨论是否发布前解决，非风险本身"
+            },
+            {
+              "index": 20,
+              "useful": false,
+              "why": "缓存方案说明，非风险"
+            },
+            {
+              "index": 21,
+              "useful": false,
+              "why": "异步方案说明，非风险"
+            },
+            {
+              "index": 22,
+              "useful": false,
+              "why": "方案选择讨论，非风险"
+            },
+            {
+              "index": 23,
+              "useful": false,
+              "why": "询问工期，非风险"
+            },
+            {
+              "index": 24,
+              "useful": false,
+              "why": "涉及服务说明，非风险"
+            },
+            {
+              "index": 25,
+              "useful": false,
+              "why": "工期估算，非风险"
+            },
+            {
+              "index": 26,
+              "useful": true,
+              "why": "报表导出需隐藏入口待改造，属风险应对"
+            },
+            {
+              "index": 27,
+              "useful": false,
+              "why": "任务拆分工，非风险"
+            },
+            {
+              "index": 28,
+              "useful": false,
+              "why": "会议流程过渡，无风险"
+            },
+            {
+              "index": 29,
+              "useful": false,
+              "why": "容量结论，非风险"
+            },
+            {
+              "index": 30,
+              "useful": false,
+              "why": "容量评估，非风险"
+            },
+            {
+              "index": 31,
+              "useful": true,
+              "why": "灰度分三步，排期较紧，属灰度风险"
+            },
+            {
+              "index": 32,
+              "useful": false,
+              "why": "询问灰度维度，非风险"
+            },
+            {
+              "index": 33,
+              "useful": false,
+              "why": "灰度切分方式，非风险"
+            },
+            {
+              "index": 34,
+              "useful": false,
+              "why": "语句片段，非风险"
+            },
+            {
+              "index": 35,
+              "useful": false,
+              "why": "询问监控指标，非风险"
+            },
+            {
+              "index": 36,
+              "useful": false,
+              "why": "监控指标说明，非风险"
+            },
+            {
+              "index": 37,
+              "useful": false,
+              "why": "告警配置说明，非风险"
+            },
+            {
+              "index": 38,
+              "useful": false,
+              "why": "上午会议开场白，无风险信息"
+            },
+            {
+              "index": 39,
+              "useful": false,
+              "why": "主持人介绍，无风险信息"
+            },
+            {
+              "index": 40,
+              "useful": false,
+              "why": "会议议程，无风险信息"
+            },
+            {
+              "index": 41,
+              "useful": false,
+              "why": "会议议题，无风险信息"
+            },
+            {
+              "index": 42,
+              "useful": false,
+              "why": "会议议题，无具体风险"
+            },
+            {
+              "index": 43,
+              "useful": false,
+              "why": "会议议题，无具体风险"
+            },
+            {
+              "index": 44,
+              "useful": false,
+              "why": "会议要求，无风险信息"
+            },
+            {
+              "index": 45,
+              "useful": false,
+              "why": "会议流程过渡，无风险"
+            },
+            {
+              "index": 46,
+              "useful": false,
+              "why": "灰度数据复盘，非风险"
+            },
+            {
+              "index": 47,
+              "useful": false,
+              "why": "灰度数据复盘，非风险"
+            },
+            {
+              "index": 48,
+              "useful": false,
+              "why": "用户反馈问题，非风险清单"
+            },
+            {
+              "index": 49,
+              "useful": false,
+              "why": "用户反馈问题，非风险清单"
+            },
+            {
+              "index": 50,
+              "useful": false,
+              "why": "无数据丢失等结论，非风险"
+            },
+            {
+              "index": 51,
+              "useful": false,
+              "why": "权限抽样检查，非风险"
+            },
+            {
+              "index": 52,
+              "useful": false,
+              "why": "权限范围说明，非风险"
+            },
+            {
+              "index": 53,
+              "useful": false,
+              "why": "移动端体验问题，非风险清单"
+            },
+            {
+              "index": 54,
+              "useful": false,
+              "why": "后端接口情况，非风险"
+            },
+            {
+              "index": 55,
+              "useful": false,
+              "why": "调用成功率数据，非风险清单"
+            },
+            {
+              "index": 56,
+              "useful": false,
+              "why": "外部模型超时说明，非风险清单"
+            },
+            {
+              "index": 57,
+              "useful": false,
+              "why": "数据库存储说明，非风险"
+            },
+            {
+              "index": 58,
+              "useful": false,
+              "why": "转写纪要流程说明，非风险"
+            },
+            {
+              "index": 59,
+              "useful": false,
+              "why": "资料更新索引说明，非风险清单"
+            },
+            {
+              "index": 60,
+              "useful": false,
+              "why": "会议流程过渡，无风险"
+            },
+            {
+              "index": 61,
+              "useful": false,
+              "why": "质量验证范围，非风险"
+            },
+            {
+              "index": 62,
+              "useful": false,
+              "why": "边界场景验证，非风险"
+            },
+            {
+              "index": 63,
+              "useful": false,
+              "why": "导出状态限制，非风险"
+            },
+            {
+              "index": 64,
+              "useful": false,
+              "why": "验收数据补充，非风险"
+            },
+            {
+              "index": 65,
+              "useful": false,
+              "why": "验收数据补充，非风险"
+            },
+            {
+              "index": 66,
+              "useful": false,
+              "why": "录音素材说明，非风险"
+            },
+            {
+              "index": 67,
+              "useful": false,
+              "why": "发布范围说明，非风险"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 3
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 17
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "两段录音中明确提到的风险点如下：",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 2,
+              "text": "上午场录音（task_id=6）：提到2项风险相关表述",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 3,
+              "text": "移动端在网络较弱时附件下载进度未及时刷新，会影响发布当天的支持成本 [38][49][53]。",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 4,
+              "text": "外部模型服务短暂超时导致AI纪要/Agent调用失败（系统已记录失败原因并支持重试）[38][55][56]。",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 5,
+              "text": "下午场录音（task_id=7）：提到1项风险相关表述",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 6,
+              "text": "报表导出接口在压测中暴露性能风险：单用户导出3个月数据耗时40+秒、超过网关30秒超时；500并发下该接口失败率达12% [8][16][17][18]。",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 7,
+              "text": "⚠️ 资料不足说明：search_knowledge 按 source_ids 检索“风险”时报错（'TranscriptSegment' object has no attribute 'speaker'），无法对两段录音做关键词召回；上述结论仅基于 get_transcript_excerpt 返回的转写片段（且均被 truncated），可能遗漏未出现在已摘录窗口内的其他风险表述。",
+              "supported": false,
+              "meta": false
+            },
+            {
+              "index": 8,
+              "text": "如需完整清单，需修复检索或分段取全量转写后再核对。",
+              "supported": false,
+              "meta": false
+            },
+            {
+              "index": 9,
+              "text": "录音清单显示两段录音均属会议「产品发布评审会议」（meeting_id=2）：上午场 task_id=6（2026-09-10 09:00）、下午场 task_id=7（2026-09-10 14:00）[1][2]。",
+              "supported": true,
+              "meta": true
+            },
+            {
+              "index": 10,
+              "text": "上午场转写片段中，张晨在 96–103s 提到“移动端在网络较弱时，附件下载进度没有及时刷新”[49]；",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 11,
+              "text": "在 144–156s 补充“移动端附件下载的体验问题会影响发布当天的支持成本，需要在正式发布前完成处理”[53]；",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 12,
+              "text": "在 193–206s 提到“两次失败都来自外部模型服务短暂超时……用户可以从失败状态发起重试”[55][56]。",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 13,
+              "text": "下午场转写片段中，张晨在 35–45s 说明“单个用户导出三个月的数据接口要跑四十多秒，超过了网关30秒的超时限制”[16][17]；",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 14,
+              "text": "在 46–52s 补充“压了500并发，这个接口的失败率到了12%”[18]。",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 15,
+              "text": "已确认纪要里该会议共登记5条风险 [3][4][5][6][7]，但因 search_knowledge 报错且转写摘录被截断，无法将上述录音原话与纪要条目逐条对应；",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 16,
+              "text": "本回答仅陈述录音片段中明确说出的风险点，不推断未摘录到的内容。",
+              "supported": true,
+              "meta": false
+            }
+          ],
+          "answered": true,
+          "why": "回答从两段录音转写中分别列出了明确提到的风险（移动端附件下载体验、外部模型超时、报表导出性能），正面回答了问题。"
+        }
+      }
+    },
+    {
+      "case_id": "cm03",
+      "question": "发布时间的结论在两段录音里一致吗？分别怎么说？",
+      "expected_facts": [
+        "上午会议结论：9月1日9:00按计划正式发布",
+        "下午会议结论：V2.0按原计划发布，报表导出入口在发布时隐藏"
+      ],
+      "unanswerable": false,
+      "answer": "结论：两段录音关于发布时间的表述一致，均指向按既定时间（9月1日）正式发布，未出现推迟或变更。\n\n依据如下：\n\n- 上午场录音（task_id=6，2026-09-10 09:00，会议“产品发布评审会议”）中，主持人在开场议题里明确提到“第二，9月1日正式发布的功能范围和风险”[7]；后续讨论发布范围时也说“下面讨论9月1日正式发布范围……产品侧建议按既定范围发布”[32]。这两处都把发布时间定为9月1日，且强调“按既定范围/计划”。\n- 下午场录音（task_id=7，2026-09-10 14:00，同一会议）中，在讨论报表导出性能问题后，系统管理员明确表态“那就定一步方案发布时间不变，报表导出这个功能在发布时先隐藏入口，等改造完成再单独放出来”[51]。这里的“发布时间不变”与上午场“9月1日正式发布”的既定时间保持一致，只是对功能范围做了调整，并未改动发布日期。\n\n因此，两段录音对发布时间的结论是一致的：维持9月1日正式发布。资料中没有出现其他日期或推迟的说法。",
+      "contexts": [
+        {
+          "ref": 1,
+          "kind": "fact",
+          "meeting_id": 2,
+          "text": "录音 task 7 · 2026-09-10 14:00:00 · 下午"
+        },
+        {
+          "ref": 2,
+          "kind": "fact",
+          "meeting_id": 2,
+          "text": "录音 task 6 · 2026-09-10 09:00:00 · 上午"
+        },
+        {
+          "ref": 3,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "各位同事上午好，现在开始产品上线复盘与下阶段发布准备会议。"
+        },
+        {
+          "ref": 4,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "我是本次会议主持人李月。"
+        },
+        {
+          "ref": 5,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "今天会议预计持续45分钟，主要讨论三个议题。"
+        },
+        {
+          "ref": 6,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第一，上一轮产品灰度发布的数据复盘。"
+        },
+        {
+          "ref": 7,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第二，9月1日正式发布的功能范围和风险。"
+        },
+        {
+          "ref": 8,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第三，明确发布前后的任务负责人、协作人和完成期限。"
+        },
+        {
+          "ref": 9,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "请大家围绕事实数据和可执行动作发言，会议结束后会形成纪要和任务清单。"
+        },
+        {
+          "ref": 10,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "先请产品负责人张晨介绍灰度发布情况。"
+        },
+        {
+          "ref": 11,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "张晨本次灰度从8月20日开始覆盖10%的活跃用户，到8月26日扩大到30%，整体登录成功率为99.8%，核心下单链路成功率为99.2%。"
+        },
+        {
+          "ref": 12,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "新版本的会议任务看板访问量比旧入口提升了24%，任务完成凭证上传率提升了18%。"
+        },
+        {
+          "ref": 13,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "用户反馈最集中的问题有两个，第一部分用户不知道如何从会议纪要进入任务草稿。"
+        },
+        {
+          "ref": 14,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第二，移动端在网络较弱时，附件下载进度没有及时刷新。"
+        },
+        {
+          "ref": 15,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "张晨继续说明，从买点和客服工单看，目前没有发现数据丢失、权限越界或订单重复提交的问题。"
+        },
+        {
+          "ref": 16,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "我们已经抽样检查了管理员、会议创建人、主持人、普通参会人员四类账号。"
+        },
+        {
+          "ref": 17,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "管理员可以查看企业会议数据，员工只可以看到自己创建、主持或参与的会议任务，负责人、创建人和协作人可以查看相关任务权限范围与预期一致。"
+        },
+        {
+          "ref": 18,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "不过移动端附件下载的体验问题会影响发布当天的支持成本，需要在正式发布前完成处理。"
+        },
+        {
+          "ref": 19,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "主持人李月请后端负责人王工补充服务和数据情况，王工，后端接口在灰度期间没有出现500错误。"
+        },
+        {
+          "ref": 20,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "AI 纪要、转写、问答和agent运行的调用日志都已经进入观测中心，最近七天的会议纪要模型调用成功率为98.6%，平均耗时为7.8秒，agent工具调用成功率为97.9%。"
+        },
+        {
+          "ref": 21,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "两次失败都来自外部模型服务短暂超时，系统已保存失败原因和耗时，用户可以从失败状态发起重试。"
+        },
+        {
+          "ref": 22,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "王工继续数据库方面，会议转写、纪要任务、知识索引和agent运行记录都保存在my sql知识库，切片保存在知识库切片表里，向量存进独立的向量库。"
+        },
+        {
+          "ref": 23,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "我们检查了长会议的转写和纪要生成流程，音频会按时长切分，转写完成后生成带时间轴的片段，纪要由整场转写一次生成，不再分段总结再合并；生成后由 agent 对着原文自检一遍。"
+        },
+        {
+          "ref": 24,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "对于资料更新，知识索引会标记为需要重建，旧版本仍保持可检索，直到新版本完成切换。"
+        },
+        {
+          "ref": 25,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "主持人李月，请测试负责人陈琳介绍质量验证情况。"
+        },
+        {
+          "ref": 26,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "陈琳目前已完成会议创建，参会人员维护录音和视频资料上传转写，发起说话人匹配、纪要修订、确认任务草稿、确认任务延期转交re问答agent人工确认和运行中断恢复的主流程验证。"
+        },
+        {
+          "ref": 27,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "我们重点关注了三类边界场景，第一，会议参与人访问不属于自己的会议资料时，接口会返回，没有会议访问权限。"
+        },
+        {
+          "ref": 28,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第二，纪要处于生成中或失败状态时不能导出，只有草稿和已确认版本可以导出word或pdf。"
+        },
+        {
+          "ref": 29,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第三，已完成任务不能再修改进度、延期转交或发送提醒，陈琳继续还需要在正式发布前补充两组验收数据，第一组是至少30分钟的真实会议录音，用于验证长音频切分、异步进度和整场转写的单遍纪要生成。"
+        },
+        {
+          "ref": 30,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第二组是包含多个角色发言的会议内容，用于检查说话人标签与员工身份的匹配效果。"
+        },
+        {
+          "ref": 31,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "今天的会议录音将作为演示素材之一，内容会包含产品研发、测试、运营和客户支持角色的发言。"
+        },
+        {
+          "ref": 32,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "主持人李月，下面讨论9月1日正式发布范围，张晨产品侧建议按既定范围发布，发布内容包括会议创建和状态流转、会议资料管理、音视频转写、AI纪要、任务跟踪、会议知识库react agent数据分析、运行观测和质量评价。"
+        },
+        {
+          "ref": 33,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "各位下午好，今天的产品发布评审会现在开始。"
+        },
+        {
+          "ref": 34,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "今天要出三个结论，V2.0能不能按期发布？"
+        },
+        {
+          "ref": 35,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "灰度怎么放？"
+        },
+        {
+          "ref": 36,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "还有对外通稿什么时候定稿？"
+        },
+        {
+          "ref": 37,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "先请王敏说一下功能验收的情况。"
+        },
+        {
+          "ref": 38,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "好的，V2.0计划内的17个需求已经验收通过15个，剩下两个，一个是报表导出，一个是消息推送的免打扰设置。"
+        },
+        {
+          "ref": 39,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "消息推送这个已经修完了，昨天回归通过报表导出。"
+        },
+        {
+          "ref": 40,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "还有问题我让张涛详细说一下报表导。"
+        },
+        {
+          "ref": 41,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "出的问题在压测里暴露出来了。"
+        },
+        {
+          "ref": 42,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "单个用户导出三个月的数据接口要跑四十多秒，超过了网关30秒的超时限制。"
+        },
+        {
+          "ref": 43,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "我们压了500并发，这个接口的失败率到了12%，其他接口都是正常的。"
+        },
+        {
+          "ref": 44,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "四十多秒确实不能接受，有没有办法在发布前解决？"
+        },
+        {
+          "ref": 45,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "有两个方案，一是加缓存，把常用的时间范围预生成，但覆盖不全，用户选个冷门区间还是慢。"
+        },
+        {
+          "ref": 46,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "二是改成异步任务，用户点导出之后先返回一个任务号，后台跑完了再通知他下载这个方案彻底一些。"
+        },
+        {
+          "ref": 47,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "从用户体验看，异步方案更好导出本来就是个低频操作，等一会儿可以接受卡在那转圈40秒反而更差。"
+        },
+        {
+          "ref": 48,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "异步方案要改多久？"
+        },
+        {
+          "ref": 49,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "涉及三个服务，导出服务、任务调度，还有消息通知。"
+        },
+        {
+          "ref": 50,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "开发两天，连调一天，测试两天，加起来一周。"
+        },
+        {
+          "ref": 51,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "那就定一步方案发布时间不变，报表导出这个功能在发布时先隐藏入口，等改造完成再单独放出来。"
+        },
+        {
+          "ref": 52,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "明白，我这边今天就拆任务。"
+        },
+        {
+          "ref": 53,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "陈磊说一下灰度和容量。"
+        },
+        {
+          "ref": 54,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "容量这块没问题。"
+        },
+        {
+          "ref": 55,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "现在的机器配置扛刀日活8万枚压力我们预估发布后日或是5万左右。"
+        },
+        {
+          "ref": 56,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "灰度方案我建议分三步，第一天放10%观察一天，第二天到50%，第三天全量回滚预案也准备好了，数据库改动都是加字段向后兼容，回滚步需要动数据，最快五分钟能切回旧版本。"
+        },
+        {
+          "ref": 57,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第一天10%是按什么维度切？"
+        },
+        {
+          "ref": 58,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "挨用户ID取魔，保证同一个用户每次都落在同一边，不会一会儿新版。"
+        },
+        {
+          "ref": 59,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "一会儿旧版。"
+        },
+        {
+          "ref": 60,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "灰度期间我们需要盯哪些指标？"
+        },
+        {
+          "ref": 61,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "主要看接口错误率、平均响应时间，还有核心链路的转化率。"
+        },
+        {
+          "ref": 62,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "这三个我配了告警，超过阈值会。"
+        }
+      ],
+      "context_source": "retrieved",
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "标注为下午录音，是判断下午结论的载体"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "标注为上午录音，是判断上午结论的载体"
+            },
+            {
+              "index": 3,
+              "useful": false,
+              "why": "会议开场白，无发布时间结论"
+            },
+            {
+              "index": 4,
+              "useful": false,
+              "why": "主持人自我介绍"
+            },
+            {
+              "index": 5,
+              "useful": false,
+              "why": "会议时长与议题概述"
+            },
+            {
+              "index": 6,
+              "useful": false,
+              "why": "议题一概述"
+            },
+            {
+              "index": 7,
+              "useful": true,
+              "why": "提及9月1日正式发布的功能范围和风险，与发布时间相关"
+            },
+            {
+              "index": 8,
+              "useful": false,
+              "why": "议题三概述"
+            },
+            {
+              "index": 9,
+              "useful": false,
+              "why": "会议纪律说明"
+            },
+            {
+              "index": 10,
+              "useful": false,
+              "why": "请产品负责人发言"
+            },
+            {
+              "index": 11,
+              "useful": false,
+              "why": "灰度数据介绍"
+            },
+            {
+              "index": 12,
+              "useful": false,
+              "why": "看板访问量数据"
+            },
+            {
+              "index": 13,
+              "useful": false,
+              "why": "用户反馈问题一"
+            },
+            {
+              "index": 14,
+              "useful": false,
+              "why": "用户反馈问题二"
+            },
+            {
+              "index": 15,
+              "useful": false,
+              "why": "无严重问题说明"
+            },
+            {
+              "index": 16,
+              "useful": false,
+              "why": "账号抽样检查"
+            },
+            {
+              "index": 17,
+              "useful": false,
+              "why": "权限验证结果"
+            },
+            {
+              "index": 18,
+              "useful": false,
+              "why": "移动端体验问题"
+            },
+            {
+              "index": 19,
+              "useful": false,
+              "why": "请后端补充"
+            },
+            {
+              "index": 20,
+              "useful": false,
+              "why": "模型调用指标"
+            },
+            {
+              "index": 21,
+              "useful": false,
+              "why": "失败重试说明"
+            },
+            {
+              "index": 22,
+              "useful": false,
+              "why": "数据库存储说明"
+            },
+            {
+              "index": 23,
+              "useful": false,
+              "why": "转写纪要流程"
+            },
+            {
+              "index": 24,
+              "useful": false,
+              "why": "知识索引更新"
+            },
+            {
+              "index": 25,
+              "useful": false,
+              "why": "请测试负责人发言"
+            },
+            {
+              "index": 26,
+              "useful": false,
+              "why": "主流程验证清单"
+            },
+            {
+              "index": 27,
+              "useful": false,
+              "why": "边界场景一"
+            },
+            {
+              "index": 28,
+              "useful": false,
+              "why": "边界场景二"
+            },
+            {
+              "index": 29,
+              "useful": false,
+              "why": "边界场景三与补充验收"
+            },
+            {
+              "index": 30,
+              "useful": false,
+              "why": "补充验收第二组"
+            },
+            {
+              "index": 31,
+              "useful": false,
+              "why": "录音作为演示素材"
+            },
+            {
+              "index": 32,
+              "useful": true,
+              "why": "上午会议讨论9月1日按既定范围发布，含发布时间信息"
+            },
+            {
+              "index": 33,
+              "useful": false,
+              "why": "下午会议开场白"
+            },
+            {
+              "index": 34,
+              "useful": true,
+              "why": "下午会议要出V2.0能否按期发布的结论"
+            },
+            {
+              "index": 35,
+              "useful": false,
+              "why": "灰度议题"
+            },
+            {
+              "index": 36,
+              "useful": false,
+              "why": "通稿议题"
+            },
+            {
+              "index": 37,
+              "useful": false,
+              "why": "请王敏发言"
+            },
+            {
+              "index": 38,
+              "useful": false,
+              "why": "需求验收情况"
+            },
+            {
+              "index": 39,
+              "useful": false,
+              "why": "消息推送修复与报表导出问题引出"
+            },
+            {
+              "index": 40,
+              "useful": false,
+              "why": "请张涛说明报表导出"
+            },
+            {
+              "index": 41,
+              "useful": false,
+              "why": "报表导出压测问题"
+            },
+            {
+              "index": 42,
+              "useful": false,
+              "why": "导出超时细节"
+            },
+            {
+              "index": 43,
+              "useful": false,
+              "why": "并发压测失败率"
+            },
+            {
+              "index": 44,
+              "useful": false,
+              "why": "询问能否发布前解决"
+            },
+            {
+              "index": 45,
+              "useful": false,
+              "why": "方案一缓存"
+            },
+            {
+              "index": 46,
+              "useful": false,
+              "why": "方案二异步任务"
+            },
+            {
+              "index": 47,
+              "useful": false,
+              "why": "方案比较"
+            },
+            {
+              "index": 48,
+              "useful": false,
+              "why": "询问改造时长"
+            },
+            {
+              "index": 49,
+              "useful": false,
+              "why": "涉及服务说明"
+            },
+            {
+              "index": 50,
+              "useful": false,
+              "why": "工期估算"
+            },
+            {
+              "index": 51,
+              "useful": true,
+              "why": "下午会议结论：发布时间不变，报表导出发布时隐藏入口"
+            },
+            {
+              "index": 52,
+              "useful": false,
+              "why": "拆任务回应"
+            },
+            {
+              "index": 53,
+              "useful": false,
+              "why": "请陈磊说灰度容量"
+            },
+            {
+              "index": 54,
+              "useful": false,
+              "why": "容量结论"
+            },
+            {
+              "index": 55,
+              "useful": false,
+              "why": "容量预估"
+            },
+            {
+              "index": 56,
+              "useful": false,
+              "why": "灰度三步方案"
+            },
+            {
+              "index": 57,
+              "useful": false,
+              "why": "询问灰度维度"
+            },
+            {
+              "index": 58,
+              "useful": false,
+              "why": "灰度切分方式"
+            },
+            {
+              "index": 59,
+              "useful": false,
+              "why": "灰度切分补充"
+            },
+            {
+              "index": 60,
+              "useful": false,
+              "why": "询问监控指标"
+            },
+            {
+              "index": 61,
+              "useful": false,
+              "why": "监控指标说明"
+            },
+            {
+              "index": 62,
+              "useful": false,
+              "why": "告警配置说明"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 32
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 51
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "结论：两段录音关于发布时间的表述一致，均指向按既定时间（9月1日）正式发布，未出现推迟或变更。",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 2,
+              "text": "上午场录音（task_id=6，2026-09-10 09:00，会议“产品发布评审会议”）中，主持人在开场议题里明确提到“第二，9月1日正式发布的功能范围和风险”[7]；",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 3,
+              "text": "后续讨论发布范围时也说“下面讨论9月1日正式发布范围……产品侧建议按既定范围发布”[32]。",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 4,
+              "text": "这两处都把发布时间定为9月1日，且强调“按既定范围/计划”。",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 5,
+              "text": "下午场录音（task_id=7，2026-09-10 14:00，同一会议）中，在讨论报表导出性能问题后，系统管理员明确表态“那就定一步方案发布时间不变，报表导出这个功能在发布时先隐藏入口，等改造完成再单独放出来”[51]。",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 6,
+              "text": "这里的“发布时间不变”与上午场“9月1日正式发布”的既定时间保持一致，只是对功能范围做了调整，并未改动发布日期。",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 7,
+              "text": "因此，两段录音对发布时间的结论是一致的：维持9月1日正式发布。",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 8,
+              "text": "资料中没有出现其他日期或推迟的说法。",
+              "supported": true,
+              "meta": false
+            }
+          ],
+          "answered": true,
+          "why": "回答明确比较了两段录音的发布时间表述，并引用上下文中的原句支撑“一致、维持9月1日”的结论。"
+        }
+      }
+    },
+    {
+      "case_id": "cm04",
+      "question": "两段录音分别是上午还是下午的会、主题分别是什么？",
+      "expected_facts": [
+        "task 6 是上午的产品上线复盘与下阶段发布准备会议",
+        "task 7 是下午的V2.0产品发布评审会"
+      ],
+      "unanswerable": false,
+      "answer": "### 结论\n- **录音 task_id=6**：上午的会，主题为「产品发布评审会议」[2]。\n- **录音 task_id=7**：下午的会，主题同为「产品发布评审会议」[1]。\n- 两场录音属于同一场会议（meeting_id=2）的不同时段录音，会议整体议题包括：灰度发布数据复盘、9月1日正式发布的功能范围与风险、发布前后任务分工与期限 [3][4][5]。\n\n### 依据\n- 录音清单显示 task_id=6 的 `period` 为“上午”、`recorded_at` 为 2026-09-10 09:00:00，会议标题为“产品发布评审会议” [2]。\n- 录音清单显示 task_id=7 的 `period` 为“下午”、`recorded_at` 为 2026-09-10 14:00:00，会议标题同为“产品发布评审会议” [1]。\n- 该会议（meeting_id=2）已确认纪要的议题字段列出三项主题，分别对应灰度复盘、正式发布范围与风险、任务负责人与期限 [3][4][5]。\n- 注：针对两段录音分别检索转写内容时工具报错，无法给出每段录音各自讨论的具体片段；但录音元数据与会议纪要已足够回答“上午/下午”及“会议主题”。",
+      "contexts": [
+        {
+          "ref": 1,
+          "kind": "fact",
+          "meeting_id": 2,
+          "text": "录音 task 7 · 2026-09-10 14:00:00 · 下午"
+        },
+        {
+          "ref": 2,
+          "kind": "fact",
+          "meeting_id": 2,
+          "text": "录音 task 6 · 2026-09-10 09:00:00 · 上午"
+        },
+        {
+          "ref": 3,
+          "kind": "fact",
+          "meeting_id": 2,
+          "text": "上一轮产品灰度发布的数据复盘"
+        },
+        {
+          "ref": 4,
+          "kind": "fact",
+          "meeting_id": 2,
+          "text": "9月1日正式发布的功能范围和风险"
+        },
+        {
+          "ref": 5,
+          "kind": "fact",
+          "meeting_id": 2,
+          "text": "明确发布前后的任务负责人、协作人和完成期限"
+        }
+      ],
+      "context_source": "retrieved",
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": true,
+              "why": "标明 task 7 是下午的录音"
+            },
+            {
+              "index": 2,
+              "useful": true,
+              "why": "标明 task 6 是上午的录音"
+            },
+            {
+              "index": 3,
+              "useful": true,
+              "why": "提到灰度发布数据复盘，与产品上线复盘主题相关"
+            },
+            {
+              "index": 4,
+              "useful": true,
+              "why": "提到正式发布的功能范围和风险，与发布准备/评审主题相关"
+            },
+            {
+              "index": 5,
+              "useful": true,
+              "why": "提到发布前后任务负责人和期限，与发布准备会议主题相关"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": false,
+              "in_context": null
+            },
+            {
+              "index": 2,
+              "found": false,
+              "in_context": null
+            }
+          ],
+          "missing_facts": [
+            1,
+            2
+          ]
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "**录音 task_id=6**：上午的会，主题为「产品发布评审会议」[2]。",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 2,
+              "text": "**录音 task_id=7**：下午的会，主题同为「产品发布评审会议」[1]。",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 3,
+              "text": "两场录音属于同一场会议（meeting_id=2）的不同时段录音，会议整体议题包括：灰度发布数据复盘、9月1日正式发布的功能范围与风险、发布前后任务分工与期限 [3][4][5]。",
+              "supported": false,
+              "meta": false
+            },
+            {
+              "index": 4,
+              "text": "录音清单显示 task_id=6 的 `period` 为“上午”、`recorded_at` 为 2026-09-10 09:00:00，会议标题为“产品发布评审会议” [2]。",
+              "supported": false,
+              "meta": false
+            },
+            {
+              "index": 5,
+              "text": "录音清单显示 task_id=7 的 `period` 为“下午”、`recorded_at` 为 2026-09-10 14:00:00，会议标题同为“产品发布评审会议” [1]。",
+              "supported": false,
+              "meta": false
+            },
+            {
+              "index": 6,
+              "text": "该会议（meeting_id=2）已确认纪要的议题字段列出三项主题，分别对应灰度复盘、正式发布范围与风险、任务负责人与期限 [3][4][5]。",
+              "supported": false,
+              "meta": false
+            },
+            {
+              "index": 7,
+              "text": "注：针对两段录音分别检索转写内容时工具报错，无法给出每段录音各自讨论的具体片段；但录音元数据与会议纪要已足够回答“上午/下午”及“会议主题”。",
+              "supported": false,
+              "meta": false
+            }
+          ],
+          "answered": true,
+          "why": "回答给出了两段录音的上午/下午归属，但主题「产品发布评审会议」及 meeting_id=2 在上下文中无依据，且上下文未提供会议主题。"
+        }
+      }
+    },
+    {
+      "case_id": "cm05",
+      "question": "灰度这件事在两段录音里分别讨论到什么？",
+      "expected_facts": [
+        "上午复盘：8月20日开始灰度、覆盖10%活跃用户，8月26日扩大到30%",
+        "下午确定灰度三阶段：首日10%、次日50%、第三日全量，回滚最快5分钟"
+      ],
+      "unanswerable": false,
+      "answer": "### 结论\n两段录音都围绕“灰度”展开，但侧重点不同：\n\n- **上午场（task_id=6）**：复盘**上一轮灰度发布**的执行结果与问题。重点是灰度期间的数据表现、用户反馈、权限校验和移动端体验缺陷，并据此提出正式发布前需修复的事项 [11][12][13][14][18]。\n- **下午场（task_id=7）**：讨论**V2.0 正式发布的灰度方案**。重点是新一版上线的灰度节奏、流量切分维度、监控指标与回滚预案，属于发布策略规划 [35][53][54][55][56][57][58][60][61]。\n\n### 依据\n\n#### 上午录音（2026-09-10 09:00，task_id=6）\n- 会议议题明确包含“上一轮产品灰度发布的数据复盘” [6]。\n- 张晨介绍本轮灰度从 8/20 覆盖 10% 活跃用户、8/26 扩到 30%，登录成功率 99.8%、核心下单链路 99.2% [11]。\n- 新版会议任务看板访问量提升 24%，任务完成凭证上传率提升 18% [12]。\n- 用户反馈集中在两点：从纪要进入任务草稿的路径不清晰；移动端弱网下附件下载进度刷新不及时 [13][14]。\n- 移动端附件下载体验问题被认为会影响发布当天支持成本，需在正式发布前处理 [18]。\n- 后端在灰度期间无 500 错误，AI 纪要/转写/问答/Agent 调用成功率与耗时均有观测数据 [19][20]。\n\n#### 下午录音（2026-09-10 14:00，task_id=7）\n- 开场即把“灰度怎么放”列为本次会议要出的三个结论之一 [35]。\n- 系统管理员点名让陈磊说明“灰度和容量” [53]。\n- 李悦给出三步灰度节奏：第1天 10%、第2天 50%、第3天全量；回滚预案已备好，数据库改动向后兼容，最快 5 分钟可切回旧版 [54][55][56]。\n- 流量切分按用户 ID 取模，保证同一用户始终落在同一版本 [57][58]。\n- 灰度期间重点盯接口错误率、平均响应时间、核心链路转化率，并已配置告警 [60][61]。\n\n> 注：两段录音均来自同一场“产品发布评审会议”（meeting_id=2），分别对应上午与下午两段录音 [1][2]。以上引用均标注了说话人与秒数，便于定位原文。",
+      "contexts": [
+        {
+          "ref": 1,
+          "kind": "fact",
+          "meeting_id": 2,
+          "text": "录音 task 7 · 2026-09-10 14:00:00 · 下午"
+        },
+        {
+          "ref": 2,
+          "kind": "fact",
+          "meeting_id": 2,
+          "text": "录音 task 6 · 2026-09-10 09:00:00 · 上午"
+        },
+        {
+          "ref": 3,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "各位同事上午好，现在开始产品上线复盘与下阶段发布准备会议。"
+        },
+        {
+          "ref": 4,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "我是本次会议主持人李月。"
+        },
+        {
+          "ref": 5,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "今天会议预计持续45分钟，主要讨论三个议题。"
+        },
+        {
+          "ref": 6,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第一，上一轮产品灰度发布的数据复盘。"
+        },
+        {
+          "ref": 7,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第二，9月1日正式发布的功能范围和风险。"
+        },
+        {
+          "ref": 8,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第三，明确发布前后的任务负责人、协作人和完成期限。"
+        },
+        {
+          "ref": 9,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "请大家围绕事实数据和可执行动作发言，会议结束后会形成纪要和任务清单。"
+        },
+        {
+          "ref": 10,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "先请产品负责人张晨介绍灰度发布情况。"
+        },
+        {
+          "ref": 11,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "张晨本次灰度从8月20日开始覆盖10%的活跃用户，到8月26日扩大到30%，整体登录成功率为99.8%，核心下单链路成功率为99.2%。"
+        },
+        {
+          "ref": 12,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "新版本的会议任务看板访问量比旧入口提升了24%，任务完成凭证上传率提升了18%。"
+        },
+        {
+          "ref": 13,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "用户反馈最集中的问题有两个，第一部分用户不知道如何从会议纪要进入任务草稿。"
+        },
+        {
+          "ref": 14,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第二，移动端在网络较弱时，附件下载进度没有及时刷新。"
+        },
+        {
+          "ref": 15,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "张晨继续说明，从买点和客服工单看，目前没有发现数据丢失、权限越界或订单重复提交的问题。"
+        },
+        {
+          "ref": 16,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "我们已经抽样检查了管理员、会议创建人、主持人、普通参会人员四类账号。"
+        },
+        {
+          "ref": 17,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "管理员可以查看企业会议数据，员工只可以看到自己创建、主持或参与的会议任务，负责人、创建人和协作人可以查看相关任务权限范围与预期一致。"
+        },
+        {
+          "ref": 18,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "不过移动端附件下载的体验问题会影响发布当天的支持成本，需要在正式发布前完成处理。"
+        },
+        {
+          "ref": 19,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "主持人李月请后端负责人王工补充服务和数据情况，王工，后端接口在灰度期间没有出现500错误。"
+        },
+        {
+          "ref": 20,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "AI 纪要、转写、问答和agent运行的调用日志都已经进入观测中心，最近七天的会议纪要模型调用成功率为98.6%，平均耗时为7.8秒，agent工具调用成功率为97.9%。"
+        },
+        {
+          "ref": 21,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "两次失败都来自外部模型服务短暂超时，系统已保存失败原因和耗时，用户可以从失败状态发起重试。"
+        },
+        {
+          "ref": 22,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "王工继续数据库方面，会议转写、纪要任务、知识索引和agent运行记录都保存在my sql知识库，切片保存在知识库切片表里，向量存进独立的向量库。"
+        },
+        {
+          "ref": 23,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "我们检查了长会议的转写和纪要生成流程，音频会按时长切分，转写完成后生成带时间轴的片段，纪要由整场转写一次生成，不再分段总结再合并；生成后由 agent 对着原文自检一遍。"
+        },
+        {
+          "ref": 24,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "对于资料更新，知识索引会标记为需要重建，旧版本仍保持可检索，直到新版本完成切换。"
+        },
+        {
+          "ref": 25,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "主持人李月，请测试负责人陈琳介绍质量验证情况。"
+        },
+        {
+          "ref": 26,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "陈琳目前已完成会议创建，参会人员维护录音和视频资料上传转写，发起说话人匹配、纪要修订、确认任务草稿、确认任务延期转交re问答agent人工确认和运行中断恢复的主流程验证。"
+        },
+        {
+          "ref": 27,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "我们重点关注了三类边界场景，第一，会议参与人访问不属于自己的会议资料时，接口会返回，没有会议访问权限。"
+        },
+        {
+          "ref": 28,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第二，纪要处于生成中或失败状态时不能导出，只有草稿和已确认版本可以导出word或pdf。"
+        },
+        {
+          "ref": 29,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第三，已完成任务不能再修改进度、延期转交或发送提醒，陈琳继续还需要在正式发布前补充两组验收数据，第一组是至少30分钟的真实会议录音，用于验证长音频切分、异步进度和整场转写的单遍纪要生成。"
+        },
+        {
+          "ref": 30,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第二组是包含多个角色发言的会议内容，用于检查说话人标签与员工身份的匹配效果。"
+        },
+        {
+          "ref": 31,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "今天的会议录音将作为演示素材之一，内容会包含产品研发、测试、运营和客户支持角色的发言。"
+        },
+        {
+          "ref": 32,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "主持人李月，下面讨论9月1日正式发布范围，张晨产品侧建议按既定范围发布，发布内容包括会议创建和状态流转、会议资料管理、音视频转写、AI纪要、任务跟踪、会议知识库react agent数据分析、运行观测和质量评价。"
+        },
+        {
+          "ref": 33,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "各位下午好，今天的产品发布评审会现在开始。"
+        },
+        {
+          "ref": 34,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "今天要出三个结论，V2.0能不能按期发布？"
+        },
+        {
+          "ref": 35,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "灰度怎么放？"
+        },
+        {
+          "ref": 36,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "还有对外通稿什么时候定稿？"
+        },
+        {
+          "ref": 37,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "先请王敏说一下功能验收的情况。"
+        },
+        {
+          "ref": 38,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "好的，V2.0计划内的17个需求已经验收通过15个，剩下两个，一个是报表导出，一个是消息推送的免打扰设置。"
+        },
+        {
+          "ref": 39,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "消息推送这个已经修完了，昨天回归通过报表导出。"
+        },
+        {
+          "ref": 40,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "还有问题我让张涛详细说一下报表导。"
+        },
+        {
+          "ref": 41,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "出的问题在压测里暴露出来了。"
+        },
+        {
+          "ref": 42,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "单个用户导出三个月的数据接口要跑四十多秒，超过了网关30秒的超时限制。"
+        },
+        {
+          "ref": 43,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "我们压了500并发，这个接口的失败率到了12%，其他接口都是正常的。"
+        },
+        {
+          "ref": 44,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "四十多秒确实不能接受，有没有办法在发布前解决？"
+        },
+        {
+          "ref": 45,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "有两个方案，一是加缓存，把常用的时间范围预生成，但覆盖不全，用户选个冷门区间还是慢。"
+        },
+        {
+          "ref": 46,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "二是改成异步任务，用户点导出之后先返回一个任务号，后台跑完了再通知他下载这个方案彻底一些。"
+        },
+        {
+          "ref": 47,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "从用户体验看，异步方案更好导出本来就是个低频操作，等一会儿可以接受卡在那转圈40秒反而更差。"
+        },
+        {
+          "ref": 48,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "异步方案要改多久？"
+        },
+        {
+          "ref": 49,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "涉及三个服务，导出服务、任务调度，还有消息通知。"
+        },
+        {
+          "ref": 50,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "开发两天，连调一天，测试两天，加起来一周。"
+        },
+        {
+          "ref": 51,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "那就定一步方案发布时间不变，报表导出这个功能在发布时先隐藏入口，等改造完成再单独放出来。"
+        },
+        {
+          "ref": 52,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "明白，我这边今天就拆任务。"
+        },
+        {
+          "ref": 53,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "陈磊说一下灰度和容量。"
+        },
+        {
+          "ref": 54,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "容量这块没问题。"
+        },
+        {
+          "ref": 55,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "现在的机器配置扛刀日活8万枚压力我们预估发布后日或是5万左右。"
+        },
+        {
+          "ref": 56,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "灰度方案我建议分三步，第一天放10%观察一天，第二天到50%，第三天全量回滚预案也准备好了，数据库改动都是加字段向后兼容，回滚步需要动数据，最快五分钟能切回旧版本。"
+        },
+        {
+          "ref": 57,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "第一天10%是按什么维度切？"
+        },
+        {
+          "ref": 58,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "挨用户ID取魔，保证同一个用户每次都落在同一边，不会一会儿新版。"
+        },
+        {
+          "ref": 59,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "一会儿旧版。"
+        },
+        {
+          "ref": 60,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "灰度期间我们需要盯哪些指标？"
+        },
+        {
+          "ref": 61,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "主要看接口错误率、平均响应时间，还有核心链路的转化率。"
+        },
+        {
+          "ref": 62,
+          "kind": "segment",
+          "meeting_id": 2,
+          "text": "这三个我配了告警，超过阈值会。"
+        }
+      ],
+      "context_source": "retrieved",
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [
+            {
+              "index": 1,
+              "useful": false,
+              "why": "仅标注录音时间与场次，无灰度内容"
+            },
+            {
+              "index": 2,
+              "useful": false,
+              "why": "仅标注录音时间与场次，无灰度内容"
+            },
+            {
+              "index": 3,
+              "useful": false,
+              "why": "会议开场白，无灰度信息"
+            },
+            {
+              "index": 4,
+              "useful": false,
+              "why": "主持人介绍，无灰度信息"
+            },
+            {
+              "index": 5,
+              "useful": false,
+              "why": "会议时长与议题概述，无灰度细节"
+            },
+            {
+              "index": 6,
+              "useful": true,
+              "why": "点明议题为灰度发布数据复盘"
+            },
+            {
+              "index": 7,
+              "useful": false,
+              "why": "正式发布范围议题，与灰度无关"
+            },
+            {
+              "index": 8,
+              "useful": false,
+              "why": "任务负责人议题，与灰度无关"
+            },
+            {
+              "index": 9,
+              "useful": false,
+              "why": "会议纪律说明，无灰度信息"
+            },
+            {
+              "index": 10,
+              "useful": false,
+              "why": "请产品负责人发言，无灰度内容"
+            },
+            {
+              "index": 11,
+              "useful": true,
+              "why": "上午复盘：8月20日起灰度10%，8月26日扩至30%"
+            },
+            {
+              "index": 12,
+              "useful": false,
+              "why": "灰度期间看板与凭证数据，非灰度安排"
+            },
+            {
+              "index": 13,
+              "useful": false,
+              "why": "用户反馈问题，与灰度安排无关"
+            },
+            {
+              "index": 14,
+              "useful": false,
+              "why": "移动端附件下载问题，与灰度无关"
+            },
+            {
+              "index": 15,
+              "useful": false,
+              "why": "灰度期间无严重问题，非灰度安排"
+            },
+            {
+              "index": 16,
+              "useful": false,
+              "why": "账号抽样检查，与灰度无关"
+            },
+            {
+              "index": 17,
+              "useful": false,
+              "why": "权限检查结果，与灰度无关"
+            },
+            {
+              "index": 18,
+              "useful": false,
+              "why": "移动端体验问题，与灰度无关"
+            },
+            {
+              "index": 19,
+              "useful": false,
+              "why": "后端接口情况，与灰度安排无关"
+            },
+            {
+              "index": 20,
+              "useful": false,
+              "why": "模型调用指标，与灰度无关"
+            },
+            {
+              "index": 21,
+              "useful": false,
+              "why": "失败重试说明，与灰度无关"
+            },
+            {
+              "index": 22,
+              "useful": false,
+              "why": "数据库存储说明，与灰度无关"
+            },
+            {
+              "index": 23,
+              "useful": false,
+              "why": "转写纪要流程，与灰度无关"
+            },
+            {
+              "index": 24,
+              "useful": false,
+              "why": "知识索引更新，与灰度无关"
+            },
+            {
+              "index": 25,
+              "useful": false,
+              "why": "请测试负责人发言，无灰度内容"
+            },
+            {
+              "index": 26,
+              "useful": false,
+              "why": "主流程验证清单，与灰度无关"
+            },
+            {
+              "index": 27,
+              "useful": false,
+              "why": "边界场景权限，与灰度无关"
+            },
+            {
+              "index": 28,
+              "useful": false,
+              "why": "导出状态限制，与灰度无关"
+            },
+            {
+              "index": 29,
+              "useful": false,
+              "why": "验收数据要求，与灰度无关"
+            },
+            {
+              "index": 30,
+              "useful": false,
+              "why": "多角色发言测试，与灰度无关"
+            },
+            {
+              "index": 31,
+              "useful": false,
+              "why": "录音演示素材，与灰度无关"
+            },
+            {
+              "index": 32,
+              "useful": false,
+              "why": "发布范围清单，与灰度无关"
+            },
+            {
+              "index": 33,
+              "useful": false,
+              "why": "下午会议开场，无灰度内容"
+            },
+            {
+              "index": 34,
+              "useful": false,
+              "why": "会议结论议题，无灰度细节"
+            },
+            {
+              "index": 35,
+              "useful": true,
+              "why": "提出灰度怎么放这一议题"
+            },
+            {
+              "index": 36,
+              "useful": false,
+              "why": "通稿定稿议题，与灰度无关"
+            },
+            {
+              "index": 37,
+              "useful": false,
+              "why": "功能验收发言，与灰度无关"
+            },
+            {
+              "index": 38,
+              "useful": false,
+              "why": "需求验收情况，与灰度无关"
+            },
+            {
+              "index": 39,
+              "useful": false,
+              "why": "消息推送修复，与灰度无关"
+            },
+            {
+              "index": 40,
+              "useful": false,
+              "why": "报表导出问题，与灰度无关"
+            },
+            {
+              "index": 41,
+              "useful": false,
+              "why": "压测问题，与灰度无关"
+            },
+            {
+              "index": 42,
+              "useful": false,
+              "why": "导出超时，与灰度无关"
+            },
+            {
+              "index": 43,
+              "useful": false,
+              "why": "并发失败率，与灰度无关"
+            },
+            {
+              "index": 44,
+              "useful": false,
+              "why": "导出方案讨论，与灰度无关"
+            },
+            {
+              "index": 45,
+              "useful": false,
+              "why": "缓存方案，与灰度无关"
+            },
+            {
+              "index": 46,
+              "useful": false,
+              "why": "异步方案，与灰度无关"
+            },
+            {
+              "index": 47,
+              "useful": false,
+              "why": "用户体验讨论，与灰度无关"
+            },
+            {
+              "index": 48,
+              "useful": false,
+              "why": "工期询问，与灰度无关"
+            },
+            {
+              "index": 49,
+              "useful": false,
+              "why": "涉及服务说明，与灰度无关"
+            },
+            {
+              "index": 50,
+              "useful": false,
+              "why": "工期估算，与灰度无关"
+            },
+            {
+              "index": 51,
+              "useful": false,
+              "why": "导出功能隐藏决定，与灰度无关"
+            },
+            {
+              "index": 52,
+              "useful": false,
+              "why": "任务拆分，与灰度无关"
+            },
+            {
+              "index": 53,
+              "useful": true,
+              "why": "引出陈磊讲灰度与容量"
+            },
+            {
+              "index": 54,
+              "useful": false,
+              "why": "容量结论，非灰度安排"
+            },
+            {
+              "index": 55,
+              "useful": false,
+              "why": "容量与日活预估，非灰度安排"
+            },
+            {
+              "index": 56,
+              "useful": true,
+              "why": "下午确定灰度三阶段10%/50%/全量，回滚最快5分钟"
+            },
+            {
+              "index": 57,
+              "useful": true,
+              "why": "询问灰度切分维度"
+            },
+            {
+              "index": 58,
+              "useful": true,
+              "why": "按用户ID取模的灰度切分方式"
+            },
+            {
+              "index": 59,
+              "useful": false,
+              "why": "承接上句的断句，无独立信息"
+            },
+            {
+              "index": 60,
+              "useful": true,
+              "why": "询问灰度期间监控指标"
+            },
+            {
+              "index": 61,
+              "useful": true,
+              "why": "灰度监控指标：错误率、响应时间、转化率"
+            },
+            {
+              "index": 62,
+              "useful": true,
+              "why": "灰度指标告警配置"
+            }
+          ],
+          "facts": [
+            {
+              "index": 1,
+              "found": true,
+              "in_context": 11
+            },
+            {
+              "index": 2,
+              "found": true,
+              "in_context": 56
+            }
+          ],
+          "missing_facts": []
+        },
+        "answer": {
+          "claims": [
+            {
+              "index": 1,
+              "text": "两段录音都围绕“灰度”展开，但侧重点不同",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 2,
+              "text": "上午场（task_id=6）：复盘上一轮灰度发布的执行结果与问题",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 3,
+              "text": "重点是灰度期间的数据表现、用户反馈、权限校验和移动端体验缺陷，并据此提出正式发布前需修复的事项 [11][12][13][14][18]",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 4,
+              "text": "下午场（task_id=7）：讨论V2.0 正式发布的灰度方案",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 5,
+              "text": "重点是新一版上线的灰度节奏、流量切分维度、监控指标与回滚预案，属于发布策略规划 [35][53][54][55][56][57][58][60][61]",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 6,
+              "text": "会议议题明确包含“上一轮产品灰度发布的数据复盘” [6]",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 7,
+              "text": "张晨介绍本轮灰度从 8/20 覆盖 10% 活跃用户、8/26 扩到 30%，登录成功率 99.8%、核心下单链路 99.2% [11]",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 8,
+              "text": "新版会议任务看板访问量提升 24%，任务完成凭证上传率提升 18% [12]",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 9,
+              "text": "用户反馈集中在两点：从纪要进入任务草稿的路径不清晰；移动端弱网下附件下载进度刷新不及时 [13][14]",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 10,
+              "text": "移动端附件下载体验问题被认为会影响发布当天支持成本，需在正式发布前处理 [18]",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 11,
+              "text": "后端在灰度期间无 500 错误，AI 纪要/转写/问答/Agent 调用成功率与耗时均有观测数据 [19][20]",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 12,
+              "text": "开场即把“灰度怎么放”列为本次会议要出的三个结论之一 [35]",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 13,
+              "text": "系统管理员点名让陈磊说明“灰度和容量” [53]",
+              "supported": false,
+              "meta": false
+            },
+            {
+              "index": 14,
+              "text": "李悦给出三步灰度节奏：第1天 10%、第2天 50%、第3天全量；回滚预案已备好，数据库改动向后兼容，最快 5 分钟可切回旧版 [54][55][56]",
+              "supported": false,
+              "meta": false
+            },
+            {
+              "index": 15,
+              "text": "流量切分按用户 ID 取模，保证同一用户始终落在同一版本 [57][58]",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 16,
+              "text": "灰度期间重点盯接口错误率、平均响应时间、核心链路转化率，并已配置告警 [60][61]",
+              "supported": true,
+              "meta": false
+            },
+            {
+              "index": 17,
+              "text": "注：两段录音均来自同一场“产品发布评审会议”（meeting_id=2），分别对应上午与下午两段录音 [1][2]",
+              "supported": false,
+              "meta": true
+            },
+            {
+              "index": 18,
+              "text": "以上引用均标注了说话人与秒数，便于定位原文",
+              "supported": false,
+              "meta": true
+            }
+          ],
+          "answered": true,
+          "why": "回答分别概括了上午场对上一轮灰度复盘的讨论和下午场对V2.0灰度方案的讨论，正面回答了问题；但部分细节（陈磊、李悦、三步节奏）与上下文不符。"
+        }
+      }
+    },
+    {
+      "case_id": "cm06",
+      "question": "测试回归与对外通稿分别由谁负责？",
+      "expected_facts": [
+        "发布回归测试由陈琳负责，8月31日12:00前完成",
+        "对外通稿由刘颖负责，发布前一日18:00前定稿"
+      ],
+      "unanswerable": false,
+      "answer": "",
+      "contexts": [],
+      "context_source": "citations",
+      "has_answer": true,
+      "judgement": {
+        "context": {
+          "contexts": [],
+          "facts": [
+            {
+              "index": 1,
+              "found": false,
+              "in_context": null
+            },
+            {
+              "index": 2,
+              "found": false,
+              "in_context": null
+            }
+          ],
+          "missing_facts": [
+            1,
+            2
+          ]
+        },
+        "answer": {
+          "claims": [],
+          "answered": false,
+          "why": "没有检索到上下文，回答为空，未回答测试回归与对外通稿分别由谁负责。"
+        }
+      }
+    }
+  ],
+  "adjudicator_disclosure": {
+    "model_used": "deepseek-flash",
+    "provider": "deepseek",
+    "definition": "逐段上下文有用性 + 逐条事实覆盖 + 逐断言支撑 + 是否正面回答；answer_relevancy 与 RAGAS 的嵌入版口径不同，见模块文档",
+    "not_gold": "这是模型判定，不是人类金标"
+  },
+  "summary": {
+    "cases_judged": 6,
+    "cases_total": 6,
+    "cases_step_without_gold": 0,
+    "context_precision": {
+      "successes": 30,
+      "total": 196,
+      "rate": 0.15306122448979592,
+      "wilson_95": [
+        0.1093679792916594,
+        0.2100925530595145
+      ],
+      "clopper_pearson_95": [
+        0.10571460219557141,
+        0.21123857271504676
+      ],
+      "note": "exact interval is primary; Wilson shown for comparison"
+    },
+    "context_recall": {
+      "successes": 6,
+      "total": 12,
+      "rate": 0.5,
+      "wilson_95": [
+        0.2537815976337061,
+        0.7462184023662939
+      ],
+      "clopper_pearson_95": [
+        0.21094463823929654,
+        0.7890553617607032
+      ],
+      "note": "exact interval is primary; Wilson shown for comparison"
+    },
+    "faithfulness": {
+      "successes": 38,
+      "total": 49,
+      "rate": 0.7755102040816326,
+      "wilson_95": [
+        0.6412121276403999,
+        0.869750298503408
+      ],
+      "clopper_pearson_95": [
+        0.6337569811407358,
+        0.8822565794458093
+      ],
+      "note": "exact interval is primary; Wilson shown for comparison"
+    },
+    "faithfulness_content": {
+      "successes": 37,
+      "total": 46,
+      "rate": 0.8043478260869565,
+      "wilson_95": [
+        0.6682874107701539,
+        0.8934938986560147
+      ],
+      "clopper_pearson_95": [
+        0.6608524004890142,
+        0.9064242655785915
+      ],
+      "note": "exact interval is primary; Wilson shown for comparison"
+    },
+    "faithfulness_meta_claims": 3,
+    "answer_relevancy": {
+      "successes": 4,
+      "total": 6,
+      "rate": 0.6666666666666666,
+      "wilson_95": [
+        0.299993315138392,
+        0.9032285888942195
+      ],
+      "clopper_pearson_95": [
+        0.22277809550351435,
+        0.9567281317072585
+      ],
+      "note": "exact interval is primary; Wilson shown for comparison"
+    },
+    "unanswerable": null,
+    "per_case": [
+      {
+        "case_id": "cm01",
+        "context_precision": null,
+        "context_recall": 0.0,
+        "faithfulness": null,
+        "faithfulness_content": null,
+        "meta_claims": null,
+        "answer_relevancy": 0.0
+      },
+      {
+        "case_id": "cm02",
+        "context_precision": 0.13432835820895522,
+        "context_recall": 1.0,
+        "faithfulness": 0.875,
+        "faithfulness_content": 0.8666666666666667,
+        "meta_claims": 1,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "cm03",
+        "context_precision": 0.0967741935483871,
+        "context_recall": 1.0,
+        "faithfulness": 1.0,
+        "faithfulness_content": 1.0,
+        "meta_claims": 0,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "cm04",
+        "context_precision": 1.0,
+        "context_recall": 0.0,
+        "faithfulness": 0.2857142857142857,
+        "faithfulness_content": 0.2857142857142857,
+        "meta_claims": 0,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "cm05",
+        "context_precision": 0.16129032258064516,
+        "context_recall": 1.0,
+        "faithfulness": 0.7777777777777778,
+        "faithfulness_content": 0.875,
+        "meta_claims": 2,
+        "answer_relevancy": 1.0
+      },
+      {
+        "case_id": "cm06",
+        "context_precision": null,
+        "context_recall": 0.0,
+        "faithfulness": null,
+        "faithfulness_content": null,
+        "meta_claims": null,
+        "answer_relevancy": 0.0
+      }
+    ],
+    "reading": "context_precision = **检索到的全部切片**里被判『有用』的比例（RAGAS 口径；老产物缺检索集时退回引用集，逐 case 的 context_source 会标出来）；context_recall = 标注事实里能在上下文中找到的比例（只有带金标的 case 计入）；faithfulness = 答案断言里被上下文支撑的比例（全部断言口径）；faithfulness_content = 同上但**剔掉出处说明类元陈述**（可引用口径，判定标了 meta 才有；旧提示词的标签报 null）；answer_relevancy = 正面回答了问题的 case 比例（与 RAGAS 的嵌入口径不同）。四个指标各自独立报出，**没有加权总分**。`unanswerable` 一节**不并进四个指标**：拒答率 = 不可答题里没有硬凑答案的比例，context_useful_rate = 负样上下文里被判有用的比例（越低越好，暴露检索噪声）。",
+    "not_measured": "本次未测：产品在真实模型下的答案质量（需要一次授权运行）；本文件里的数字若是空值，说明对应样本没有判定，而不是 0 分。"
+  }
+}

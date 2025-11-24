@@ -106,6 +106,8 @@ class Hit:
     source_id: int | None = None
     # 来源类型（TRANSCRIPT / MINUTES）：读侧按 MySQL 状态兜底过滤时用
     source_type: str | None = None
+    # 可选的 parent/sibling 上下文：只作为模型阅读材料，不替换 child 的引用正文。
+    parent_text: str | None = None
 
     def as_citation(self) -> dict[str, Any]:
         """转成给前端/工具用的引用结构（时间戳换算成秒，和转写行格式一致）。"""
@@ -121,7 +123,7 @@ class Hit:
             "end_second": (self.end_ms or 0) // 1000 if self.end_ms is not None else None,
             "source_id": self.source_id,
             "quote": self.text,
-        }
+        } | ({"parent_text": self.parent_text} if self.parent_text else {})
 
 
 # --------------------------------------------------------------------------- #
@@ -725,7 +727,7 @@ async def _expand_parent_context(hit: Hit) -> Hit:
     for segment in segments:
         second = int((segment.start_ms or 0) // 1000)
         lines.append(f"[{second}s][{segment.speaker or ''}] {segment.content}")
-    return replace(hit, text="\n".join(lines))
+    return replace(hit, parent_text="\n".join(lines))
 
 
 async def search_knowledge(
