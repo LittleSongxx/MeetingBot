@@ -2277,6 +2277,14 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 
 - failure taxonomy：9 条 partial 主要是证据选择/跨工具覆盖/关键条目缺失；纯 retrieval miss 0。
 - 条件化提示：仅“问题问数量/类别 + 上下文出现多个计数口径”时追加一句；默认 0。
-- e04 修好；holdout E hint on：recall 88.24→97.06、precision 73.02→78.33、
-  faithfulness 89.58→95.92、relevance 90→100；cross10 基本不变。
-- 仍未默认开启：需要独立盲评 + 完整 cross30 回归；避免再次把 judge 读数当答案质量。
+- 单题 fresh session e04 提示能触发，但 holdout E 独立盲评 v3 两臂 e04 仍同错，
+  19/20 组一致，无系统性效果；提示触发/注入位置待排查。
+- 仍未默认开启；judge 读数（holdout E off/on recall 88.24→97.06）不能当答案质量提升。
+
+### 20) P0 多轮测量中止（2026-10-20）
+
+- cross10 3 轮基线：r1 完成（recall 100 / precision 61.67 / faith 86.96 / relevance 100），
+  r2 在最后一题长时间未返回、r3 未开始；中止，不把部分数据当方差估计。
+- 条件化证据提示 v3 独立盲评：两臂均 19 correct/1 partial/0 wrong，e04 两臂仍同错，
+  提示无可辨识效果；`KB_EVIDENCE_HINT_ENABLED` 默认 0。
+- 下一步 P0：6 题固定小集 + 后台队列跑 3 轮；P2/P3 尚未实施。
