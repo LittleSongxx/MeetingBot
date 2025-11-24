@@ -2231,3 +2231,23 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
   只能当 sanity check。
 - prompt 去案例化后 cross30 单轮 recall 76.79%、precision 68.87%、faithfulness 81.86%；
   与改动前互有升降，不声称提升。
+
+### 16) 预注册：turn 级上下文过滤（2026-10-20）
+
+- 机制：模型调用前，对本轮**累积的工具结果**做一次 3-way 过滤，而不是在每次 search 内过滤；
+  用现有 AGENT 模型，不做便宜小模型/规则预筛（用户明确排除）。
+- cross30 开发集：precision 68.87%→77.55%（+8.68pp）、recall 76.79%→77.59%、
+  faithfulness 81.86%→81.06%、relevance 100%→93.33%。
+- 全新 holdout E（20 题，未调参）做 off/on 两臂；门槛：precision ≥+5pp，
+  recall/faithfulness 下降不超过 2pp，relevance 下降不超过 5pp。
+- 通过才考虑默认开启；否则保持关闭。该集只用于本次判定。
+
+### 16b) Turn 级过滤结果（2026-10-20）
+
+- cross30：recall 76.79%→77.59%、precision 68.87%→77.55%、
+  faithfulness 81.86%→81.06%、relevance 100%→93.33%。
+- holdout E（off/on）：recall 97.06%→97.06%、precision 73.33%→**90.38%**、
+  faithfulness 93.00%→**97.80%**、relevance 100%→100% → 预注册全部通过。
+- 成本：60 次、平均 1,471.77ms、59,577 tokens；约 1.2 次/题、+1.8s/题。
+- 决定：`KB_TURN_FILTER_ENABLED` 默认改为 1；holdout E 仍为 AI 起草/单语料，
+  不能声称强泛化。

@@ -133,6 +133,9 @@ class CitationRegistry:
 
     _items: list[Citation] = field(default_factory=list)
     _by_key: dict[tuple, int] = field(default_factory=dict)
+    # turn 级上下文过滤删掉的引用：保留编号不重排（答案里的 [n] 仍可解析），
+    # 但不再作为本轮“检索到的上下文”输出。
+    _hidden: set[int] = field(default_factory=set)
 
     def annotate(self, tool_name: str, result: dict[str, Any]) -> dict[str, Any]:
         """给工具结果里的条目补上 `ref` 字段，返回新字典（不改原对象）。
@@ -201,9 +204,13 @@ class CitationRegistry:
         self._by_key[citation.key] = citation.ref
         return citation
 
+    def prune(self, refs: set[int]) -> None:
+        """隐藏被 turn 级过滤掉的引用；编号保持不变。"""
+        self._hidden.update(int(ref) for ref in refs if int(ref) > 0)
+
     def since(self, ref: int) -> list[Citation]:
         """编号大于 `ref` 的引用（增量推给前端用）。"""
-        return [item for item in self._items if item.ref > ref]
+        return [item for item in self._items if item.ref > ref and item.ref not in self._hidden]
 
     def get(self, ref: int) -> Citation | None:
         if 1 <= ref <= len(self._items):
@@ -211,10 +218,10 @@ class CitationRegistry:
         return None
 
     def all(self) -> list[Citation]:
-        return list(self._items)
+        return [item for item in self._items if item.ref not in self._hidden]
 
     def as_dicts(self) -> list[dict[str, Any]]:
-        return [item.as_dict() for item in self._items]
+        return [item.as_dict() for item in self._items if item.ref not in self._hidden]
 
     def __len__(self) -> int:
         return len(self._items)
