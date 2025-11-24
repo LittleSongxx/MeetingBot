@@ -163,3 +163,33 @@ precision **−3.28pp**，预注册“+3pp”不达标 → **拒绝**，默认�
 - rerank 相对 floor：开发集 +4.29pp，但 holdout B precision −3.28pp，拒绝
 - 唯一保留的新增能力：**嵌入故障时 BM25-only 降级**（可靠性，不是质量提升）
 - 所有默认恢复：top_k=3、contextual off、rerank floor=0、planning off
+
+## 13. CRAG 式上下文过滤实验（预注册验证，未启用）
+
+### 方法
+对 rerank 后的候选上下文，用 qwen 逐条判“是否可能包含回答问题所需信息”，
+DeepSeek judge 独立重判过滤后的 context precision / recall；不改产品默认。
+开发集 cross30 先调评估器提示词，再在**全新 holdout C 20 题/22 事实**上一次性验证。
+
+### cross30 开发集
+| 版本 | context_precision | context_recall |
+|---|---:|---:|
+| 基线 | 67.57% | 77.59% |
+| 过滤（初版） | **85.19%** | 75.86% |
+| 过滤（保守提示） | **83.53%** | 75.86% |
+
+### holdout C（未参与调参）
+| 配置 | context_precision | context_recall |
+|---|---:|---:|
+| 基线 | 66.67% | **100%** |
+| CRAG 过滤 | **92.86%** | 95.45% |
+
+- precision **+26.19pp**，但 recall **−4.55pp**（丢 1 条支撑上下文）
+- 预注册门槛为“precision ≥+5pp 且 recall 下降 ≤3pp” → **未通过**
+- 因此不实现为默认；记录为“高 precision、低召回代价”的候选方案
+
+### 结论
+- CRAG 是目前最有希望提升 context precision 的通用方法（开发集和 holdout 都大幅提升）
+- 但当前评估器会误删 1 条部分相关的上下文；需要增加“安全底线”（例如强制保留
+  rerank top-k 或歧义上下文）并在**新的 holdout D** 上重验，不能直接上线
+- 所有产品默认保持不变：top_k=3、contextual off、rerank floor=0、planning off
