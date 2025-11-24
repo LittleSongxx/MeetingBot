@@ -2296,3 +2296,12 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - 读数：precision 63.16/63.16/52.63%；faithfulness 87.88/85.71/96.55%；
   recall 100% 稳定；relevancy 100%。
 - 结论：小样本单轮噪声很大（precision 一轮 10.5pp），后续至少 6 题×3 轮 + 配对 CI。
+
+### 22) P0 6×3 + P2 parent-context 实验（2026-10-21）
+
+- P0 6 题×3（fresh session）：recall mean 97.22%、precision 64.23%（58.54–68.29）、
+  faithfulness 90.75%（86.21–94.23）、relevancy 100%。
+- P2 parent-context（相邻窗口拼回 hit.text）：recall 97.22→33.33%、precision 64.23→13.80%、
+  faithfulness 90.75→78.33%、relevancy 100→66.67% → 否决，默认 0。
+- 原因：直接拼长文本破坏 citation/ref 与上下文分母；parent 只能作阅读上下文，
+  不能替换 child 引用身份。

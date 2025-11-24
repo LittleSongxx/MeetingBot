@@ -705,6 +705,29 @@ async def _filter_valid_sources(hits: list[Hit]) -> list[Hit]:
     ]
 
 
+async def _expand_parent_context(hit: Hit) -> Hit:
+    """把 transcript child 命中扩成相邻窗口（±30s），用于 parent/sibling context 实验。"""
+    if hit.source_type != SOURCE_TRANSCRIPT or hit.source_id is None or hit.start_ms is None:
+        return hit
+    end_ms = hit.end_ms if hit.end_ms is not None else hit.start_ms + 60_000
+    try:
+        segments = await TranscriptSegment.filter(
+            task_id=hit.source_id,
+            start_ms__gte=max(0, hit.start_ms - 30_000),
+            start_ms__lte=end_ms + 30_000,
+        ).order_by("start_ms").limit(40)
+    except Exception:  # noqa: BLE001 - 扩展失败保持原 hit
+        logger.exception("parent context 扩展失败（source_id=%s）", hit.source_id)
+        return hit
+    if len(segments) <= 1:
+        return hit
+    lines = []
+    for segment in segments:
+        second = int((segment.start_ms or 0) // 1000)
+        lines.append(f"[{second}s][{segment.speaker or ''}] {segment.content}")
+    return replace(hit, text="\n".join(lines))
+
+
 async def search_knowledge(
     query: str,
     *,
@@ -814,6 +837,8 @@ async def search_knowledge(
     # 它们占的是同一段话，交两段给生成模型只会让 context_precision 的分母虚高。
     # 保留排序更靠前（重排分数更高）的一条，再按漏斗口径截断。
     hits = _dedupe_overlapping(hits)
+    if parent_context_enabled():
+        hits = [await _expand_parent_context(hit) for hit in hits]
     return hits[:min(int(limit), rerank_top_k())]
 
 
@@ -915,6 +940,11 @@ def rerank_score_floor() -> float:
         return max(0.0, min(1.0, float(raw)))
     except ValueError:
         return 0.0
+
+
+def parent_context_enabled() -> bool:
+    """parent/sibling context 开关。默认关：先把 child 重排，再把相邻窗口补回。"""
+    return os.getenv("KB_PARENT_CONTEXT_ENABLED", "0").strip().lower() not in {"0", "false", "no", "off"}
 
 
 def rerank_enabled() -> bool:
