@@ -735,9 +735,16 @@ async def search_knowledge(
     if not text:
         return []
     config = await _embedding_config()
-    vectors = await model_factory.embed_texts(config, [text], biz_id=biz_id,
-                                              call_type="KB_QUERY_EMBED")
-    dense = vectors[0]
+    # 嵌入供应商故障（余额/配额/网络）不应让整个检索 500：BM25 不依赖查询向量，
+    # 仍能给出词面命中。dense=None 表示本轮降级为 BM25-only，由下方分支如实标注。
+    dense: list[float] | None
+    try:
+        vectors = await model_factory.embed_texts(config, [text], biz_id=biz_id,
+                                                  call_type="KB_QUERY_EMBED")
+        dense = vectors[0]
+    except Exception:  # noqa: BLE001 - 单臂（查询嵌入）失败，降级 BM25
+        logger.exception("查询嵌入失败，本轮降级为 BM25-only（query=%s）", text[:120])
+        dense = None
     candidates = rerank_candidates() if rerank_enabled() else 0
     fetch = max(int(limit), candidates) if candidates else int(limit)
     authority_list = list(authority) if authority is not None else None
@@ -748,16 +755,17 @@ async def search_knowledge(
     dense_raw: list[dict[str, Any]] = []
     bm25_raw: list[pg_kb.PgHit] = []
     if pg_kb.available():
-        try:
-            dense_raw = await pg_kb.dense_search(
-                dense, limit=fetch,
-                allowed_meeting_ids=allowed_meeting_ids, authority=authority_list,
-                chunk_type=chunk_type_list, source_ids=source_id_list,
-                source_types=source_type_list,
-                meeting_time_from=meeting_time_from, meeting_time_to=meeting_time_to,
-            )
-        except Exception:  # noqa: BLE001 - 单臂失败不阻断另一臂
-            logger.exception("PG dense 检索失败，本轮只用 BM25（query=%s）", text[:120])
+        if dense is not None:
+            try:
+                dense_raw = await pg_kb.dense_search(
+                    dense, limit=fetch,
+                    allowed_meeting_ids=allowed_meeting_ids, authority=authority_list,
+                    chunk_type=chunk_type_list, source_ids=source_id_list,
+                    source_types=source_type_list,
+                    meeting_time_from=meeting_time_from, meeting_time_to=meeting_time_to,
+                )
+            except Exception:  # noqa: BLE001 - 单臂失败不阻断另一臂
+                logger.exception("PG dense 检索失败，本轮只用 BM25（query=%s）", text[:120])
         try:
             bm25_raw = await pg_kb.bm25_search(
                 text, allowed_meeting_ids=allowed_meeting_ids,

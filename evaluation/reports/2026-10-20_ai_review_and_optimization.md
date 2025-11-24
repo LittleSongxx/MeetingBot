@@ -1,7 +1,7 @@
 # 2026-10-20 独立 Agent 代审 + 优化 + A/B 复现实验（完成版）
 
 - 用户授权独立子 Agent 代人工审核；共 4 个独立复核 Agent。
-- 不设调用上限：产品侧累计 **4,319 次**调用，记账 **¥1.6624**。
+- 不设调用上限：产品侧累计 **4,759 次**调用，记账 **¥1.8015**。
 - A/B 复现已完成（两轮 30×2）；结论：无稳定收益，保持 `KB_QUERY_PLAN_ENABLED=0`。
 
 ## 1. 独立审核结果
@@ -92,3 +92,46 @@ ct02（漏 3 个中间节点）、cm03、ct06、cm07、ct08、ct09（各 1 项�
 - 泛化：holdout 20 题 context_recall 96.88%、faithfulness 89.83%，未用于调参。
 - 剩余限制：9 条调参集 partial 未逐条修；独立 Agent 代审不是人工签名；
   单会议语料、语料时间线仍有矛盾。
+
+## 10. 检索质量调研与实验
+
+### 调研结论
+- RAGAS Context Precision 是 rank-aware 指标：它惩罚“检索到但无用”的切片，
+  因此**单纯截断 top-k** 会提高 precision 但往往牺牲 recall/faithfulness。
+  [RAGAS Context Precision](https://docs.ragas.io/en/stable/concepts/metrics/available_metrics/context_precision/)
+- Anthropic Contextual Retrieval：为每个切片生成文档级上下文再嵌入/建 BM25，
+  报告 top-20 检索失败率降低 49%，加 rerank 后降低 67%；代价是索引期额外模型调用。
+  [Contextual Retrieval](https://www.anthropic.com/engineering/contextual-retrieval)
+- CRAG 类方法：用检索评估器判断召回质量，再决定“直接生成/纠错检索/放弃”，
+  本质是把 retrieval precision 的判断从静态阈值改成按 query 的自适应判断。
+  [Corrective RAG](https://www.kore.ai/blog/corrective-rag-crag)
+
+### 实验 1：top-k 截断（cross30 开发集，同 prompt）
+| 配置 | context_recall | context_precision | faithfulness | answer_relevancy |
+|---|---:|---:|---:|---:|
+| top_k=3（当前） | **80.36%** | 67.27% | **79.10%** | 100% |
+| top_k=2 | 65.52% | **69.41%** | 73.36% | 96.67% |
+
+结论：precision 只 +2.14pp，recall 掉 14.84pp、faithfulness 掉 5.74pp；
+**拒绝用截断换 precision**，恢复 top_k=3。
+
+### 实验 2：Contextual Retrieval（未完成）
+- 开启 `KB_CONTEXTUAL_ENABLED=1` 并重建 KB；索引 worker 报错：
+  `嵌入模型调用失败：Arrearage / Access denied, account not in good standing`
+- 失败的索引任务把 `kb_document.status` 置为 FAILED；已恢复为 SUCCEEDED，
+  旧切片与 PG 向量未删除。
+- 因此 contextual retrieval **没有有效读数**，不能声称收益；根因是供应商账户欠费，
+  不是方法本身失败。
+
+### 系统性修复：嵌入故障降级
+- `search_knowledge` 在查询嵌入失败时不再 500，自动降级为 **BM25-only**，
+  并记录异常；dense 失败/BM25 失败仍各自不阻断另一臂。
+- 新增单测 `test_embedding_failure_falls_back_to_bm25`。
+- 当前线上检索处于 BM25-only（DashScope 账户欠费），dense 不可用。
+
+## 11. 当前阻塞
+
+- DashScope 返回 `Arrearage`：查询嵌入失败，产品侧 qwen/embedding 付费调用
+  无法继续；**本轮之后不能再跑质量评测**，需要账户充值。
+- DeepSeek judge 是独立账户，仍可用；但它只能判已有产物，不能修复产品检索。
+- 因此本轮不再声称任何新的质量提升；top-k/contextual retrieval 实验均按“未通过/未完成”记录。
