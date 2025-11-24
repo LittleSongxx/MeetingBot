@@ -110,9 +110,9 @@ async def _allowed_meetings(actor: Any, user: User) -> list[int] | None:
 def _matches_query(text: str, query: str) -> bool:
     """状态工具的关键词匹配：容忍同义/改写，不要求逐字子串。
 
-    实测模型会把「移动端附件下载修复」传成 query，而条目正文是「移动端附件
-    下载进度问题须在发布前修复」；只做 SQL `contains` 会返回 0 条，模型就会
-    误判“不存在”。这里在条目量很小的状态表上做规范化包含 + 身份判据兜底。
+    模型常把口语化/缩略的 query 传给状态工具，而条目正文是更完整的表述；
+    只做 SQL `contains` 会返回 0 条，模型就会误判“不存在”。这里在条目量很小的
+    状态表上做规范化包含 + 身份判据兜底。
     """
     target = textsim.normalize(query)
     content = textsim.normalize(text)

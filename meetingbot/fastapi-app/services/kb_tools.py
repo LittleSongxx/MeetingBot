@@ -260,15 +260,15 @@ class ListFactsArgs(BaseModel):
     )
     keywords: list[str] | None = Field(
         default=None,
-        description="按关键词缩小事实（任一命中即可）。先把问题里的关键名词放进来"
-                    "（例如「报表导出」「回滚」），不要一次把整类事实都当上下文。",
+        description="按关键词缩小事实（任一命中即可）。先把问题里的具体名词/功能名放进来，"
+                    "不要一次把整类事实都当上下文。",
     )
     limit: int = Field(default=20, ge=1, le=50, description="返回条数上限")
 
     @field_validator("meeting_ids", "keywords", mode="before")
     @classmethod
     def _loose_meeting_ids(cls, value: Any) -> Any:
-        # 这一条就是 q26/q27 的现场：模型发的是字符串 "[2]"
+        # 模型偶尔把数组参数发成字符串（如 "[2]"），这里宽松解析。
         return _loose(value, (list, type(None)))
 
     @field_validator("limit", mode="before")
@@ -289,9 +289,8 @@ class GetMinutesArgs(BaseModel):
     )
     keywords: list[str] | None = Field(
         default=None,
-        description="按关键词缩小列表字段（任一命中即可）。问「发布范围/某个主题/某功能」时"
-                    "**必须**把问题里的名词放进来，例如 [\"发布范围\", \"功能\"]；"
-                    "不要整字段返回。summary 不受 keywords 影响。",
+        description="按关键词缩小列表字段（任一命中即可）。问某个主题/功能时"
+                    "**必须**把问题里的名词放进来；不要整字段返回。summary 不受 keywords 影响。",
     )
     limit: int | None = Field(
         default=None, ge=1, le=50,
@@ -504,8 +503,7 @@ async def _list_facts(actor: Actor, args: ListFactsArgs) -> dict[str, Any]:
         return await _list_recordings(allowed, args.limit)
 
     # `task` 把决策与待办一起查：问「某人负责的任务」时只查 pending_item 会漏掉
-    # 写在 decisions 里的任务（q42 的专项评审触发项就是 pending_item 的干扰项），
-    # 但工具不该猜用户指的是哪一类，所以给一个显式的合并类别。
+    # 写在 decisions 里的任务；工具不该猜用户指的是哪一类，所以给一个显式的合并类别。
     fields = {
         "decision": ("decisions",),
         "pending_item": ("pending_items",),
@@ -795,7 +793,7 @@ TOOL_SPECS: tuple[ToolSpec, ...] = (
                     "用 include_draft=true 读最近草稿并标注草稿。"
                     "**按需传 fields**：问时长/议题只取 summary/topics，问待办只取 "
                     "pending_items；不确定才取全部。一次取六字段会把无关条目塞满上下文。"
-                    "**问某主题/发布范围/功能时传 keywords**（从问题取名词）。"
+                    "**问某主题/功能时传 keywords**（从问题取名词）。"
                     "列表字段是纪要数组顺序，**不保证会议时间顺序**；问「会议最后总结的几条」"
                     "请用 search_knowledge 检索总结段，不要用字段顺序猜。"
                     "summary/topics 不保证包含时长/数量/具体时间点；问这些元信息必须检索转写。",
