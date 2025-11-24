@@ -2319,3 +2319,9 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
   holdout E：50 个，2% 不在任何上下文。
 - cross30 高值需人工/LLM 判定（派生数字/会议日期/多上下文），不能直接当幻觉率；
   产品默认不变，P3 未集成。
+
+### 25) P3 claim 校验（cross30 48 缺口，2026-10-21）
+
+- 深判：citation_mapping 18、supported_by_cited 11、unsupported 18、derived 1。
+- 规则审计 25.5% 高估；真 unsupported 约为 188 个数字断言的 9.6%。
+- 例子集中在时间归属/引用绑定（ct06/ct08），支持做条件化 claim 校验，不做全量拦截。
