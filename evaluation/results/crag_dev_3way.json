@@ -1,0 +1,657 @@
+{
+  "rows": [
+    {
+      "case_id": "cm01",
+      "baseline": {
+        "contexts": 3,
+        "useful": 3,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 3,
+        "useful": 3,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2,
+        3
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cm02",
+      "baseline": {
+        "contexts": 8,
+        "useful": 3,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 6,
+        "useful": 3,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cm03",
+      "baseline": {
+        "contexts": 6,
+        "useful": 4,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 6,
+        "useful": 4,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cm04",
+      "baseline": {
+        "contexts": 8,
+        "useful": 8,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 8,
+        "useful": 8,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cm05",
+      "baseline": {
+        "contexts": 6,
+        "useful": 4,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 6,
+        "useful": 4,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cm06",
+      "baseline": {
+        "contexts": 6,
+        "useful": 4,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 6,
+        "useful": 4,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cm07",
+      "baseline": {
+        "contexts": 5,
+        "useful": 5,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 5,
+        "useful": 5,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cm08",
+      "baseline": {
+        "contexts": 6,
+        "useful": 3,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 5,
+        "useful": 3,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cm09",
+      "baseline": {
+        "contexts": 6,
+        "useful": 3,
+        "facts_found": 1,
+        "facts_total": 1
+      },
+      "filtered": {
+        "contexts": 3,
+        "useful": 2,
+        "facts_found": 1,
+        "facts_total": 1
+      },
+      "evaluator_keep": [
+        1,
+        2,
+        3
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cm10",
+      "baseline": {
+        "contexts": 6,
+        "useful": 3,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 3,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2,
+        3
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cs01",
+      "baseline": {
+        "contexts": 2,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 1
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 1
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cs02",
+      "baseline": {
+        "contexts": 1,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 1,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cs03",
+      "baseline": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cs04",
+      "baseline": {
+        "contexts": 1,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 1
+      },
+      "filtered": {
+        "contexts": 1,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 1
+      },
+      "evaluator_keep": [
+        1
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cs05",
+      "baseline": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cs06",
+      "baseline": {
+        "contexts": 1,
+        "useful": 0,
+        "facts_found": 0,
+        "facts_total": 3
+      },
+      "filtered": {
+        "contexts": 1,
+        "useful": 0,
+        "facts_found": 0,
+        "facts_total": 3
+      },
+      "evaluator_keep": [
+        1
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cs07",
+      "baseline": {
+        "contexts": 2,
+        "useful": 0,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 0,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cs08",
+      "baseline": {
+        "contexts": 1,
+        "useful": 0,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 1,
+        "useful": 0,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cs09",
+      "baseline": {
+        "contexts": 2,
+        "useful": 1,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 1,
+        "useful": 0,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "cs10",
+      "baseline": {
+        "contexts": 3,
+        "useful": 3,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 3,
+        "useful": 3,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2,
+        3
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "ct01",
+      "baseline": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "ct02",
+      "baseline": {
+        "contexts": 3,
+        "useful": 2,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 1,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "ct03",
+      "baseline": {
+        "contexts": 1,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 1
+      },
+      "filtered": {
+        "contexts": 1,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 1
+      },
+      "evaluator_keep": [
+        1
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "ct04",
+      "baseline": {
+        "contexts": 5,
+        "useful": 5,
+        "facts_found": 3,
+        "facts_total": 3
+      },
+      "filtered": {
+        "contexts": 5,
+        "useful": 5,
+        "facts_found": 3,
+        "facts_total": 3
+      },
+      "evaluator_keep": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "ct05",
+      "baseline": {
+        "contexts": 3,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 3,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2,
+        3
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "ct06",
+      "baseline": {
+        "contexts": 5,
+        "useful": 4,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 5,
+        "useful": 4,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "ct07",
+      "baseline": {
+        "contexts": 3,
+        "useful": 3,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 3,
+        "useful": 3,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2,
+        3
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "ct08",
+      "baseline": {
+        "contexts": 3,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "ct09",
+      "baseline": {
+        "contexts": 6,
+        "useful": 4,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 4,
+        "useful": 4,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "evaluator_reasons": []
+    },
+    {
+      "case_id": "ct10",
+      "baseline": {
+        "contexts": 3,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 3,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2,
+        3
+      ],
+      "evaluator_reasons": []
+    }
+  ],
+  "summary": {
+    "baseline": {
+      "contexts": 111,
+      "precision": 0.7027027027027027,
+      "facts_found": 45,
+      "facts_total": 58,
+      "recall": 0.7758620689655172
+    },
+    "filtered": {
+      "contexts": 97,
+      "precision": 0.7628865979381443,
+      "facts_found": 44,
+      "facts_total": 58,
+      "recall": 0.7586206896551724
+    }
+  }
+}

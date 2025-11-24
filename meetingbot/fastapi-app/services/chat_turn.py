@@ -385,7 +385,7 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     tokens = await turn_tokens(
         assistant_row.id,
         call_types=(CHAT_CALL_TYPE, SUMMARY_CALL_TYPE, "KB_QUERY_EMBED",
-                    "KB_RERANK", "KB_QUERY_PLAN"))
+                    "KB_RERANK", "KB_QUERY_PLAN", "KB_RELEVANCE_FILTER"))
     checkpoint_id = None
     if chat_checkpoint.get_checkpointer() is not None:
         try:

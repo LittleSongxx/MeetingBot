@@ -1,0 +1,302 @@
+{
+  "name": "泛化 holdout D 20 题",
+  "purpose": "CRAG 3way 预注册验证；未用于调参",
+  "label_source": "holdout_agent_draft",
+  "human_checked": false,
+  "do_not_tune": true,
+  "cases": [
+    {
+      "case_id": "d01",
+      "question": "李月开场说这次会议的目标是什么？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "形成会议纪要和任务清单"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d02",
+      "question": "上午会介绍的灰度覆盖比例从多少扩到多少？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "8月20日覆盖10%活跃用户",
+        "8月26日扩大到30%"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d03",
+      "question": "灰度复盘里登录成功率和下单链路成功率分别是多少？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "登录成功率99.8%",
+        "下单链路99.2%"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d04",
+      "question": "新版本看板访问量和凭证上传率分别提升多少？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "看板访问量提升24%",
+        "凭证上传率提升18%"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d05",
+      "question": "灰度期间后端接口稳定性如何？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "后端没有出现500错误"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d06",
+      "question": "测试团队回归需要覆盖哪些模块？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "登录注册、部门员工权限、会议资料上传下载、长音频转写、纪要导出、任务确认、逾期提醒、知识索引重建、跨会议问答、Agent人工确认"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d07",
+      "question": "移动端附件下载问题影响核心会议流程吗？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "不影响核心会议和任务流程",
+        "但发布前要修复并在发布说明中写明处理结果"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d08",
+      "question": "首周运行日报需要汇总哪些数据？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "会议创建数量与总时长",
+        "转写任务成功率与平均耗时",
+        "任务完成率与逾期率",
+        "RAG问答与Agent运行质量"
+      ],
+      "source_task_ids": [
+        3
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d09",
+      "question": "发布公告需要写清哪些入口？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "会议创建、录音上传、纪要确认、任务跟踪、知识库问答"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d10",
+      "question": "发布当天10:00要做什么？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "对外通稿与产品公告同步发布"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d11",
+      "question": "报表导出在正式发布时怎么处理？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "发布时隐藏入口",
+        "异步改造完成后再单独上线"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d12",
+      "question": "报表导出异步改造需要多少工作日？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "开发2天、联调1天、测试2天，共5个工作日"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d13",
+      "question": "缓存方案为什么没有采用？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "缓存覆盖不全，冷门区间仍然慢"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d14",
+      "question": "灰度按什么维度切流？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "按用户ID取模分流"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d15",
+      "question": "回滚时数据库改动需要动数据吗？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "不需要，加字段且向后兼容"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d16",
+      "question": "阻断任务未完成会触发什么？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "8月31日17:00张晨与王工开专项评审",
+        "决定是否调整发布时间"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d17",
+      "question": "会议最后复述了哪三项结论？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "V2.0按期发布、报表导出入口隐藏",
+        "灰度10%、50%、全量分三天",
+        "通稿与产品公告发布前一日18:00前定稿"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d18",
+      "question": "客服知识库由谁负责、什么时候完成？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "周宁负责",
+        "9月1日10:00前完成"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d19",
+      "question": "发布后要观察哪两个运营指标？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "从纪要创建正式任务的转化率",
+        "任务逾期率"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    },
+    {
+      "case_id": "d20",
+      "question": "9月1日9:00发布的范围包括哪些能力？",
+      "intent": "holdout_d",
+      "expected_facts": [
+        "会议创建与状态流转、资料管理、音视频转写、AI纪要、任务跟踪、知识库、React Agent分析、运行观测、质量评价"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "holdout_agent_draft",
+      "human_checked": false,
+      "do_not_tune": true
+    }
+  ]
+}

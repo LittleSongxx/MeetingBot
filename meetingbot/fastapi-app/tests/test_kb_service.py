@@ -352,6 +352,29 @@ class SearchKnowledgeTest(_KbBase):
         self.assertEqual(dense.await_count, 0, "嵌入失败时不应再调 dense")
         self.assertEqual([hit.chunk_id for hit in hits], [chunk.id])
 
+    async def test_relevance_filter_keeps_needed_and_maybe(self):
+        hits = [SimpleNamespace(text="a"), SimpleNamespace(text="b"), SimpleNamespace(text="c")]
+        config = SimpleNamespace(model_name="m")
+        with patch("services.model_config.resolve_route", AsyncMock(return_value=config)), \
+             patch.object(kb_service.model_factory, "invoke_json",
+                          AsyncMock(return_value={"labels": [
+                              {"index": 1, "label": "no"},
+                              {"index": 2, "label": "needed"},
+                              {"index": 3, "label": "maybe"}]})):
+            kept = await kb_service._filter_relevant("q", hits, biz_id=1)
+        self.assertEqual([hit.text for hit in kept], ["b", "c"])
+
+    async def test_relevance_filter_keeps_first_when_all_no(self):
+        hits = [SimpleNamespace(text="a"), SimpleNamespace(text="b")]
+        config = SimpleNamespace(model_name="m")
+        with patch("services.model_config.resolve_route", AsyncMock(return_value=config)), \
+             patch.object(kb_service.model_factory, "invoke_json",
+                          AsyncMock(return_value={"labels": [
+                              {"index": 1, "label": "no"},
+                              {"index": 2, "label": "no"}]})):
+            kept = await kb_service._filter_relevant("q", hits, biz_id=1)
+        self.assertEqual([hit.text for hit in kept], ["a"])
+
     async def test_missing_embedding_config_is_a_readable_error(self):
         await AiModelConfig.filter(model_type="EMBEDDING").update(enabled=False)
         with self.assertRaises(kb_service.KbError) as caught:
