@@ -1,0 +1,1135 @@
+{
+  "rows": [
+    {
+      "case_id": "cm01",
+      "baseline": {
+        "contexts": 3,
+        "useful": 3,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "明确提到对外通稿和产品公告的定稿时间（发布前一日下午六点前）以及刘颖负责通稿定稿。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "明确提到发布公告由运营负责人赵敏牵头、协作人周宁，完成时间为9月1日9:00前。"
+        },
+        {
+          "index": 3,
+          "useful": true,
+          "why": "讨论了对外通稿初稿进度、产品公告发布时间（发布当天上午十点）及通稿定稿时间（发布前一日下午六点前），提供关键时间线索。"
+        }
+      ]
+    },
+    {
+      "case_id": "cm02",
+      "baseline": {
+        "contexts": 8,
+        "useful": 3,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 0,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": false,
+          "why": "仅包含录音元信息，无风险内容"
+        },
+        {
+          "index": 2,
+          "useful": false,
+          "why": "仅包含录音元信息，无风险内容"
+        },
+        {
+          "index": 3,
+          "useful": true,
+          "why": "明确提到一项风险：异步改造和灰度发布挨得太近，改造延期可能影响后续排期"
+        },
+        {
+          "index": 4,
+          "useful": true,
+          "why": "同样包含上述异步改造与灰度发布排期风险的讨论片段"
+        },
+        {
+          "index": 5,
+          "useful": true,
+          "why": "描述了报表导出接口超时及高并发失败率问题，属于技术/性能风险背景"
+        },
+        {
+          "index": 6,
+          "useful": true,
+          "why": "列出了多项风险：模型服务延迟波动、会议资料频繁更新导致索引重建、任务负责人分配不合理"
+        },
+        {
+          "index": 7,
+          "useful": true,
+          "why": "继续列出风险：任务负责人分配不合理，以及删除用户时的数据风险"
+        },
+        {
+          "index": 8,
+          "useful": false,
+          "why": "主要讨论引用展示功能，虽末尾提及'现在讨论风险'但未展开具体风险内容"
+        }
+      ]
+    },
+    {
+      "case_id": "cm03",
+      "baseline": {
+        "contexts": 6,
+        "useful": 5,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "第一段录音中明确提到发布时间为9月1日九点，是回答问题的关键信息。"
+        },
+        {
+          "index": 2,
+          "useful": false,
+          "why": "讨论的是发布范围和上线后观察指标，未涉及具体发布时间点。"
+        },
+        {
+          "index": 3,
+          "useful": true,
+          "why": "第一段录音的会议总结部分再次确认了9月1日九点发布，与上下文1共同构成第一段录音的发布时间结论。"
+        },
+        {
+          "index": 4,
+          "useful": true,
+          "why": "第二段录音中提到公告和通告放在发布当天上午十点，提供了第二段录音关于发布时间的线索。"
+        },
+        {
+          "index": 5,
+          "useful": false,
+          "why": "仅提到'发布时间不变'，但未说明具体时间是什么，无法直接回答问题。"
+        },
+        {
+          "index": 6,
+          "useful": true,
+          "why": "第二段录音结尾复述决议时提到'V2.0按期发布'，结合上下文4可推断第二段录音对发布时间的表述。"
+        }
+      ]
+    },
+    {
+      "case_id": "cm04",
+      "baseline": {
+        "contexts": 8,
+        "useful": 4,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "标明其中一段录音是下午的会"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "标明另一段录音是上午的会"
+        },
+        {
+          "index": 3,
+          "useful": true,
+          "why": "包含上午会议的主题：产品上线复盘与下阶段发布准备会议"
+        },
+        {
+          "index": 6,
+          "useful": true,
+          "why": "包含下午会议的主题：产品发布评审会"
+        }
+      ]
+    },
+    {
+      "case_id": "cm05",
+      "baseline": {
+        "contexts": 6,
+        "useful": 4,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "包含第一段录音中灰度发布的具体数据（时间、覆盖率、成功率、用户反馈问题等）。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "包含第一段录音的会议议程，明确提到要讨论上一轮产品灰度发布的数据复盘。"
+        },
+        {
+          "index": 3,
+          "useful": true,
+          "why": "补充了第一段录音中灰度期间的账号权限抽样检查结果及后端接口情况。"
+        },
+        {
+          "index": 4,
+          "useful": true,
+          "why": "包含第二段录音中关于灰度方案的具体建议（分三步：10%、50%、全量）、切流维度及监控指标讨论。"
+        },
+        {
+          "index": 5,
+          "useful": true,
+          "why": "包含第二段录音结尾对灰度计划（10%、50%全量分三天）的总结复述及相关行动项。"
+        },
+        {
+          "index": 6,
+          "useful": true,
+          "why": "包含第二段录音中关于异步改造与灰度发布时间冲突的风险讨论，以及灰度计划的再次确认。"
+        }
+      ]
+    },
+    {
+      "case_id": "cm06",
+      "baseline": {
+        "contexts": 6,
+        "useful": 4,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "明确提到'刘颖负责通稿定稿'，回答了对外通稿由谁负责的问题。"
+        },
+        {
+          "index": 3,
+          "useful": true,
+          "why": "讨论对外通稿的初稿、调整及定稿时间，包含通稿负责人的相关线索（刘颖市场这边）。"
+        },
+        {
+          "index": 4,
+          "useful": true,
+          "why": "明确提到'发布回归任务（负责人陈琳）'，回答了测试回归由谁负责的问题。"
+        },
+        {
+          "index": 6,
+          "useful": true,
+          "why": "提到'测试团队将在8月31日中午12点前完成回归'以及协作人陈琳，补充了测试回归负责人的信息。"
+        }
+      ]
+    },
+    {
+      "case_id": "cm07",
+      "baseline": {
+        "contexts": 5,
+        "useful": 5,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "讨论了报表导出的处理方案（加缓存或异步任务），并给出了开发排期，属于报表导出问题的处理方式。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "明确提到移动端附件下载进度未刷新的问题，属于移动端附件下载问题的讨论片段。"
+        },
+        {
+          "index": 3,
+          "useful": true,
+          "why": "详细说明了移动端附件下载的研发计划、负责人、截止时间及具体任务描述，是附件下载的处理方式。"
+        },
+        {
+          "index": 4,
+          "useful": true,
+          "why": "包含报表导出的最终决策（入口先隐藏、张涛负责异步化改造本周五前完成），是报表导出的处理方式。"
+        },
+        {
+          "index": 5,
+          "useful": true,
+          "why": "补充了报表导出异步改造的风险及应对策略（周三给中期进度，否则推到下个版本），与报表导出处理相关。"
+        }
+      ]
+    },
+    {
+      "case_id": "cm08",
+      "baseline": {
+        "contexts": 6,
+        "useful": 3,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "包含回归测试的时间节点、覆盖角色及重点检查项等详细回归要求。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "同样包含回归测试安排和具体检查项，与上下文1内容重叠但可能对应不同录音片段。"
+        },
+        {
+          "index": 3,
+          "useful": true,
+          "why": "提到'发布回归任务按时完成'作为正式发布的前提条件，属于回归要求的一部分。"
+        },
+        {
+          "index": 4,
+          "useful": true,
+          "why": "包含功能验收情况（17个需求验收通过15个）以及消息推送的回归通过状态，涉及验收/回归要求。"
+        }
+      ]
+    },
+    {
+      "case_id": "cm09",
+      "baseline": {
+        "contexts": 6,
+        "useful": 3,
+        "facts_found": 1,
+        "facts_total": 1
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 1
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "包含移动端附件下载的研发计划、任务描述（弱网下展示下载状态和失败提示）及测试安排。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "包含移动端附件下载的任务描述和测试安排，可能对应问题中提到的其中一段录音内容。"
+        },
+        {
+          "index": 3,
+          "useful": true,
+          "why": "同样包含移动端下载进度的研发计划和任务描述，可能对应另一段录音的内容。"
+        }
+      ]
+    },
+    {
+      "case_id": "cm10",
+      "baseline": {
+        "contexts": 6,
+        "useful": 3,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "包含运营支持（发布公告、线上答疑）和客服支持（完成常见问题知识库）的具体安排信息。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "补充了客服支持团队常见问题知识库的具体内容以及问题追踪流程等详细安排。"
+        },
+        {
+          "index": 3,
+          "useful": false,
+          "why": "主要讲述测试团队的回归测试安排，仅提及运营发布公告但无客服支持相关内容。"
+        },
+        {
+          "index": 4,
+          "useful": false,
+          "why": "讨论灰度期间的监控指标和排班，与客服支持和运营支持无关。"
+        },
+        {
+          "index": 5,
+          "useful": false,
+          "why": "会议总结和行动项复述，未涉及客服支持与运营支持的安排。"
+        },
+        {
+          "index": 6,
+          "useful": false,
+          "why": "讨论开发周期、报表导出隐藏及容量评估，与客服和运营支持无关。"
+        }
+      ]
+    },
+    {
+      "case_id": "cs01",
+      "baseline": {
+        "contexts": 2,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 1
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 1
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "提供了产品发布评审系列会议的背景信息，有助于定位问题所属的会议系列。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "明确给出了已人工确认（CONFIRMED）的发布决策内容，包括发布时间、产品名称及发布范围，直接回答了问题。"
+        }
+      ]
+    },
+    {
+      "case_id": "cs02",
+      "baseline": {
+        "contexts": 1,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 1,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "明确给出了移动端附件下载进度问题的状态为PROPOSED（提议中），直接回答了该事项是已确认还是未确认的候选。"
+        }
+      ]
+    },
+    {
+      "case_id": "cs03",
+      "baseline": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "包含一条状态为OPEN的待办，提供了负责人（陈琳）和截止时间（8月31日12:00）。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "包含一条状态为OPEN的待办，提供了负责人（王工）和截止时间（8月30日18:00）。"
+        }
+      ]
+    },
+    {
+      "case_id": "cs04",
+      "baseline": {
+        "contexts": 1,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 1
+      },
+      "filtered": {
+        "contexts": 1,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 1
+      },
+      "evaluator_keep": [
+        1
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "直接回答了该偏好的负责人是系统管理员，且状态为CONFIRMED（已确认）。"
+        }
+      ]
+    },
+    {
+      "case_id": "cs05",
+      "baseline": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "包含系列中的一段录音（task 7）及其时间信息，可用于回答包含哪些录音及时间顺序。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "包含系列中的另一段录音（task 6）及其时间信息，可用于回答包含哪些录音及时间顺序。"
+        }
+      ]
+    },
+    {
+      "case_id": "cs06",
+      "baseline": {
+        "contexts": 1,
+        "useful": 0,
+        "facts_found": 0,
+        "facts_total": 3
+      },
+      "filtered": {
+        "contexts": 1,
+        "useful": 0,
+        "facts_found": 0,
+        "facts_total": 3
+      },
+      "evaluator_keep": [
+        1
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "提供了系列中一次会议的时间和名称信息，是判断'最近一次会议'及其结论的相关线索。"
+        }
+      ]
+    },
+    {
+      "case_id": "cs07",
+      "baseline": {
+        "contexts": 2,
+        "useful": 0,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 0,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "提供了后续会议（会议2）的信息，可用于判断是否有后续会议对发布决策进行了替代或修改。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "包含原始发布决策的具体内容和状态（CONFIRMED），是判断该决策是否被后续修改或替代的基准信息。"
+        }
+      ]
+    },
+    {
+      "case_id": "cs08",
+      "baseline": {
+        "contexts": 1,
+        "useful": 0,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 1,
+        "useful": 0,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "该上下文为产品发布评审会议记录，可能包含关于报表导出相关决定的讨论与确认信息。"
+        }
+      ]
+    },
+    {
+      "case_id": "cs09",
+      "baseline": {
+        "contexts": 2,
+        "useful": 1,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 1,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": false,
+          "why": "该上下文讨论的是移动端附件下载进度问题的修复与发布说明，与未确认候选记忆的处理方式完全无关。"
+        },
+        {
+          "index": 2,
+          "useful": false,
+          "why": "该上下文描述的是AI智能会议助手与任务跟踪系统的发布时间与范围，不涉及未确认候选记忆能否当作事实回答的问题。"
+        }
+      ]
+    },
+    {
+      "case_id": "cs10",
+      "baseline": {
+        "contexts": 3,
+        "useful": 3,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "直接说明了项目当前状态（CONFIRMED）及即将进行的下一步动作（9月1日正式发布）。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "描述了发布前需要完成的补充验收任务及其状态（OPEN），属于下一步要做的事情。"
+        },
+        {
+          "index": 3,
+          "useful": true,
+          "why": "描述了发布前必须修复的问题及其状态（OPEN），同样属于下一步要做的事情。"
+        }
+      ]
+    },
+    {
+      "case_id": "ct01",
+      "baseline": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "包含下午会的时间信息（14:00:00）"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "包含上午会的时间信息（09:00:00），结合上下文1可判断先后顺序"
+        }
+      ]
+    },
+    {
+      "case_id": "ct02",
+      "baseline": {
+        "contexts": 3,
+        "useful": 2,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 1,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "明确提到9月1日9:00正式发布这一关键时间节点，以及灰度发布复盘等阶段信息。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "包含灰度按10%、50%全量分三天走的时间节奏，以及发布前一日下午六点前定稿通稿等关键时间节点。"
+        },
+        {
+          "index": 3,
+          "useful": false,
+          "why": "仅为会议开场寒暄和发言规则说明，不包含任何时间节点信息。"
+        },
+        {
+          "index": 4,
+          "useful": true,
+          "why": "提供了灰度开始的具体日期（8月20日）及扩大覆盖比例的时间节点（8月26日），是回答从灰度到正式发布中间时间线的重要信息。"
+        }
+      ]
+    },
+    {
+      "case_id": "ct03",
+      "baseline": {
+        "contexts": 1,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 1
+      },
+      "filtered": {
+        "contexts": 1,
+        "useful": 1,
+        "facts_found": 1,
+        "facts_total": 1
+      },
+      "evaluator_keep": [
+        1
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "明确指出移动端附件下载问题须在发布前修复，直接回答了截止时间在正式发布之前还是之后。"
+        }
+      ]
+    },
+    {
+      "case_id": "ct04",
+      "baseline": {
+        "contexts": 5,
+        "useful": 5,
+        "facts_found": 3,
+        "facts_total": 3
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 1,
+        "facts_total": 3
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "明确指出8月31日12:00对应的事项是完成两组补充验收（长音频与多角色说话人匹配）。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "明确指出8月30日18:00对应的事项是修复移动端附件下载进度问题。"
+        },
+        {
+          "index": 3,
+          "useful": true,
+          "why": "明确提到8月31日17:00由张晨与王工召开专项评审，决定是否调整发布时间，同时复述了前两个时间点的事项。"
+        },
+        {
+          "index": 4,
+          "useful": true,
+          "why": "再次确认8月31日17:00召开专项评审这一事项及风险等级。"
+        },
+        {
+          "index": 5,
+          "useful": true,
+          "why": "会议纪要中张晨的发言提到了8月31日下午五点（即17:00）召开专项评审的条件和决策内容，包含所需信息。"
+        }
+      ]
+    },
+    {
+      "case_id": "ct05",
+      "baseline": {
+        "contexts": 3,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "包含会议总结，明确了报表导出异步化改造的负责人和截止时间（本周五前），以及灰度发布的安排，可用于判断先后顺序。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "张晨明确提到'异步改造和灰度发布挨得太近，如果改造延期可能会影响到后面的排期'，直接说明异步改造在前、灰度发布在后。"
+        },
+        {
+          "index": 3,
+          "useful": true,
+          "why": "讨论了报表导出的开发周期及'发布时间不变，报表导出先隐藏入口，等改造完成再单独放出来'的方案，并紧接着讨论灰度，提供了两者先后关系的线索。"
+        }
+      ]
+    },
+    {
+      "case_id": "ct06",
+      "baseline": {
+        "contexts": 5,
+        "useful": 4,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "明确提到9月1日9:00正式发布，回答了发布时间。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "再次确认9月1日9:00正式发布的时间安排。"
+        },
+        {
+          "index": 3,
+          "useful": true,
+          "why": "包含各方同意9月1日九点按计划发布的讨论记录。"
+        },
+        {
+          "index": 4,
+          "useful": true,
+          "why": "直接提到通稿和公告放在发布当天上午十点，回答了同步发通稿的时间。"
+        },
+        {
+          "index": 5,
+          "useful": true,
+          "why": "提到发布公告任务9月1日九点完成、常见问题知识库十点完成，补充了发布当天的时间安排细节。"
+        }
+      ]
+    },
+    {
+      "case_id": "ct07",
+      "baseline": {
+        "contexts": 3,
+        "useful": 3,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 1,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "提到首周复盘（发布决策复盘与首周数据汇总）的截止时间为9月8日18点，包含部分所需信息。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "明确说明首周复盘相关内容于9月8日18:00前提交，直接回答了首周复盘的提交时间。"
+        },
+        {
+          "index": 3,
+          "useful": true,
+          "why": "明确说明《AI会议助手首周运行日报》在首周每日17:00前提交，直接回答了首周运行日报的提交时间。"
+        }
+      ]
+    },
+    {
+      "case_id": "ct08",
+      "baseline": {
+        "contexts": 3,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "明确提到'定稿时间就定在发布前一日下午六点前'，直接回答了问题。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "包含更完整的上下文，说明需要在发布前一天完成通稿定稿以留出审核时间，并确认了下午六点前的截止时间。"
+        },
+        {
+          "index": 3,
+          "useful": false,
+          "why": "讨论的是移动端下载进度、接口验证和测试回归安排，与发布前一日18:00的任务无关。"
+        }
+      ]
+    },
+    {
+      "case_id": "ct09",
+      "baseline": {
+        "contexts": 6,
+        "useful": 4,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 0,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "包含报表导出异步方案的开发、联调、测试时间线（开发两天、连调一天、测试两天，共一周）。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "包含报表导出问题的发现过程及方案讨论的时间线。"
+        },
+        {
+          "index": 3,
+          "useful": true,
+          "why": "包含报表导出异步化改造的截止时间（本周五前完成）以及发布相关安排。"
+        },
+        {
+          "index": 4,
+          "useful": true,
+          "why": "提到消息推送免打扰设置已经修完且昨天回归通过，是回答该问题处理时间线的关键信息。"
+        }
+      ]
+    },
+    {
+      "case_id": "ct10",
+      "baseline": {
+        "contexts": 3,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "filtered": {
+        "contexts": 2,
+        "useful": 2,
+        "facts_found": 2,
+        "facts_total": 2
+      },
+      "evaluator_keep": [
+        1,
+        2
+      ],
+      "evaluator_reasons": [
+        {
+          "index": 1,
+          "useful": true,
+          "why": "明确提到灰度分三步（第一天10%、第二天50%、第三天全量）以及回滚最快五分钟能切回旧版本。"
+        },
+        {
+          "index": 2,
+          "useful": true,
+          "why": "复述确认了灰度按10%、50%、全量分三天走的节奏，是对问题时间节奏的补充印证。"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "baseline": {
+      "contexts": 111,
+      "precision": 0.6756756756756757,
+      "facts_found": 45,
+      "facts_total": 58,
+      "recall": 0.7758620689655172
+    },
+    "filtered": {
+      "contexts": 55,
+      "precision": 0.7818181818181819,
+      "facts_found": 28,
+      "facts_total": 58,
+      "recall": 0.4827586206896552
+    }
+  }
+}

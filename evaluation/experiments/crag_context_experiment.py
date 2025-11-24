@@ -83,6 +83,8 @@ def main() -> int:
     parser.add_argument("--packet", type=Path, default=PACKET)
     parser.add_argument("--qa", type=Path, default=QA)
     parser.add_argument("--out", type=Path, default=OUT)
+    parser.add_argument("--keep-top", type=int, default=0,
+                        help="无论评估器怎么判，强制保留排序最前的 N 条上下文（安全底线）")
     args = parser.parse_args()
     _load_env()
     judge = _judge_module()
@@ -93,7 +95,13 @@ def main() -> int:
     for index, case in enumerate(packet["cases"], 1):
         facts = facts_by_id.get(case["case_id"]) or case.get("expected_facts") or []
         contexts = _contexts(case)
-        kept, evaluator = _evaluate(case["question"], facts, contexts)
+        evaluated, evaluator = _evaluate(case["question"], facts, contexts)
+        kept = list(evaluated)
+        if args.keep_top > 0:
+            # 安全底线：评估器可能误删唯一支撑；强制保留重排最前的 N 条。
+            forced = contexts[:args.keep_top]
+            seen = {ref for ref, _ in kept}
+            kept = forced + [(ref, text) for ref, text in kept if ref not in seen]
         useful, found = _judge_contexts(judge, case["question"], facts, contexts)
         useful_kept, found_kept = _judge_contexts(judge, case["question"], facts, kept)
         rows.append({

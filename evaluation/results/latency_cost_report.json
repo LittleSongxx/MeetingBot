@@ -1,0 +1,91 @@
+{
+  "generated_at": "2026-10-20T16:55:29+0800",
+  "overview": {
+    "call_count": 13723,
+    "average_elapsed_ms": 1888.62,
+    "total_tokens": 44460986,
+    "cost_micro": 5124651,
+    "unpriced_call_count": 13723
+  },
+  "call_types": [
+    {
+      "call_type": "CHAT",
+      "call_count": 6050,
+      "failed_count": 3,
+      "total_tokens": 30353359,
+      "cost_micro": 0,
+      "success_rate": 99.95,
+      "average_elapsed_ms": 2445.33
+    },
+    {
+      "call_type": "KB_QUERY_EMBED",
+      "call_count": 3269,
+      "failed_count": 4,
+      "total_tokens": 75254,
+      "cost_micro": 0,
+      "success_rate": 99.88,
+      "average_elapsed_ms": 309.76
+    },
+    {
+      "call_type": "KB_RERANK",
+      "call_count": 2905,
+      "failed_count": 1,
+      "total_tokens": 11605681,
+      "cost_micro": 5124651,
+      "success_rate": 99.97,
+      "average_elapsed_ms": 274.13
+    },
+    {
+      "call_type": "KB_QUERY_PLAN",
+      "call_count": 849,
+      "failed_count": 0,
+      "total_tokens": 862561,
+      "cost_micro": 0,
+      "success_rate": 100.0,
+      "average_elapsed_ms": 1635.54
+    },
+    {
+      "call_type": "CHAT_SUMMARY",
+      "call_count": 370,
+      "failed_count": 0,
+      "total_tokens": 1331574,
+      "cost_micro": 0,
+      "success_rate": 100.0,
+      "average_elapsed_ms": 20731.52
+    },
+    {
+      "call_type": "KB_CONTEXTUALIZE",
+      "call_count": 122,
+      "failed_count": 0,
+      "total_tokens": 46136,
+      "cost_micro": 0,
+      "success_rate": 100.0,
+      "average_elapsed_ms": 1272.48
+    },
+    {
+      "call_type": "KB_EMBEDDING",
+      "call_count": 93,
+      "failed_count": 8,
+      "total_tokens": 116849,
+      "cost_micro": 0,
+      "success_rate": 91.4,
+      "average_elapsed_ms": 446.38
+    },
+    {
+      "call_type": "ONLINE_EVAL_JUDGE",
+      "call_count": 65,
+      "failed_count": 0,
+      "total_tokens": 69572,
+      "cost_micro": 0,
+      "success_rate": 100.0,
+      "average_elapsed_ms": 898.8
+    }
+  ],
+  "search": {
+    "n": 10,
+    "mean_ms": 650.3279734995886,
+    "p95_ms": 798.0502379978134,
+    "max_ms": 939.1357960012101,
+    "mean_hits": 3
+  }
+}

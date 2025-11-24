@@ -20,6 +20,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import os
@@ -752,22 +753,24 @@ async def search_knowledge(
     source_id_list = list(source_ids) if source_ids is not None else None
     source_type_list = list(source_types) if source_types is not None else None
 
-    dense_raw: list[dict[str, Any]] = []
-    bm25_raw: list[pg_kb.PgHit] = []
-    if pg_kb.available():
-        if dense is not None:
-            try:
-                dense_raw = await pg_kb.dense_search(
-                    dense, limit=fetch,
-                    allowed_meeting_ids=allowed_meeting_ids, authority=authority_list,
-                    chunk_type=chunk_type_list, source_ids=source_id_list,
-                    source_types=source_type_list,
-                    meeting_time_from=meeting_time_from, meeting_time_to=meeting_time_to,
-                )
-            except Exception:  # noqa: BLE001 - 单臂失败不阻断另一臂
-                logger.exception("PG dense 检索失败，本轮只用 BM25（query=%s）", text[:120])
+    async def _dense_arm() -> list[dict[str, Any]]:
+        if dense is None:
+            return []
         try:
-            bm25_raw = await pg_kb.bm25_search(
+            return await pg_kb.dense_search(
+                dense, limit=fetch,
+                allowed_meeting_ids=allowed_meeting_ids, authority=authority_list,
+                chunk_type=chunk_type_list, source_ids=source_id_list,
+                source_types=source_type_list,
+                meeting_time_from=meeting_time_from, meeting_time_to=meeting_time_to,
+            )
+        except Exception:  # noqa: BLE001 - 单臂失败不阻断另一臂
+            logger.exception("PG dense 检索失败，本轮只用 BM25（query=%s）", text[:120])
+            return []
+
+    async def _bm25_arm() -> list[pg_kb.PgHit]:
+        try:
+            return await pg_kb.bm25_search(
                 text, allowed_meeting_ids=allowed_meeting_ids,
                 limit=max(fetch, pg_kb.top_k(fetch)),
                 authority=authority_list, chunk_type=chunk_type_list,
@@ -776,6 +779,14 @@ async def search_knowledge(
             )
         except Exception:  # noqa: BLE001 - 单臂失败不阻断另一臂
             logger.exception("PG BM25 检索失败，本轮只用 dense（query=%s）", text[:120])
+            return []
+
+    dense_raw: list[dict[str, Any]] = []
+    bm25_raw: list[pg_kb.PgHit] = []
+    if pg_kb.available():
+        # 两路召回互不依赖，顺序 await 会把两次网络/查询耗时相加；并发后
+        # 墙钟约等于较慢的一臂（实测可省 100–300ms），错误仍由各自 arm 吞掉。
+        dense_raw, bm25_raw = await asyncio.gather(_dense_arm(), _bm25_arm())
     else:
         logger.warning("PG 知识库不可用，本轮没有检索结果（query=%s）", text[:120])
     scores: dict[int, float] = {}
