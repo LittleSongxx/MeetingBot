@@ -430,3 +430,27 @@ cross3，3 轮：
 - 这支持 P3 的下一步：只对“引用缺失/数字不在被引上下文”的句子做 claim 校验，
   并且区分 citation_mapping 与 unsupported，不能全量拦截。
 - 产品默认不变；P3 尚未集成。
+
+## 26. 深度复盘：多轮评测口径是最大的混淆项
+
+完整报告：`evaluation/reports/2026-10-21_deep_dive.md`。
+
+- 同一 session 连问 30 题时，模型复用历史 `[n]`；评测只抓当前轮 retrieved，
+  历史引用上下文缺失 → judge 把正确引用判成 unsupported。
+- 多轮 cross30 claim audit “数字不在任何上下文” **22.9%**；
+  每题 fresh session cross30 降到 **9.4%**，说明约一半是评测假阴性。
+- fresh session cross30：recall 75.86%、precision 63.64%、faithfulness **88.63%**、
+  relevance 93.33%；P0 6×3 仍是当前最可信基线。
+- 真问题集中在 **引用/时间绑定**（ct06/ct08/ct03），不是数字编造。
+- 后续按：fresh 主口径 → citation/time binding 校验 → e04 证据选择 → parent 阅读层。
+
+## 28. Agent 全链路深研
+
+完整报告：`evaluation/reports/2026-10-21_agent_quality_deep_dive.md`。
+
+- 意图/工具是当前最弱层：cross_meeting strict 20%、工具过度调用 1.8×；state F1 0.583、
+  过度调用 1.75×；aggregation F1 0.778。
+- LLM 直接做 intent 分类 27 题 accuracy 81.5%，不足以硬路由；需规则+分类器+置信度回退。
+- RAG recall 已高、precision 是瓶颈；引用/时间绑定是真 unsupported 主因。
+- 后续顺序：补 intent/tool/citation/pass^k 指标 → 混合意图路由与工具预算 →
+  引用/时间绑定 → 最后再调检索 precision。
