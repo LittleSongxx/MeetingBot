@@ -40,6 +40,11 @@ def enabled() -> bool:
     return os.getenv("INTENT_ROUTER_ENABLED", "0").strip().lower() not in {"0", "false", "no", "off"}
 
 
+def selective() -> bool:
+    """只对 cross_meeting/state 注入路由，避免影响 single/aggregation 的答案忠实度。"""
+    return os.getenv("INTENT_ROUTER_SELECTIVE", "1").strip().lower() not in {"0", "false", "no", "off"}
+
+
 def classify(question: str) -> str:
     q = (question or "").strip()
     if not q:
@@ -62,4 +67,4 @@ def policy_for(question: str) -> dict:
     return {"intent": intent, **POLICY[intent]}
 
 
-__all__ = ["INTENTS", "POLICY", "classify", "enabled", "policy_for"]
+__all__ = ["INTENTS", "POLICY", "classify", "enabled", "selective", "policy_for"]

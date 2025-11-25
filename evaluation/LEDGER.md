@@ -2351,3 +2351,11 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
   cross/state 明显改善。
 - fresh cross30：faithfulness 88.63→83.06（下降），precision 持平；默认 0。
 - 结论：路由改善工具选择但伤答案忠实度，需选择性路由 + 新 holdout 后再决定。
+
+### 30) 选择性意图路由（2026-10-21）
+
+- 只对 cross_meeting/state 注入提示：fresh trajectory F1 0.8025、strict 17、coverage 24；
+  全量为 0.8519/18/26，off 为 0.7309/14/24。
+- fresh cross30：off recall75.86/precision63.64/faith88.63；选择性 recall77.59/precision73.33/
+  faith73.53；全量 faith83.06。
+- precision 提升但 faithfulness 明显下降，默认仍 0；需盲评+新 holdout。
