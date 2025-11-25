@@ -121,3 +121,35 @@ parent-context / floor / planning；top_k=3，rerank on。
 - 不在单会议语料上继续调 top-k；
 - 不把 judge 单次读数当答案质量；
 - 不在多轮会话上直接比较 RAG 指标（历史引用混淆）。
+
+## 7. 意图路由原型结果（2026-10-21）
+
+### 规则分类器
+- 27 条轨迹题：**26/27 = 96.3%**（t09 单事实被误判 state）
+- 15 条新探针：15/15（规则在这些探针上做过调整，不能当独立泛化）
+- 对照：LLM 直接分类 27 条 = 81.5%
+
+### 接入产品（`INTENT_ROUTER_ENABLED`，默认 0）
+路由输出 intent + first_tool + max_tool_calls + system hint。
+
+**fresh trajectory 27（每题新 session）**
+| 配置 | tool F1 | strict | acceptable | required 覆盖 |
+|---|---:|---:|---:|---:|
+| router off | 0.7309 | 14/27 | 22/27 | 24/27 |
+| router on | **0.8519** | **18/27** | **23/27** | **26/27** |
+
+- cross_meeting strict 0→80%，F1 .667→.933
+- state F1 .433→.750，strict 25%→50%
+- aggregation F1 .611→.722，coverage 66.7%→100%
+
+**fresh cross30（答案质量）**
+| 配置 | recall | precision | faithfulness | relevancy |
+|---|---:|---:|---:|---:|
+| router off | 75.86% | 63.64% | **88.63%** | 93.33% |
+| router on | 75.86% | 63.57% | **83.06%** | 100% |
+
+结论：
+- 路由显著改善工具选择/覆盖，但 **faithfulness 下降 5.6pp**；
+- 规则在 27 题上调过，泛化不足；
+- 因此 **默认保持 0**，代码保留为可选实验开关。
+- 下一步应做“选择性路由”（只对 cross_meeting/state 触发）并上新 holdout，而不是全量注入。

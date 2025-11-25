@@ -2342,3 +2342,12 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - LLM intent 分类 27 题 accuracy 81.5%，混淆集中在 cross/state/aggregation。
 - 优化：先补 intent/tool/citation/pass^k 指标；再做混合意图路由（规则+分类器+置信度回退）；
   然后做工具预算与引用/时间绑定；检索 precision 最后调。
+
+### 29) 意图路由原型（2026-10-21）
+
+- 规则分类：27 题 26/27=96.3%；15 探针 15/15（探针参与过规则调整，非独立泛化）；
+  LLM 直接分类 27 题 81.5%。
+- fresh trajectory 27：router on tool F1 0.7309→0.8519、strict 14→18、coverage 24→26；
+  cross/state 明显改善。
+- fresh cross30：faithfulness 88.63→83.06（下降），precision 持平；默认 0。
+- 结论：路由改善工具选择但伤答案忠实度，需选择性路由 + 新 holdout 后再决定。
