@@ -1,6 +1,7 @@
-"""RAG 全链路质量闸：零模型调用，读取既有 packet，按阈值失败退出。
+"""RAG 全链路质量闸：相对冻结基线回归 + 绝对下限，零模型调用。
 
-用法：python evaluation/quality_gate.py
+阈值不是按当前分数“贴着”设的：基线冻结后只允许 2pp 波动；
+低于绝对下限或低于基线 2pp 才失败。修改基线需要显式提交。
 """
 from __future__ import annotations
 
@@ -9,19 +10,21 @@ from pathlib import Path
 
 EVAL = Path(__file__).resolve().parent
 RESULTS = EVAL / "results"
+BASELINE = EVAL / "baselines/quality_gate_baseline.json"
 
-THRESHOLDS = {
-    "p0": {"context_recall": 0.90, "context_precision": 0.58,
-           "faithfulness": 0.85, "answer_relevancy": 0.95},
-    "cross30": {"context_recall": 0.70, "context_precision": 0.60,
-                "faithfulness": 0.85, "answer_relevancy": 0.90},
-    "new_meeting": {"context_recall": 0.80, "context_precision": 0.60,
-                    "faithfulness": 0.75, "answer_relevancy": 0.90},
-    "mixed100": {"context_recall": 0.88, "context_precision": 0.68,
-                 "faithfulness": 0.87, "answer_relevancy": 0.94},
-    "claim_not_in_any_context": 0.12,
-}
 METRICS = ("context_recall", "context_precision", "faithfulness", "answer_relevancy")
+FLOORS = {
+    "p0": {"context_recall": 0.90, "context_precision": 0.55,
+           "faithfulness": 0.85, "answer_relevancy": 0.95},
+    "cross30": {"context_recall": 0.70, "context_precision": 0.55,
+                "faithfulness": 0.80, "answer_relevancy": 0.90},
+    "new_meeting": {"context_recall": 0.80, "context_precision": 0.55,
+                    "faithfulness": 0.75, "answer_relevancy": 0.90},
+    "mixed100": {"context_recall": 0.85, "context_precision": 0.60,
+                 "faithfulness": 0.80, "answer_relevancy": 0.90},
+}
+TOLERANCE = 0.02
+CLAIM_FLOOR = 0.15
 
 
 def _rates(path: Path) -> dict[str, float]:
@@ -32,36 +35,46 @@ def _rates(path: Path) -> dict[str, float]:
 
 
 def main() -> int:
+    if not BASELINE.exists():
+        print(f"缺少冻结基线: {BASELINE}")
+        return 2
+    baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
     p0_paths = [RESULTS / f"p0_fresh6_r{i}_packet.json" for i in (1, 2, 3)]
     missing = [str(path) for path in p0_paths if not path.exists()]
     if missing:
         print(f"缺少 P0 packet: {missing}")
         return 2
-    p0 = {metric: sum(_rates(path)[metric] for path in p0_paths) / 3 for metric in METRICS}
-    cross30 = _rates(RESULTS / "cross30_fresh_packet.json")
-    new_meeting = _rates(RESULTS / "new_meeting_packet.json")
+    p0 = {metric: round(sum(_rates(path)[metric] for path in p0_paths) / 3, 4)
+          for metric in METRICS}
+    values = {
+        "p0": p0,
+        "cross30": _rates(RESULTS / "cross30_fresh_packet.json"),
+        "new_meeting": _rates(RESULTS / "new_meeting_packet.json"),
+        "mixed100": _rates(RESULTS / "eval100_scope_fixed_packet.json"),
+    }
     new_meeting_smoke = _rates(RESULTS / "new_meeting_scoped_packet.json")
-    mixed100 = _rates(RESULTS / "eval100_scope_fixed_packet.json")
     claim = json.loads((RESULTS / "claim_audit_cross30_fresh.json").read_text(encoding="utf-8"))
     claim_rate = float(claim.get("not_in_any_context_rate") or 0)
     rows = []
     failed = False
-    for name, values in (("p0", p0), ("cross30", cross30),
-                     ("new_meeting", new_meeting), ("mixed100", mixed100)):
-        for metric in METRICS:
-            threshold = THRESHOLDS[name][metric]
-            ok = values[metric] >= threshold
-            rows.append((name, metric, values[metric], threshold, ok))
+    for scope, metrics in values.items():
+        for metric, value in metrics.items():
+            floor = FLOORS[scope][metric]
+            frozen = float(baseline[scope][metric])
+            ok = value >= floor and value >= frozen - TOLERANCE
+            rows.append((scope, metric, value, frozen, value - frozen, floor, ok))
             failed = failed or not ok
-    ok = claim_rate <= THRESHOLDS["claim_not_in_any_context"]
-    rows.append(("cross30", "claim_not_in_any_context", claim_rate,
-                 THRESHOLDS["claim_not_in_any_context"], ok))
-    failed = failed or not ok
-    print(f"{'scope':8} {'metric':28} {'value':>8} {'threshold':>9} ok")
+    frozen_claim = float(baseline["claim_not_in_any_context"])
+    claim_ok = claim_rate <= CLAIM_FLOOR and claim_rate <= frozen_claim + TOLERANCE
+    rows.append(("cross30", "claim_not_in_any_context", claim_rate, frozen_claim,
+                 claim_rate - frozen_claim, CLAIM_FLOOR, claim_ok))
+    failed = failed or not claim_ok
+    print(f"{'scope':10} {'metric':24} {'value':>7} {'frozen':>7} {'delta':>7} {'floor':>7} ok")
     for metric, value in new_meeting_smoke.items():
-        print(f"{'smoke':8} {metric:28} {value:8.3f} {'(no gate)':>9} yes")
-    for name, metric, value, threshold, ok in rows:
-        print(f"{name:8} {metric:28} {value:8.3f} {threshold:9.3f} {'yes' if ok else 'NO'}")
+        print(f"{'smoke':10} {metric:24} {value:7.3f} {'-':>7} {'-':>7} {'-':>7} yes")
+    for scope, metric, value, frozen, delta, floor, ok in rows:
+        print(f"{scope:10} {metric:24} {value:7.3f} {frozen:7.3f} {delta:+7.3f} {floor:7.3f} {'yes' if ok else 'NO'}")
+    print(f"baseline: {BASELINE} (tolerance {TOLERANCE:.2f})")
     print("QUALITY GATE:", "FAIL" if failed else "PASS")
     return 1 if failed else 0
 

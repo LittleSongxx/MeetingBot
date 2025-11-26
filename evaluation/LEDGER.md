@@ -2420,3 +2420,11 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
   复述顺序当时间顺序、“回滚无需动数据”与转写相反。
 - 新增 `rag_quality.quote_not_in_cited` 检查（标注不拦截）。
 - 报告：`evaluation/reports/2026-10-22_blind20_review.md`。
+
+### 38) 通用性/泛化自查 v2 与相对质量闸（2026-10-22）
+
+- 默认产品链路未发现 case 硬编码；所有意图/过滤实验开关默认关闭。
+- quality_gate 改为冻结基线 + 2pp 容忍 + 绝对下限，不再贴当前分数设阈值。
+- 未采纳 state 元数据与压 over-call 的默认改动；mixed100 仍是组装集、new meeting 仍为合成。
+- 报告：`evaluation/reports/2026-10-22_generalization_audit_v2.md`。
+

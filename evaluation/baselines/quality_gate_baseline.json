@@ -1,0 +1,29 @@
+{
+  "frozen_at": "2026-10-22",
+  "note": "相对回归基线；只允许 2pp 波动，不作为调参目标",
+  "p0": {
+    "context_recall": 0.9722,
+    "context_precision": 0.6423,
+    "faithfulness": 0.9075,
+    "answer_relevancy": 1.0
+  },
+  "cross30": {
+    "context_recall": 0.7586,
+    "context_precision": 0.6364,
+    "faithfulness": 0.8863,
+    "answer_relevancy": 0.9333
+  },
+  "new_meeting": {
+    "context_recall": 0.8696,
+    "context_precision": 0.7097,
+    "faithfulness": 0.8,
+    "answer_relevancy": 1.0
+  },
+  "mixed100": {
+    "context_recall": 0.9102,
+    "context_precision": 0.7183,
+    "faithfulness": 0.8921,
+    "answer_relevancy": 0.97
+  },
+  "claim_not_in_any_context": 0.09389671361502347
+}
