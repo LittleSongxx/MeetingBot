@@ -160,11 +160,12 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         if not intent_router.selective() or candidate["intent"] in ("cross_meeting", "state"):
             intent_decision = candidate
             max_tools = int(intent_decision.get("max_tool_calls") or 0)
-            if max_tools > 0:
+            if intent_router.budget_enabled() and max_tools > 0:
                 budget["max_tool_calls"] = min(int(budget["max_tool_calls"]), max_tools)
-            route_message = SystemMessage(
-                f"【意图路由】本轮意图={intent_decision['intent']}。"
-                f"{intent_decision['hint']}")
+            if intent_router.hint_enabled():
+                route_message = SystemMessage(
+                    f"【意图路由】本轮意图={intent_decision['intent']}。"
+                    f"{intent_decision['hint']}")
     recursion_limit = chat_graph.recursion_limit(budget)
     if resume_row is None:
         values: dict[str, Any] = {

@@ -454,3 +454,13 @@ cross3，3 轮：
 - RAG recall 已高、precision 是瓶颈；引用/时间绑定是真 unsupported 主因。
 - 后续顺序：补 intent/tool/citation/pass^k 指标 → 混合意图路由与工具预算 →
   引用/时间绑定 → 最后再调检索 precision。
+
+## 32. 工具 F1 低的原因与修复方向
+
+完整报告：`evaluation/reports/2026-10-22_tool_f1_deep_dive.md`。
+
+- fresh trajectory：真正漏 required 仅 3/27；12 题只多调、12 题精确匹配。
+- 18 次 extra call 中 7 次无 citation 贡献、11 次有贡献；over-call 是混合的。
+- 全量/选择性/hint/budget 压 over-call 都能改善部分 F1，但 cross30 faithfulness 都下降。
+- 结论：F1 是最小工具集口径，不等于“工具选不对”；后续按 over-call utility、
+  coverage、first-tool、faithfulness、pass^k 联合评估，只压无贡献调用。
