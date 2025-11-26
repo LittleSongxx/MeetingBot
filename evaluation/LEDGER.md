@@ -2412,3 +2412,11 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - quality_gate 新增 mixed100 阈值（recall≥88、precision≥68、faith≥87、rel≥94），当前 PASS。
 - 限制：答案由既有 fresh-session 产物组装，不是单次 100 题运行；无独立答案盲评。
 - 报告：`evaluation/reports/2026-10-22_eval100_scale.md`。
+
+### 37) 100 题抽样盲评（2026-10-22）
+
+- 20 条无 expected facts 盲评：14 correct / 6 partial / 0 wrong。
+- 主要问题：引语/notice 不在被引上下文、9:00/10:00 时间对象过度解读、
+  复述顺序当时间顺序、“回滚无需动数据”与转写相反。
+- 新增 `rag_quality.quote_not_in_cited` 检查（标注不拦截）。
+- 报告：`evaluation/reports/2026-10-22_blind20_review.md`。

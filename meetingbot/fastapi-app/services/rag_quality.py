@@ -9,6 +9,7 @@ import re
 from typing import Any, Iterable, Mapping
 
 CITATION = re.compile(r"\[(\d{1,3})\]")
+QUOTE = re.compile(r"[“‘\"]([^”’\"]{4,160})[”’\"]|「([^」]{4,160})」")
 NUMBER = re.compile(r"\d+年\d+月(?:\d+日)?|\d+月\d+日|\d+(?:\.\d+)?(?:[:：/-]\d+)*(?:%|％)?")
 SENTENCE = re.compile(r"[。！？\n]+")
 _LOCATOR = re.compile(r"\d{1,6}s|第?\d{1,6}秒")
@@ -54,6 +55,11 @@ def audit_answer(answer: str, citations: Iterable[Mapping[str, Any]]) -> list[di
             flags.append({"kind": "missing_citation", "text": ",".join(map(str, missing_refs)),
                           "reason": "引用了本轮未登记的编号"})
         haystack = _compact("\n".join(source_parts))
+        for match in QUOTE.finditer(sentence):
+            quote = (match.group(1) or match.group(2) or "").strip()
+            if quote and _compact(quote) not in haystack:
+                flags.append({"kind": "quote_not_in_cited", "text": quote[:40],
+                              "reason": "引语不在被引用上下文里"})
         for token in tokens:
             if _compact(token) not in haystack:
                 flags.append({"kind": "number_not_in_cited", "text": token,
