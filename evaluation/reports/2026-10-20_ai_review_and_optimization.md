@@ -464,3 +464,12 @@ cross3，3 轮：
 - 全量/选择性/hint/budget 压 over-call 都能改善部分 F1，但 cross30 faithfulness 都下降。
 - 结论：F1 是最小工具集口径，不等于“工具选不对”；后续按 over-call utility、
   coverage、first-tool、faithfulness、pass^k 联合评估，只压无贡献调用。
+
+## 33. RAG 全链路质量闸
+
+完整报告：`evaluation/reports/2026-10-22_rag_quality_gate.md`。
+
+- 评测侧 `quality_gate.py` 已接入 Makefile；P0 6×3 + fresh cross30 + claim audit 阈值，
+  当前 PASS。
+- 运行时新增确定性 `rag_quality` 审计：引用数字/日期不在被引上下文时标注
+  （不拦截），补上生成后的质量兜底。

@@ -28,6 +28,7 @@ from services import (
     moderation,
     prompt_injection,
     query_plan,
+    rag_quality,
     smalltalk,
     turn_filter,
 )
@@ -464,6 +465,17 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     entity_flags = (guardrails.entity_flags(
         answer, _entity_haystack(registry, final_state)) if answer else [])
     entity_note = guardrails.entity_note(entity_flags)
+    quality_flags = []
+    if answer and rag_quality.enabled():
+        used = citations.used_citations(answer, registry)
+        quality_flags = rag_quality.audit_answer(
+            answer, [item.as_dict() for item in used])
+        quality_note = rag_quality.note(quality_flags)
+        if quality_note:
+            entity_note = (entity_note + "；" + quality_note) if entity_note else quality_note
+            if failure is None:
+                logger.warning("会话 %s 的这一轮出现 RAG 质量提示：%s", session.id,
+                               [flag.get("kind") for flag in quality_flags])
     if entity_note and failure is None:
         # **只标注，不把这一轮变成失败**：`failure` 会让 SSE 走 error 分支、没有 done，
         # 而实体核查是代理（有误报），不该据此判一轮失败。标注进 error_message

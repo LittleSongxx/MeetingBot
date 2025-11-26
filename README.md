@@ -198,7 +198,7 @@ cp meetingbot/fastapi-app/.env.example meetingbot/fastapi-app/.env
 ```bash
 make -C evaluation smoke    # 零调用回归：契约不变量 / 证据可定位率 / 问答引用不变量 / 可靠性复算
 make -C evaluation test     # 评测侧单测（330 项）
-cd meetingbot/fastapi-app && .venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # 产品侧单测（629 项）
+cd meetingbot/fastapi-app && .venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # 产品侧单测（633 项）
 cd meetingbot/vue && npm ci && npm run type-check && npm run lint && npm run test   # 前端：类型 / lint / 单测
 ```
 
