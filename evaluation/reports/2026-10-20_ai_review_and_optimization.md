@@ -483,3 +483,13 @@ cross3，3 轮：
 - 独立事实 23/0/0，答案盲评 15/0/0；
 - quality_gate 纳入 new_meeting 阈值，当前 PASS；
 - 限制：合成语料、题面较直接，需真实会议/人工金标。
+
+## 35. 评测集规模与公正性审计
+
+完整报告：`evaluation/reports/2026-10-22_eval_design_audit.md`。
+
+- 全目录约 40 个 QA/gold 文件、1032 原始 case、259 唯一题面；大量是 reviewed/副本/重复 holdout；
+  人工金标 0。
+- 新会议 scoped 100% recall 只是 smoke；unscoped 主口径 recall 86.96%、precision 70.97%、
+  faith 80.00%、relevancy 100%。
+- quality_gate 已切换为 unscoped new_meeting；不再把 scoped 100% 当泛化。
