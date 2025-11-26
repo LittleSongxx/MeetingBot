@@ -2368,3 +2368,10 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
   faithfulness 均下降（88.63→73.53~83.69%）。
 - 结论：F1 是“最小工具集”口径，不能当唯一目标；先补 over-call utility/faithfulness/
   pass^k 指标，只压无贡献调用。报告：`evaluation/reports/2026-10-22_tool_f1_deep_dive.md`。
+
+### 32) 强制首工具实验（2026-10-22）
+
+- 只对 cross/state 用 tool_choice 强制首工具：F1 0.7309→0.7901、strict 14→19，
+  但 coverage 24→23；cross30 recall 75.86→68.97、precision 63.64→57.14、
+  faithfulness 88.63→82.05。
+- 拒绝默认；结论：over-call 抑制必须按“是否有贡献”，不能按数量。

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 from typing import Any, AsyncIterator
 from uuid import uuid4
 
@@ -310,6 +311,9 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
 
         prepare_messages = _prepare_with_conflict_hint
 
+    forced_first_tool = None
+    if intent_decision is not None and os.getenv("INTENT_FORCE_FIRST_TOOL", "0").strip().lower() not in {"0", "false", "no", "off"}:
+        forced_first_tool = intent_decision.get("first_tool")
     runtime = ChatRuntime(
         call_model=model_factory.make_model_caller(
             config, tools=model_tools, call_type=CHAT_CALL_TYPE,
@@ -317,7 +321,8 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
             # 首轮强制检索：能力允许时用 tool_choice="required"（供应商 × 推理开关
             # 的判定在 model_factory 里），判不了就退回图里的"提醒"路径。
             # 实测背景：修复前 27 轮里 24 轮首轮不检索，多花约 26% token。
-            first_round_tool_choice=model_factory.first_round_tool_choice(config, CHAT_CALL_TYPE)),
+            first_round_tool_choice=model_factory.first_round_tool_choice(config, CHAT_CALL_TYPE),
+            forced_first_tool=forced_first_tool),
         tools=_tool_node(tools),
         cost_micro_of=lambda usage: model_factory.cost_micro(config, usage),
         evidence=evidence_state,
