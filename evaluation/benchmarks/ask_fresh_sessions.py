@@ -40,20 +40,21 @@ def main() -> int:
     qa = json.loads(args.qa_set.read_text(encoding="utf-8"))
     turns = []
     for case in qa["cases"]:
+        scope = case.get("meeting_ids") or ([args.meeting_id] if args.meeting_id else None)
         created = _http_json(f"{args.base_url}/chat/session",
-                             payload={"meeting_ids": [args.meeting_id] if args.meeting_id else None},
-                             token=token)
+                             payload={"meeting_ids": scope}, token=token)
         session_id = (created.get("data") or {}).get("id")
         if not session_id:
             raise RuntimeError(f"建会话失败：{created.get('msg') or created}")
         message = _ask(args.base_url, token, session_id, case["question"])
         turns.append({
-            "case_id": case["id"], "meeting_id": args.meeting_id, "question": case["question"],
+            "case_id": case["id"], "meeting_id": scope[0] if scope else None,
+            "question": case["question"],
             "answer": message.get("content") or "", "message_id": message.get("id"),
             "stop_reason": message.get("stop_reason"),
             "citations": message.get("citations") or [],
             "tools": message.get("tools") or [],
-            "allowed_meeting_ids": [args.meeting_id] if args.meeting_id else None,
+            "allowed_meeting_ids": scope,
             "used_refs": _refs_from_answer(message),
             "unknown_refs": _unknown_refs(message),
             "retrieved": message.get("retrieved") or [],
