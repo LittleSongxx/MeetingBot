@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 EVAL = Path(__file__).resolve().parents[1]
@@ -41,8 +42,10 @@ def main() -> int:
     turns = []
     for case in qa["cases"]:
         scope = case.get("meeting_ids") or ([args.meeting_id] if args.meeting_id else None)
+        series_scope = case.get("series_ids")
         created = _http_json(f"{args.base_url}/chat/session",
-                             payload={"meeting_ids": scope}, token=token)
+                             payload={"meeting_ids": scope, "series_ids": series_scope},
+                             token=token)
         session_id = (created.get("data") or {}).get("id")
         if not session_id:
             raise RuntimeError(f"建会话失败：{created.get('msg') or created}")
@@ -55,12 +58,14 @@ def main() -> int:
             "citations": message.get("citations") or [],
             "tools": message.get("tools") or [],
             "allowed_meeting_ids": scope,
+            "series_ids": series_scope,
             "used_refs": _refs_from_answer(message),
             "unknown_refs": _unknown_refs(message),
             "retrieved": message.get("retrieved") or [],
             "session_id": session_id,
         })
         print(f"[{case['id']}] {case['question'][:34]}…", flush=True)
+        time.sleep(1.2)
     args.answers.parent.mkdir(parents=True, exist_ok=True)
     args.answers.write_text(json.dumps({
         "artifact_version": 1,

@@ -17,8 +17,8 @@ THRESHOLDS = {
                 "faithfulness": 0.85, "answer_relevancy": 0.90},
     "new_meeting": {"context_recall": 0.80, "context_precision": 0.60,
                     "faithfulness": 0.75, "answer_relevancy": 0.90},
-    "mixed100": {"context_recall": 0.85, "context_precision": 0.65,
-                 "faithfulness": 0.87, "answer_relevancy": 0.93},
+    "mixed100": {"context_recall": 0.88, "context_precision": 0.68,
+                 "faithfulness": 0.87, "answer_relevancy": 0.94},
     "claim_not_in_any_context": 0.12,
 }
 METRICS = ("context_recall", "context_precision", "faithfulness", "answer_relevancy")
@@ -41,7 +41,7 @@ def main() -> int:
     cross30 = _rates(RESULTS / "cross30_fresh_packet.json")
     new_meeting = _rates(RESULTS / "new_meeting_packet.json")
     new_meeting_smoke = _rates(RESULTS / "new_meeting_scoped_packet.json")
-    mixed100 = _rates(RESULTS / "eval100_packet.json")
+    mixed100 = _rates(RESULTS / "eval100_scope_fixed_packet.json")
     claim = json.loads((RESULTS / "claim_audit_cross30_fresh.json").read_text(encoding="utf-8"))
     claim_rate = float(claim.get("not_in_any_context_rate") or 0)
     rows = []

@@ -2407,8 +2407,8 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 
 - 100 题/167 facts，来源 cross30(30)、holdoutA(20)、D(20)、new meeting(15)、B(15)；
   每题 fresh session 且按 meeting_ids 限定。
-- 结果：recall 88.62%、precision 71.06%、faithfulness 90.24%、relevancy 96.00%。
-- 分层：cross30 recall 78.3%/faith 80.8% 是主短板；new meeting scoped 100%/91.7%/89.7%。
-- quality_gate 新增 mixed100 阈值（recall≥85、precision≥65、faith≥87、rel≥93），当前 PASS。
+- 修正系列题 scope 后：recall 91.02%、precision 71.83%、faithfulness 89.21%、relevancy 97.00%。
+- 分层：cross30 recall 81.7%/precision 74.6%/faith 78.6% 仍是主短板；new meeting scoped 100%/93.9%/90.3%。
+- quality_gate 新增 mixed100 阈值（recall≥88、precision≥68、faith≥87、rel≥94），当前 PASS。
 - 限制：答案由既有 fresh-session 产物组装，不是单次 100 题运行；无独立答案盲评。
 - 报告：`evaluation/reports/2026-10-22_eval100_scale.md`。

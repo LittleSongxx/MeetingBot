@@ -15,7 +15,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "cm01"
+      "original_id": "cm01",
+      "series_ids": null
     },
     {
       "case_id": "m002",
@@ -28,7 +29,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "cm02"
+      "original_id": "cm02",
+      "series_ids": null
     },
     {
       "case_id": "m003",
@@ -41,7 +43,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "cm03"
+      "original_id": "cm03",
+      "series_ids": null
     },
     {
       "case_id": "m004",
@@ -54,7 +57,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "cm04"
+      "original_id": "cm04",
+      "series_ids": null
     },
     {
       "case_id": "m005",
@@ -67,7 +71,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "cm05"
+      "original_id": "cm05",
+      "series_ids": null
     },
     {
       "case_id": "m006",
@@ -80,7 +85,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "cm06"
+      "original_id": "cm06",
+      "series_ids": null
     },
     {
       "case_id": "m007",
@@ -93,7 +99,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "cm07"
+      "original_id": "cm07",
+      "series_ids": null
     },
     {
       "case_id": "m008",
@@ -106,7 +113,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "cm08"
+      "original_id": "cm08",
+      "series_ids": null
     },
     {
       "case_id": "m009",
@@ -118,7 +126,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "cm09"
+      "original_id": "cm09",
+      "series_ids": null
     },
     {
       "case_id": "m010",
@@ -131,7 +140,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "cm10"
+      "original_id": "cm10",
+      "series_ids": null
     },
     {
       "case_id": "m011",
@@ -139,11 +149,12 @@
       "expected_facts": [
         "系列1已确认的发布决策：9月1日9:00正式发布AI智能会议助手与任务跟踪系统"
       ],
-      "meeting_ids": [
-        2
-      ],
+      "meeting_ids": null,
       "source_set": "cross30",
-      "original_id": "cs01"
+      "original_id": "cs01",
+      "series_ids": [
+        1
+      ]
     },
     {
       "case_id": "m012",
@@ -152,11 +163,12 @@
         "移动端附件下载修复在系列记忆中是PROPOSED候选，不是已确认决策",
         "对应待办为OPEN状态"
       ],
-      "meeting_ids": [
-        2
-      ],
+      "meeting_ids": null,
       "source_set": "cross30",
-      "original_id": "cs02"
+      "original_id": "cs02",
+      "series_ids": [
+        1
+      ]
     },
     {
       "case_id": "m013",
@@ -165,11 +177,12 @@
         "OPEN待办：移动端附件下载修复（王工，8月30日18:00）",
         "OPEN待办：发布前两组补充验收（陈琳，8月31日12:00）"
       ],
-      "meeting_ids": [
-        2
-      ],
+      "meeting_ids": null,
       "source_set": "cross30",
-      "original_id": "cs03"
+      "original_id": "cs03",
+      "series_ids": [
+        1
+      ]
     },
     {
       "case_id": "m014",
@@ -177,11 +190,12 @@
       "expected_facts": [
         "scope=USER、kind=PREFERENCE，属于用户1，状态CONFIRMED"
       ],
-      "meeting_ids": [
-        2
-      ],
+      "meeting_ids": null,
       "source_set": "cross30",
-      "original_id": "cs04"
+      "original_id": "cs04",
+      "series_ids": [
+        1
+      ]
     },
     {
       "case_id": "m015",
@@ -190,11 +204,12 @@
         "系列1只包含会议2",
         "会议2下有两段录音：task 6（上午）与task 7（下午）"
       ],
-      "meeting_ids": [
-        2
-      ],
+      "meeting_ids": null,
       "source_set": "cross30",
-      "original_id": "cs05"
+      "original_id": "cs05",
+      "series_ids": [
+        1
+      ]
     },
     {
       "case_id": "m016",
@@ -204,11 +219,12 @@
         "灰度三阶段：10%、50%、全量",
         "对外通稿与产品公告在发布前一日18:00前定稿"
       ],
-      "meeting_ids": [
-        2
-      ],
+      "meeting_ids": null,
       "source_set": "cross30",
-      "original_id": "cs06"
+      "original_id": "cs06",
+      "series_ids": [
+        1
+      ]
     },
     {
       "case_id": "m017",
@@ -217,11 +233,12 @@
         "该DECISION的supersedes_id为空，没有后续替代记录",
         "只能说明没有替代记录，不能推断内容一定没有变化"
       ],
-      "meeting_ids": [
-        2
-      ],
+      "meeting_ids": null,
       "source_set": "cross30",
-      "original_id": "cs07"
+      "original_id": "cs07",
+      "series_ids": [
+        1
+      ]
     },
     {
       "case_id": "m018",
@@ -230,11 +247,12 @@
         "报表导出隐藏入口的决定来自DRAFT纪要，不是CONFIRMED",
         "系列已确认记忆中目前没有该条，不能当作已确认事实"
       ],
-      "meeting_ids": [
-        2
-      ],
+      "meeting_ids": null,
       "source_set": "cross30",
-      "original_id": "cs08"
+      "original_id": "cs08",
+      "series_ids": [
+        1
+      ]
     },
     {
       "case_id": "m019",
@@ -243,11 +261,12 @@
         "只返回CONFIRMED记忆与有效待办",
         "PROPOSED候选不得直接当事实回答"
       ],
-      "meeting_ids": [
-        2
-      ],
+      "meeting_ids": null,
       "source_set": "cross30",
-      "original_id": "cs09"
+      "original_id": "cs09",
+      "series_ids": [
+        1
+      ]
     },
     {
       "case_id": "m020",
@@ -256,11 +275,12 @@
         "已确认：9月1日9:00正式发布",
         "未完成：移动端附件下载修复与发布回归/补充验收待办"
       ],
-      "meeting_ids": [
-        2
-      ],
+      "meeting_ids": null,
       "source_set": "cross30",
-      "original_id": "cs10"
+      "original_id": "cs10",
+      "series_ids": [
+        1
+      ]
     },
     {
       "case_id": "m021",
@@ -273,7 +293,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "ct01"
+      "original_id": "ct01",
+      "series_ids": null
     },
     {
       "case_id": "m022",
@@ -286,7 +307,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "ct02"
+      "original_id": "ct02",
+      "series_ids": null
     },
     {
       "case_id": "m023",
@@ -298,7 +320,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "ct03"
+      "original_id": "ct03",
+      "series_ids": null
     },
     {
       "case_id": "m024",
@@ -312,7 +335,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "ct04"
+      "original_id": "ct04",
+      "series_ids": null
     },
     {
       "case_id": "m025",
@@ -325,7 +349,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "ct05"
+      "original_id": "ct05",
+      "series_ids": null
     },
     {
       "case_id": "m026",
@@ -338,7 +363,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "ct06"
+      "original_id": "ct06",
+      "series_ids": null
     },
     {
       "case_id": "m027",
@@ -351,7 +377,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "ct07"
+      "original_id": "ct07",
+      "series_ids": null
     },
     {
       "case_id": "m028",
@@ -364,7 +391,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "ct08"
+      "original_id": "ct08",
+      "series_ids": null
     },
     {
       "case_id": "m029",
@@ -377,7 +405,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "ct09"
+      "original_id": "ct09",
+      "series_ids": null
     },
     {
       "case_id": "m030",
@@ -390,7 +419,8 @@
         2
       ],
       "source_set": "cross30",
-      "original_id": "ct10"
+      "original_id": "ct10",
+      "series_ids": null
     },
     {
       "case_id": "m031",
@@ -402,7 +432,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h01"
+      "original_id": "h01",
+      "series_ids": null
     },
     {
       "case_id": "m032",
@@ -414,7 +445,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h02"
+      "original_id": "h02",
+      "series_ids": null
     },
     {
       "case_id": "m033",
@@ -427,7 +459,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h03"
+      "original_id": "h03",
+      "series_ids": null
     },
     {
       "case_id": "m034",
@@ -440,7 +473,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h04"
+      "original_id": "h04",
+      "series_ids": null
     },
     {
       "case_id": "m035",
@@ -453,7 +487,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h05"
+      "original_id": "h05",
+      "series_ids": null
     },
     {
       "case_id": "m036",
@@ -465,7 +500,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h06"
+      "original_id": "h06",
+      "series_ids": null
     },
     {
       "case_id": "m037",
@@ -478,7 +514,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h07"
+      "original_id": "h07",
+      "series_ids": null
     },
     {
       "case_id": "m038",
@@ -491,7 +528,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h08"
+      "original_id": "h08",
+      "series_ids": null
     },
     {
       "case_id": "m039",
@@ -503,7 +541,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h09"
+      "original_id": "h09",
+      "series_ids": null
     },
     {
       "case_id": "m040",
@@ -515,7 +554,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h10"
+      "original_id": "h10",
+      "series_ids": null
     },
     {
       "case_id": "m041",
@@ -527,7 +567,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h11"
+      "original_id": "h11",
+      "series_ids": null
     },
     {
       "case_id": "m042",
@@ -540,7 +581,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h12"
+      "original_id": "h12",
+      "series_ids": null
     },
     {
       "case_id": "m043",
@@ -552,7 +594,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h13"
+      "original_id": "h13",
+      "series_ids": null
     },
     {
       "case_id": "m044",
@@ -565,7 +608,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h14"
+      "original_id": "h14",
+      "series_ids": null
     },
     {
       "case_id": "m045",
@@ -578,7 +622,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h15"
+      "original_id": "h15",
+      "series_ids": null
     },
     {
       "case_id": "m046",
@@ -590,7 +635,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h16"
+      "original_id": "h16",
+      "series_ids": null
     },
     {
       "case_id": "m047",
@@ -602,7 +648,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h17"
+      "original_id": "h17",
+      "series_ids": null
     },
     {
       "case_id": "m048",
@@ -616,7 +663,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h18"
+      "original_id": "h18",
+      "series_ids": null
     },
     {
       "case_id": "m049",
@@ -629,7 +677,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h19"
+      "original_id": "h19",
+      "series_ids": null
     },
     {
       "case_id": "m050",
@@ -642,7 +691,8 @@
         2
       ],
       "source_set": "holdoutA",
-      "original_id": "h20"
+      "original_id": "h20",
+      "series_ids": null
     },
     {
       "case_id": "m051",
@@ -654,7 +704,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d01"
+      "original_id": "d01",
+      "series_ids": null
     },
     {
       "case_id": "m052",
@@ -667,7 +718,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d02"
+      "original_id": "d02",
+      "series_ids": null
     },
     {
       "case_id": "m053",
@@ -680,7 +732,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d03"
+      "original_id": "d03",
+      "series_ids": null
     },
     {
       "case_id": "m054",
@@ -693,7 +746,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d04"
+      "original_id": "d04",
+      "series_ids": null
     },
     {
       "case_id": "m055",
@@ -705,7 +759,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d05"
+      "original_id": "d05",
+      "series_ids": null
     },
     {
       "case_id": "m056",
@@ -717,7 +772,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d06"
+      "original_id": "d06",
+      "series_ids": null
     },
     {
       "case_id": "m057",
@@ -730,7 +786,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d07"
+      "original_id": "d07",
+      "series_ids": null
     },
     {
       "case_id": "m058",
@@ -745,7 +802,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d08"
+      "original_id": "d08",
+      "series_ids": null
     },
     {
       "case_id": "m059",
@@ -757,7 +815,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d09"
+      "original_id": "d09",
+      "series_ids": null
     },
     {
       "case_id": "m060",
@@ -769,7 +828,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d10"
+      "original_id": "d10",
+      "series_ids": null
     },
     {
       "case_id": "m061",
@@ -782,7 +842,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d11"
+      "original_id": "d11",
+      "series_ids": null
     },
     {
       "case_id": "m062",
@@ -794,7 +855,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d12"
+      "original_id": "d12",
+      "series_ids": null
     },
     {
       "case_id": "m063",
@@ -806,7 +868,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d13"
+      "original_id": "d13",
+      "series_ids": null
     },
     {
       "case_id": "m064",
@@ -818,7 +881,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d14"
+      "original_id": "d14",
+      "series_ids": null
     },
     {
       "case_id": "m065",
@@ -830,7 +894,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d15"
+      "original_id": "d15",
+      "series_ids": null
     },
     {
       "case_id": "m066",
@@ -843,7 +908,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d16"
+      "original_id": "d16",
+      "series_ids": null
     },
     {
       "case_id": "m067",
@@ -857,7 +923,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d17"
+      "original_id": "d17",
+      "series_ids": null
     },
     {
       "case_id": "m068",
@@ -870,7 +937,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d18"
+      "original_id": "d18",
+      "series_ids": null
     },
     {
       "case_id": "m069",
@@ -883,7 +951,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d19"
+      "original_id": "d19",
+      "series_ids": null
     },
     {
       "case_id": "m070",
@@ -895,7 +964,8 @@
         2
       ],
       "source_set": "holdoutD",
-      "original_id": "d20"
+      "original_id": "d20",
+      "series_ids": null
     },
     {
       "case_id": "m071",
@@ -907,7 +977,8 @@
         3
       ],
       "source_set": "newmeeting",
-      "original_id": "n01"
+      "original_id": "n01",
+      "series_ids": null
     },
     {
       "case_id": "m072",
@@ -920,7 +991,8 @@
         3
       ],
       "source_set": "newmeeting",
-      "original_id": "n02"
+      "original_id": "n02",
+      "series_ids": null
     },
     {
       "case_id": "m073",
@@ -933,7 +1005,8 @@
         3
       ],
       "source_set": "newmeeting",
-      "original_id": "n03"
+      "original_id": "n03",
+      "series_ids": null
     },
     {
       "case_id": "m074",
@@ -947,7 +1020,8 @@
         3
       ],
       "source_set": "newmeeting",
-      "original_id": "n04"
+      "original_id": "n04",
+      "series_ids": null
     },
     {
       "case_id": "m075",
@@ -960,7 +1034,8 @@
         3
       ],
       "source_set": "newmeeting",
-      "original_id": "n05"
+      "original_id": "n05",
+      "series_ids": null
     },
     {
       "case_id": "m076",
@@ -972,7 +1047,8 @@
         3
       ],
       "source_set": "newmeeting",
-      "original_id": "n06"
+      "original_id": "n06",
+      "series_ids": null
     },
     {
       "case_id": "m077",
@@ -984,7 +1060,8 @@
         3
       ],
       "source_set": "newmeeting",
-      "original_id": "n07"
+      "original_id": "n07",
+      "series_ids": null
     },
     {
       "case_id": "m078",
@@ -996,7 +1073,8 @@
         3
       ],
       "source_set": "newmeeting",
-      "original_id": "n08"
+      "original_id": "n08",
+      "series_ids": null
     },
     {
       "case_id": "m079",
@@ -1008,7 +1086,8 @@
         3
       ],
       "source_set": "newmeeting",
-      "original_id": "n09"
+      "original_id": "n09",
+      "series_ids": null
     },
     {
       "case_id": "m080",
@@ -1020,7 +1099,8 @@
         3
       ],
       "source_set": "newmeeting",
-      "original_id": "n10"
+      "original_id": "n10",
+      "series_ids": null
     },
     {
       "case_id": "m081",
@@ -1032,7 +1112,8 @@
         3
       ],
       "source_set": "newmeeting",
-      "original_id": "n11"
+      "original_id": "n11",
+      "series_ids": null
     },
     {
       "case_id": "m082",
@@ -1045,7 +1126,8 @@
         3
       ],
       "source_set": "newmeeting",
-      "original_id": "n12"
+      "original_id": "n12",
+      "series_ids": null
     },
     {
       "case_id": "m083",
@@ -1058,7 +1140,8 @@
         3
       ],
       "source_set": "newmeeting",
-      "original_id": "n13"
+      "original_id": "n13",
+      "series_ids": null
     },
     {
       "case_id": "m084",
@@ -1070,7 +1153,8 @@
         3
       ],
       "source_set": "newmeeting",
-      "original_id": "n14"
+      "original_id": "n14",
+      "series_ids": null
     },
     {
       "case_id": "m085",
@@ -1083,7 +1167,8 @@
         3
       ],
       "source_set": "newmeeting",
-      "original_id": "n15"
+      "original_id": "n15",
+      "series_ids": null
     },
     {
       "case_id": "m086",
@@ -1095,7 +1180,8 @@
         2
       ],
       "source_set": "holdoutB",
-      "original_id": "b01"
+      "original_id": "b01",
+      "series_ids": null
     },
     {
       "case_id": "m087",
@@ -1107,7 +1193,8 @@
         2
       ],
       "source_set": "holdoutB",
-      "original_id": "b02"
+      "original_id": "b02",
+      "series_ids": null
     },
     {
       "case_id": "m088",
@@ -1119,7 +1206,8 @@
         2
       ],
       "source_set": "holdoutB",
-      "original_id": "b03"
+      "original_id": "b03",
+      "series_ids": null
     },
     {
       "case_id": "m089",
@@ -1132,7 +1220,8 @@
         2
       ],
       "source_set": "holdoutB",
-      "original_id": "b04"
+      "original_id": "b04",
+      "series_ids": null
     },
     {
       "case_id": "m090",
@@ -1144,7 +1233,8 @@
         2
       ],
       "source_set": "holdoutB",
-      "original_id": "b05"
+      "original_id": "b05",
+      "series_ids": null
     },
     {
       "case_id": "m091",
@@ -1157,7 +1247,8 @@
         2
       ],
       "source_set": "holdoutB",
-      "original_id": "b06"
+      "original_id": "b06",
+      "series_ids": null
     },
     {
       "case_id": "m092",
@@ -1170,7 +1261,8 @@
         2
       ],
       "source_set": "holdoutB",
-      "original_id": "b07"
+      "original_id": "b07",
+      "series_ids": null
     },
     {
       "case_id": "m093",
@@ -1182,7 +1274,8 @@
         2
       ],
       "source_set": "holdoutB",
-      "original_id": "b08"
+      "original_id": "b08",
+      "series_ids": null
     },
     {
       "case_id": "m094",
@@ -1195,7 +1288,8 @@
         2
       ],
       "source_set": "holdoutB",
-      "original_id": "b09"
+      "original_id": "b09",
+      "series_ids": null
     },
     {
       "case_id": "m095",
@@ -1207,7 +1301,8 @@
         2
       ],
       "source_set": "holdoutB",
-      "original_id": "b10"
+      "original_id": "b10",
+      "series_ids": null
     },
     {
       "case_id": "m096",
@@ -1219,7 +1314,8 @@
         2
       ],
       "source_set": "holdoutB",
-      "original_id": "b11"
+      "original_id": "b11",
+      "series_ids": null
     },
     {
       "case_id": "m097",
@@ -1232,7 +1328,8 @@
         2
       ],
       "source_set": "holdoutB",
-      "original_id": "b12"
+      "original_id": "b12",
+      "series_ids": null
     },
     {
       "case_id": "m098",
@@ -1245,7 +1342,8 @@
         2
       ],
       "source_set": "holdoutB",
-      "original_id": "b13"
+      "original_id": "b13",
+      "series_ids": null
     },
     {
       "case_id": "m099",
@@ -1257,7 +1355,8 @@
         2
       ],
       "source_set": "holdoutB",
-      "original_id": "b14"
+      "original_id": "b14",
+      "series_ids": null
     },
     {
       "case_id": "m100",
@@ -1269,7 +1368,8 @@
         2
       ],
       "source_set": "holdoutB",
-      "original_id": "b15"
+      "original_id": "b15",
+      "series_ids": null
     }
   ]
 }
