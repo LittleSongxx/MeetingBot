@@ -15,6 +15,8 @@ THRESHOLDS = {
            "faithfulness": 0.85, "answer_relevancy": 0.95},
     "cross30": {"context_recall": 0.70, "context_precision": 0.60,
                 "faithfulness": 0.85, "answer_relevancy": 0.90},
+    "new_meeting": {"context_recall": 0.85, "context_precision": 0.65,
+                    "faithfulness": 0.80, "answer_relevancy": 0.90},
     "claim_not_in_any_context": 0.12,
 }
 METRICS = ("context_recall", "context_precision", "faithfulness", "answer_relevancy")
@@ -35,11 +37,13 @@ def main() -> int:
         return 2
     p0 = {metric: sum(_rates(path)[metric] for path in p0_paths) / 3 for metric in METRICS}
     cross30 = _rates(RESULTS / "cross30_fresh_packet.json")
+    new_meeting = _rates(RESULTS / "new_meeting_scoped_packet.json")
     claim = json.loads((RESULTS / "claim_audit_cross30_fresh.json").read_text(encoding="utf-8"))
     claim_rate = float(claim.get("not_in_any_context_rate") or 0)
     rows = []
     failed = False
-    for name, values in (("p0", p0), ("cross30", cross30)):
+    for name, values in (("p0", p0), ("cross30", cross30),
+                     ("new_meeting", new_meeting)):
         for metric in METRICS:
             threshold = THRESHOLDS[name][metric]
             ok = values[metric] >= threshold
