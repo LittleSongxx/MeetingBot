@@ -520,3 +520,10 @@ cross3，3 轮：
 - quality_gate 改为冻结基线 + 2pp 容忍 + 绝对下限，避免贴当前分数设阈值。
 - 未采纳 state 元数据实验与压 over-call 默认改动。
 
+## 39. P0 盲评 40 条 + P2 证据边界提示
+
+- 40 条无 expected facts 盲评：34 correct / 6 partial / 0 wrong。
+- 主要问题：权限/FAQ细目/引语归属超出 retrieved context；无 wrong。
+- 通用证据边界 prompt：cross30 faith 78.6→84.8、relevancy 96.7→100，
+  但 precision 74.6→66.4；默认关闭。
+- 报告：`2026-10-22_blind40_review.md`、`2026-10-22_evidence_prompt.md`。

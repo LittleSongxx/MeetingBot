@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from common.prompts import render_prompt
 from langchain_core.messages import HumanMessage
@@ -83,6 +84,17 @@ STATE_PROTOCOL = (
 )
 
 
+EVIDENCE_PROTOCOL = (
+    "\n\n【证据边界规则】\n"
+    "1. 每个具体事实/数字/日期/引语，必须能在其引用 [n] 对应的工具结果原文中找到；"
+    "找不到就不要写，或明确标为“我的推断”。\n"
+    "2. 引语必须逐字来自工具结果；不要把改写后的句子放进引号，也不要把一般结论说成某人原话。\n"
+    "3. 时间点、序号、复述顺序不等于时间先后；材料没有明确顺序时不要推断“先/后”。\n"
+    "4. 同一事实在材料中冲突时，保留原文并说明冲突，不要替材料裁决。\n"
+    "5. 回答补充解释时，区分“材料原文”和“我的推断”。"
+)
+
+
 CITATION_PROTOCOL = (
     "\n\n【引用规则】\n"
     "1. 工具返回的每条内容都带 ref 编号；引用它必须写方括号编号，例如 [1]，"
@@ -131,7 +143,10 @@ async def get_system_prompt() -> str:
     # 内容审核的第二层：生成约束。未配置词表时它返回空串（不留一句空话）。
     # 资料覆盖规则放在引用协议之前：引用协议始终是最后一块结构性约束。
     return (body.strip() + SOURCE_COVERAGE_PROTOCOL + AGGREGATION_PROTOCOL
-            + STATE_PROTOCOL + prompt_injection.system_guards()
+            + STATE_PROTOCOL
+            + (EVIDENCE_PROTOCOL if os.getenv("EVIDENCE_CONSTRAINT_ENABLED", "0").strip().lower()
+               not in {"0", "false", "no", "off"} else "")
+            + prompt_injection.system_guards()
             + CITATION_PROTOCOL + moderation.prompt_constraints())
 
 
