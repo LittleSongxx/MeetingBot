@@ -16,6 +16,8 @@ sys.path.insert(0, str(HERE.parents[1]))
 from benchmarks import alimeeting_review as review  # noqa: E402
 from benchmarks.alimeeting_adapter import load_cases  # noqa: E402
 
+_ALI_SOURCE = HERE / "source" / "alimeeting4mug" / "source-manifest.json"
+
 
 def _output(label: str) -> dict:
     return {
@@ -28,6 +30,7 @@ def _output(label: str) -> dict:
     }
 
 
+@unittest.skipUnless(_ALI_SOURCE.is_file(), "AliMeeting 评测语料未 fetch（语料不入库）；CI 跳过")
 class AliMeetingReviewTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

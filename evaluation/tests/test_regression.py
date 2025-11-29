@@ -1066,6 +1066,10 @@ class ReliabilityTest(unittest.TestCase):
             self.assertEqual(report["ledgers_without_recognizable_calls"], ["run-a"])
 
 
+_VCS_SUM_SOURCE = Path(__file__).resolve().parents[1] / "benchmarks" / "source" / "vcsum" / "LICENSE"
+
+
+@unittest.skipUnless(_VCS_SUM_SOURCE.is_file(), "vcsum 评测语料未 fetch（语料不入库）；CI 跳过")
 class NewContractLoaderTest(unittest.TestCase):
     """契约 v2 合并集的守卫：合并规则不成立时必须报错，不能出一组看似正常的数字。"""
 

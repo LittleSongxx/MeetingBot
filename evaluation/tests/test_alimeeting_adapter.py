@@ -13,6 +13,8 @@ from pathlib import Path
 
 from benchmarks import alimeeting_adapter as adapter
 
+_VCS_SUM_SOURCE = Path(__file__).resolve().parents[1] / "benchmarks" / "source" / "vcsum" / "LICENSE"
+
 
 def example_record(key: str, *, action_ids: list[int] | None = None) -> dict:
     return {
@@ -161,6 +163,7 @@ if __name__ == "__main__":
     unittest.main()
 
 
+@unittest.skipUnless(_VCS_SUM_SOURCE.is_file(), "vcsum 评测语料未 fetch（语料不入库）；CI 跳过")
 class VcsumHoldoutTest(unittest.TestCase):
     """2026-09-26：留出集必须排除已消费的 dev22/test26，且抽样确定。"""
 

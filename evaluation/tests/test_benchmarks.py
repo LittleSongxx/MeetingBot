@@ -13,6 +13,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 HERE = Path(__file__).resolve().parents[1] / "benchmarks"
+_SOURCE = HERE / "source"
 sys.path.insert(0, str(HERE.parents[1]))
 from benchmarks import run_public_eval as runner  # noqa: E402 - 需先注入 sys.path
 
@@ -431,6 +432,9 @@ class SchemaContractDriftTest(unittest.TestCase):
 
     def test_real_product_outputs_pass_the_independent_contract(self):
         from benchmarks.bench_common import schema_errors
+        from lib import corpora
+        if not any((corpora.PUBLIC_RESULTS / run).is_dir() for run in corpora.NEW_CONTRACT_TEST26_RUNS):
+            self.skipTest("钉住的 v2 run 未入库（评测产物不入库）；CI 跳过")
         outputs = self._golden_outputs()
         self.assertTrue(outputs, "钉住的 v2 run 对里没有可用金样")
         for output in outputs:
@@ -489,6 +493,8 @@ class ChunkBudgetConsistencyTest(unittest.TestCase):
     def test_estimators_are_single_pass(self):
         import bench_common
         import vcsum_adapter  # type: ignore
+        if not (_SOURCE / "vcsum" / "LICENSE").is_file():
+            self.skipTest("vcsum 评测语料未 fetch（语料不入库）；CI 跳过")
 
         # 单遍长上下文：每场生成恰好一次调用，适配器与运行器读同一实现
         manifest = vcsum_adapter.build_test_manifest(review_cap_chars=100000)
