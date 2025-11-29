@@ -15,6 +15,7 @@
 [![MCP](https://img.shields.io/badge/MCP-streamable%20HTTP-000000?style=flat-square)](https://modelcontextprotocol.io/)
 [![docker compose](https://img.shields.io/badge/docker--compose-7%20services-2496ED?style=flat-square&logo=docker&logoColor=white)](compose.yaml)
 [![license](https://img.shields.io/badge/license-MIT-3DA639?style=flat-square)](LICENSE)
+[![CI](https://github.com/LittleSongxx/MeetingBot/actions/workflows/ci.yml/badge.svg)](https://github.com/LittleSongxx/MeetingBot/actions/workflows/ci.yml)
 
 ![登录页](docs/assets/screenshots/login.png)
 
@@ -250,7 +251,7 @@ cd meetingbot/vue && npm ci && npm run type-check && npm run lint && npm run tes
 | MOSS 执行侧修复（worker env/镜像、显式 max_new_tokens、覆盖率守卫、实际模型名展示） | `services/transcription_service.py`、`api/transcription.py`、`scripts/moss_asr_server.py`；单测 `tests/test_transcription.py` · `LEDGER.md §47b/§47d` |
 | Claim 级人工锚点包 + 子 Agent 代审校准（α=0.426<0.70 → claim 级裁判只作方向信号） | [evaluation/gold/claim_anchor_cross30_100.csv](evaluation/gold/claim_anchor_cross30_100.csv) · `evaluation/gold/claim_anchor_score.py` · [evaluation/reports/2026-10-22_claim_anchor_calibration.md](evaluation/reports/2026-10-22_claim_anchor_calibration.md) · `LEDGER.md §44/§44b` |
 
-## 作品集入口（2026-10-23）
+## 作品集入口（2026-10-25）
 
 - [质量仪表盘](docs/quality_dashboard.html)（零调用生成：五轴记分卡、机制 A/B、质量闸）
 - [作品集一页纸](docs/作品集一页纸.md)（架构、指标、三个案例、demo 脚本、面试问答、负结果）
