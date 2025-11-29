@@ -27,10 +27,11 @@ from models import (
     MeetingMinutes,
     MeetingParticipant,
     MeetingSeries,
+    TranscriptionTask,
     User,
 )
 
-from services import contracts
+from services import action_validate, contracts
 
 # 待办状态是封闭集合，前端状态下拉框与状态机共用这一份
 STATUSES = ("OPEN", "DONE", "BLOCKED", "CANCELLED")
@@ -211,6 +212,12 @@ async def sync_from_minutes(minutes: MeetingMinutes, *, actor_id: int | None = N
         return {"created": 0, "carried": 0, "skipped": 0}
     items = contracts.upgrade_output(
         {"pending_items": minutes.pending_items_json or []}).get("pending_items") or []
+    # 行动项槽位校验（确定性）：负责人/期限必须是转写里真的出现过的东西。
+    # 没有转写（老任务/测试）时 fail-open，保持原行为。
+    transcript = ""
+    if minutes.source_task_id:
+        task = await TranscriptionTask.get_or_none(id=minutes.source_task_id)
+        transcript = str(getattr(task, "full_text", "") or "") if task is not None else ""
     users_by_name = await _participants_by_name(meeting)
     existing = await _series_items(meeting)
     actor = minutes.confirmed_by or actor_id or minutes.created_by
@@ -222,10 +229,16 @@ async def sync_from_minutes(minutes: MeetingMinutes, *, actor_id: int | None = N
             skipped += 1
             continue
         owner_text = _slot_text(item.get("owner")) if isinstance(item, Mapping) else ""
+        deadline_text = _slot_text(item.get("deadline")) if isinstance(item, Mapping) else ""
+        if transcript:
+            check = action_validate.validate_item(item, transcript)
+            if check["drop_owner"]:
+                owner_text = ""
+            if check["drop_deadline"]:
+                deadline_text = ""
         matched = _match_owner(users_by_name, owner_text)
         owner_user_id = matched.id if matched is not None else None
         owner_name = matched.name if matched is not None else (owner_text or None)
-        deadline_text = _slot_text(item.get("deadline")) if isinstance(item, Mapping) else ""
         deadline = parse_deadline(deadline_text, reference=meeting.start_time)
         duplicate = _find_duplicate(existing, normalized, owner_user_id, owner_name, deadline)
         if duplicate is not None:

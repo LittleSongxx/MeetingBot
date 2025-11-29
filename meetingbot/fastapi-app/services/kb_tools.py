@@ -57,7 +57,7 @@ from models import (
 )
 from pydantic import BaseModel, Field, ValidationError, field_validator
 
-from services import contracts, kb_service
+from services import contracts, kb_service, tool_metadata
 
 logger = logging.getLogger("meetingbot.kb_tools")
 
@@ -910,14 +910,23 @@ def _filter_meetings(query, allowed: list[int] | None):
 async def _list_meetings(allowed: list[int] | None, limit: int) -> dict[str, Any]:
     query = Meeting.all() if allowed is None else Meeting.filter(id__in=list(allowed) or [-1])
     rows = await query.order_by("-start_time").limit(limit)
+    series_map: dict[int, dict[str, Any]] = {}
+    if tool_metadata.enrichment_enabled():
+        series_map = await tool_metadata.series_metadata_for_meetings([row.id for row in rows])
+    facts = []
+    for row in rows:
+        fact = {"meeting_id": row.id, "title": row.title,
+                "start_time": _fmt(row.start_time), "status": row.status}
+        meta = series_map.get(row.id)
+        if meta:
+            fact.update(meta)
+        facts.append(fact)
     return {
         "kind": "meeting",
         "scope_meeting_count": None if allowed is None else len(allowed),
-        "facts": [{
-            "meeting_id": row.id, "title": row.title,
-            "start_time": _fmt(row.start_time), "status": row.status,
-        } for row in rows],
-        "notice": "只列当前用户可见的会议。",
+        "facts": facts,
+        "notice": "只列当前用户可见的会议；系列信息（series_id/系列内会议）在返回里，"
+                  "可用它回答“这个系列包含哪些会议/录音”。",
     }
 
 
@@ -931,10 +940,13 @@ async def _list_recordings(allowed: list[int] | None, limit: int) -> dict[str, A
     query = _filter_meetings(query, allowed)
     rows = await query.order_by("-create_time").limit(limit)
     titles = await _meeting_titles([row.meeting_id for row in rows])
-    return {
-        "kind": "recording",
-        "scope_meeting_count": None if allowed is None else len(allowed),
-        "facts": [{
+    series_map: dict[int, dict[str, Any]] = {}
+    if tool_metadata.enrichment_enabled():
+        series_map = await tool_metadata.series_metadata_for_meetings(
+            [row.meeting_id for row in rows])
+    facts = []
+    for row in rows:
+        fact = {
             "task_id": row.id, "meeting_id": row.meeting_id,
             "meeting_title": titles.get(row.meeting_id, ""),
             # **录音实际开始时间（墙钟）**：不是上传时间，也不是会议名义时间。
@@ -944,7 +956,15 @@ async def _list_recordings(allowed: list[int] | None, limit: int) -> dict[str, A
             "create_time": _fmt(row.create_time),
             "transcribed_at": _fmt(row.finished_at) or _fmt(row.started_at),
             "duration_minutes": round((row.total_duration_ms or 0) / 60_000, 1) or None,
-        } for row in rows],
+        }
+        meta = series_map.get(row.meeting_id)
+        if meta:
+            fact.update(meta)
+        facts.append(fact)
+    return {
+        "kind": "recording",
+        "scope_meeting_count": None if allowed is None else len(allowed),
+        "facts": facts,
         "notice": "task_id 可用于 search_knowledge 的 source_ids（只搜这一段录音）、"
                   "也用于 get_transcript_excerpt（取这段录音的原话）。"
                   "recorded_at 是录音实际开始时间；period 是上午/下午/晚上/未标注。"

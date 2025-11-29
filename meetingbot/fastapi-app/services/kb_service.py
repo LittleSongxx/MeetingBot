@@ -24,6 +24,7 @@ import asyncio
 import hashlib
 import logging
 import os
+from contextvars import ContextVar
 from dataclasses import dataclass, replace
 from datetime import timedelta
 from typing import Any, Iterable, Sequence
@@ -917,6 +918,22 @@ def rerank_candidates() -> int:
         raise ValueError("RERANK_CANDIDATES 必须为正整数") from error
 
 
+_TOP_K_OVERRIDE: ContextVar[int | None] = ContextVar("kb_top_k_override", default=None)
+
+
+def set_top_k_override(depth: int | None):
+    """本轮检索截断口的临时覆盖（上下文变量，请求/任务隔离）。"""
+    return _TOP_K_OVERRIDE.set(int(depth) if depth else None)
+
+
+def clear_top_k_override() -> None:
+    _TOP_K_OVERRIDE.set(None)
+
+
+def current_top_k_override() -> int | None:
+    return _TOP_K_OVERRIDE.get()
+
+
 def rerank_top_k() -> int:
     """重排后交给生成模型的最大条数（**漏斗的截断口**）。
 
@@ -924,6 +941,9 @@ def rerank_top_k() -> int:
     必然有一半是同会议同主题但答不了问题的窗口——那正是 context_precision 被拖低的
     唯一原因（截断前实测 33–37%，条数越多越低）。可用 `RERANK_TOP_K` 覆盖。
     """
+    override = _TOP_K_OVERRIDE.get()
+    if override:
+        return max(1, int(override))
     raw = os.getenv("RERANK_TOP_K", "5").strip()
     try:
         return max(1, int(raw))

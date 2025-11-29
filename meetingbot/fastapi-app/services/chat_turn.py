@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 from typing import Any, AsyncIterator
 from uuid import uuid4
 
@@ -19,6 +20,7 @@ from tortoise.expressions import F
 from services import (
     chat_checkpoint,
     chat_graph,
+    citation_bind,
     citations,
     coverage,
     intent_router,
@@ -29,6 +31,7 @@ from services import (
     prompt_injection,
     query_plan,
     rag_quality,
+    retrieval_policy,
     smalltalk,
     turn_filter,
 )
@@ -64,6 +67,42 @@ def _entity_haystack(registry: citations.CitationRegistry,
     return "\n".join(part for part in parts if part)
 
 
+CITATION_BIND_ENV = "CHAT_CITATION_BIND_ENABLED"
+STATE_COVERAGE_ENV = "CHAT_STATE_COVERAGE_ENABLED"
+
+
+def state_coverage_enabled() -> bool:
+    """系列/状态覆盖开关（S2 预注册 §50）。默认关，A/B 通过后开。"""
+    value = (os.getenv(STATE_COVERAGE_ENV) or "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
+def citation_binding_enabled() -> bool:
+    """生成后引用绑定开关。默认关，A/B 通过后由 .env 开启（预注册 §49）。"""
+    value = (os.getenv(CITATION_BIND_ENV) or "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
+def apply_citation_binding(answer: str, registry: Any) -> tuple[str, dict[str, Any] | None]:
+    """对最终答案做确定性引用绑定；返回 (新答案, 留痕摘要)。
+
+    绑定是纯规则（零模型调用）：只在"数字/日期在别的引用上下文里"时补引用；
+    哪里都没有的不动（不删内容）。开关关闭时原样返回。
+    """
+    if not answer or not citation_binding_enabled():
+        return answer, None
+    bound = citation_bind.bind_answer(answer, registry.as_dicts())
+    summary = {
+        "enabled": True,
+        "checked_numbers": bound.checked_numbers,
+        "already_supported": bound.already_supported,
+        "rebound": bound.rebound,
+        "unbound": bound.unbound,
+        "changed": bound.changed,
+    }
+    return bound.answer, summary
+
+
 def _resume_answer_text(prefix: str, streamed: str,
                         final_state: dict[str, Any]) -> str:
     """恢复轮最终正文：优先新流；新流为空时取 checkpoint 的完整答案。
@@ -90,6 +129,13 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     if not text:
         yield ("error", {"message": "问题不能为空"})
         return
+    turn_started = time.perf_counter()
+    # 每轮先清掉上一轮的深度覆盖，再按本轮问题决定是否加宽检索截断口。
+    # ContextVar 按请求任务隔离；这里是防御性清理，避免同任务多轮测试串扰。
+    kb_service.clear_top_k_override()
+    adaptive_depth = retrieval_policy.adaptive_depth(text)
+    if adaptive_depth is not None:
+        kb_service.set_top_k_override(adaptive_depth)
     guardrails = GuardrailChain()
     # 内容审核第一层（输入）：违规内容不进模型——送进去就已经产生了一次生成
     input_verdict = guardrails.check_input(text)
@@ -204,7 +250,11 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     if recording_scope is not None:
         recording_query = recording_query.filter(meeting_id__in=recording_scope)
     recordings = await recording_query.values_list("id", flat=True)
-    coverage_plan = coverage.build_plan(text, plan=plan, recordings=recordings)
+    coverage_plan = coverage.build_plan(
+        text, plan=plan, recordings=recordings,
+        state_aware=state_coverage_enabled(),
+        series_ids=session.scope_series_ids or (),
+        meeting_ids=scope_ids or ())
     evidence_state = coverage.EvidenceState(plan=coverage_plan)
 
     yield ("meta", {
@@ -338,6 +388,13 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
 
     chunks: list[str] = []
     emitted_refs = len(registry)
+    # 阶段耗时：LangGraph 节点（agent/tools/coverage/nudge/finalize）与工具调用。
+    # 用 run_id 配对 on_chain_start/end、on_tool_start/end；事件流本身不改。
+    node_started: dict[str, float] = {}
+    node_timings: dict[str, int] = {}
+    tool_started: dict[str, float] = {}
+    tool_timings: list[dict[str, Any]] = []
+    tracked_nodes = {"agent", "tools", "coverage", "nudge", "finalize"}
     final_state: dict[str, Any] = {}
     failure: str | None = None
     interrupted: BaseException | None = None
@@ -359,6 +416,13 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
             # 绝不能把它的 labels JSON 拼进给用户的流式正文。
             if "internal_context_filter" in (event.get("tags") or []):
                 continue
+            if name == "on_chain_start" and node in tracked_nodes:
+                node_started[str(event.get("run_id") or "")] = time.perf_counter()
+            elif name == "on_chain_end" and node in tracked_nodes:
+                start = node_started.pop(str(event.get("run_id") or ""), None)
+                if start is not None:
+                    node_timings[node] = node_timings.get(node, 0) + int(
+                        (time.perf_counter() - start) * 1000)
             if name == "on_chat_model_end" and node == "agent":
                 model_round += 1
                 message = event.get("data", {}).get("output")
@@ -378,11 +442,19 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
                     chunks.append(piece)
                     yield ("token", {"text": piece})
             elif name == "on_tool_start" and node == "tools":
+                tool_started[str(event.get("run_id") or "")] = time.perf_counter()
                 yield ("tool_start", {
                     "name": event.get("name") or "", "call_id": event.get("run_id", ""),
                     "arguments": _tool_arguments(event),
                 })
             elif name == "on_tool_end" and node == "tools":
+                tool_start = tool_started.pop(str(event.get("run_id") or ""), None)
+                if tool_start is not None:
+                    tool_timings.append({
+                        "name": event.get("name") or "",
+                        "call_id": str(event.get("run_id") or ""),
+                        "elapsed_ms": int((time.perf_counter() - tool_start) * 1000),
+                    })
                 tool_text = _tool_output_text(event)
                 try:
                     tool_result = json.loads(tool_text)
@@ -453,12 +525,18 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         logger.warning("会话 %s 的这一轮停在 %s：%s", session.id, stop_reason, detail)
     # 内容审核第三层（输出复检）：输入干净不代表输出干净——检索到的会议原文本身
     # 就可能含违规表述。这一层才是门，处置动作（flag/redact/block）由配置决定
+    blocked_by_moderation = False
     output_verdict = guardrails.check_output(answer)
     if output_verdict.matched:
         answer, blocked_by_moderation = guardrails.apply_output(answer, output_verdict)
         if blocked_by_moderation:
             # 拦下整段回答：正文不返回，改由下面的 error 事件给提示
             failure = moderation.BLOCKED_MESSAGE
+    # 生成后引用绑定（预注册 §49）：把数字/日期重绑到真正包含它的上下文。
+    # 放在实体/质量标注之前，让后面的标注看到的是"绑定后的答案"。
+    citation_binding_summary: dict[str, Any] | None = None
+    if answer and failure is None and not blocked_by_moderation:
+        answer, citation_binding_summary = apply_citation_binding(answer, registry)
     # 实体核查（生成后、落库前）：答案里的人名/数字如果在本轮检索结果里找不到，
     # **如实标注、不拦截**（与 no_retrieval 同款处置）。实测背景 q14：答案里出现了
     # 种子里不存在的人名"李婷"与通知渠道，判定侧逮到了、产品侧没有任何环节会报警。
@@ -468,8 +546,11 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     quality_flags = []
     if answer and rag_quality.enabled():
         used = citations.used_citations(answer, registry)
+        # 传本轮**全部检索结果**：用于区分「引用归属错（证据在别的 ref 里）」
+        # 与「无依据（哪里都没有）」——前者可修引用，后者才是编造候选。
         quality_flags = rag_quality.audit_answer(
-            answer, [item.as_dict() for item in used])
+            answer, [item.as_dict() for item in used],
+            retrieved=registry.as_dicts())
         quality_note = rag_quality.note(quality_flags)
         if quality_note:
             entity_note = (entity_note + "；" + quality_note) if entity_note else quality_note
@@ -492,6 +573,9 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         seen_security.add(key)
         deduped_security.append(flag)
     security_snapshot = {"flags": deduped_security, "blocked": False}
+    turn_elapsed_ms = int((time.perf_counter() - turn_started) * 1000)
+    timing = {"total_ms": turn_elapsed_ms, "nodes": node_timings,
+              "tools": tool_timings}
     tokens = await turn_tokens(
         assistant_row.id,
         call_types=(CHAT_CALL_TYPE, SUMMARY_CALL_TYPE, "KB_QUERY_EMBED",
@@ -510,8 +594,10 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
                                  entity_note=entity_note,
                                  tokens=tokens, moderation_verdict=output_verdict, plan=plan,
                                  security=security_snapshot,
+                                 citation_binding=citation_binding_summary,
                                  run_status=run_status, thread_id=thread_id,
-                                 checkpoint_id=checkpoint_id, trace_id=trace_id)
+                                 checkpoint_id=checkpoint_id, trace_id=trace_id,
+                                 timing=timing)
     if interrupted is not None:
         raise interrupted
     if failure:

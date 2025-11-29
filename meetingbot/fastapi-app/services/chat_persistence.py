@@ -87,10 +87,12 @@ async def _persist_turn(assistant_row: ChatMessage, *, answer: str, stop_reason:
                         moderation_verdict: Any = None,
                         plan: dict[str, Any] | None = None,
                         security: dict[str, Any] | None = None,
+                        citation_binding: dict[str, Any] | None = None,
                         run_status: str = "FINISHED",
                         thread_id: str | None = None,
                         checkpoint_id: str | None = None,
-                        trace_id: str | None = None) -> dict[str, Any]:
+                        trace_id: str | None = None,
+                        timing: dict[str, Any] | None = None) -> dict[str, Any]:
     """把这一轮的结果落库：正文、停止原因、引用快照、工具轨迹、用量。"""
     # 旧编号解析：引用登记表按轮新建，模型可能复用历史回答里的 [n]。
     # 能从本会话此前的引用快照对上号的补回 used（页面卡片可渲染）；
@@ -105,6 +107,16 @@ async def _persist_turn(assistant_row: ChatMessage, *, answer: str, stop_reason:
         # 页面/排障读同一个出口；不新增列，避免又一份会漂移的真相。
         moderation_snapshot = dict(moderation_snapshot or {})
         moderation_snapshot["security"] = security
+    if citation_binding:
+        # 生成后引用绑定的留痕：绑了几条/哪些数字仍无依据。与安全扫描同列，
+        # 但放在独立 key 下，互不覆盖（复盘时能看出"这轮做过绑定"）。
+        moderation_snapshot = dict(moderation_snapshot or {})
+        moderation_snapshot["citation_binding"] = citation_binding
+    if timing:
+        # 阶段耗时：图节点（agent/tools/coverage/nudge/finalize）+ 工具调用。
+        # 与安全/绑定同列但独立 key，页面与排障读同一个出口。
+        moderation_snapshot = dict(moderation_snapshot or {})
+        moderation_snapshot["timing"] = timing
     stored = {
         "citations": {
             "used": used,
