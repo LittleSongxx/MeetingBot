@@ -1,0 +1,60 @@
+{
+  "source": "benchmarks/results/vcsum-test26-singlepass-r2-20261006",
+  "manifest": "benchmarks/manifest_test_chunk6000.json",
+  "items": 10,
+  "owner": {
+    "with_owner": 7,
+    "fabricated": 0,
+    "fabricated_rate": 0.0,
+    "located": 7
+  },
+  "deadline": {
+    "with_deadline": 3,
+    "misuse": 0,
+    "unlocated": 1,
+    "misuse_rate": 0.0,
+    "located": 2
+  },
+  "evidence": {
+    "located": 10,
+    "unlocated": 0,
+    "missing": 0,
+    "unlocated_rate": 0.0
+  },
+  "validator_downgrades": {
+    "owner": 0,
+    "deadline": 1,
+    "evidence": 0
+  },
+  "by_case": {
+    "vcsum_110": {
+      "items": 3,
+      "owner_fabricated": 0,
+      "deadline_misuse": 0,
+      "evidence_unlocated": 0
+    },
+    "vcsum_23": {
+      "items": 1,
+      "owner_fabricated": 0,
+      "deadline_misuse": 0,
+      "evidence_unlocated": 0
+    },
+    "vcsum_236": {
+      "items": 4,
+      "owner_fabricated": 0,
+      "deadline_misuse": 0,
+      "evidence_unlocated": 0
+    },
+    "vcsum_31": {
+      "items": 2,
+      "owner_fabricated": 0,
+      "deadline_misuse": 0,
+      "evidence_unlocated": 0
+    }
+  },
+  "limitations": [
+    "转写来自 VCSum 官方 test26（人工整理转写），不是产品 ASR；owner/deadline 是规则代理，不是人工金标",
+    "只审计 pending_items/decisions 的槽位，不评行动项抽取召回（无 gold 行动项集）",
+    "校验器降级 ≠ 指标提升：它保证的是'不把无依据槽位当事实写进待办'"
+  ]
+}

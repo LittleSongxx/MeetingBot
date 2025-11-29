@@ -1,0 +1,227 @@
+{
+  "policy": "LEDGER §49c/§49d：3 次运行/臂的均值 + 同答案配对回放；判定线未改",
+  "arms": {
+    "off1": {
+      "attribution": {
+        "checked": 166,
+        "cited": 31,
+        "any": 16,
+        "cited_gap": 0.1867,
+        "any_gap": 0.0964
+      },
+      "metrics": {
+        "context_precision": 0.6733333333333333,
+        "context_recall": 0.8448275862068966,
+        "faithfulness": 0.8783783783783784,
+        "faithfulness_content": 0.8984771573604061,
+        "answer_relevancy": 1.0
+      }
+    },
+    "off2": {
+      "attribution": {
+        "checked": 174,
+        "cited": 28,
+        "any": 17,
+        "cited_gap": 0.1609,
+        "any_gap": 0.0977
+      },
+      "metrics": {
+        "context_precision": 0.6413793103448275,
+        "context_recall": 0.8448275862068966,
+        "faithfulness": 0.8204081632653061,
+        "faithfulness_content": 0.8609865470852018,
+        "answer_relevancy": 0.9666666666666667
+      }
+    },
+    "off3": {
+      "attribution": {
+        "checked": 196,
+        "cited": 35,
+        "any": 22,
+        "cited_gap": 0.1786,
+        "any_gap": 0.1122
+      },
+      "metrics": {
+        "context_precision": 0.6617647058823529,
+        "context_recall": 0.7931034482758621,
+        "faithfulness": 0.8677685950413223,
+        "faithfulness_content": 0.8755760368663594,
+        "answer_relevancy": 1.0
+      }
+    },
+    "off4": {
+      "attribution": {
+        "checked": 171,
+        "cited": 19,
+        "any": 13,
+        "cited_gap": 0.1111,
+        "any_gap": 0.076
+      },
+      "metrics": {
+        "context_precision": 0.6142857142857143,
+        "context_recall": 0.7931034482758621,
+        "faithfulness": 0.8776371308016878,
+        "faithfulness_content": 0.8773584905660378,
+        "answer_relevancy": 0.9666666666666667
+      }
+    },
+    "on1": {
+      "attribution": {
+        "checked": 177,
+        "cited": 12,
+        "any": 12,
+        "cited_gap": 0.0678,
+        "any_gap": 0.0678
+      },
+      "metrics": {
+        "context_precision": 0.6068965517241379,
+        "context_recall": 0.8448275862068966,
+        "faithfulness": 0.8553719008264463,
+        "faithfulness_content": 0.8552036199095022,
+        "answer_relevancy": 1.0
+      }
+    },
+    "on2": {
+      "attribution": {
+        "checked": 187,
+        "cited": 12,
+        "any": 12,
+        "cited_gap": 0.0642,
+        "any_gap": 0.0642
+      },
+      "metrics": {
+        "context_precision": 0.6573426573426573,
+        "context_recall": 0.8620689655172413,
+        "faithfulness": 0.8658536585365854,
+        "faithfulness_content": 0.8737864077669902,
+        "answer_relevancy": 1.0
+      }
+    },
+    "on3": {
+      "attribution": {
+        "checked": 184,
+        "cited": 15,
+        "any": 15,
+        "cited_gap": 0.0815,
+        "any_gap": 0.0815
+      },
+      "metrics": {
+        "context_precision": 0.636986301369863,
+        "context_recall": 0.864406779661017,
+        "faithfulness": 0.8669201520912547,
+        "faithfulness_content": 0.8697478991596639,
+        "answer_relevancy": 1.0
+      }
+    },
+    "on4": {
+      "attribution": {
+        "checked": 167,
+        "cited": 15,
+        "any": 15,
+        "cited_gap": 0.0898,
+        "any_gap": 0.0898
+      },
+      "metrics": {
+        "context_precision": 0.6595744680851063,
+        "context_recall": 0.8448275862068966,
+        "faithfulness": 0.851063829787234,
+        "faithfulness_content": 0.8604651162790697,
+        "answer_relevancy": 0.9666666666666667
+      }
+    }
+  },
+  "means": {
+    "off": {
+      "metrics": {
+        "context_precision": 0.6477,
+        "context_recall": 0.819,
+        "faithfulness": 0.861,
+        "faithfulness_content": 0.8781,
+        "answer_relevancy": 0.9833
+      },
+      "attribution": {
+        "cited_gap": 0.1593,
+        "any_gap": 0.0956
+      }
+    },
+    "on": {
+      "metrics": {
+        "context_precision": 0.6402,
+        "context_recall": 0.854,
+        "faithfulness": 0.8598,
+        "faithfulness_content": 0.8648,
+        "answer_relevancy": 0.9917
+      },
+      "attribution": {
+        "cited_gap": 0.0758,
+        "any_gap": 0.0758
+      }
+    }
+  },
+  "delta_pp": {
+    "context_precision": -0.75,
+    "context_recall": 3.5,
+    "faithfulness": -0.12,
+    "faithfulness_content": -1.33,
+    "answer_relevancy": 0.84,
+    "cited_gap_pp": -8.35,
+    "any_gap_pp": -1.98
+  },
+  "paired_replay": {
+    "arms": {
+      "same_answers": {
+        "attribution": {
+          "checked": 166,
+          "cited": 31,
+          "any": 16,
+          "cited_gap": 0.1867,
+          "any_gap": 0.0964
+        },
+        "metrics": {
+          "context_precision": 0.6733333333333333,
+          "context_recall": 0.8448275862068966,
+          "faithfulness": 0.8783783783783784,
+          "faithfulness_content": 0.8984771573604061,
+          "answer_relevancy": 1.0
+        }
+      },
+      "same_answers_bound": {
+        "attribution": {
+          "checked": 166,
+          "cited": 16,
+          "any": 16,
+          "cited_gap": 0.0964,
+          "any_gap": 0.0964
+        },
+        "metrics": {
+          "context_precision": 0.6666666666666666,
+          "context_recall": 0.8448275862068966,
+          "faithfulness": 0.9054054054054054,
+          "faithfulness_content": 0.9090909090909091,
+          "answer_relevancy": 1.0
+        }
+      }
+    },
+    "delta_pp": {
+      "context_precision": -0.67,
+      "context_recall": 0.0,
+      "faithfulness": 2.7,
+      "faithfulness_content": 1.06,
+      "answer_relevancy": 0.0
+    }
+  },
+  "checks": {
+    "cited_gap_abs_ge_5pp": true,
+    "faithfulness_content_non_inferior_2pp": true,
+    "context_precision_non_inferior_2pp": true,
+    "relevancy_non_inferior_2pp": true,
+    "paired_replay_any_gap_unchanged": true,
+    "paired_replay_faithfulness_non_inferior": true
+  },
+  "s49_pass": true,
+  "limitations": [
+    "单裁判（deepseek-flash，非人工金标）",
+    "每臂 3 次 cross30 运行；cross30 单次波动约 5pp",
+    "配对回放是机制级验证（同一答案/上下文），跨臂是外部效度验证；两者并列"
+  ]
+}

@@ -1,0 +1,2427 @@
+{
+  "artifact_version": 1,
+  "captured_from": {
+    "base_url": "http://127.0.0.1:19091",
+    "mode": "fresh_session_per_case",
+    "captured_at": "2026-10-24T09:24:51Z",
+    "switches": {
+      "model": "qwen3.8-max-0902",
+      "kb_rerank_enabled": true,
+      "kb_query_plan_enabled": false,
+      "kb_chunk_target_chars": 300,
+      "rerank_top_k": 3,
+      "rerank_candidates": 24,
+      "rerank_input_price_micro_per_1k": 500,
+      "kb_dedupe_enabled": false,
+      "kb_dedupe_overlap_seconds": 30,
+      "kb_contextual_enabled": false,
+      "pg_kb_table": "kb.chunk_search",
+      "vector_dim": null
+    }
+  },
+  "turns": [
+    {
+      "case_id": "n01",
+      "meeting_id": null,
+      "question": "会议主持人是谁？",
+      "answer": "结论：在可检索到的会议中，“产品发布评审会议”（meeting_id=2）的主持人是李月。依据：\n- 该会议转写开场原话为：“我是本次会议主持人李月。”[6]\n- 后续讨论中也多次以“主持人李月”称呼，进一步印证其主持身份 [7][8]。说明：当前工具未返回其他会议的主持人信息（最近列出的会议尚无对应纪要或转写命中），因此只能确认上述这场会议的主持人；如您指的是其他具体会议，请提供会议名称或时间，我再定向查询。",
+      "message_id": 10160,
+      "stop_reason": "finished",
+      "citations": [
+        {
+          "ref": 6,
+          "kind": "chunk",
+          "quote": "[0s][张晨] 各位同事上午好，现在开始产品上线复盘与下阶段发布准备会议。\n[8s][张晨] 我是本次会议主持人李月。\n[12s][张晨] 今天会议预计持续45分钟，主要讨论三个议题。\n[18s][张晨] 第一，上一轮产品灰度发布的数据复盘。\n[24s][张晨] 第二，9月1日正式发布的功能范围和风险。\n[29s][张晨] 第三，明确发布前后的任务负责人、协作人和完成期限。\n[36s][张晨] 请大家围绕事实数据和可执行动作发言，会议结束后会形成纪要和任务清单。\n[46s][张晨] 先请产品负责人张晨介绍灰度发布情况。",
+          "speaker": "张晨",
+          "chunk_id": 700,
+          "authority": "RAW",
+          "source_id": 6,
+          "end_second": 51,
+          "meeting_id": 2,
+          "start_second": 0,
+          "meeting_title": "产品发布评审会议"
+        },
+        {
+          "ref": 7,
+          "kind": "chunk",
+          "quote": "[346s][张晨] 第二组是包含多个角色发言的会议内容，用于检查说话人标签与员工身份的匹配效果。\n[356s][张晨] 今天的会议录音将作为演示素材之一，内容会包含产品研发、测试、运营和客户支持角色的发言。\n[369s][张晨] 主持人李月，下面讨论9月1日正式发布范围，张晨产品侧建议按既定范围发布，发布内容包括会议创建和状态流转、会议资料管理、音视频转写、AI纪要、任务跟踪、会议知识库react agent数据分析、运行观测和质量评价。\n[397s][张晨] 移动端附件下载进度问题不影响核心会议和任务流程，但需要在发布前修复，并在发布说明中写明处理结果。",
+          "speaker": "张晨",
+          "chunk_id": 711,
+          "authority": "RAW",
+          "source_id": 6,
+          "end_second": 412,
+          "meeting_id": 2,
+          "start_second": 346,
+          "meeting_title": "产品发布评审会议"
+        },
+        {
+          "ref": 8,
+          "kind": "chunk",
+          "quote": "[840s][张晨] 质量评价页面还会收集纪要和agent结果的综合评分，准确性、完整性和可执行性评分，用于观察模型输出是否满足业务需要。\n[856s][张晨] 主持人，李月，关于正式发布决策，请大家最后确认。\n[863s][张晨] 产品研发、测试、运营和客户支持均同意在9月1日九点按计划发布，前提是移动端附件下载进度任务和发布回归任务按时完成。\n[879s][张晨] 如果任意阻断任务没有完成，由张晨和王工在8月31日下午五点召开专项评审，决定是否调整发布时间。\n[892s][张晨] 这个条件请记录未会议该确认事项同时记录风险等级为高。\n[900s][张晨] 最后总结本次会议决策。",
+          "speaker": "张晨",
+          "chunk_id": 727,
+          "authority": "RAW",
+          "source_id": 6,
+          "end_second": 903,
+          "meeting_id": 2,
+          "start_second": 840,
+          "meeting_title": "产品发布评审会议"
+        }
+      ],
+      "tools": [
+        {
+          "ok": true,
+          "name": "list_facts",
+          "call_id": "call_ebada0399dfa47dba52b12e0",
+          "summary": "5 条事实",
+          "arguments": {
+            "kind": "meeting",
+            "limit": 5
+          }
+        },
+        {
+          "ok": false,
+          "name": "get_minutes",
+          "call_id": "call_b7452902dadc446ea78b7831",
+          "summary": "失败：找不到对应的纪要",
+          "arguments": {
+            "fields": [
+              "summary"
+            ],
+            "meeting_id": 13
+          }
+        },
+        {
+          "ok": true,
+          "name": "search_knowledge",
+          "call_id": "call_cba63713118f4b15a2845aae",
+          "summary": "3 条切片",
+          "arguments": {
+            "limit": 5,
+            "query": "会议主持人 主持 开场"
+          }
+        }
+      ],
+      "allowed_meeting_ids": null,
+      "series_ids": null,
+      "used_refs": [
+        6,
+        7,
+        8
+      ],
+      "unknown_refs": [],
+      "retrieved": [
+        {
+          "ref": 1,
+          "kind": "fact",
+          "quote": "会议 13 · [ASR_EVAL] MOSS local link smoke 102823 · 2026-10-23 10:28:23",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 13,
+          "source_text": "会议 13 · [ASR_EVAL] MOSS local link smoke 102823 · 2026-10-23 10:28:23",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 102823"
+        },
+        {
+          "ref": 2,
+          "kind": "fact",
+          "quote": "会议 12 · [ASR_EVAL] MOSS local link smoke 102745 · 2026-10-23 10:27:45",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 12,
+          "source_text": "会议 12 · [ASR_EVAL] MOSS local link smoke 102745 · 2026-10-23 10:27:45",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 102745"
+        },
+        {
+          "ref": 3,
+          "kind": "fact",
+          "quote": "会议 11 · [ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min · 2026-10-23 09:36:04",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 11,
+          "source_text": "会议 11 · [ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min · 2026-10-23 09:36:04",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min"
+        },
+        {
+          "ref": 4,
+          "kind": "fact",
+          "quote": "会议 10 · [ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min · 2026-10-23 09:36:00",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 10,
+          "source_text": "会议 10 · [ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min · 2026-10-23 09:36:00",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min"
+        },
+        {
+          "ref": 5,
+          "kind": "fact",
+          "quote": "会议 9 · [ASR_EVAL] AliMeeting 远场首测 R8007_M8011 · 2026-10-23 09:19:09",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 9,
+          "source_text": "会议 9 · [ASR_EVAL] AliMeeting 远场首测 R8007_M8011 · 2026-10-23 09:19:09",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] AliMeeting 远场首测 R8007_M8011"
+        },
+        {
+          "ref": 6,
+          "kind": "chunk",
+          "quote": "[0s][张晨] 各位同事上午好，现在开始产品上线复盘与下阶段发布准备会议。\n[8s][张晨] 我是本次会议主持人李月。\n[12s][张晨] 今天会议预计持续45分钟，主要讨论三个议题。\n[18s][张晨] 第一，上一轮产品灰度发布的数据复盘。\n[24s][张晨] 第二，9月1日正式发布的功能范围和风险。\n[29s][张晨] 第三，明确发布前后的任务负责人、协作人和完成期限。\n[36s][张晨] 请大家围绕事实数据和可执行动作发言，会议结束后会形成纪要和任务清单。\n[46s][张晨] 先请产品负责人张晨介绍灰度发布情况。",
+          "speaker": "张晨",
+          "chunk_id": 700,
+          "authority": "RAW",
+          "source_id": 6,
+          "end_second": 51,
+          "meeting_id": 2,
+          "start_second": 0,
+          "meeting_title": "产品发布评审会议"
+        },
+        {
+          "ref": 7,
+          "kind": "chunk",
+          "quote": "[346s][张晨] 第二组是包含多个角色发言的会议内容，用于检查说话人标签与员工身份的匹配效果。\n[356s][张晨] 今天的会议录音将作为演示素材之一，内容会包含产品研发、测试、运营和客户支持角色的发言。\n[369s][张晨] 主持人李月，下面讨论9月1日正式发布范围，张晨产品侧建议按既定范围发布，发布内容包括会议创建和状态流转、会议资料管理、音视频转写、AI纪要、任务跟踪、会议知识库react agent数据分析、运行观测和质量评价。\n[397s][张晨] 移动端附件下载进度问题不影响核心会议和任务流程，但需要在发布前修复，并在发布说明中写明处理结果。",
+          "speaker": "张晨",
+          "chunk_id": 711,
+          "authority": "RAW",
+          "source_id": 6,
+          "end_second": 412,
+          "meeting_id": 2,
+          "start_second": 346,
+          "meeting_title": "产品发布评审会议"
+        },
+        {
+          "ref": 8,
+          "kind": "chunk",
+          "quote": "[840s][张晨] 质量评价页面还会收集纪要和agent结果的综合评分，准确性、完整性和可执行性评分，用于观察模型输出是否满足业务需要。\n[856s][张晨] 主持人，李月，关于正式发布决策，请大家最后确认。\n[863s][张晨] 产品研发、测试、运营和客户支持均同意在9月1日九点按计划发布，前提是移动端附件下载进度任务和发布回归任务按时完成。\n[879s][张晨] 如果任意阻断任务没有完成，由张晨和王工在8月31日下午五点召开专项评审，决定是否调整发布时间。\n[892s][张晨] 这个条件请记录未会议该确认事项同时记录风险等级为高。\n[900s][张晨] 最后总结本次会议决策。",
+          "speaker": "张晨",
+          "chunk_id": 727,
+          "authority": "RAW",
+          "source_id": 6,
+          "end_second": 903,
+          "meeting_id": 2,
+          "start_second": 840,
+          "meeting_title": "产品发布评审会议"
+        }
+      ],
+      "session_id": 2321
+    },
+    {
+      "case_id": "n02",
+      "meeting_id": null,
+      "question": "知识库当前覆盖率和目标覆盖率分别是多少？",
+      "answer": "**结论**\n知识库当前覆盖率为 **82%**，目标覆盖率为 **90%**。**依据**\n以上数据来自「客户支持知识库与智能客服灰度评审会」（meeting_id: 3）：\n- 人工确认纪要明确记录：“会议确认客户支持知识库当前覆盖率82%、目标90%”[2]；\n- 转写原话中王磊也提到：“当前知识库覆盖率为82%，我们的目标是把覆盖率提升到90%”[1]；\n- 已确认观点条目同样复述：“知识库覆盖率82%，目标90%”[3]。注：工具返回内容标记为 untrusted，但上述覆盖率数值在转写与已确认纪要中一致，可作为事实引用；资料未提供该数据的统计时间点或口径定义，如需精确到具体日期或计算方式，需进一步补充说明。",
+      "message_id": 10162,
+      "stop_reason": "finished",
+      "citations": [
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "会议确认客户支持知识库当前覆盖率82%、目标90%，未覆盖主题为账单纠纷和权限申请；计划新增120条FAQ（王磊，10月25日）。智能客服灰度11月1日10%，回滚15分钟，依赖账单API，API稳定性验证10月30日前完成；全量上线不早于11月15日。CSAT目标4.5，季度预算8万元，退款政策10月28日前更新。",
+          "speaker": null,
+          "chunk_id": 765,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 各位上午好，今天评审客户支持知识库和智能客服灰度的准备情况，先对齐目标和风险。\n[8s][王磊] 当前知识库覆盖率为82%，我们的目标是把覆盖率提升到90%，重点补齐两个未覆盖主题：账单纠纷和权限申请。\n[18s][王磊] 我计划新增120条FAQ，负责人是我，截止10月25日；每条FAQ都需要来源和审核人。\n[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。",
+          "speaker": "李娜",
+          "chunk_id": 763,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 47,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[viewpoints] 王磊 知识库覆盖率82%，目标90%；新增120条FAQ，覆盖账单纠纷和权限申请，10月25日完成。",
+          "speaker": null,
+          "chunk_id": 769,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "tools": [
+        {
+          "ok": true,
+          "name": "search_knowledge",
+          "call_id": "call_7f0adb50ecfd42f4ab8032b4",
+          "summary": "3 条切片",
+          "arguments": {
+            "limit": 5,
+            "query": "知识库当前覆盖率 目标覆盖率"
+          }
+        }
+      ],
+      "allowed_meeting_ids": null,
+      "series_ids": null,
+      "used_refs": [
+        1,
+        2,
+        3
+      ],
+      "unknown_refs": [],
+      "retrieved": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 各位上午好，今天评审客户支持知识库和智能客服灰度的准备情况，先对齐目标和风险。\n[8s][王磊] 当前知识库覆盖率为82%，我们的目标是把覆盖率提升到90%，重点补齐两个未覆盖主题：账单纠纷和权限申请。\n[18s][王磊] 我计划新增120条FAQ，负责人是我，截止10月25日；每条FAQ都需要来源和审核人。\n[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。",
+          "speaker": "李娜",
+          "chunk_id": 763,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 47,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "会议确认客户支持知识库当前覆盖率82%、目标90%，未覆盖主题为账单纠纷和权限申请；计划新增120条FAQ（王磊，10月25日）。智能客服灰度11月1日10%，回滚15分钟，依赖账单API，API稳定性验证10月30日前完成；全量上线不早于11月15日。CSAT目标4.5，季度预算8万元，退款政策10月28日前更新。",
+          "speaker": null,
+          "chunk_id": 765,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[viewpoints] 王磊 知识库覆盖率82%，目标90%；新增120条FAQ，覆盖账单纠纷和权限申请，10月25日完成。",
+          "speaker": null,
+          "chunk_id": 769,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "session_id": 2322
+    },
+    {
+      "case_id": "n03",
+      "meeting_id": null,
+      "question": "知识库还有哪些主题没有覆盖？",
+      "answer": "**结论：**\n当前知识库已覆盖的主题主要集中在 **ASR/语音识别评测**、**客户支持知识库与智能客服**、以及 **产品发布评审** 三个领域；除此之外，知识库中没有其他主题的会议记录。**依据：**\n根据会议清单，当前可见的 12 场会议全部归属于以下三类主题 [1][2][3][4][5][6][7][8][9][10][11][12]：\n1.  **ASR / 语音识别评测**（共 10 场）：包括 MOSS local link smoke 测试、MOSS 长音频容量守卫测试、AliMeeting 远场首测等，时间集中在 2026-10-22 至 2026-10-23 [1][2][3][4][5][6][7][8][9][10]。2.  **客户支持知识库与智能客服**（共 1 场）：即“客户支持知识库与智能客服灰度评审会”，时间为 2026-10-15 [11]。3.  **产品发布评审**（共 1 场）：即“产品发布评审会议”（属于“产品发布评审系列”），时间为 2026-09-10 [12]。**资料局限说明：**\n以上结论仅基于当前用户权限下可见的会议列表。如果存在用户无权访问的会议、尚未录入系统的线下讨论、或非会议形式的知识沉淀（如文档、邮件等），工具无法返回，因此无法判断这些不可见范围内是否还包含其他主题。",
+      "message_id": 10161,
+      "stop_reason": "finished",
+      "citations": [
+        {
+          "ref": 1,
+          "kind": "fact",
+          "quote": "会议 13 · [ASR_EVAL] MOSS local link smoke 102823 · 2026-10-23 10:28:23",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 13,
+          "source_text": "会议 13 · [ASR_EVAL] MOSS local link smoke 102823 · 2026-10-23 10:28:23",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 102823"
+        },
+        {
+          "ref": 2,
+          "kind": "fact",
+          "quote": "会议 12 · [ASR_EVAL] MOSS local link smoke 102745 · 2026-10-23 10:27:45",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 12,
+          "source_text": "会议 12 · [ASR_EVAL] MOSS local link smoke 102745 · 2026-10-23 10:27:45",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 102745"
+        },
+        {
+          "ref": 3,
+          "kind": "fact",
+          "quote": "会议 11 · [ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min · 2026-10-23 09:36:04",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 11,
+          "source_text": "会议 11 · [ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min · 2026-10-23 09:36:04",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min"
+        },
+        {
+          "ref": 4,
+          "kind": "fact",
+          "quote": "会议 10 · [ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min · 2026-10-23 09:36:00",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 10,
+          "source_text": "会议 10 · [ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min · 2026-10-23 09:36:00",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min"
+        },
+        {
+          "ref": 5,
+          "kind": "fact",
+          "quote": "会议 9 · [ASR_EVAL] AliMeeting 远场首测 R8007_M8011 · 2026-10-23 09:19:09",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 9,
+          "source_text": "会议 9 · [ASR_EVAL] AliMeeting 远场首测 R8007_M8011 · 2026-10-23 09:19:09",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] AliMeeting 远场首测 R8007_M8011"
+        },
+        {
+          "ref": 6,
+          "kind": "fact",
+          "quote": "会议 8 · [ASR_EVAL] AliMeeting 远场首测 R8007_M8011 · 2026-10-23 09:14:30",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 8,
+          "source_text": "会议 8 · [ASR_EVAL] AliMeeting 远场首测 R8007_M8011 · 2026-10-23 09:14:30",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] AliMeeting 远场首测 R8007_M8011"
+        },
+        {
+          "ref": 7,
+          "kind": "fact",
+          "quote": "会议 7 · [ASR_EVAL] AliMeeting 远场首测 R8007_M8011 · 2026-10-23 09:11:27",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 7,
+          "source_text": "会议 7 · [ASR_EVAL] AliMeeting 远场首测 R8007_M8011 · 2026-10-23 09:11:27",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] AliMeeting 远场首测 R8007_M8011"
+        },
+        {
+          "ref": 8,
+          "kind": "fact",
+          "quote": "会议 6 · [ASR_EVAL] MOSS local link smoke 192637 · 2026-10-22 19:26:37",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 6,
+          "source_text": "会议 6 · [ASR_EVAL] MOSS local link smoke 192637 · 2026-10-22 19:26:37",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 192637"
+        },
+        {
+          "ref": 9,
+          "kind": "fact",
+          "quote": "会议 5 · [ASR_EVAL] MOSS local link smoke 185738 · 2026-10-22 18:57:38",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 5,
+          "source_text": "会议 5 · [ASR_EVAL] MOSS local link smoke 185738 · 2026-10-22 18:57:38",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 185738"
+        },
+        {
+          "ref": 10,
+          "kind": "fact",
+          "quote": "会议 4 · [ASR_EVAL] MOSS local link smoke 184654 · 2026-10-22 18:46:54",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 4,
+          "source_text": "会议 4 · [ASR_EVAL] MOSS local link smoke 184654 · 2026-10-22 18:46:54",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 184654"
+        },
+        {
+          "ref": 11,
+          "kind": "fact",
+          "quote": "会议 3 · 客户支持知识库与智能客服灰度评审会 · 2026-10-15 09:00:00",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 3,
+          "source_text": "会议 3 · 客户支持知识库与智能客服灰度评审会 · 2026-10-15 09:00:00",
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 12,
+          "kind": "fact",
+          "quote": "会议 2 · 产品发布评审会议 · 2026-09-10 10:40:00 · 系列：产品发布评审系列（系列内会议 1 场：2·产品发布评审会议）",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 2,
+          "source_text": "会议 2 · 产品发布评审会议 · 2026-09-10 10:40:00 · 系列：产品发布评审系列（系列内会议 1 场：2·产品发布评审会议）",
+          "start_second": null,
+          "meeting_title": "产品发布评审会议"
+        }
+      ],
+      "tools": [
+        {
+          "ok": true,
+          "name": "list_facts",
+          "call_id": "call_a126620e22df404b9fdd77be",
+          "summary": "12 条事实",
+          "arguments": {
+            "kind": "meeting",
+            "limit": 50
+          }
+        }
+      ],
+      "allowed_meeting_ids": null,
+      "series_ids": null,
+      "used_refs": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "unknown_refs": [],
+      "retrieved": [
+        {
+          "ref": 1,
+          "kind": "fact",
+          "quote": "会议 13 · [ASR_EVAL] MOSS local link smoke 102823 · 2026-10-23 10:28:23",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 13,
+          "source_text": "会议 13 · [ASR_EVAL] MOSS local link smoke 102823 · 2026-10-23 10:28:23",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 102823"
+        },
+        {
+          "ref": 2,
+          "kind": "fact",
+          "quote": "会议 12 · [ASR_EVAL] MOSS local link smoke 102745 · 2026-10-23 10:27:45",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 12,
+          "source_text": "会议 12 · [ASR_EVAL] MOSS local link smoke 102745 · 2026-10-23 10:27:45",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 102745"
+        },
+        {
+          "ref": 3,
+          "kind": "fact",
+          "quote": "会议 11 · [ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min · 2026-10-23 09:36:04",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 11,
+          "source_text": "会议 11 · [ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min · 2026-10-23 09:36:04",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min"
+        },
+        {
+          "ref": 4,
+          "kind": "fact",
+          "quote": "会议 10 · [ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min · 2026-10-23 09:36:00",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 10,
+          "source_text": "会议 10 · [ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min · 2026-10-23 09:36:00",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS 长音频容量守卫 synthetic_concat_62min"
+        },
+        {
+          "ref": 5,
+          "kind": "fact",
+          "quote": "会议 9 · [ASR_EVAL] AliMeeting 远场首测 R8007_M8011 · 2026-10-23 09:19:09",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 9,
+          "source_text": "会议 9 · [ASR_EVAL] AliMeeting 远场首测 R8007_M8011 · 2026-10-23 09:19:09",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] AliMeeting 远场首测 R8007_M8011"
+        },
+        {
+          "ref": 6,
+          "kind": "fact",
+          "quote": "会议 8 · [ASR_EVAL] AliMeeting 远场首测 R8007_M8011 · 2026-10-23 09:14:30",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 8,
+          "source_text": "会议 8 · [ASR_EVAL] AliMeeting 远场首测 R8007_M8011 · 2026-10-23 09:14:30",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] AliMeeting 远场首测 R8007_M8011"
+        },
+        {
+          "ref": 7,
+          "kind": "fact",
+          "quote": "会议 7 · [ASR_EVAL] AliMeeting 远场首测 R8007_M8011 · 2026-10-23 09:11:27",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 7,
+          "source_text": "会议 7 · [ASR_EVAL] AliMeeting 远场首测 R8007_M8011 · 2026-10-23 09:11:27",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] AliMeeting 远场首测 R8007_M8011"
+        },
+        {
+          "ref": 8,
+          "kind": "fact",
+          "quote": "会议 6 · [ASR_EVAL] MOSS local link smoke 192637 · 2026-10-22 19:26:37",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 6,
+          "source_text": "会议 6 · [ASR_EVAL] MOSS local link smoke 192637 · 2026-10-22 19:26:37",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 192637"
+        },
+        {
+          "ref": 9,
+          "kind": "fact",
+          "quote": "会议 5 · [ASR_EVAL] MOSS local link smoke 185738 · 2026-10-22 18:57:38",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 5,
+          "source_text": "会议 5 · [ASR_EVAL] MOSS local link smoke 185738 · 2026-10-22 18:57:38",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 185738"
+        },
+        {
+          "ref": 10,
+          "kind": "fact",
+          "quote": "会议 4 · [ASR_EVAL] MOSS local link smoke 184654 · 2026-10-22 18:46:54",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 4,
+          "source_text": "会议 4 · [ASR_EVAL] MOSS local link smoke 184654 · 2026-10-22 18:46:54",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 184654"
+        },
+        {
+          "ref": 11,
+          "kind": "fact",
+          "quote": "会议 3 · 客户支持知识库与智能客服灰度评审会 · 2026-10-15 09:00:00",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 3,
+          "source_text": "会议 3 · 客户支持知识库与智能客服灰度评审会 · 2026-10-15 09:00:00",
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 12,
+          "kind": "fact",
+          "quote": "会议 2 · 产品发布评审会议 · 2026-09-10 10:40:00 · 系列：产品发布评审系列（系列内会议 1 场：2·产品发布评审会议）",
+          "speaker": null,
+          "authority": null,
+          "end_second": null,
+          "meeting_id": 2,
+          "source_text": "会议 2 · 产品发布评审会议 · 2026-09-10 10:40:00 · 系列：产品发布评审系列（系列内会议 1 场：2·产品发布评审会议）",
+          "start_second": null,
+          "meeting_title": "产品发布评审会议"
+        }
+      ],
+      "session_id": 2324
+    },
+    {
+      "case_id": "n04",
+      "meeting_id": null,
+      "question": "计划新增多少条FAQ、负责人是谁、什么时候完成？",
+      "answer": "结论：计划新增 **120 条** FAQ，负责人是 **王磊**，完成时间为 **2026-10-25**。依据：\n- 在「客户支持知识库与智能客服灰度评审会」（meeting_id=3）中，王磊明确表示：“我计划新增120条FAQ，负责人是我，截止10月25日”[1]。- 该会议已确认纪要的待办事项也记录为：“新增120条FAQ，覆盖账单纠纷和权限申请 王磊 2026-10-25”[3]，摘要中同样写明“计划新增120条FAQ（王磊，10月25日）”[2]。注：当前 query_meeting_state 未返回已确认的 action_item/decision 条目，但上述信息来自同一场会议的已确认纪要（CONFIRMED）与转写原话，可作为有效依据。资料中未提及年份时默认按纪要中的 2026 年标注；如需核实是否为最新计划或是否有变更，请告知是否需要进一步检索后续会议。",
+      "message_id": 10157,
+      "stop_reason": "finished",
+      "citations": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 各位上午好，今天评审客户支持知识库和智能客服灰度的准备情况，先对齐目标和风险。\n[8s][王磊] 当前知识库覆盖率为82%，我们的目标是把覆盖率提升到90%，重点补齐两个未覆盖主题：账单纠纷和权限申请。\n[18s][王磊] 我计划新增120条FAQ，负责人是我，截止10月25日；每条FAQ都需要来源和审核人。\n[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。",
+          "speaker": "李娜",
+          "chunk_id": 763,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 47,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[pending_items] 新增120条FAQ，覆盖账单纠纷和权限申请 王磊 2026-10-25T18:00:00（2026-10-25）",
+          "speaker": null,
+          "chunk_id": 775,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "会议确认客户支持知识库当前覆盖率82%、目标90%，未覆盖主题为账单纠纷和权限申请；计划新增120条FAQ（王磊，10月25日）。智能客服灰度11月1日10%，回滚15分钟，依赖账单API，API稳定性验证10月30日前完成；全量上线不早于11月15日。CSAT目标4.5，季度预算8万元，退款政策10月28日前更新。",
+          "speaker": null,
+          "chunk_id": 765,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "tools": [
+        {
+          "ok": true,
+          "name": "query_meeting_state",
+          "call_id": "call_d832eccf557b41f1a52f4a14",
+          "summary": "0 条状态",
+          "arguments": {
+            "kind": "action_item",
+            "query": "FAQ",
+            "status": "all"
+          }
+        },
+        {
+          "ok": true,
+          "name": "query_meeting_state",
+          "call_id": "call_806585fde96e4e1f927ae04d",
+          "summary": "0 条状态",
+          "arguments": {
+            "kind": "decision",
+            "query": "FAQ"
+          }
+        },
+        {
+          "ok": true,
+          "name": "search_knowledge",
+          "call_id": "call_876bdc176daf4a64b5dc9fc7",
+          "summary": "3 条切片",
+          "arguments": {
+            "limit": 10,
+            "query": "新增FAQ数量 负责人 完成时间"
+          }
+        }
+      ],
+      "allowed_meeting_ids": null,
+      "series_ids": null,
+      "used_refs": [
+        1,
+        2,
+        3
+      ],
+      "unknown_refs": [],
+      "retrieved": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 各位上午好，今天评审客户支持知识库和智能客服灰度的准备情况，先对齐目标和风险。\n[8s][王磊] 当前知识库覆盖率为82%，我们的目标是把覆盖率提升到90%，重点补齐两个未覆盖主题：账单纠纷和权限申请。\n[18s][王磊] 我计划新增120条FAQ，负责人是我，截止10月25日；每条FAQ都需要来源和审核人。\n[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。",
+          "speaker": "李娜",
+          "chunk_id": 763,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 47,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "会议确认客户支持知识库当前覆盖率82%、目标90%，未覆盖主题为账单纠纷和权限申请；计划新增120条FAQ（王磊，10月25日）。智能客服灰度11月1日10%，回滚15分钟，依赖账单API，API稳定性验证10月30日前完成；全量上线不早于11月15日。CSAT目标4.5，季度预算8万元，退款政策10月28日前更新。",
+          "speaker": null,
+          "chunk_id": 765,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[pending_items] 新增120条FAQ，覆盖账单纠纷和权限申请 王磊 2026-10-25T18:00:00（2026-10-25）",
+          "speaker": null,
+          "chunk_id": 775,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "session_id": 2323
+    },
+    {
+      "case_id": "n05",
+      "meeting_id": null,
+      "question": "智能客服灰度什么时候开始、放量比例多少？",
+      "answer": "**结论**\n智能客服灰度开始时间为 **11月1日**，初始放量比例为 **10%**[1][2][3]。**依据**\n- 在「客户支持知识库与智能客服灰度评审会」（meeting_id=3）中，陈雪明确说明：“智能客服灰度定在11月1日，先放量10%”[1][2]。- 该会议已确认纪要的议题条目也记录为：“11月1日灰度10%，回滚15分钟；依赖账单API，10月30日前验证；全量不早于11月15日”[3]。**补充说明**\n- 灰度存在前置条件：账单API稳定性验证需在10月30日前完成，否则灰度将顺延[1][2]。- 当前已确认决策状态中未检索到该事项的独立决策条目，上述信息来源于转写原话与已确认纪要议题[1][2][3]；若需核实是否已按前提条件如期启动或是否有调整，建议进一步核对10月30日后的验证结果或后续会议记录。",
+      "message_id": 10164,
+      "stop_reason": "finished",
+      "citations": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。\n[47s][张敏] 客户满意度CSAT目前4.3，目标提升到4.5；这个季度支持预算8万元。\n[56s][张敏] 主要风险是退款政策已过期，知识库如果继续引用旧政策会误导客户。\n[65s][李娜] 今天先确认知识库补齐和灰度前检查两项决策，具体行动项下午继续对齐。",
+          "speaker": "陈雪",
+          "chunk_id": 764,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 72,
+          "meeting_id": 3,
+          "start_second": 28,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 各位上午好，今天评审客户支持知识库和智能客服灰度的准备情况，先对齐目标和风险。\n[8s][王磊] 当前知识库覆盖率为82%，我们的目标是把覆盖率提升到90%，重点补齐两个未覆盖主题：账单纠纷和权限申请。\n[18s][王磊] 我计划新增120条FAQ，负责人是我，截止10月25日；每条FAQ都需要来源和审核人。\n[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。",
+          "speaker": "李娜",
+          "chunk_id": 763,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 47,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[topics] 智能客服灰度方案 11月1日灰度10%，回滚15分钟；依赖账单API，10月30日前验证；全量不早于11月15日。",
+          "speaker": null,
+          "chunk_id": 767,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "tools": [
+        {
+          "ok": true,
+          "name": "query_meeting_state",
+          "call_id": "call_209af9d5b6734bd9a5303da0",
+          "summary": "0 条状态",
+          "arguments": {
+            "kind": "decision",
+            "query": "智能客服灰度 放量比例"
+          }
+        },
+        {
+          "ok": true,
+          "name": "search_knowledge",
+          "call_id": "call_6d4aa36b43ff47d78347e6c7",
+          "summary": "3 条切片",
+          "arguments": {
+            "limit": 10,
+            "query": "智能客服灰度开始时间 放量比例"
+          }
+        }
+      ],
+      "allowed_meeting_ids": null,
+      "series_ids": null,
+      "used_refs": [
+        1,
+        2,
+        3
+      ],
+      "unknown_refs": [],
+      "retrieved": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。\n[47s][张敏] 客户满意度CSAT目前4.3，目标提升到4.5；这个季度支持预算8万元。\n[56s][张敏] 主要风险是退款政策已过期，知识库如果继续引用旧政策会误导客户。\n[65s][李娜] 今天先确认知识库补齐和灰度前检查两项决策，具体行动项下午继续对齐。",
+          "speaker": "陈雪",
+          "chunk_id": 764,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 72,
+          "meeting_id": 3,
+          "start_second": 28,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 各位上午好，今天评审客户支持知识库和智能客服灰度的准备情况，先对齐目标和风险。\n[8s][王磊] 当前知识库覆盖率为82%，我们的目标是把覆盖率提升到90%，重点补齐两个未覆盖主题：账单纠纷和权限申请。\n[18s][王磊] 我计划新增120条FAQ，负责人是我，截止10月25日；每条FAQ都需要来源和审核人。\n[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。",
+          "speaker": "李娜",
+          "chunk_id": 763,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 47,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[topics] 智能客服灰度方案 11月1日灰度10%，回滚15分钟；依赖账单API，10月30日前验证；全量不早于11月15日。",
+          "speaker": null,
+          "chunk_id": 767,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "session_id": 2325
+    },
+    {
+      "case_id": "n06",
+      "meeting_id": null,
+      "question": "灰度回滚要求多长时间内完成？",
+      "answer": "**结论：** 灰度回滚要求在 **15分钟** 内完成（切回旧版）。**依据：**\n在「客户支持知识库与智能客服灰度评审会」（meeting_id: 3）中，陈雪明确说明：“智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版”[1][2]。该要求也已记录在已确认纪要的观点条目中：“智能客服11月1日灰度10%，回滚15分钟”[3]。",
+      "message_id": 10166,
+      "stop_reason": "finished",
+      "citations": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。\n[47s][张敏] 客户满意度CSAT目前4.3，目标提升到4.5；这个季度支持预算8万元。\n[56s][张敏] 主要风险是退款政策已过期，知识库如果继续引用旧政策会误导客户。\n[65s][李娜] 今天先确认知识库补齐和灰度前检查两项决策，具体行动项下午继续对齐。",
+          "speaker": "陈雪",
+          "chunk_id": 764,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 72,
+          "meeting_id": 3,
+          "start_second": 28,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 各位上午好，今天评审客户支持知识库和智能客服灰度的准备情况，先对齐目标和风险。\n[8s][王磊] 当前知识库覆盖率为82%，我们的目标是把覆盖率提升到90%，重点补齐两个未覆盖主题：账单纠纷和权限申请。\n[18s][王磊] 我计划新增120条FAQ，负责人是我，截止10月25日；每条FAQ都需要来源和审核人。\n[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。",
+          "speaker": "李娜",
+          "chunk_id": 763,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 47,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[viewpoints] 陈雪 智能客服11月1日灰度10%，回滚15分钟；依赖账单API，10月30日前完成验证；全量上线不早于11月15日。",
+          "speaker": null,
+          "chunk_id": 770,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "tools": [
+        {
+          "ok": true,
+          "name": "search_knowledge",
+          "call_id": "call_d16b4e1514b244c192c03da3",
+          "summary": "3 条切片",
+          "arguments": {
+            "limit": 5,
+            "query": "灰度回滚要求多长时间内完成"
+          }
+        }
+      ],
+      "allowed_meeting_ids": null,
+      "series_ids": null,
+      "used_refs": [
+        1,
+        2,
+        3
+      ],
+      "unknown_refs": [],
+      "retrieved": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。\n[47s][张敏] 客户满意度CSAT目前4.3，目标提升到4.5；这个季度支持预算8万元。\n[56s][张敏] 主要风险是退款政策已过期，知识库如果继续引用旧政策会误导客户。\n[65s][李娜] 今天先确认知识库补齐和灰度前检查两项决策，具体行动项下午继续对齐。",
+          "speaker": "陈雪",
+          "chunk_id": 764,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 72,
+          "meeting_id": 3,
+          "start_second": 28,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 各位上午好，今天评审客户支持知识库和智能客服灰度的准备情况，先对齐目标和风险。\n[8s][王磊] 当前知识库覆盖率为82%，我们的目标是把覆盖率提升到90%，重点补齐两个未覆盖主题：账单纠纷和权限申请。\n[18s][王磊] 我计划新增120条FAQ，负责人是我，截止10月25日；每条FAQ都需要来源和审核人。\n[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。",
+          "speaker": "李娜",
+          "chunk_id": 763,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 47,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[viewpoints] 陈雪 智能客服11月1日灰度10%，回滚15分钟；依赖账单API，10月30日前完成验证；全量上线不早于11月15日。",
+          "speaker": null,
+          "chunk_id": 770,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "session_id": 2326
+    },
+    {
+      "case_id": "n07",
+      "meeting_id": null,
+      "question": "全量上线最早什么时候？",
+      "answer": "**结论：全量上线最早时间为 11 月 15 日（不早于该日期）。**\n**依据：**\n在“客户支持知识库与智能客服灰度评审会”（meeting_id=3）中，已确认的决策与纪要均明确记录：“全量上线不早于11月15日”[1][2][3]。该时间点由陈雪提出，作为智能客服灰度（11月1日灰度10%）及账单API稳定性验证（10月30日前完成）之后的最早全量节点 [1][2]。**资料说明：**\n当前检索到的已确认纪要仅给出“不早于11月15日”的下限，未返回更精确的具体上线时刻或后续是否调整过该时间的记录；如需确认最终实际全量上线日期，建议补充查询后续会议纪要或项目状态更新。",
+      "message_id": 10168,
+      "stop_reason": "finished",
+      "citations": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[viewpoints] 陈雪 智能客服11月1日灰度10%，回滚15分钟；依赖账单API，10月30日前完成验证；全量上线不早于11月15日。",
+          "speaker": null,
+          "chunk_id": 770,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "会议确认客户支持知识库当前覆盖率82%、目标90%，未覆盖主题为账单纠纷和权限申请；计划新增120条FAQ（王磊，10月25日）。智能客服灰度11月1日10%，回滚15分钟，依赖账单API，API稳定性验证10月30日前完成；全量上线不早于11月15日。CSAT目标4.5，季度预算8万元，退款政策10月28日前更新。",
+          "speaker": null,
+          "chunk_id": 765,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[decisions] 全量上线不早于11月15日 陈雪 2026-11-15T18:00:00（2026-11-15）",
+          "speaker": null,
+          "chunk_id": 774,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "tools": [
+        {
+          "ok": true,
+          "name": "search_knowledge",
+          "call_id": "call_514df60956b04536907a635d",
+          "summary": "3 条切片",
+          "arguments": {
+            "limit": 10,
+            "query": "全量上线最早时间"
+          }
+        }
+      ],
+      "allowed_meeting_ids": null,
+      "series_ids": null,
+      "used_refs": [
+        1,
+        2,
+        3
+      ],
+      "unknown_refs": [],
+      "retrieved": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[viewpoints] 陈雪 智能客服11月1日灰度10%，回滚15分钟；依赖账单API，10月30日前完成验证；全量上线不早于11月15日。",
+          "speaker": null,
+          "chunk_id": 770,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "会议确认客户支持知识库当前覆盖率82%、目标90%，未覆盖主题为账单纠纷和权限申请；计划新增120条FAQ（王磊，10月25日）。智能客服灰度11月1日10%，回滚15分钟，依赖账单API，API稳定性验证10月30日前完成；全量上线不早于11月15日。CSAT目标4.5，季度预算8万元，退款政策10月28日前更新。",
+          "speaker": null,
+          "chunk_id": 765,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[decisions] 全量上线不早于11月15日 陈雪 2026-11-15T18:00:00（2026-11-15）",
+          "speaker": null,
+          "chunk_id": 774,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "session_id": 2327
+    },
+    {
+      "case_id": "n08",
+      "meeting_id": null,
+      "question": "账单API稳定性验证的截止时间是什么？",
+      "answer": "账单API稳定性验证的截止时间是**10月30日前**。依据来自「客户支持知识库与智能客服灰度评审会」（meeting_id=3）的转写原话：\n- 陈雪在会上明确说明：“灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。”[1][3]\n- 同场会议下午段落中，陈雪再次确认：“如果账单API在10月30日前没有通过稳定性验证，就推迟灰度。”[2]\n补充说明：已确认待办状态查询未返回该事项的结构化条目（query_meeting_state(action_item) 为空），上述截止时间仅来自转写原文；资料中未给出具体年份，请勿自行补全年份。",
+      "message_id": 10170,
+      "stop_reason": "finished",
+      "citations": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。\n[47s][张敏] 客户满意度CSAT目前4.3，目标提升到4.5；这个季度支持预算8万元。\n[56s][张敏] 主要风险是退款政策已过期，知识库如果继续引用旧政策会误导客户。\n[65s][李娜] 今天先确认知识库补齐和灰度前检查两项决策，具体行动项下午继续对齐。",
+          "speaker": "陈雪",
+          "chunk_id": 764,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 72,
+          "meeting_id": 3,
+          "start_second": 28,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 各位上午好，今天评审客户支持知识库和智能客服灰度的准备情况，先对齐目标和风险。\n[8s][王磊] 当前知识库覆盖率为82%，我们的目标是把覆盖率提升到90%，重点补齐两个未覆盖主题：账单纠纷和权限申请。\n[18s][王磊] 我计划新增120条FAQ，负责人是我，截止10月25日；每条FAQ都需要来源和审核人。\n[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。",
+          "speaker": "李娜",
+          "chunk_id": 763,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 47,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 下午继续，先复盘上午确定的知识库和灰度目标。\n[8s][王磊] FAQ已经拆分到四个主题，账单纠纷和权限申请是优先级最高的两个；10月25日交付。\n[18s][陈雪] 11月1日灰度10%，如果账单API在10月30日前没有通过稳定性验证，就推迟灰度。\n[30s][陈雪] 全量上线暂定11月15日，前提是灰度期没有P1问题；回滚15分钟。\n[40s][张敏] 退款政策文档10月28日前由我更新，客服话术也同步调整。\n[48s][李娜] 确认行动项：王磊FAQ 10月25日、陈雪API检查10月28日、张敏退款政策10月28日；10月22日再开一次检查会。",
+          "speaker": "李娜",
+          "chunk_id": 761,
+          "authority": "RAW",
+          "source_id": 9,
+          "end_second": 58,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "tools": [
+        {
+          "ok": true,
+          "name": "query_meeting_state",
+          "call_id": "call_dbca6c23d1524986b26fa410",
+          "summary": "0 条状态",
+          "arguments": {
+            "kind": "action_item",
+            "query": "账单API稳定性验证"
+          }
+        },
+        {
+          "ok": true,
+          "name": "search_knowledge",
+          "call_id": "call_0ad179d0106644958c8060d0",
+          "summary": "3 条切片",
+          "arguments": {
+            "query": "账单API稳定性验证 截止时间"
+          }
+        }
+      ],
+      "allowed_meeting_ids": null,
+      "series_ids": null,
+      "used_refs": [
+        1,
+        2,
+        3
+      ],
+      "unknown_refs": [],
+      "retrieved": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。\n[47s][张敏] 客户满意度CSAT目前4.3，目标提升到4.5；这个季度支持预算8万元。\n[56s][张敏] 主要风险是退款政策已过期，知识库如果继续引用旧政策会误导客户。\n[65s][李娜] 今天先确认知识库补齐和灰度前检查两项决策，具体行动项下午继续对齐。",
+          "speaker": "陈雪",
+          "chunk_id": 764,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 72,
+          "meeting_id": 3,
+          "start_second": 28,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 下午继续，先复盘上午确定的知识库和灰度目标。\n[8s][王磊] FAQ已经拆分到四个主题，账单纠纷和权限申请是优先级最高的两个；10月25日交付。\n[18s][陈雪] 11月1日灰度10%，如果账单API在10月30日前没有通过稳定性验证，就推迟灰度。\n[30s][陈雪] 全量上线暂定11月15日，前提是灰度期没有P1问题；回滚15分钟。\n[40s][张敏] 退款政策文档10月28日前由我更新，客服话术也同步调整。\n[48s][李娜] 确认行动项：王磊FAQ 10月25日、陈雪API检查10月28日、张敏退款政策10月28日；10月22日再开一次检查会。",
+          "speaker": "李娜",
+          "chunk_id": 761,
+          "authority": "RAW",
+          "source_id": 9,
+          "end_second": 58,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 各位上午好，今天评审客户支持知识库和智能客服灰度的准备情况，先对齐目标和风险。\n[8s][王磊] 当前知识库覆盖率为82%，我们的目标是把覆盖率提升到90%，重点补齐两个未覆盖主题：账单纠纷和权限申请。\n[18s][王磊] 我计划新增120条FAQ，负责人是我，截止10月25日；每条FAQ都需要来源和审核人。\n[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。",
+          "speaker": "李娜",
+          "chunk_id": 763,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 47,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "session_id": 2328
+    },
+    {
+      "case_id": "n09",
+      "meeting_id": null,
+      "question": "客户满意度CSAT的目标是多少？",
+      "answer": "客户满意度CSAT的目标是 **4.5**。**依据：**\n- 在“客户支持知识库与智能客服灰度评审会”（meeting_id=3）中，张敏明确提到：“客户满意度CSAT目前4.3，目标提升到4.5”[1]。- 该会议已确认的纪要摘要与议题中也记录：“CSAT目标4.5，季度预算8万元”[2][3]。资料中未提及该目标的截止时间或考核周期细节；如需更具体的达成节点，可进一步检索相关待办或决策条目。",
+      "message_id": 10172,
+      "stop_reason": "finished",
+      "citations": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。\n[47s][张敏] 客户满意度CSAT目前4.3，目标提升到4.5；这个季度支持预算8万元。\n[56s][张敏] 主要风险是退款政策已过期，知识库如果继续引用旧政策会误导客户。\n[65s][李娜] 今天先确认知识库补齐和灰度前检查两项决策，具体行动项下午继续对齐。",
+          "speaker": "陈雪",
+          "chunk_id": 764,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 72,
+          "meeting_id": 3,
+          "start_second": 28,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "会议确认客户支持知识库当前覆盖率82%、目标90%，未覆盖主题为账单纠纷和权限申请；计划新增120条FAQ（王磊，10月25日）。智能客服灰度11月1日10%，回滚15分钟，依赖账单API，API稳定性验证10月30日前完成；全量上线不早于11月15日。CSAT目标4.5，季度预算8万元，退款政策10月28日前更新。",
+          "speaker": null,
+          "chunk_id": 765,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[topics] 客户满意度和风险 CSAT目标4.5，预算8万；退款政策过期是主要风险，10月28日前更新。",
+          "speaker": null,
+          "chunk_id": 768,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "tools": [
+        {
+          "ok": true,
+          "name": "search_knowledge",
+          "call_id": "call_7cdffca8418e404bbcd6b060",
+          "summary": "3 条切片",
+          "arguments": {
+            "limit": 5,
+            "query": "客户满意度CSAT目标"
+          }
+        }
+      ],
+      "allowed_meeting_ids": null,
+      "series_ids": null,
+      "used_refs": [
+        1,
+        2,
+        3
+      ],
+      "unknown_refs": [],
+      "retrieved": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。\n[47s][张敏] 客户满意度CSAT目前4.3，目标提升到4.5；这个季度支持预算8万元。\n[56s][张敏] 主要风险是退款政策已过期，知识库如果继续引用旧政策会误导客户。\n[65s][李娜] 今天先确认知识库补齐和灰度前检查两项决策，具体行动项下午继续对齐。",
+          "speaker": "陈雪",
+          "chunk_id": 764,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 72,
+          "meeting_id": 3,
+          "start_second": 28,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "会议确认客户支持知识库当前覆盖率82%、目标90%，未覆盖主题为账单纠纷和权限申请；计划新增120条FAQ（王磊，10月25日）。智能客服灰度11月1日10%，回滚15分钟，依赖账单API，API稳定性验证10月30日前完成；全量上线不早于11月15日。CSAT目标4.5，季度预算8万元，退款政策10月28日前更新。",
+          "speaker": null,
+          "chunk_id": 765,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[topics] 客户满意度和风险 CSAT目标4.5，预算8万；退款政策过期是主要风险，10月28日前更新。",
+          "speaker": null,
+          "chunk_id": 768,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "session_id": 2329
+    },
+    {
+      "case_id": "n10",
+      "meeting_id": null,
+      "question": "这个季度的客户支持预算是多少？",
+      "answer": "本季度客户支持预算为 **8万元**。**依据：**\n- 在「客户支持知识库与智能客服灰度评审会」（meeting_id=3）中，张敏明确提到：“这个季度支持预算8万元”[1]。- 该信息已写入人工确认的纪要摘要与议题条目，均记录“CSAT目标4.5，季度预算8万元”[2][3]。资料中未说明该预算对应的具体季度起止时间或币种；如需精确到某一年/季度区间，当前会议资料不足，需补充财务或预算专项会议记录。",
+      "message_id": 10174,
+      "stop_reason": "finished",
+      "citations": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。\n[47s][张敏] 客户满意度CSAT目前4.3，目标提升到4.5；这个季度支持预算8万元。\n[56s][张敏] 主要风险是退款政策已过期，知识库如果继续引用旧政策会误导客户。\n[65s][李娜] 今天先确认知识库补齐和灰度前检查两项决策，具体行动项下午继续对齐。",
+          "speaker": "陈雪",
+          "chunk_id": 764,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 72,
+          "meeting_id": 3,
+          "start_second": 28,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "会议确认客户支持知识库当前覆盖率82%、目标90%，未覆盖主题为账单纠纷和权限申请；计划新增120条FAQ（王磊，10月25日）。智能客服灰度11月1日10%，回滚15分钟，依赖账单API，API稳定性验证10月30日前完成；全量上线不早于11月15日。CSAT目标4.5，季度预算8万元，退款政策10月28日前更新。",
+          "speaker": null,
+          "chunk_id": 765,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[topics] 客户满意度和风险 CSAT目标4.5，预算8万；退款政策过期是主要风险，10月28日前更新。",
+          "speaker": null,
+          "chunk_id": 768,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "tools": [
+        {
+          "ok": true,
+          "name": "search_knowledge",
+          "call_id": "call_fe2ad80b09ae44b1b95d0559",
+          "summary": "3 条切片",
+          "arguments": {
+            "limit": 5,
+            "query": "本季度客户支持预算"
+          }
+        }
+      ],
+      "allowed_meeting_ids": null,
+      "series_ids": null,
+      "used_refs": [
+        1,
+        2,
+        3
+      ],
+      "unknown_refs": [],
+      "retrieved": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。\n[47s][张敏] 客户满意度CSAT目前4.3，目标提升到4.5；这个季度支持预算8万元。\n[56s][张敏] 主要风险是退款政策已过期，知识库如果继续引用旧政策会误导客户。\n[65s][李娜] 今天先确认知识库补齐和灰度前检查两项决策，具体行动项下午继续对齐。",
+          "speaker": "陈雪",
+          "chunk_id": 764,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 72,
+          "meeting_id": 3,
+          "start_second": 28,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "会议确认客户支持知识库当前覆盖率82%、目标90%，未覆盖主题为账单纠纷和权限申请；计划新增120条FAQ（王磊，10月25日）。智能客服灰度11月1日10%，回滚15分钟，依赖账单API，API稳定性验证10月30日前完成；全量上线不早于11月15日。CSAT目标4.5，季度预算8万元，退款政策10月28日前更新。",
+          "speaker": null,
+          "chunk_id": 765,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[topics] 客户满意度和风险 CSAT目标4.5，预算8万；退款政策过期是主要风险，10月28日前更新。",
+          "speaker": null,
+          "chunk_id": 768,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "session_id": 2330
+    },
+    {
+      "case_id": "n11",
+      "meeting_id": null,
+      "question": "知识库补齐和智能客服灰度之间是什么决策关系？",
+      "answer": "**结论**\n知识库补齐是智能客服灰度的前置决策条件：会议明确决定“知识库补齐后再评估灰度”，即知识库补齐完成是启动灰度评估与放量的必要前提；同时灰度还独立依赖账单API稳定性验证，任一不满足则灰度顺延。**依据**\n- 在「客户支持知识库与智能客服灰度评审会」（meeting_id=3）中，主持人李娜当场宣布：“今天的决定是：知识库补齐后再评估灰度；灰度前必须完成API验证；全量上线不早于11月15日。”[4]（66s）这直接确立了“先补齐、后评估灰度”的决策关系。- 同一场会的转写也给出了两项工作的时序安排：王磊负责新增120条FAQ、截止10月25日完成知识库补齐[1]（18s）；陈雪说明智能客服灰度定在11月1日、且“灰度依赖账单API……否则灰度顺延”[1][2]（28s–38s）。这与上述决策一致：补齐在前、灰度在后，并且灰度还有独立的API验证门槛。- 已确认纪要摘要同样记载了这两项安排及依赖关系：“计划新增120条FAQ（王磊，10月25日）。智能客服灰度11月1日10%……依赖账单API，API稳定性验证10月30日前完成；全量上线不早于11月15日。”[3]\n**资料不足说明**\n当前未查到将“知识库补齐”作为灰度硬性阻断条件的书面验收标准（例如覆盖率达标的具体阈值或验收签字流程），仅能依据会议口头决策与纪要摘要确认其为前置评估条件；如需更细的阻断规则或验收口径，需补充相关评审文档或后续检查会记录。",
+      "message_id": 10176,
+      "stop_reason": "finished",
+      "citations": [
+        {
+          "ref": 4,
+          "kind": "chunk",
+          "quote": "[40s][张敏] 退款政策文档10月28日前由我更新，客服话术也同步调整。\n[48s][李娜] 确认行动项：王磊FAQ 10月25日、陈雪API检查10月28日、张敏退款政策10月28日；10月22日再开一次检查会。\n[58s][王磊] 知识库每条FAQ要标来源和审核人，避免旧政策再次进入检索。\n[66s][李娜] 今天的决定是：知识库补齐后再评估灰度；灰度前必须完成API验证；全量上线不早于11月15日。",
+          "speaker": "张敏",
+          "chunk_id": 762,
+          "authority": "RAW",
+          "source_id": 9,
+          "end_second": 74,
+          "meeting_id": 3,
+          "start_second": 40,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 各位上午好，今天评审客户支持知识库和智能客服灰度的准备情况，先对齐目标和风险。\n[8s][王磊] 当前知识库覆盖率为82%，我们的目标是把覆盖率提升到90%，重点补齐两个未覆盖主题：账单纠纷和权限申请。\n[18s][王磊] 我计划新增120条FAQ，负责人是我，截止10月25日；每条FAQ都需要来源和审核人。\n[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。",
+          "speaker": "李娜",
+          "chunk_id": 763,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 47,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。\n[47s][张敏] 客户满意度CSAT目前4.3，目标提升到4.5；这个季度支持预算8万元。\n[56s][张敏] 主要风险是退款政策已过期，知识库如果继续引用旧政策会误导客户。\n[65s][李娜] 今天先确认知识库补齐和灰度前检查两项决策，具体行动项下午继续对齐。",
+          "speaker": "陈雪",
+          "chunk_id": 764,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 72,
+          "meeting_id": 3,
+          "start_second": 28,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "会议确认客户支持知识库当前覆盖率82%、目标90%，未覆盖主题为账单纠纷和权限申请；计划新增120条FAQ（王磊，10月25日）。智能客服灰度11月1日10%，回滚15分钟，依赖账单API，API稳定性验证10月30日前完成；全量上线不早于11月15日。CSAT目标4.5，季度预算8万元，退款政策10月28日前更新。",
+          "speaker": null,
+          "chunk_id": 765,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "tools": [
+        {
+          "ok": true,
+          "name": "query_meeting_state",
+          "call_id": "call_d46c8276ba8e4199a33c9c3e",
+          "summary": "0 条状态",
+          "arguments": {
+            "kind": "decision",
+            "query": "知识库补齐 智能客服灰度"
+          }
+        },
+        {
+          "ok": true,
+          "name": "search_knowledge",
+          "call_id": "call_5c8b3eeb1d0a4442a1d82eec",
+          "summary": "3 条切片",
+          "arguments": {
+            "limit": 10,
+            "query": "知识库补齐 智能客服灰度 决策关系"
+          }
+        },
+        {
+          "ok": true,
+          "name": "search_knowledge",
+          "call_id": "call_ab66b9cf5070437796f13f08",
+          "summary": "3 条切片",
+          "arguments": {
+            "limit": 8,
+            "query": "知识库补齐完成 才能 灰度 前置条件 依赖"
+          }
+        }
+      ],
+      "allowed_meeting_ids": null,
+      "series_ids": null,
+      "used_refs": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "unknown_refs": [],
+      "retrieved": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 各位上午好，今天评审客户支持知识库和智能客服灰度的准备情况，先对齐目标和风险。\n[8s][王磊] 当前知识库覆盖率为82%，我们的目标是把覆盖率提升到90%，重点补齐两个未覆盖主题：账单纠纷和权限申请。\n[18s][王磊] 我计划新增120条FAQ，负责人是我，截止10月25日；每条FAQ都需要来源和审核人。\n[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。",
+          "speaker": "李娜",
+          "chunk_id": 763,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 47,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "[28s][陈雪] 智能客服灰度定在11月1日，先放量10%，回滚预案要求15分钟内切回旧版。\n[38s][陈雪] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延。\n[47s][张敏] 客户满意度CSAT目前4.3，目标提升到4.5；这个季度支持预算8万元。\n[56s][张敏] 主要风险是退款政策已过期，知识库如果继续引用旧政策会误导客户。\n[65s][李娜] 今天先确认知识库补齐和灰度前检查两项决策，具体行动项下午继续对齐。",
+          "speaker": "陈雪",
+          "chunk_id": 764,
+          "authority": "RAW",
+          "source_id": 8,
+          "end_second": 72,
+          "meeting_id": 3,
+          "start_second": 28,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "会议确认客户支持知识库当前覆盖率82%、目标90%，未覆盖主题为账单纠纷和权限申请；计划新增120条FAQ（王磊，10月25日）。智能客服灰度11月1日10%，回滚15分钟，依赖账单API，API稳定性验证10月30日前完成；全量上线不早于11月15日。CSAT目标4.5，季度预算8万元，退款政策10月28日前更新。",
+          "speaker": null,
+          "chunk_id": 765,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 4,
+          "kind": "chunk",
+          "quote": "[40s][张敏] 退款政策文档10月28日前由我更新，客服话术也同步调整。\n[48s][李娜] 确认行动项：王磊FAQ 10月25日、陈雪API检查10月28日、张敏退款政策10月28日；10月22日再开一次检查会。\n[58s][王磊] 知识库每条FAQ要标来源和审核人，避免旧政策再次进入检索。\n[66s][李娜] 今天的决定是：知识库补齐后再评估灰度；灰度前必须完成API验证；全量上线不早于11月15日。",
+          "speaker": "张敏",
+          "chunk_id": 762,
+          "authority": "RAW",
+          "source_id": 9,
+          "end_second": 74,
+          "meeting_id": 3,
+          "start_second": 40,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "session_id": 2331
+    },
+    {
+      "case_id": "n12",
+      "meeting_id": null,
+      "question": "退款政策文档由谁更新、什么时候完成？",
+      "answer": "**结论**：退款政策文档由张敏负责更新，截止时间为2026年10月28日。**依据**：\n- 在“客户支持知识库与智能客服灰度评审会”（meeting_id=3）的人工确认纪要待办事项中明确记录：“更新退款政策文档和客服话术 张敏 2026-10-28T18:00:00（2026-10-28）”[3]。- 同场会议转写原话中，张敏本人表示：“退款政策文档10月28日前由我更新，客服话术也同步调整”[1][2]；主持人李娜复述确认行动项时也提到“张敏退款政策10月28日”[1][2]。注：当前已确认状态查询未返回该待办的完成状态条目，上述截止时间与负责人以已确认纪要及转写原文为准；如需核实是否已完成，建议进一步核对最新会议纪要或任务系统。",
+      "message_id": 10178,
+      "stop_reason": "finished",
+      "citations": [
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[pending_items] 更新退款政策文档和客服话术 张敏 2026-10-28T18:00:00（2026-10-28）",
+          "speaker": null,
+          "chunk_id": 777,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[40s][张敏] 退款政策文档10月28日前由我更新，客服话术也同步调整。\n[48s][李娜] 确认行动项：王磊FAQ 10月25日、陈雪API检查10月28日、张敏退款政策10月28日；10月22日再开一次检查会。\n[58s][王磊] 知识库每条FAQ要标来源和审核人，避免旧政策再次进入检索。\n[66s][李娜] 今天的决定是：知识库补齐后再评估灰度；灰度前必须完成API验证；全量上线不早于11月15日。",
+          "speaker": "张敏",
+          "chunk_id": 762,
+          "authority": "RAW",
+          "source_id": 9,
+          "end_second": 74,
+          "meeting_id": 3,
+          "start_second": 40,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 下午继续，先复盘上午确定的知识库和灰度目标。\n[8s][王磊] FAQ已经拆分到四个主题，账单纠纷和权限申请是优先级最高的两个；10月25日交付。\n[18s][陈雪] 11月1日灰度10%，如果账单API在10月30日前没有通过稳定性验证，就推迟灰度。\n[30s][陈雪] 全量上线暂定11月15日，前提是灰度期没有P1问题；回滚15分钟。\n[40s][张敏] 退款政策文档10月28日前由我更新，客服话术也同步调整。\n[48s][李娜] 确认行动项：王磊FAQ 10月25日、陈雪API检查10月28日、张敏退款政策10月28日；10月22日再开一次检查会。",
+          "speaker": "李娜",
+          "chunk_id": 761,
+          "authority": "RAW",
+          "source_id": 9,
+          "end_second": 58,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "tools": [
+        {
+          "ok": true,
+          "name": "query_meeting_state",
+          "call_id": "call_fbad645ec09540318cfa66f2",
+          "summary": "0 条状态",
+          "arguments": {
+            "kind": "action_item",
+            "query": "退款政策文档"
+          }
+        },
+        {
+          "ok": true,
+          "name": "search_knowledge",
+          "call_id": "call_af2984d504094fe29964f05d",
+          "summary": "3 条切片",
+          "arguments": {
+            "query": "退款政策文档 更新 负责人 完成时间"
+          }
+        }
+      ],
+      "allowed_meeting_ids": null,
+      "series_ids": null,
+      "used_refs": [
+        1,
+        2,
+        3
+      ],
+      "unknown_refs": [],
+      "retrieved": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[40s][张敏] 退款政策文档10月28日前由我更新，客服话术也同步调整。\n[48s][李娜] 确认行动项：王磊FAQ 10月25日、陈雪API检查10月28日、张敏退款政策10月28日；10月22日再开一次检查会。\n[58s][王磊] 知识库每条FAQ要标来源和审核人，避免旧政策再次进入检索。\n[66s][李娜] 今天的决定是：知识库补齐后再评估灰度；灰度前必须完成API验证；全量上线不早于11月15日。",
+          "speaker": "张敏",
+          "chunk_id": 762,
+          "authority": "RAW",
+          "source_id": 9,
+          "end_second": 74,
+          "meeting_id": 3,
+          "start_second": 40,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 下午继续，先复盘上午确定的知识库和灰度目标。\n[8s][王磊] FAQ已经拆分到四个主题，账单纠纷和权限申请是优先级最高的两个；10月25日交付。\n[18s][陈雪] 11月1日灰度10%，如果账单API在10月30日前没有通过稳定性验证，就推迟灰度。\n[30s][陈雪] 全量上线暂定11月15日，前提是灰度期没有P1问题；回滚15分钟。\n[40s][张敏] 退款政策文档10月28日前由我更新，客服话术也同步调整。\n[48s][李娜] 确认行动项：王磊FAQ 10月25日、陈雪API检查10月28日、张敏退款政策10月28日；10月22日再开一次检查会。",
+          "speaker": "李娜",
+          "chunk_id": 761,
+          "authority": "RAW",
+          "source_id": 9,
+          "end_second": 58,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[pending_items] 更新退款政策文档和客服话术 张敏 2026-10-28T18:00:00（2026-10-28）",
+          "speaker": null,
+          "chunk_id": 777,
+          "authority": "CONFIRMED",
+          "source_id": 5,
+          "end_second": null,
+          "meeting_id": 3,
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "session_id": 2332
+    },
+    {
+      "case_id": "n13",
+      "meeting_id": null,
+      "question": "会议识别出的主要风险是什么？",
+      "answer": "会议识别出的主要风险共7项，按会议分组如下：\n### 一、客户支持知识库与智能客服灰度评审会（会议3）\n1.  **高风险**：退款政策已过期，知识库继续引用旧政策会误导客户；建议10月28日前更新退款政策并标注审核人 [1]。2.  **中风险**：账单API未在10月30日前通过稳定性验证会导致灰度顺延；建议每日检查API稳定性，未通过则推迟灰度 [2]。### 二、产品发布评审会议（会议2）\n3.  **高风险**：模型服务延迟波动导致纪要生成与Agent运行等待时间延长，影响用户体验；建议发布首周每日查看运行观测中心的调用量、失败率、平均耗时和token使用量 [3]。4.  **中风险**：会议资料频繁更新导致知识索引长期处于“需要重建”状态，影响检索时效性与一致性；建议资料整理完成后统一发起知识索引构建 [4]。5.  **高风险**：任务负责人分配不合理风险，Agent仅提供建议、最终由用户确认，存在人为误配可能且无技术强制校验机制；建议前端在任务创建页增加“负责人负载提示”，展示建议人选当前待办任务数及平均处理时长以辅助决策 [5]。6.  **高风险**：删除用户时若关联历史业务记录（会议、任务、转写、纪要、问答、Agent运行、质量评价），系统将阻止删除操作，影响账号生命周期管理；建议管理员须先调整相关业务记录中的负责人、创建人或协作人关系，确保人员信息可追溯 [6]。7.  **高风险**：阻断任务未按时完成将触发发布时间调整风险；建议按pending_items约定，由张晨与王工于8月31日17:00召开专项评审 [7]。**依据说明**：以上7条风险均来自已确认纪要（authority=CONFIRMED），分别出自“客户支持知识库与智能客服灰度评审会”[1][2] 和“产品发布评审会议”[3][4][5][6][7]。**资料覆盖提示**：当前仅检索到2份已确认纪要中的风险条目，另有2份未确认纪要和12段转写录音尚未纳入结构化事实。如需了解未确认纪要或转写中提及的其他风险，可进一步检索原文补充。",
+      "message_id": 10180,
+      "stop_reason": "finished",
+      "citations": [
+        {
+          "ref": 1,
+          "kind": "fact",
+          "field": "risks",
+          "quote": "退款政策已过期，知识库继续引用旧政策会误导客户",
+          "speaker": null,
+          "authority": "CONFIRMED",
+          "end_second": null,
+          "item_index": 0,
+          "meeting_id": 3,
+          "minutes_id": 5,
+          "source_text": "退款政策已过期，知识库继续引用旧政策会误导客户；等级：HIGH",
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "fact",
+          "field": "risks",
+          "quote": "账单API未在10月30日前通过稳定性验证会导致灰度顺延",
+          "speaker": null,
+          "authority": "CONFIRMED",
+          "end_second": null,
+          "item_index": 1,
+          "meeting_id": 3,
+          "minutes_id": 5,
+          "source_text": "账单API未在10月30日前通过稳定性验证会导致灰度顺延；等级：MEDIUM",
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "fact",
+          "field": "risks",
+          "quote": "模型服务延迟波动导致纪要生成与Agent运行等待时间延长，影响用户体验。",
+          "speaker": null,
+          "authority": "CONFIRMED",
+          "end_second": null,
+          "item_index": 0,
+          "meeting_id": 2,
+          "minutes_id": 3,
+          "source_text": "模型服务延迟波动导致纪要生成与Agent运行等待时间延长，影响用户体验。；等级：HIGH",
+          "start_second": null,
+          "meeting_title": "产品发布评审会议"
+        },
+        {
+          "ref": 4,
+          "kind": "fact",
+          "field": "risks",
+          "quote": "会议资料频繁更新导致知识索引长期处于‘需要重建’状态，影响检索时效性与一致性。",
+          "speaker": null,
+          "authority": "CONFIRMED",
+          "end_second": null,
+          "item_index": 1,
+          "meeting_id": 2,
+          "minutes_id": 3,
+          "source_text": "会议资料频繁更新导致知识索引长期处于‘需要重建’状态，影响检索时效性与一致性。；等级：MEDIUM",
+          "start_second": null,
+          "meeting_title": "产品发布评审会议"
+        },
+        {
+          "ref": 5,
+          "kind": "fact",
+          "field": "risks",
+          "quote": "任务负责人分配不合理风险：Agent仅提供建议，最终由用户确认，存在人为误配可能；无技术强制校验机制。",
+          "speaker": null,
+          "authority": "CONFIRMED",
+          "end_second": null,
+          "item_index": 2,
+          "meeting_id": 2,
+          "minutes_id": 3,
+          "source_text": "任务负责人分配不合理风险：Agent仅提供建议，最终由用户确认，存在人为误配可能；无技术强制校验机制。；等级：HIGH",
+          "start_second": null,
+          "meeting_title": "产品发布评审会议"
+        },
+        {
+          "ref": 6,
+          "kind": "fact",
+          "field": "risks",
+          "quote": "删除用户时若关联历史业务记录（会议、任务、转写、纪要、问答、Agent运行、质量评价），系统将阻止删除操作，影响账号生命周期管理。",
+          "speaker": null,
+          "authority": "CONFIRMED",
+          "end_second": null,
+          "item_index": 3,
+          "meeting_id": 2,
+          "minutes_id": 3,
+          "source_text": "删除用户时若关联历史业务记录（会议、任务、转写、纪要、问答、Agent运行、质量评价），系统将阻止删除操作，影响账号生命周期管理。；等级：HIGH",
+          "start_second": null,
+          "meeting_title": "产品发布评审会议"
+        },
+        {
+          "ref": 7,
+          "kind": "fact",
+          "field": "risks",
+          "quote": "阻断任务未按时完成将触发发布时间调整风险",
+          "speaker": null,
+          "authority": "CONFIRMED",
+          "end_second": null,
+          "item_index": 4,
+          "meeting_id": 2,
+          "minutes_id": 3,
+          "source_text": "阻断任务未按时完成将触发发布时间调整风险；等级：HIGH",
+          "start_second": null,
+          "meeting_title": "产品发布评审会议"
+        }
+      ],
+      "tools": [
+        {
+          "ok": true,
+          "name": "list_facts",
+          "call_id": "call_5bf10b00c8994ff6ac9656fe",
+          "summary": "7 条事实",
+          "arguments": {
+            "kind": "risk",
+            "limit": 50
+          }
+        }
+      ],
+      "allowed_meeting_ids": null,
+      "series_ids": null,
+      "used_refs": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "unknown_refs": [],
+      "retrieved": [
+        {
+          "ref": 1,
+          "kind": "fact",
+          "field": "risks",
+          "quote": "退款政策已过期，知识库继续引用旧政策会误导客户",
+          "speaker": null,
+          "authority": "CONFIRMED",
+          "end_second": null,
+          "item_index": 0,
+          "meeting_id": 3,
+          "minutes_id": 5,
+          "source_text": "退款政策已过期，知识库继续引用旧政策会误导客户；等级：HIGH",
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "fact",
+          "field": "risks",
+          "quote": "账单API未在10月30日前通过稳定性验证会导致灰度顺延",
+          "speaker": null,
+          "authority": "CONFIRMED",
+          "end_second": null,
+          "item_index": 1,
+          "meeting_id": 3,
+          "minutes_id": 5,
+          "source_text": "账单API未在10月30日前通过稳定性验证会导致灰度顺延；等级：MEDIUM",
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "fact",
+          "field": "risks",
+          "quote": "模型服务延迟波动导致纪要生成与Agent运行等待时间延长，影响用户体验。",
+          "speaker": null,
+          "authority": "CONFIRMED",
+          "end_second": null,
+          "item_index": 0,
+          "meeting_id": 2,
+          "minutes_id": 3,
+          "source_text": "模型服务延迟波动导致纪要生成与Agent运行等待时间延长，影响用户体验。；等级：HIGH",
+          "start_second": null,
+          "meeting_title": "产品发布评审会议"
+        },
+        {
+          "ref": 4,
+          "kind": "fact",
+          "field": "risks",
+          "quote": "会议资料频繁更新导致知识索引长期处于‘需要重建’状态，影响检索时效性与一致性。",
+          "speaker": null,
+          "authority": "CONFIRMED",
+          "end_second": null,
+          "item_index": 1,
+          "meeting_id": 2,
+          "minutes_id": 3,
+          "source_text": "会议资料频繁更新导致知识索引长期处于‘需要重建’状态，影响检索时效性与一致性。；等级：MEDIUM",
+          "start_second": null,
+          "meeting_title": "产品发布评审会议"
+        },
+        {
+          "ref": 5,
+          "kind": "fact",
+          "field": "risks",
+          "quote": "任务负责人分配不合理风险：Agent仅提供建议，最终由用户确认，存在人为误配可能；无技术强制校验机制。",
+          "speaker": null,
+          "authority": "CONFIRMED",
+          "end_second": null,
+          "item_index": 2,
+          "meeting_id": 2,
+          "minutes_id": 3,
+          "source_text": "任务负责人分配不合理风险：Agent仅提供建议，最终由用户确认，存在人为误配可能；无技术强制校验机制。；等级：HIGH",
+          "start_second": null,
+          "meeting_title": "产品发布评审会议"
+        },
+        {
+          "ref": 6,
+          "kind": "fact",
+          "field": "risks",
+          "quote": "删除用户时若关联历史业务记录（会议、任务、转写、纪要、问答、Agent运行、质量评价），系统将阻止删除操作，影响账号生命周期管理。",
+          "speaker": null,
+          "authority": "CONFIRMED",
+          "end_second": null,
+          "item_index": 3,
+          "meeting_id": 2,
+          "minutes_id": 3,
+          "source_text": "删除用户时若关联历史业务记录（会议、任务、转写、纪要、问答、Agent运行、质量评价），系统将阻止删除操作，影响账号生命周期管理。；等级：HIGH",
+          "start_second": null,
+          "meeting_title": "产品发布评审会议"
+        },
+        {
+          "ref": 7,
+          "kind": "fact",
+          "field": "risks",
+          "quote": "阻断任务未按时完成将触发发布时间调整风险",
+          "speaker": null,
+          "authority": "CONFIRMED",
+          "end_second": null,
+          "item_index": 4,
+          "meeting_id": 2,
+          "minutes_id": 3,
+          "source_text": "阻断任务未按时完成将触发发布时间调整风险；等级：HIGH",
+          "start_second": null,
+          "meeting_title": "产品发布评审会议"
+        }
+      ],
+      "session_id": 2333
+    },
+    {
+      "case_id": "n14",
+      "meeting_id": null,
+      "question": "下一次检查会定在什么时候？",
+      "answer": "下一次检查会定在 **10月22日**。**依据：**\n在“客户支持知识库与智能客服灰度评审会”（meeting_id: 3）的转写中，李娜明确确认：“10月22日再开一次检查会”[1][2]。**说明：**\n- 该信息来自会议转写原话（RAW），尚未见人工确认的决策条目；如需正式纪要版本，可进一步核对确认版纪要。- 资料未给出具体时间点（如几点开始）和会议形式，若需这些细节需另行检索或向组织者确认。",
+      "message_id": 10182,
+      "stop_reason": "finished",
+      "citations": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[40s][张敏] 退款政策文档10月28日前由我更新，客服话术也同步调整。\n[48s][李娜] 确认行动项：王磊FAQ 10月25日、陈雪API检查10月28日、张敏退款政策10月28日；10月22日再开一次检查会。\n[58s][王磊] 知识库每条FAQ要标来源和审核人，避免旧政策再次进入检索。\n[66s][李娜] 今天的决定是：知识库补齐后再评估灰度；灰度前必须完成API验证；全量上线不早于11月15日。",
+          "speaker": "张敏",
+          "chunk_id": 762,
+          "authority": "RAW",
+          "source_id": 9,
+          "end_second": 74,
+          "meeting_id": 3,
+          "start_second": 40,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 下午继续，先复盘上午确定的知识库和灰度目标。\n[8s][王磊] FAQ已经拆分到四个主题，账单纠纷和权限申请是优先级最高的两个；10月25日交付。\n[18s][陈雪] 11月1日灰度10%，如果账单API在10月30日前没有通过稳定性验证，就推迟灰度。\n[30s][陈雪] 全量上线暂定11月15日，前提是灰度期没有P1问题；回滚15分钟。\n[40s][张敏] 退款政策文档10月28日前由我更新，客服话术也同步调整。\n[48s][李娜] 确认行动项：王磊FAQ 10月25日、陈雪API检查10月28日、张敏退款政策10月28日；10月22日再开一次检查会。",
+          "speaker": "李娜",
+          "chunk_id": 761,
+          "authority": "RAW",
+          "source_id": 9,
+          "end_second": 58,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        }
+      ],
+      "tools": [
+        {
+          "ok": true,
+          "name": "query_meeting_state",
+          "call_id": "call_644f70c0d26a429fb2a528f0",
+          "summary": "0 条状态",
+          "arguments": {
+            "kind": "decision",
+            "query": "下一次检查会时间"
+          }
+        },
+        {
+          "ok": true,
+          "name": "search_knowledge",
+          "call_id": "call_0d97da09eea648259ebb7f0f",
+          "summary": "3 条切片",
+          "arguments": {
+            "limit": 5,
+            "query": "下一次检查会时间 安排"
+          }
+        }
+      ],
+      "allowed_meeting_ids": null,
+      "series_ids": null,
+      "used_refs": [
+        1,
+        2
+      ],
+      "unknown_refs": [],
+      "retrieved": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[40s][张敏] 退款政策文档10月28日前由我更新，客服话术也同步调整。\n[48s][李娜] 确认行动项：王磊FAQ 10月25日、陈雪API检查10月28日、张敏退款政策10月28日；10月22日再开一次检查会。\n[58s][王磊] 知识库每条FAQ要标来源和审核人，避免旧政策再次进入检索。\n[66s][李娜] 今天的决定是：知识库补齐后再评估灰度；灰度前必须完成API验证；全量上线不早于11月15日。",
+          "speaker": "张敏",
+          "chunk_id": 762,
+          "authority": "RAW",
+          "source_id": 9,
+          "end_second": 74,
+          "meeting_id": 3,
+          "start_second": 40,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "[0s][李娜] 下午继续，先复盘上午确定的知识库和灰度目标。\n[8s][王磊] FAQ已经拆分到四个主题，账单纠纷和权限申请是优先级最高的两个；10月25日交付。\n[18s][陈雪] 11月1日灰度10%，如果账单API在10月30日前没有通过稳定性验证，就推迟灰度。\n[30s][陈雪] 全量上线暂定11月15日，前提是灰度期没有P1问题；回滚15分钟。\n[40s][张敏] 退款政策文档10月28日前由我更新，客服话术也同步调整。\n[48s][李娜] 确认行动项：王磊FAQ 10月25日、陈雪API检查10月28日、张敏退款政策10月28日；10月22日再开一次检查会。",
+          "speaker": "李娜",
+          "chunk_id": 761,
+          "authority": "RAW",
+          "source_id": 9,
+          "end_second": 58,
+          "meeting_id": 3,
+          "start_second": 0,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[642s][张晨] 陈琳，我确认测试安排，测试团队将在8月31日中午12点前完成回归。\n[653s][张晨] 覆盖管理员和员工两种角色，重点检查登录注册部门员工权限、会议资料上传下载、长音频转写、纪要导出、任务确认、逾期提醒、知识索引重建、跨会议问答和agent人工确认完成后，会在发布群提交测试结论和任务完成凭证。\n[681s][张晨] 赵敏运营团队在9月1日九点前完成发布公告使用指引和部门通知负责人赵敏，协作人周宁，截止时间为9月1日九点，公告中需要包含会议创建入口、录音上传入口，纪要确认入口、任务跟踪入口和知识库问答入口。",
+          "speaker": "张晨",
+          "chunk_id": 721,
+          "authority": "RAW",
+          "source_id": 6,
+          "end_second": 709,
+          "meeting_id": 2,
+          "start_second": 642,
+          "meeting_title": "产品发布评审会议"
+        }
+      ],
+      "session_id": 2334
+    },
+    {
+      "case_id": "n15",
+      "meeting_id": null,
+      "question": "两段录音分别主要讨论什么？",
+      "answer": "资料不足，无法回答“两段录音分别主要讨论什么”。**缺什么：**\n- 当前知识库共返回 12 段录音（task_id 8–17），但问题未指明是哪两段；其中只有 task_id 8、9 有明确 recorded_at/period（同属会议 3「客户支持知识库与智能客服灰度评审会」的上午/下午场）[6][7]，其余录音 period 未标注、recorded_at 为空，无法按“上午/下午”或时间顺序推断用户所指的两段 [1][2][3][4][5][8][9][10]。- 即便假设是 task_id 8 与 9，目前也未检索过这两段录音的转写内容或纪要主题，缺少“主要讨论什么”的实质依据。**需要您补充：**\n请明确指定两段录音（例如给出 task_id、meeting_id、会议标题或具体时间），我再针对对应 source_ids 检索转写/纪要并归纳主题。",
+      "message_id": 10184,
+      "stop_reason": "finished",
+      "citations": [
+        {
+          "ref": 6,
+          "kind": "fact",
+          "quote": "录音 task 8 · 2026-10-15 09:00:00 · 上午 · 时长 1.2 分钟",
+          "speaker": null,
+          "task_id": 8,
+          "authority": null,
+          "source_id": 8,
+          "end_second": null,
+          "meeting_id": 3,
+          "source_text": "录音 task 8 · 2026-10-15 09:00:00 · 上午 · 时长 1.2 分钟",
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 7,
+          "kind": "fact",
+          "quote": "录音 task 9 · 2026-10-15 14:00:00 · 下午 · 时长 1.2 分钟",
+          "speaker": null,
+          "task_id": 9,
+          "authority": null,
+          "source_id": 9,
+          "end_second": null,
+          "meeting_id": 3,
+          "source_text": "录音 task 9 · 2026-10-15 14:00:00 · 下午 · 时长 1.2 分钟",
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 1,
+          "kind": "fact",
+          "quote": "录音 task 17 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "speaker": null,
+          "task_id": 17,
+          "authority": null,
+          "source_id": 17,
+          "end_second": null,
+          "meeting_id": 13,
+          "source_text": "录音 task 17 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 102823"
+        },
+        {
+          "ref": 2,
+          "kind": "fact",
+          "quote": "录音 task 16 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "speaker": null,
+          "task_id": 16,
+          "authority": null,
+          "source_id": 16,
+          "end_second": null,
+          "meeting_id": 12,
+          "source_text": "录音 task 16 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 102745"
+        },
+        {
+          "ref": 3,
+          "kind": "fact",
+          "quote": "录音 task 15 · 时间未标注 · 未标注 · 时长 31.0 分钟",
+          "speaker": null,
+          "task_id": 15,
+          "authority": null,
+          "source_id": 15,
+          "end_second": null,
+          "meeting_id": 9,
+          "source_text": "录音 task 15 · 时间未标注 · 未标注 · 时长 31.0 分钟",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] AliMeeting 远场首测 R8007_M8011"
+        },
+        {
+          "ref": 4,
+          "kind": "fact",
+          "quote": "录音 task 14 · 时间未标注 · 未标注 · 时长 8.6 分钟",
+          "speaker": null,
+          "task_id": 14,
+          "authority": null,
+          "source_id": 14,
+          "end_second": null,
+          "meeting_id": 8,
+          "source_text": "录音 task 14 · 时间未标注 · 未标注 · 时长 8.6 分钟",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] AliMeeting 远场首测 R8007_M8011"
+        },
+        {
+          "ref": 5,
+          "kind": "fact",
+          "quote": "录音 task 13 · 时间未标注 · 未标注 · 时长 31.0 分钟",
+          "speaker": null,
+          "task_id": 13,
+          "authority": null,
+          "source_id": 13,
+          "end_second": null,
+          "meeting_id": 7,
+          "source_text": "录音 task 13 · 时间未标注 · 未标注 · 时长 31.0 分钟",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] AliMeeting 远场首测 R8007_M8011"
+        },
+        {
+          "ref": 8,
+          "kind": "fact",
+          "quote": "录音 task 12 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "speaker": null,
+          "task_id": 12,
+          "authority": null,
+          "source_id": 12,
+          "end_second": null,
+          "meeting_id": 6,
+          "source_text": "录音 task 12 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 192637"
+        },
+        {
+          "ref": 9,
+          "kind": "fact",
+          "quote": "录音 task 11 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "speaker": null,
+          "task_id": 11,
+          "authority": null,
+          "source_id": 11,
+          "end_second": null,
+          "meeting_id": 5,
+          "source_text": "录音 task 11 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 185738"
+        },
+        {
+          "ref": 10,
+          "kind": "fact",
+          "quote": "录音 task 10 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "speaker": null,
+          "task_id": 10,
+          "authority": null,
+          "source_id": 10,
+          "end_second": null,
+          "meeting_id": 4,
+          "source_text": "录音 task 10 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 184654"
+        }
+      ],
+      "tools": [
+        {
+          "ok": true,
+          "name": "list_facts",
+          "call_id": "call_0a30e442d91942b1aaee235e",
+          "summary": "10 条事实",
+          "arguments": {
+            "kind": "recording",
+            "limit": 10
+          }
+        }
+      ],
+      "allowed_meeting_ids": null,
+      "series_ids": null,
+      "used_refs": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "unknown_refs": [],
+      "retrieved": [
+        {
+          "ref": 1,
+          "kind": "fact",
+          "quote": "录音 task 17 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "speaker": null,
+          "task_id": 17,
+          "authority": null,
+          "source_id": 17,
+          "end_second": null,
+          "meeting_id": 13,
+          "source_text": "录音 task 17 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 102823"
+        },
+        {
+          "ref": 2,
+          "kind": "fact",
+          "quote": "录音 task 16 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "speaker": null,
+          "task_id": 16,
+          "authority": null,
+          "source_id": 16,
+          "end_second": null,
+          "meeting_id": 12,
+          "source_text": "录音 task 16 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 102745"
+        },
+        {
+          "ref": 3,
+          "kind": "fact",
+          "quote": "录音 task 15 · 时间未标注 · 未标注 · 时长 31.0 分钟",
+          "speaker": null,
+          "task_id": 15,
+          "authority": null,
+          "source_id": 15,
+          "end_second": null,
+          "meeting_id": 9,
+          "source_text": "录音 task 15 · 时间未标注 · 未标注 · 时长 31.0 分钟",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] AliMeeting 远场首测 R8007_M8011"
+        },
+        {
+          "ref": 4,
+          "kind": "fact",
+          "quote": "录音 task 14 · 时间未标注 · 未标注 · 时长 8.6 分钟",
+          "speaker": null,
+          "task_id": 14,
+          "authority": null,
+          "source_id": 14,
+          "end_second": null,
+          "meeting_id": 8,
+          "source_text": "录音 task 14 · 时间未标注 · 未标注 · 时长 8.6 分钟",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] AliMeeting 远场首测 R8007_M8011"
+        },
+        {
+          "ref": 5,
+          "kind": "fact",
+          "quote": "录音 task 13 · 时间未标注 · 未标注 · 时长 31.0 分钟",
+          "speaker": null,
+          "task_id": 13,
+          "authority": null,
+          "source_id": 13,
+          "end_second": null,
+          "meeting_id": 7,
+          "source_text": "录音 task 13 · 时间未标注 · 未标注 · 时长 31.0 分钟",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] AliMeeting 远场首测 R8007_M8011"
+        },
+        {
+          "ref": 6,
+          "kind": "fact",
+          "quote": "录音 task 8 · 2026-10-15 09:00:00 · 上午 · 时长 1.2 分钟",
+          "speaker": null,
+          "task_id": 8,
+          "authority": null,
+          "source_id": 8,
+          "end_second": null,
+          "meeting_id": 3,
+          "source_text": "录音 task 8 · 2026-10-15 09:00:00 · 上午 · 时长 1.2 分钟",
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 7,
+          "kind": "fact",
+          "quote": "录音 task 9 · 2026-10-15 14:00:00 · 下午 · 时长 1.2 分钟",
+          "speaker": null,
+          "task_id": 9,
+          "authority": null,
+          "source_id": 9,
+          "end_second": null,
+          "meeting_id": 3,
+          "source_text": "录音 task 9 · 2026-10-15 14:00:00 · 下午 · 时长 1.2 分钟",
+          "start_second": null,
+          "meeting_title": "客户支持知识库与智能客服灰度评审会"
+        },
+        {
+          "ref": 8,
+          "kind": "fact",
+          "quote": "录音 task 12 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "speaker": null,
+          "task_id": 12,
+          "authority": null,
+          "source_id": 12,
+          "end_second": null,
+          "meeting_id": 6,
+          "source_text": "录音 task 12 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 192637"
+        },
+        {
+          "ref": 9,
+          "kind": "fact",
+          "quote": "录音 task 11 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "speaker": null,
+          "task_id": 11,
+          "authority": null,
+          "source_id": 11,
+          "end_second": null,
+          "meeting_id": 5,
+          "source_text": "录音 task 11 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 185738"
+        },
+        {
+          "ref": 10,
+          "kind": "fact",
+          "quote": "录音 task 10 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "speaker": null,
+          "task_id": 10,
+          "authority": null,
+          "source_id": 10,
+          "end_second": null,
+          "meeting_id": 4,
+          "source_text": "录音 task 10 · 时间未标注 · 未标注 · 时长 1.0 分钟",
+          "start_second": null,
+          "meeting_title": "[ASR_EVAL] MOSS local link smoke 184654"
+        }
+      ],
+      "session_id": 2335
+    }
+  ]
+}

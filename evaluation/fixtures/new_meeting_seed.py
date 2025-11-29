@@ -1,5 +1,7 @@
-import json, os, pymysql
-from datetime import datetime
+import json
+import os
+
+import pymysql
 
 SEG_A = [
  ("李娜","各位上午好，今天评审客户支持知识库和智能客服灰度的准备情况，先对齐目标和风险。",0,8000),
@@ -39,7 +41,8 @@ def insert_task(task_id, recorded_at, segs):
     for no,(speaker,text,start,end) in enumerate(segs,1):
         cur.execute("INSERT INTO transcript_segment (task_id,meeting_id,segment_no,start_ms,end_ms,speaker_label,original_text,content,create_time,update_time) VALUES (%s,3,%s,%s,%s,%s,%s,%s,NOW(),NOW())",
                     (task_id,no,start,end,speaker,text,text))
-insert_task(8,"2026-10-15 09:00:00",SEG_A); insert_task(9,"2026-10-15 14:00:00",SEG_B)
+insert_task(8,"2026-10-15 09:00:00",SEG_A)
+insert_task(9,"2026-10-15 14:00:00",SEG_B)
 summary="会议确认客户支持知识库当前覆盖率82%、目标90%，未覆盖主题为账单纠纷和权限申请；计划新增120条FAQ（王磊，10月25日）。智能客服灰度11月1日10%，回滚15分钟，依赖账单API，API稳定性验证10月30日前完成；全量上线不早于11月15日。CSAT目标4.5，季度预算8万元，退款政策10月28日前更新。"
 topics=[{"title":"知识库覆盖率与补齐计划","summary":"覆盖率82%→90%，补齐账单纠纷和权限申请，新增120条FAQ。"},
         {"title":"智能客服灰度方案","summary":"11月1日灰度10%，回滚15分钟；依赖账单API，10月30日前验证；全量不早于11月15日。"},

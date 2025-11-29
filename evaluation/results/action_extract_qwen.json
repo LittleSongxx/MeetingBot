@@ -1,0 +1,76 @@
+{
+  "method": "qwen 独立抽取 vs deepseek AI-draft gold（跨族、同一 rubric）",
+  "items": {
+    "gold": 29,
+    "pred": 14,
+    "matched": 6
+  },
+  "precision": 0.42857142857142855,
+  "recall": 0.20689655172413793,
+  "f1": 0.2790697674418604,
+  "target_f1": 0.7,
+  "pass": false,
+  "cases": [
+    {
+      "case_id": "vcsum_0",
+      "gold": 5,
+      "pred": 0,
+      "matched": 0
+    },
+    {
+      "case_id": "vcsum_108",
+      "gold": 2,
+      "pred": 2,
+      "matched": 1
+    },
+    {
+      "case_id": "vcsum_110",
+      "gold": 7,
+      "pred": 4,
+      "matched": 4
+    },
+    {
+      "case_id": "vcsum_120",
+      "gold": 0,
+      "pred": 0,
+      "matched": 0
+    },
+    {
+      "case_id": "vcsum_125",
+      "gold": 4,
+      "pred": 0,
+      "matched": 0
+    },
+    {
+      "case_id": "vcsum_146",
+      "gold": 6,
+      "pred": 0,
+      "matched": 0
+    },
+    {
+      "case_id": "vcsum_150",
+      "gold": 0,
+      "pred": 0,
+      "matched": 0
+    },
+    {
+      "case_id": "vcsum_165",
+      "gold": 0,
+      "pred": 0,
+      "matched": 0
+    },
+    {
+      "case_id": "vcsum_172",
+      "gold": 0,
+      "pred": 5,
+      "matched": 0
+    },
+    {
+      "case_id": "vcsum_174",
+      "gold": 5,
+      "pred": 3,
+      "matched": 1
+    }
+  ],
+  "limitation": "gold 是 AI-draft（human_checked=false）；跨族只能作方向信号"
+}

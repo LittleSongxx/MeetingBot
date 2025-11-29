@@ -17,6 +17,11 @@
 无样本时如实报"无样本"）；**需授权**部分是四个质量指标（`judges/rag.py --ask/--judge`）。
 两个部分都各自独立报，不合成总分。
 
+**context_recall 两个口径（2026-10-22 起）**：旧口径（分母=全部金标事实，历史可比/回归护栏）与
+**recall-v2**（主指标；`evaluation/gold/fact_classes.json` 把 `metadata/fixture/conflict` 剔出分母，
+单审计归因 `human_checked=false`）。两者**不可相减**；仪器说明见
+`reports/2026-10-22_recall_instrument_fix.md`，质量闸同时打印两行（`make quality-gate`）。
+
 **判定族**（宪法第 2 条）：当前标准用 DeepSeek `deepseek-flash`、
 `--provider deepseek --label f --thinking off`（与被测 qwen 不同族）；旧 qwen
 `label a` 只保留历史对照，不再当裁判。单裁判读数只是方向信号，产品决策仍应

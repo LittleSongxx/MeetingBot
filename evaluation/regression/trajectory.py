@@ -552,6 +552,9 @@ def summarize(gold: Mapping[str, Any], artifacts: Iterable[Mapping[str, Any]],
 
     pass_k_report = {
         "k": k,
+        "status": "evaluated" if pass_k["evaluated"] else "not_evaluable",
+        "status_reason": ("" if pass_k["evaluated"]
+                          else "需要同一配置重复 k 次 trial 产物；单份产物只给 single_trial_reference"),
         "evaluated_cases": pass_k["evaluated"],
         "passed": pass_k["passed"],
         "rate": (pass_k["passed"] / pass_k["evaluated"]) if pass_k["evaluated"] else None,

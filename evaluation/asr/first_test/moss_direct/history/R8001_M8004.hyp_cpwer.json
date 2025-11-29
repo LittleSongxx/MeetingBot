@@ -1,0 +1,39 @@
+{
+  "error_rate": 0.2591693887074195,
+  "errors": 2777,
+  "length": 10715,
+  "insertions": 304,
+  "deletions": 1422,
+  "substitutions": 1051,
+  "reference_self_overlap": {
+    "overlap_rate": 0,
+    "overlap_time": 0,
+    "total_time": 4
+  },
+  "hypothesis_self_overlap": {
+    "overlap_rate": 0,
+    "overlap_time": 0,
+    "total_time": 4
+  },
+  "missed_speaker": 0,
+  "falarm_speaker": 0,
+  "scored_speaker": 4,
+  "assignment": [
+    [
+      "SPK8013",
+      "01_S01"
+    ],
+    [
+      "SPK8014",
+      "01_S02"
+    ],
+    [
+      "SPK8015",
+      "01_S03"
+    ],
+    [
+      "SPK8016",
+      "01_S04"
+    ]
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "meeting": "R8009_M8018",
+  "status": "SUCCEEDED",
+  "task": "evaluation/asr/first_test/task_R8009_M8018.moss_direct.json",
+  "audio_seconds": 1654.7,
+  "covered_seconds": 1651.4,
+  "truncated": false,
+  "n_segments": 479,
+  "hyp_speakers": 2,
+  "elapsed_seconds": 591.2,
+  "client_elapsed_seconds": 592.3,
+  "max_new_tokens": 32618,
+  "raw_json": "evaluation/asr/first_test/moss_direct/raw/R8009_M8018.raw.json",
+  "cpcer": 0.0734,
+  "cer_no_punct": 0.0911,
+  "delta_cp": -0.0177,
+  "ref_speakers": 2,
+  "meeteval_raw": {
+    "errors": 614,
+    "length": 8362,
+    "falarm_speaker": 0,
+    "scored_speaker": 2
+  }
+}

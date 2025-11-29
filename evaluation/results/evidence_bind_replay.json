@@ -1,0 +1,294 @@
+{
+  "policy": "LEDGER §49：cited-gap 由 39/213（18.31%）向 any-gap 20/213（9.39%）收敛",
+  "packets": {
+    "cross30_fresh": {
+      "cases": 30,
+      "changed_cases": 30,
+      "checked_numbers": 213,
+      "already_supported": 174,
+      "rebound": 19,
+      "unbound": 20,
+      "uncited_numbers": 97,
+      "before": {
+        "numbers_checked": 213,
+        "unsupported_cited": 39,
+        "cited_gap_rate": 0.1831,
+        "unsupported_any": 20,
+        "not_in_any_rate": 0.0939
+      },
+      "after": {
+        "numbers_checked": 213,
+        "unsupported_cited": 20,
+        "cited_gap_rate": 0.0939,
+        "unsupported_any": 20,
+        "not_in_any_rate": 0.0939
+      },
+      "reduction_pp": 8.92
+    },
+    "mixed100": {
+      "cases": 100,
+      "changed_cases": 100,
+      "checked_numbers": 377,
+      "already_supported": 303,
+      "rebound": 22,
+      "unbound": 52,
+      "uncited_numbers": 221,
+      "before": {
+        "numbers_checked": 377,
+        "unsupported_cited": 74,
+        "cited_gap_rate": 0.1963,
+        "unsupported_any": 52,
+        "not_in_any_rate": 0.1379
+      },
+      "after": {
+        "numbers_checked": 377,
+        "unsupported_cited": 52,
+        "cited_gap_rate": 0.1379,
+        "unsupported_any": 52,
+        "not_in_any_rate": 0.1379
+      },
+      "reduction_pp": 5.84
+    },
+    "new_meeting": {
+      "cases": 15,
+      "changed_cases": 15,
+      "checked_numbers": 59,
+      "already_supported": 56,
+      "rebound": 0,
+      "unbound": 3,
+      "uncited_numbers": 33,
+      "before": {
+        "numbers_checked": 59,
+        "unsupported_cited": 3,
+        "cited_gap_rate": 0.0508,
+        "unsupported_any": 3,
+        "not_in_any_rate": 0.0508
+      },
+      "after": {
+        "numbers_checked": 59,
+        "unsupported_cited": 3,
+        "cited_gap_rate": 0.0508,
+        "unsupported_any": 3,
+        "not_in_any_rate": 0.0508
+      },
+      "reduction_pp": 0.0
+    },
+    "p0_r1": {
+      "cases": 6,
+      "changed_cases": 6,
+      "checked_numbers": 60,
+      "already_supported": 55,
+      "rebound": 5,
+      "unbound": 0,
+      "uncited_numbers": 21,
+      "before": {
+        "numbers_checked": 60,
+        "unsupported_cited": 5,
+        "cited_gap_rate": 0.0833,
+        "unsupported_any": 0,
+        "not_in_any_rate": 0.0
+      },
+      "after": {
+        "numbers_checked": 60,
+        "unsupported_cited": 0,
+        "cited_gap_rate": 0.0,
+        "unsupported_any": 0,
+        "not_in_any_rate": 0.0
+      },
+      "reduction_pp": 8.33
+    },
+    "p0_r2": {
+      "cases": 6,
+      "changed_cases": 6,
+      "checked_numbers": 70,
+      "already_supported": 62,
+      "rebound": 7,
+      "unbound": 1,
+      "uncited_numbers": 13,
+      "before": {
+        "numbers_checked": 70,
+        "unsupported_cited": 8,
+        "cited_gap_rate": 0.1143,
+        "unsupported_any": 1,
+        "not_in_any_rate": 0.0143
+      },
+      "after": {
+        "numbers_checked": 70,
+        "unsupported_cited": 1,
+        "cited_gap_rate": 0.0143,
+        "unsupported_any": 1,
+        "not_in_any_rate": 0.0143
+      },
+      "reduction_pp": 10.0
+    },
+    "p0_r3": {
+      "cases": 6,
+      "changed_cases": 6,
+      "checked_numbers": 43,
+      "already_supported": 38,
+      "rebound": 5,
+      "unbound": 0,
+      "uncited_numbers": 31,
+      "before": {
+        "numbers_checked": 43,
+        "unsupported_cited": 5,
+        "cited_gap_rate": 0.1163,
+        "unsupported_any": 0,
+        "not_in_any_rate": 0.0
+      },
+      "after": {
+        "numbers_checked": 43,
+        "unsupported_cited": 0,
+        "cited_gap_rate": 0.0,
+        "unsupported_any": 0,
+        "not_in_any_rate": 0.0
+      },
+      "reduction_pp": 11.63
+    },
+    "extended68": {
+      "missing": "/home/song/code/Agent/media_agent/AIMeeting/evaluation/results/extended68_packet.json"
+    }
+  },
+  "examples": [
+    {
+      "packet": "cross30_fresh",
+      "case_id": "cm03",
+      "token": "2026-09-10",
+      "from_refs": [
+        3,
+        4
+      ],
+      "to_ref": 2,
+      "sentence": "- 上午录音（task_id=6，会议2，2026-09-10 09:00）中，张晨在复述决策时明确说：“产品研发、测试、运营和客户支持均同意在**9月1日九点**按计划发布……”[3]；随后总结“第一，**9月1日九点**发布AI智能会议助手与任务跟踪系统”[4]。"
+    },
+    {
+      "packet": "cross30_fresh",
+      "case_id": "cm03",
+      "token": "09:00",
+      "from_refs": [
+        3,
+        4
+      ],
+      "to_ref": 2,
+      "sentence": "- 上午录音（task_id=6，会议2，2026-09-10 09:00）中，张晨在复述决策时明确说：“产品研发、测试、运营和客户支持均同意在**9月1日九点**按计划发布……”[3]；随后总结“第一，**9月1日九点**发布AI智能会议助手与任务跟踪系统”[4]。"
+    },
+    {
+      "packet": "cross30_fresh",
+      "case_id": "cm06",
+      "token": "18:00",
+      "from_refs": [
+        4,
+        6
+      ],
+      "to_ref": 1,
+      "sentence": "    *   通稿**定稿**：由 **刘颖** 负责，截止时间为发布前一日 18:00 [4][6]。"
+    },
+    {
+      "packet": "cross30_fresh",
+      "case_id": "cm08",
+      "token": "2026-09-10",
+      "from_refs": [
+        6,
+        7,
+        8
+      ],
+      "to_ref": 2,
+      "sentence": "-   上午场录音（task_id=6，会议id=2，2026-09-10 09:00）：张晨在 642s 明确“测试团队将在8月31日中午12点前完成回归”[6]；653s 列出回归覆盖的角色与重点检查项，并要求完成后提交测试结论和凭证 [7]；863s–879s 将该回归列为发布前置条件，未完成则由张晨和王工在8月"
+    },
+    {
+      "packet": "cross30_fresh",
+      "case_id": "cm08",
+      "token": "09:00",
+      "from_refs": [
+        6,
+        7,
+        8
+      ],
+      "to_ref": 2,
+      "sentence": "-   上午场录音（task_id=6，会议id=2，2026-09-10 09:00）：张晨在 642s 明确“测试团队将在8月31日中午12点前完成回归”[6]；653s 列出回归覆盖的角色与重点检查项，并要求完成后提交测试结论和凭证 [7]；863s–879s 将该回归列为发布前置条件，未完成则由张晨和王工在8月"
+    },
+    {
+      "packet": "cross30_fresh",
+      "case_id": "cm10",
+      "token": "9:00",
+      "from_refs": [
+        6
+      ],
+      "to_ref": 2,
+      "sentence": "- **运营支持**：赵敏负责在9月1日9:00前完成发布公告、使用指引和部门通知，协作人为周宁；公告需包含会议创建入口、录音上传入口、纪要确认入口、任务跟踪入口和知识库问答入口 [6]。"
+    },
+    {
+      "packet": "cross30_fresh",
+      "case_id": "cs01",
+      "token": "2026-09-10",
+      "from_refs": [
+        2
+      ],
+      "to_ref": 1,
+      "sentence": "- 该决策来自「产品发布评审会议」（meeting_id=2，2026-09-10 10:40:00），状态为 CONFIRMED（已人工确认）[2]。"
+    },
+    {
+      "packet": "cross30_fresh",
+      "case_id": "cs01",
+      "token": "10:40:00",
+      "from_refs": [
+        2
+      ],
+      "to_ref": 1,
+      "sentence": "- 该决策来自「产品发布评审会议」（meeting_id=2，2026-09-10 10:40:00），状态为 CONFIRMED（已人工确认）[2]。"
+    },
+    {
+      "packet": "cross30_fresh",
+      "case_id": "ct02",
+      "token": "8月20日",
+      "from_refs": [
+        4,
+        3
+      ],
+      "to_ref": 2,
+      "sentence": "此外，会上还讨论了后续全量发布的节奏建议（“第一天10%、第二天50%、第三天全量”）[4]，以及复述确认的“灰度按10%、50%、全量分三天走”[3]，但资料中未给出这“三天”对应的具体日历日期，无法判断是指8月20日起的灰度阶段还是9月1日正式发布后的全量推进阶段。"
+    },
+    {
+      "packet": "cross30_fresh",
+      "case_id": "ct02",
+      "token": "9月1日",
+      "from_refs": [
+        4,
+        3
+      ],
+      "to_ref": 1,
+      "sentence": "此外，会上还讨论了后续全量发布的节奏建议（“第一天10%、第二天50%、第三天全量”）[4]，以及复述确认的“灰度按10%、50%、全量分三天走”[3]，但资料中未给出这“三天”对应的具体日历日期，无法判断是指8月20日起的灰度阶段还是9月1日正式发布后的全量推进阶段。"
+    },
+    {
+      "packet": "cross30_fresh",
+      "case_id": "ct04",
+      "token": "18:00",
+      "from_refs": [
+        1,
+        2
+      ],
+      "to_ref": 6,
+      "sentence": "- **8月30日18:00**：移动端附件下载进度任务的截止时间，负责人王工 [1][2]。"
+    },
+    {
+      "packet": "cross30_fresh",
+      "case_id": "ct04",
+      "token": "12:00",
+      "from_refs": [
+        2,
+        4
+      ],
+      "to_ref": 6,
+      "sentence": "- **8月31日12:00**：发布回归任务的截止时间，由测试团队（负责人陈琳）完成回归测试 [2][4]。"
+    }
+  ],
+  "s49_gate": {
+    "packet": "cross30_fresh",
+    "rebound": 19,
+    "unsupported_any": 20,
+    "min_rebound": 15,
+    "pass": true,
+    "reading": "数字 cited-gap 的理论下界是 any-gap：能重绑的都已绑上后，cited-gap 应等于 not_in_any（重绑不改变 any-gap）。"
+  },
+  "quote_note": "引语不在本脚本范围：quality_gap_report 已显示 cross30 引语 13/13 不在任何上下文，不可重绑。"
+}

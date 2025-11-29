@@ -1,0 +1,185 @@
+{
+  "label_source": "ai_draft_strict_rubric",
+  "human_checked": false,
+  "rubric": "你是会议行动项标注员。严格定义：\nAction item = 未来需要**某人/某方执行的可执行动作、承诺或后续安排**。\n- 允许 owner/deadline 为空，但必须有明确动作与对象；\n- 排除：纯观点/建议/评论；会议流程与活动安排（合影、下一场圆桌、直播串场）；\n  过去事实；没有动作的泛泛目标。\n正例： “张涛负责在周五前完成报表导出异步化改造”（承诺+负责人+期限）\n      “会后由运营团队梳理客户反馈清单”（后续安排）\n负例： “请大家合影留念”（流程） “建议家长多陪孩子读书”（建议非承诺）\n      “AI 是未来趋势”（观点） “去年完成了云化”（过去事实）\n每条输出：content（一句话，动宾结构）、owner（明确负责人，否则 null）、\ndeadline（明确期限，否则 null）、evidence_quote（原文逐字≤120字）、\nkind（commitment/follow_up/assignment/other）。\n只输出 JSON：{\"items\":[...]}；没有则 {\"items\":[]}。",
+  "gold_provider": "deepseek",
+  "extract_provider": "qwen",
+  "cases": [
+    {
+      "case_id": "vcsum_0",
+      "gold": [],
+      "qwen": [],
+      "qwen_error": null
+    },
+    {
+      "case_id": "vcsum_108",
+      "gold": [],
+      "qwen": [],
+      "qwen_error": null
+    },
+    {
+      "case_id": "vcsum_110",
+      "gold": [],
+      "qwen": [
+        {
+          "content": "继续扩大微软亚洲研究院规模，吸引更多计算机基础研究和应用创新人才加入",
+          "owner": "洪晓文（微软亚洲研究院）",
+          "deadline": null,
+          "evidence_quote": "我们也将继续地扩大我们的规模，吸引更多计算机基础研究和应用创新人才的加入。",
+          "kind": "commitment"
+        },
+        {
+          "content": "积极筹建上海市人工智能研发与转化功能平台",
+          "owner": "蔡总裁（上海仪电）与微软亚洲研究院",
+          "deadline": null,
+          "evidence_quote": "我们和微软亚洲研究院正在积极筹建上海市人工智能研发与转化这个功能平台。",
+          "kind": "commitment"
+        },
+        {
+          "content": "进一步深化仪电和微软的合作，助力全国人工智能产业发展",
+          "owner": "蔡总裁（上海仪电）",
+          "deadline": null,
+          "evidence_quote": "后续我们还将根据这个城市数字化治理以及企业数字化转型的需求，进一步深化宜店和微软的合作",
+          "kind": "commitment"
+        },
+        {
+          "content": "推进徐汇区一网统管3.0版升级并争取在今年8月份全面上线",
+          "owner": "方区长（徐汇区政府）",
+          "deadline": "今年8月份",
+          "evidence_quote": "现在我们正在推进 3.0 版的升级，我们争取在今年的 8 月份能够全面的上线。",
+          "kind": "commitment"
+        },
+        {
+          "content": "建设数据中台、AI中台和业务中台三大中台",
+          "owner": "方区长（徐汇区政府）",
+          "deadline": null,
+          "evidence_quote": "我们目前正在建设三大中台，一是数据中台，二是 AR 中台，三是业务中台。",
+          "kind": "commitment"
+        }
+      ],
+      "qwen_error": null
+    },
+    {
+      "case_id": "vcsum_120",
+      "gold": [],
+      "qwen": [],
+      "qwen_error": null
+    },
+    {
+      "case_id": "vcsum_125",
+      "gold": [],
+      "qwen": [],
+      "qwen_error": null
+    },
+    {
+      "case_id": "vcsum_146",
+      "gold": [],
+      "qwen": [],
+      "qwen_error": null
+    },
+    {
+      "case_id": "vcsum_150",
+      "gold": [],
+      "qwen": [],
+      "qwen_error": null
+    },
+    {
+      "case_id": "vcsum_165",
+      "gold": [],
+      "qwen": [],
+      "qwen_error": null
+    },
+    {
+      "case_id": "vcsum_172",
+      "gold": [],
+      "qwen": [
+        {
+          "content": "大同市坚决把学本教学推广好、执行好，进一步提高教学质量",
+          "owner": "李永泽（大同市教育局）",
+          "deadline": null,
+          "evidence_quote": "我们一定要有坚决怪起下去，把学本教学推广好、执行好，为大同市进一步提高教学质量，做好我们应该做的工作。",
+          "kind": "commitment"
+        },
+        {
+          "content": "通过学校课堂教学引领贵州省区域内学校的课堂教学改革",
+          "owner": "王琦（道真县民族中学）",
+          "deadline": null,
+          "evidence_quote": "一定在今后的这个课堂教学改当中真正搞得来一层革命，把这个课堂教学给他坚持到第六话，就是通过我们学校的课堂教学来引领我们一定区域内的特别是贵州省的一些学校的课堂教学等",
+          "kind": "commitment"
+        },
+        {
+          "content": "在以后的工作中将学本教学模式和理念在淮阴区进一步深化下去",
+          "owner": "金靖坤（淮阴区教育局）",
+          "deadline": null,
+          "evidence_quote": "我在这个以后的工作当中，会把这个学本教学这个模式，学本教学这个理念在怀疑局会进一步地深化下去",
+          "kind": "commitment"
+        },
+        {
+          "content": "扎赉特旗继续推进学本教学，以此作为新起点改革不停步",
+          "owner": "张希奎（扎赉特旗教育局）",
+          "deadline": null,
+          "evidence_quote": "我们将以此作为新的起点，改革不停步，追求不止步。",
+          "kind": "commitment"
+        },
+        {
+          "content": "长葛市名师工作室每年至少开展两次送教送培任务",
+          "owner": "各名师工作室",
+          "deadline": "每年",
+          "evidence_quote": "我们要求每个工作室每年至少开展两次的送教送培任务。送教送培活动主要采取学本教学专题讲座、观摩课、一课同上、同课异构以及集中研讨的形式，对乡镇教师进行培训",
+          "kind": "assignment"
+        }
+      ],
+      "qwen_error": null
+    },
+    {
+      "case_id": "vcsum_174",
+      "gold": [
+        {
+          "content": "在年内上线小米电视云游戏第一批内容",
+          "owner": "刘岩",
+          "deadline": "年内",
+          "evidence_quote": "很快就在年内，我们第一批的就是大家都等很久，相比电视上的云游戏的第一批内容的话，跟在我们咪咕的这个大力支持下就完全上线了。",
+          "kind": "commitment"
+        },
+        {
+          "content": "与丁老师约午饭并喊上发言人1，时间地点由丁老师定",
+          "owner": "发言人4",
+          "deadline": null,
+          "evidence_quote": "我就跟他说要不明天吃午饭喊上你，然后时间地点让他来定",
+          "kind": "follow_up"
+        }
+      ],
+      "qwen": [
+        {
+          "content": "年内上线小米电视云游戏第一批内容并跑数据验证用户反映和运营策略",
+          "owner": "刘岩（小米）",
+          "deadline": "年内",
+          "evidence_quote": "很快就在年内，我们第一批的就是大家都等很久，相比电视上的云游戏的第一批内容的话，跟在我们咪咕的这个大力支持下就完全上线了。我们先跑一波数据，看看我们用户反映和我们的运营策略",
+          "kind": "commitment"
+        },
+        {
+          "content": "与丁老师约明天午饭并喊上发言人4一起参加",
+          "owner": "发言人1",
+          "deadline": "明天",
+          "evidence_quote": "那就吃午饭好吧，吃午饭的话那个时时这样子我就跟他说要不明天吃午饭喊上你，然后时间地点让他来定",
+          "kind": "follow_up"
+        },
+        {
+          "content": "探索在抖音短视频阵地做小程序、小游戏以实现游戏和云的联动",
+          "owner": "戴默默（巨量引擎）",
+          "deadline": null,
+          "evidence_quote": "其实我们也在做一些小程序，微型的小程序，小游戏是否有能力去做一些用户体验去实现游戏和云的一些联动，去丰富我们在端上的一些用户体验。",
+          "kind": "commitment"
+        },
+        {
+          "content": "邀请更多游戏厂商入驻当贝市场及系统平台",
+          "owner": "周伟（当贝）",
+          "deadline": null,
+          "evidence_quote": "所以我们特别希望更多的这个游戏的厂商能够参与进来的商家入驻。",
+          "kind": "commitment"
+        }
+      ],
+      "qwen_error": null
+    }
+  ]
+}

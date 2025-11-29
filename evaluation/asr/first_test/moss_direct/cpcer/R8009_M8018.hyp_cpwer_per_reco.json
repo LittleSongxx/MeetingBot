@@ -1,0 +1,33 @@
+{
+  "R8009_M8018": {
+    "error_rate": 0.07342740971059555,
+    "errors": 614,
+    "length": 8362,
+    "insertions": 135,
+    "deletions": 191,
+    "substitutions": 288,
+    "reference_self_overlap": {
+      "overlap_rate": 0,
+      "overlap_time": 0,
+      "total_time": 2
+    },
+    "hypothesis_self_overlap": {
+      "overlap_rate": 0,
+      "overlap_time": 0,
+      "total_time": 2
+    },
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 2,
+    "assignment": [
+      [
+        "SPK8021",
+        "01_S01"
+      ],
+      [
+        "SPK8022",
+        "01_S02"
+      ]
+    ]
+  }
+}

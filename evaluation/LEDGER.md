@@ -2436,3 +2436,857 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
   但 precision 74.6→66.4；不是双赢，默认 0。
 - 报告：`evaluation/reports/2026-10-22_blind40_review.md`、
   `evaluation/reports/2026-10-22_evidence_prompt.md`。
+
+### 40) 预注册：答案级证据校验与有界修复（2026-10-22，先于任何调用写死）
+
+**背景与假设**：40 条盲评的剩余问题集中在「上下文未出现的细节写成确定事实」与「引用归属错」
+（引语/权限/字段超出被引上下文）。证据边界 prompt 实验证明"加长 prompt"带来 faith +6.2pp 的
+代价是 context_precision −8.2pp（模型因此补检索，上下文分母变大）。假设：把证据边界从
+**生成前提示**挪到**生成后校验**，只对断言做机械修复（可归因的补引用 / 删除无依据断言），
+可在不改检索的前提下提高 faithfulness，且内容覆盖不降。
+
+**机制（通用、无题面规则）**：
+- 校验器逐条判定答案断言：`supported_by_cited` / `supported_by_other_context` /
+  `citation_missing` / `derived` / `unsupported` / `meta`；证据只来自本轮检索上下文，
+  不允许外部知识。
+- 机械修复：有证据但没引对 → 补引用（不改文字）；没有任何上下文支撑 → 删除该断言；
+  其余保持原样（不改写、不新增事实）。修复后守卫：删除句 >30%、答案长度 <60% 或引用清空
+  即回退原答案。
+- 另设**零调用确定性臂**：数字/引语在被引上下文缺失、但在其他检索上下文中存在时，
+  追加对应引用（只改引用不改文字）。
+
+**主结局与判定（先写死）**：
+- 样本：`results/cross30_fresh_packet.json` 30 题（fresh，现有答案与判定可作对照）；
+  复现集 `results/new_meeting_packet.json` 15 题（unscoped）。
+- 主指标：`faithfulness_content`（deepseek 裁判、同一 ANSWER_SYSTEM；上下文不变、只重判
+  答案；基线上下文判定按"上下文未变"复用，作为不变量校验）。
+- 成功线：cross30 faith_content **≥ +5pp**，且（a）期望事实词法覆盖下降 ≤2pp；
+  （b）answer_relevancy 下降 ≤3pp；（c）单题删除句比例 >30% 的 case 数 ≤3；三项全过才算
+  "可平衡"。复现集方向一致才算泛化证据。
+- 次要/跨族：qwen 裁判（label c，同 ANSWER_SYSTEM）同向；claim 审计
+  `not_in_any_context_rate` 下降；确定性重引用臂的 `cited_gap_rate` 下降。
+- 失败判定：faith 增益 <3pp 或词法覆盖下降 >5pp 或单题灾难性删除 >3 例 → 登记
+  "不可平衡/有代价"，不进入产品默认。
+
+**仪器与限制**：校验器为 deepseek（与被测 qwen 不同族），但主裁判同为 deepseek → 存在
+"校验器-裁判同族"闭环风险，因此必须同时报 qwen 跨族读数与逐案一致率，结论只作方向信号；
+词法覆盖是代理不是金标；样本 n=30/15，CI 很宽，不报单点绝对值。
+预算：≤250 次调用（校验 + 重判），超预算按顺序截断并如实报判了几个。
+产物：`evaluation/experiments/claim_repair.py`、`results/cross30_claim_repair_*.json`、
+`reports/2026-10-22_claim_repair_experiment.md`。
+
+### 40b) 结果：答案级证据校验与有界修复（2026-10-22，预注册 §40 之后）
+
+- cross30 fresh 30 题：faithfulness_content **87.88% → 88.39%（+0.51pp）**，faithfulness
+  88.63%→89.11%，answer_relevancy 不变，期望事实词法覆盖 −0.05pp；2 改善/0 变差/28 持平；
+  删除 33 条断言，守卫回退 8 题（删除>30% 6、压缩<60% 2），无灾难性删除。
+- new_meeting 15 题（unscoped）：faithfulness_content **83.78% → 85.51%（+1.73pp）**，
+  faithfulness 80.00%→83.54%，词法覆盖 ±0，2 改善/0 变差/13 持平。
+- 预注册成功线 ≥+5pp **未通过**（配对 Wilcoxon p=0.5，不一致对只有 2 个）；
+  **不进入产品默认**，结论只作方向信号。
+- 根因：低 faithful 的 series/跨录音题（cs05–cs09/ct05）被守卫拦下——删掉大半答案会丢内容，
+  它们的问题是**上游作用域/证据选择错**，不是答案措辞越界；答案侧删除修不动。
+- **口径修正**：`eval100_scope_fixed_packet` 前 30 题（cross30 主口径）按 pooled 算
+  faith 84.47%/content 84.98%、precision 66.67%、recall 81.03%、relevancy 96.67%；
+  既有报告里 cross30 分层 "faith 78.6% / precision 74.6%" 是**逐 case 均值**（等权每题），
+  与 pooled 不是同一个估计量，引用时必须注明口径（RFC：主指标一律 pooled，逐 case 均值只作诊断）。
+- 低 faithful 归因（cross30 233 条内容断言，35 条不支撑）：series/状态元数据 12、工具协议/notice 4、
+  录音时长 2、其它 17。**其中 6 条是证据通道/仪器缺口**：`list_facts(kind=recording)` 已返回
+  `duration_minutes`，但 `citations.py` 构造引用快照时丢弃；state 工具结果级 `notice` 未进入引用。
+  已修 `services/citations.py`（录音引用带时长）+ `services/rag_quality.py`（归属错/无依据分离）+
+  `chat_turn.py` 传全部检索结果给审计，单测 10 项全过。
+- 确定性字面重引用臂不安全：47 处追加里出现把"09:00"绑到只有元数据时间的 ref 一类张冠李戴；
+  重引用必须由语义校验器给证据，不靠字面 token → 不启用。
+- 限制：未跑 qwen 跨族判定（qwen 判定 30–120 秒/次，超时间预算）；校验器与主判同族（闭环风险）；
+  未接产品流式链路（修复在 token 推流之后，产品化需要最终稿替换/纠正事件设计）。
+- 报告：`evaluation/reports/2026-10-22_claim_repair_experiment.md`、产物
+  `results/cross30_claim_repair.json`、`results/new_meeting_claim_repair.json`。
+- **独立验证（verifier）**：产品 targeted 94/94、评测 330/330、smoke 0 模型调用、quality gate PASS；
+  实验 8 项关键数字复算一致；发现并修正 3 个 P1 口径问题（分层口径、CER 同源、预注册时序）与
+  6 个 P2 事实问题。报告：`evaluation/reports/2026-10-22_independent_verification.md`。
+
+### 41) 预注册：MOSS 本地 ASR 引擎产品真实链路验证（2026-10-22，先于产品链路运行写死）
+
+**背景**：直连侧车复测（`evaluation/reports/2026-10-22_moss_asr_comparison.md`，**3/5 场有效，剩余 2 场
+待续跑**）已确认修复后的 MOSS-Transcribe-Diarize 0.9B 能在整场长音频上跑通且方向与公开锚一致：
+R8001 cpCER 25.88% vs c3600 42.04%（−16.16pp）、R8003 11.60% vs 27.18%（−15.58pp）、
+R8008（37.3min，最长）12.87% vs 36.53%（−23.66pp）；三场均覆盖率≥99.8%、0 截断、0 失败；
+三场宏平均 16.78% vs 同子集 35.25%（−18.47pp，相对 −52.4%）。n=3 只作方向信号，不替代 8 场。
+本预注册针对**下一阶段：产品真实链路（`TRANSCRIPTION_ENGINE=http`）8 场验证**，不是对直连结果的追认。
+
+**假设**：MOSS 引擎经产品转写链路（HTTP 侧车 → 分段落库 → 下游无感）在 AliMeeting Eval 8 场上
+cpCER 相对当前默认 c3600 云端基线（30.09%，8 场）改善 ≥5pp，且不引入静默截断/可靠性退化。
+
+**样本与口径**：
+- AliMeeting Eval far-field 8 场（与现有 `hyp_*_avg.mp3` 同混音：8ch → mono 16k）；
+- 参考 = 近讲 TextGrid 共享转写（M2MeT 官方口径）；假设 = 产品 task 快照的 segments（speaker_label）；
+- 指标 = MeetEval cpWER 数值等价 cpCER（字级 no_punct），与 CER/Δcp 一起报。
+
+**主结局与判定（先写死）**：
+- 主指标：8 场**配对** cpCER；
+- 成功线（全部满足）：① 相对 c3600 30.09% **≥5pp 改善**；② **≥7/8 场**方向一致；
+  ③ 配对 bootstrap/Clopper-Pearson **CI 下界 >0**；④ 同条件 **CER 不劣化 >1pp**；
+  ⑤ **0 静默截断**（每场覆盖音频时长 ≥99%，`truncated=false`，且产品 `SUCCEEDED`）；
+  ⑥ 真实链路与直连侧车 cpCER 差 **≤2pp**（链路适配不额外损失）。
+- 次指标：端到端转写可靠性、单场墙钟/RTF、显存峰值、GPU 机时成本、`task.model_name` 是否如实为
+  本地引擎名；hyp/ref speakers 数必须同时记录（cpCER 对过度分离不敏感，不能替代 DER）。
+- 失败/回滚：任一成功线不满足 → 默认引擎**保持 dashscope**，侧车停用；不得"先上线再补测"。
+
+**仪器与限制**：n=8 配对连续量 MDE≈6–7pp，<该幅度的差异写"检不出"；单评测集（AliMeeting Eval）
+不代表真实中文会议分布；公开 MOSS 22.17 用官方切分/推理栈，本项目是 8ch 平均下混单声道 + FunASR
+适配器 → 公开值只作方向锚。cpCER 是"说话人归属性字错误率"，改善可能来自"归对人"而非"听对字"，
+必须连 CER 与 Δcp 一起解释。
+
+**预算与回滚**：GPU ≤90min/轮（8 场串行约 60–75min）；产品 `.env` 只在验证窗口临时改
+（`TRANSCRIPTION_ENGINE=http`、`ASR_HTTP_URL`、`ASR_TIMEOUT_SECONDS` 放大、必要时
+`TRANSCRIPTION_MAX_DURATION_SECONDS` 与 MOSS 90min 上限对齐），验证后立即恢复并重启；
+改动前先停其他评测运行，避免互相干扰。
+
+**产物**：`evaluation/reports/2026-10-22_moss_asr_comparison.md`、
+`evaluation/asr/first_test/task_*_moss_http.json`、`cpcor_report_moss_http_8m.json`；
+报告必须含逐场配对表、失败根因、provenance（模型 revision/解码参数/GPU/覆盖率/耗时）。
+
+### 42) 仪器变更：可检索事实召回 recall-v2 + 质量闸加固（2026-10-22，零模型调用）
+
+> **更正：本节 cross30 93.62%/new_meeting 90.91% 已被 §42b 取代**（round2 独立验证发现 4 条
+> 单审计误分类；更正后 cross30 **88.00%（44/50）**、new_meeting **86.96%（20/23）**，下限 0.85/0.82）。
+
+**变更性质**：换仪器（context_recall 主口径）+ 质量闸加固。**旧读数不与新读数相减**。
+
+**问题**：cross30_fresh 的 context_recall 75.86%（44/58）里，14 条缺失事实有 11 条是检索材料
+按定义无法包含的系统元数据/否定性结论（supersedes_id 空、CONFIRMED vs DRAFT、tool notice、
+"系列只含会议 2"），另 1 条 fixture、2 条真检索缺口、1 条 partial。按题型：cm 94.74%/ct 90.00%/
+cs 42.11%——不是"跨录音检索坏了"，是系列状态题 gold 把系统状态写成了 expected fact。
+
+**机制**：
+- `evaluation/gold/fact_classes.json`（由 `evaluation/gold/build_fact_classes.py` 从
+  `quality_gap_report.json#rag_attribution.missing_facts` 生成，human_checked=false）：
+  `metadata/fixture/conflict` 不计入召回分母；`judge_uncertain` 仍计入（保守）；其余 retrievable。
+- `evaluation/lib/recall_quality.py` 逐 case 对齐 judgement facts 与 gold，未判 case 跳过、兼容 `judgements.f`；
+  `evaluation/analysis/recall_report.py` 出 `results/recall_quality_report.json`。
+- `evaluation/quality_gate.py`：旧 `context_recall` + 新 `context_recall_retrievable` **双行**；
+  新主指标独立绝对下限（p0 0.95 / cross30 0.90 / new_meeting 0.85 / mixed100 0.92）；
+  所有比例打印 Clopper-Pearson 95% CI；冻结基线记录 7 个产物的 sha256，产物变而基线未重冻 → FAIL。
+- 基线重冻：`evaluation/baselines/quality_gate_baseline.json` 增加
+  `instrument_version=recall-v2 (2026-10-22)`、`context_recall_retrievable` 与 `artifact_sha256`；旧键不变。
+
+**读数（当前产物）**：p0 97.22→97.22；cross30 **75.86→93.62%（44/47，剔除 11）**；
+new_meeting 86.96→90.91%（剔除 1）；mixed100 91.02→96.20%（剔除 9）；extended68 诊断 95.20→96.75%（剔除 2）。
+**分子不变、只收窄分母**；真缺口（retrieval_miss/partial）仍计分。报告：
+`evaluation/reports/2026-10-22_recall_instrument_fix.md`。
+
+**同轮证据通道与规则修复（产品侧，零调用）**：
+- `services/citations.py`：state 引用快照带工具 notice/类型/系列（m019 类"只返回 CONFIRMED…"断言可核）；
+  minutes 条目 source_text 追加证据原句；录音引用带 duration_minutes（前一轮已加）。
+- `services/contracts.py`：缺失类审查意见的**前提语义**校验——`MISSING_DEADLINE` 的 source_span
+  必须承载时间语义（`timex.looks_like_a_time`），`MISSING_OWNER` 必须含负责人线索；
+  否则丢弃该意见（violation `missing_rule_premise_has_no_time/no_owner`）。这是"条件化规则"的数据结构版。
+- 测试：产品 targeted（citations 4 / contracts 77 / rag_quality 8）与评测 recall-v2 单测全部通过。
+
+**限制**：fact_classes 仅单人归因、human_checked=false；只标缺失事实；judge_uncertain 保守计入；
+recall-v2 不改检索/生成。改类别=换仪器，须新预注册并重述历史数。
+
+**产物**：见 `evaluation/reports/2026-10-22_recall_instrument_fix.md` §2 与本文上列路径；
+`evaluation/gold/claim_anchor_cross30_100.csv`（100 条 claim 双人标注包，P0-4 前置，待人工填）。
+
+### 42b) 更正：recall-v2 单审计误分类（2026-10-22，round2 独立验证后）
+
+- 独立验证用**同题 packet 反证**（eval100 `m016`↔cross30 `cs06`、`m071`↔new_meeting `n01`，
+  题干与 expected_facts 逐字相同，judge 判 found=true）发现 4 条被错误剔除：
+  cross30 `cs06#0-2`（metadata）、new_meeting `n01#0`（fixture）。
+- 更正后：cross30 **44/50 = 88.00%**（原 44/47=93.62%）、new_meeting **20/23 = 86.96%**
+  （原 20/22=90.91%）；mixed100/p0/extended68 不变。
+- recall-v2 绝对下限同步按"防退化线"定位调整为 cross30 **0.85**、new_meeting **0.82**
+  （p0 0.95、mixed100 0.92 不变）；**0.90/0.85 是改进目标，不入门禁**。基线重冻：
+  `context_recall_retrievable` 更新、`fact_classes.json` sha256 入冻结校验、产物 sha 重算。
+- 其他 round2 整改：`fact_classes.json` 缺失/变更 → 质量闸 FAIL（不再静默跳过）；p0 CI 改用
+  三轮合并计数、claim 行补规则上界 CI；`contracts.py` 撤掉 MISSING_OWNER 前提线索规则
+  （真实产物 19/19 合法意见被误伤），只保留 MISSING_DEADLINE 并补软期限线索
+  （月底前/上线前/下班前…）；`citations.py` state source_text 只保留 notice（去掉重复的类型/系列，
+  避免卡片内容重复与 payload +46%）；`claim_anchor` 过滤非法 `[0]` 引用；`pass_k.status`
+  统一为 `evaluated/not_evaluable` + `status_reason`。报告：
+  `evaluation/reports/2026-10-22_round2_verification.md`（验证结论）+ 本节（整改）。
+
+### 42c) 整改后最终验证（2026-10-22，收口）
+
+- 整改项（对应 round2 复核 R1/R2/R4/R5）：旧报告勘误数字改为更正后 88.00%（44/50）并标"初稿/更正前"；
+  `fact_classes_sha256` 改为**规范化内容摘要**（剔除 `generated_at`，标准重建不误报）；floor 余量
+  表述改为实测（3–5pp）；基线缺 `fact_classes_sha256` 时 FAIL；gate 输出注明 p0 CI 为三轮合并计数；
+  删除死代码 `_artifact_paths()`；全仓 `ruff check .` 归零（含清理 `quality_gap_report.py`、
+  `moss_direct_cpcor.py`、`fixtures/new_meeting_seed.py` 的既有 lint）。
+- 最终验证：产品单测 **643/643**（6 个既有环境依赖 skip）；评测单测 **336/336**；
+  `make smoke` exit 0、**0 模型调用**、产物 sha 不变；`make recall`/`make quality-gate` 均 exit 0，
+  **QUALITY GATE PASS**（旧口径 17 行 + recall-v2 4 行 + claim 行）；分类清单重建两次仍 PASS
+  （canonical sha 稳定）。
+- 最终读数（更正后）：p0 recall-v2 97.22%（35/36）；cross30 **88.00%（44/50，excluded 8）**；
+  new_meeting **86.96%（20/23，excluded 0）**；mixed100 96.20%（152/158，excluded 9）；
+  extended68 诊断 96.75%（119/123）。下限 p0 0.95/cross30 0.85/new_meeting 0.82/mixed100 0.92，
+  **0.90/0.85 为改进目标、不入门禁**（cross30 距 90% 目标仍差 2pp，如实保留）。
+- 复核报告：`evaluation/reports/2026-10-22_round2_recheck.md`（有条件 PASS；其 R1–R5 已在本轮整改，
+  以本节与最终验证为准）。
+
+### 43) 预注册：单次 100 题 fresh 运行替换组装集（2026-10-22，先于调用写死）
+
+**目的**：`mixed100` 目前是 5 个来源的**组装集**（cross30/new meeting/holdout A/B/D 各自最近一轮），
+不是单次运行。用一次**单次、逐题新建 session、per-case scope** 的 100 题运行替换它，作为
+mixed100 的主口径；组装集保留为历史对照。
+
+**样本与口径**：
+- `gold/eval_100_mixed.json` 全 100 题；每题 `meeting_ids`/`series_ids` 来自 gold；
+- 产品默认配置（qwen CHAT，检索/rerank 默认开关不动）；判定 deepseek `label=a`（与现有 packet 同仪器）；
+- `ask_fresh_sessions.py --workers 4` 抓取；判定 `judges/rag.py --judge --provider deepseek --label a`。
+
+**主结局**：四指标 **pooled**（`context_precision/context_recall/faithfulness/answer_relevancy`），
+rep 里同时给 pooled 与 per-case 均值、CP 95% CI、逐题失败/空答案数。
+**判定（先写死）**：
+1) 运行事故率 ≤5%（空答案/`stop_reason=stalled`/抓取失败）；
+2) 四指标均不低于组装集读数 −2pp，且不低于 quality_gate 的 `FLOORS.mixed100`；
+3) 单次 packet 的 recall-v2（cross30/新会议子层）不跌破对应下限。
+三项全过 → 质量闸 mixed100 输入切换为该单次 packet 并重冻基线（新仪器版本号）；任一项失败 →
+保留组装集并如实登记“单次运行更差/不可用”。
+
+**预算与限制**：抓取 ≤1500 次 CHAT 调用、判定 ≤260 次；超预算按已完成题数截断并如实报 n。
+限流/429 按 harness 重试；失败题记入报告，不剔分母。
+**产物**：`results/qa_eval100_fresh.json`、`results/eval100_fresh_answers.json`、
+`results/eval100_fresh_packet.json`、`reports/2026-10-22_eval100_fresh_run.md`。
+不做的事：不按题调 prompt、不改检索参数、不在看到结果后改判定线。
+
+### 44) 预注册：claim 级人工锚点（独立子 Agent 代审，2026-10-22，先于标注）
+
+**背景**：faithfulness/attribution 全部来自 LLM 裁判；评测宪法要求单裁判读数只作方向信号。
+在真人标注到位前，用**两个 fresh-context 独立子 Agent** 按同一评分卡盲标 100 条 claim，
+用来估计“claim 相对其引用上下文是否被支撑”的可判性与裁判一致性。
+
+**样本**：`evaluation/gold/claim_anchor_cross30_100.csv` 的 100 条（来自 cross30_fresh 答案，
+每条只给 question/claim_text/cited_refs/cited_context，**不给**完整答案、gold、judge 输出）。
+两位标注者**互相不可见**、均不可读取仓库中的 packet/judge 产物（只在临时目录工作）。
+
+**判定与指标（先写死）**：
+- 标签：`supported / unsupported / uncertain`（只判 cited_context 是否支撑该 claim，不使用外部知识）；
+- 主指标：**Krippendorff α（nominal，2 标注者）**，目标 **≥0.70**；
+- 次指标：raw agreement、Cohen's κ、标签分布、A/B 分歧清单；
+- 裁判对照：对 A/B 一致（consensus）的样本，比较 deepseek judge 的 claim supported 标签
+  （从 `cross30_fresh_packet.json` 按 claim 原文对齐），报一致率与混淆矩阵（含 uncertain 单列）。
+- **判定**：α ≥0.70 → claim 级裁判可用作校准；α <0.70 → 登记“claim 级裁判不可靠”，
+  faithfulness 读数继续降级为方向信号（不冒充人工金标）。
+**限制**：子 Agent 代审 ≠ 人工签名（`human_checked=false`）；样本来自单会议 cross30；n=100。
+**产物**：`claim_anchor_cross30_100.a.csv`、`.b.csv`、`results/claim_anchor_scores.json`、
+`reports/2026-10-22_claim_anchor_calibration.md`。
+
+### 45) 变更登记：MOSS 本地 SA-ASR 直接采用（2026-10-22，用户授权；不做对照实验）
+
+用户决定：**MOSS 直接采用，不再做 c3600 配对对照实验，只测 MOSS 自身质量指标**。
+- 质量口径（MOSS 自身，8 场 AliMeeting Eval）：cpCER（MeetEval cpWER）、CER(no_punct)、
+  Δcp=cpCER−CER、覆盖率（covered/audio）、hyp/ref speakers、RTF/耗时、失败与截断数；
+  不报“相对 c3600 提升”，历史 c3600 数字仅作背景。
+- 产品侧启用：`TRANSCRIPTION_ENGINE=http`、`ASR_HTTP_URL=<sidecar>`、
+  `ASR_TIMEOUT_SECONDS` 放大（历史墙钟 575–810s/场）、`TRANSCRIPTION_MAX_DURATION_SECONDS`
+  与 MOSS 单次 90min 对齐；保留回滚开关（引擎切回 dashscope）。
+- 验证：8 场直连自身指标 + ≥1 场产品真实链路复核（链路 cpCER 与直连差 ≤2pp、无截断/无报错）。
+- 产物：`reports/2026-10-22_moss_own_metrics.md`、`evaluation/asr/first_test/moss_direct/`、
+  `results/moss_own_metrics.json`；不改既有 `cpcor/` 基线文件。
+
+### 44b) 结果：claim 级人工锚点（独立子 Agent 代审，2026-10-22）
+
+- 2 名 fresh-context 独立子 Agent 盲标 100 条 claim（只给 question/claim/cited_context，互不可见）；
+  100/100 皆有标签。分布：A supported 93 / unsupported 4 / uncertain 3；
+  B supported 82 / unsupported 8 / uncertain 10。
+- **Krippendorff α（nominal）= 0.426 < 0.70 目标 → 按 §44 判定 FAIL**：
+  登记「claim 级裁判当前不可靠，faithfulness/attribution 读数继续只作方向信号，不冒充人工金标」。
+  原始一致率 0.870、Cohen κ 0.438、consensus 86 条、分歧 13 条（分歧集中在“来源性细节/否定性
+  推断/残片引文”该不该算支持——说明评分卡边界本身需要真人定标）。
+- 与 LLM judge 对照（consensus 86 条中匹配到 72 条）：judge 与 consensus 一致率 **0.944**
+  （65 supported→supported、3 supported→unsupported、3 unsupported→unsupported、1 unsupported→judge
+  supported）；即 judge 在本样本上对“不支持”的敏感度不足（consensus-unsupported 4 条里 judge 放过 1 条），
+  支持了“judge 不能当答案正确率、只能作方向信号”的既有结论。
+- 限制：子 Agent 代审 ≠ 人工签名（human_checked=false）；单会议 cross30；n=100；α 反映可判性/一致性，
+  不反映标注正确率。正式金标仍需真人双标（`gold/ANNOTATION_GUIDE.md`）。
+- 产物：`evaluation/gold/claim_anchor_cross30_100.{a,b}.csv`、`evaluation/results/claim_anchor_scores.json`、
+  `evaluation/reports/2026-10-22_claim_anchor_calibration.md`。
+
+### 43b) 结果：单次 100 题 fresh 运行（2026-10-22，§43 预注册之后）
+
+- 抓取：100/100（每题新 session、workers=4、墙钟 3m35s），**0 空答案/0 stalled/0 抓取失败**（事故率 0%）。
+- 判定：deepseek-flash label=a，实耗 **200/260** 调用，100/100 判完、0 错误。
+- 四指标 pooled（CP 95% CI）：precision **71.43%**（255/357，[66.4,76.1]）、recall **89.22%**
+  （149/167，[83.5,93.5]）、faithfulness **85.02%**（505/594，[81.9,87.8]）、relevancy **99.00%**
+  （99/100，[94.6,100]）；per-case 均值 75.07/91.75/84.77/99.00%。
+- 对照组装集差值：−0.40 / −1.80 / **−4.19** / +2.00pp；四项均 ≥ quality_gate `FLOORS.mixed100`。
+- §43 三项判定：①事故率 PASS；②faithfulness **−4.19pp 越过 −2pp 非劣线 → FAIL**（其余三项非劣）；
+  ③recall-v2 子层 cross30 88.00%（=冻结值）、new_meeting 100% → PASS。**总判定 FAIL**：
+  **保留组装集、不切换 mixed100 输入、不重冻基线**；如实登记"单次运行 faithfulness 更差"
+  （逐题 34 降/18 升/48 平；holdoutD −9.90pp、newmeeting −7.33pp 最大，呈分散波动而非单源定向回归）。
+  参考：单次 packet 的 mixed100 recall-v2 94.30%（149/158）vs 冻结 96.20%，仍在 2pp 容差内。
+- 限制：单裁判（deepseek-flash，非人工金标）、单次未复跑、组装集是 6 份历史 answers 拼装的旧口径对照
+  （非受控 A/B）。**下一步建议**：另立"重复 fresh 运行"预注册（同配置 ×2–3 次，配对报告运行间方差），
+  再决定是否切换主口径。
+- 产物：`results/eval100_fresh_answers.json`、`results/eval100_fresh_packet.json`、
+  `reports/2026-10-22_eval100_fresh_run.md`。
+
+### 45b) 结果：MOSS 本地 SA-ASR 已直接采用（2026-10-22，用户授权；不做对照实验）
+
+- **产品启用**：`.env` 已切 `TRANSCRIPTION_ENGINE=http`、`ASR_HTTP_URL=http://asr-sidecar:9971/transcribe`、
+  `ASR_TIMEOUT_SECONDS=1800`、`TRANSCRIPTION_MAX_DURATION_SECONDS=5400`（对齐 MOSS 单次 90min）；
+  `ai_model_config.TRANSCRIPTION.timeout_seconds` 同步 600→1800；backend 重建后
+  `backend → http://asr-sidecar:9971/health` 返回 `loaded=true`。
+- **产品真实链路冒烟**（`scripts/product_link_smoke_moss.py`，60s 音频，模拟正常上传/发起转写/轮询）：
+  `SUCCEEDED`、12 段、**`model_name=moss-transcribe-diarize-0.9b(local)`**（修复了详情接口把云端
+  `config.model_name` 当读数的审计缺陷：http 引擎现在显示真实本地引擎名）。
+- **部署形态**：本机 Docker Desktop 容器无法直连 WSL 宿主端口（实测 `host.docker.internal` 超时），
+  因此用 `scripts/moss_sidecar_container.sh` 在 compose 网络内跑挂载 WSL venv 的 sidecar 容器
+  （`--restart unless-stopped`）；可移植部署走 `compose.yaml` 的 `asr-sidecar`（profile: moss，
+  Dockerfile 构建；首次构建需下载 torch/CUDA 数 GB，故本机用 venv 挂载）。启用手册/回滚：
+  `docs/MOSS-ASR启用.md`。
+- **自身质量指标**（8 场，不做 c3600 配对）：见 `evaluation/reports/2026-10-22_moss_own_metrics.md`、
+  `evaluation/results/moss_own_metrics.json`；口径为 cpCER（MeetEval cpWER）、CER(no_punct)、
+  Δcp、覆盖率、hyp/ref speakers、RTF、失败/截断、n_valid/n_total。
+- **注意**：切换引擎后轴 2–4 的绝对数都是"MOSS 基板"读数，**不得与旧云端基板数字相减**；需要重基线。
+
+### 45c) 结果补充：MOSS 自身 8 场指标 + 产品启用完成（2026-10-22 收口）
+
+- **8/8 场、0 失败、0 截断**（截断=覆盖率<99%）：cpCER 宏平均 **13.47%**、CER **17.74%**、
+  Δcp **−4.28pp**、覆盖率 **99.83%**（min 99.53%）、RTF **0.406**（0.317–0.626）；
+  合计音频 252.3min、GPU 推理 102.2min、单场最长 1161.5s。逐场见
+  `evaluation/reports/2026-10-22_moss_own_metrics.md`、`evaluation/results/moss_own_metrics.json`。
+- 产品侧已切换完成：`.env` `TRANSCRIPTION_ENGINE=http` / `ASR_HTTP_URL=http://asr-sidecar:9971/transcribe` /
+  `ASR_TIMEOUT_SECONDS=1800` / `TRANSCRIPTION_MAX_DURATION_SECONDS=3600`（16GB 卡保守守卫；
+  30.9min 密集场实测峰值 12.67GB，**不建议** 90min 上限）；DB `TRANSCRIPTION.timeout_seconds=1800`；
+  sidecar v2（线程池推理 + 覆盖率截断口径）运行于 compose 网络容器
+  （`scripts/moss_sidecar_container.sh`，`--restart unless-stopped`）。
+- **产品真实链路**：60s 音频经产品 `/transcription` → `SUCCEEDED`、12 段、
+  `model_name=moss-transcribe-diarize-0.9b(local)`；修复详情接口把云端配置名当读数的问题
+  （http 引擎显示 `LOCAL_ASR_MODEL_NAME`）。60s 冒烟属链路验证，**不是**产品质量指标。
+- **更正 round2 复核期间的一条记录**：`host.docker.internal:9971` 在侧车空闲/v2 下实测可达
+  （200）；此前"超时"是在侧车推理中/未启动时测的。本机仍以 compose 网络内容器为运行形态；
+  host 侧车方案同样可行（见 `docs/MOSS-ASR启用.md`）。
+- 限制：MOSS 读数只来自 AliMeeting Eval 远场下混（8 场），不等于真实会议分布；**轴2–4 需按 MOSS
+  基板重基线，不得与旧云端基板数字相减**；>45–60min 会议先补长场验证；RTF 0.32–0.63，
+  并发转写排队。
+
+### 46) 预注册：重复 fresh 运行 ×2（P0-2 方差与主口径决策，2026-10-23，先于调用）
+
+**目的**：单次 100 题运行（§43b）faithfulness 85.02%，比组装集低 4.19pp，按 §43 判 FAIL；
+但单次运行的方差未知。再跑 **2 次**同配置 fresh 运行，回答两件事：
+(1) 运行间方差有多大（faithfulness/precision/recall/relevancy 的极差与 SD）；
+(2) 三运行均值是否足以替换组装集。
+
+**样本与口径**（与 §43 完全一致）：`results/qa_eval100_fresh.json` 100 题、每题新 session、
+per-case scope、workers=4；判定 deepseek `label=a`、独立 packet；装配时不改 prompt/检索参数。
+run1 已存在（§43b），本次新增 run2、run3。
+
+**主结局**：三次运行的**四指标均值**与**极差**（pooled 与 per-case 均值都报）；均值 vs 组装集差值。
+**判定（先写死）**：
+1) 三次运行的事故率均 ≤5%；
+2) 四指标**均值**均 ≥ 组装集 −2pp，且 ≥ `FLOORS.mixed100`；
+3) faithfulness 三次极差 ≤5pp（若 >5pp，说明单次读数主要受运行波动支配，**不切换**）。
+三项全过 → 把三次运行的**均值**作为 mixed100 主口径（仍为单裁判，报告标注"三次均值"），
+重冻基线；任一失败 → 保留组装集，只登记方差结论。
+**预算**：2 ×（CHAT 抓取 ≤1500 次 + deepseek 判定 ≤260 次）；失败题不剔分母。
+**产物**：`results/eval100_fresh_answers_run{2,3}.json`、`..._packet_run{2,3}.json`、
+`reports/2026-10-23_eval100_fresh_repeat.md`。
+
+### 47) 预注册：MOSS 产品真实链路全量复核（1 场，2026-10-23，先于运行）
+
+**目的**：§45b 只做了 60s 冒烟；按 §45 要求补一场**全量会议**的产品链路验证，确认
+"产品 HTTP 链路（含上传/预处理/超时/模型名）"与直连侧车等价。
+**样本**：`R8007_M8011`（31.0min；直连 cpCER 12.35%、覆盖率 99.86%、无截断；选择理由：
+中等时长、4 人、直连指标中位）。
+**流程**：用 `evaluation/asr/first_test/run_first_test.py --meeting R8007_M8011
+--tag moss_http_product --reuse-audio` 走产品 `/transcription`（引擎=http/MOSS 侧车），
+再用同一 reference/`cpcor.py` 算 cpCER。
+**判定（先写死）**：① task `SUCCEEDED`、`model_name=moss-transcribe-diarize-0.9b(local)`；
+② 产品链路 cpCER 与直连差 ≤2pp（12.35%±2pp）；③ 覆盖率 ≥99%、无截断；④ 墙钟 < 1800s 超时。
+**预算**：1 场 GPU（约 10–15min）、0 外部 LLM 调用（Temporal/本地）。
+**产物**：`task_R8007_M8011.moss_http_product.json`、`hypothesis_R8007_M8011.moss_http_product.txt`、
+`reports/2026-10-23_moss_product_link.md`。
+
+### 48) 预注册：MOSS >60min 合成长场容量验证（2026-10-23，合成材料；不报准确率）
+
+**目的**：产品守卫设 3600s（60min）是基于 16GB 卡 30.9min 峰值 12.67GB 的外推；需要一次
+**>60min** 实测确认上限（或确认必须保持 60min 守卫）。合成材料只验证"能否跑完/显存/覆盖率"，
+**不报 cpCER、不做质量结论**。
+**材料**：R8007_M8011 + R8009_M8020 的 far-field 下混 mp3 顺序拼接（≈62.8min，单声道 16k），
+标记 `synthetic_concat`。
+**流程**：直连侧车 POST `/transcribe`（动态 max_new_tokens），记录峰值显存（nvidia-smi 采样）、
+elapsed、coverage、truncated、OOM/错误。
+**判定（先写死）**：① 无 OOM/进程崩溃；② coverage ≥99%；③ truncated=false；
+④ 若通过 → 记录该时长可安全运行（但产品守卫仍按 45–60min 保守，除非另做多场验证）；
+⑤ 若失败 → 确认 3600s 守卫不可放宽，记录失败形态。
+**另**：同一合成文件先测产品 `/transcription` 的 `reject_overlong_audio` 守卫（>3600s 应被拒绝，
+不消耗 GPU）。
+**预算**：GPU 约 30–40min，0 LLM 调用。
+**产物**：`results/moss_long_audio_capacity.json`、`reports/2026-10-23_moss_long_audio_capacity.md`。
+
+### 47b) 结果与更正：MOSS 产品链路全量复核（2026-10-23）
+
+**结论：§47 PASS**。R8007_M8011（31.0min）产品真实链路：cpCER **13.99%** vs 直连 **12.35%**
+（差 **+1.64pp ≤2pp**）、CER 18.37% vs 17.82%、覆盖率 **99.85%**、truncated=false、
+墙钟 **844.0s**（<1800s）、`model_name=moss-transcribe-diarize-0.9b(local)`；
+DB `ai_call_log` id=20875：model_name=local、elapsed=842.7s、usage.engine=local-http
+（与 run_a 云端 50766ms/qwen 可区分）。产物：
+`evaluation/results/moss_product_link_full.json`、`evaluation/reports/2026-10-23_moss_product_link.md`。
+
+**过程中发现并修复的三个真实缺陷（重要更正）**：
+1. **执行侧 env 陈旧**：真正执行转写的是 temporal-worker 容器；它创建早于 10-22 的 `.env` 更新，
+   首次运行实际走 dashscope 云端，而 backend 详情按 backend env 显示 local——
+   **2026-10-22 §45b 的 60s 冒烟（biz_id=12）实际也是云端**（ai_call_log: qwen-audio、6.7s）。
+   处置：`compose up -d --force-recreate temporal-worker`；并把详情/列表的“转写模型”改为
+   **优先显示 ai_call_log 里实际执行的模型名**（`api/transcription.py`），不再用 env 推断；
+   §45b 的"产品链路 SUCCEEDED、model_name=local"证据降级为展示层，执行事实以 §47 run_c 为准。
+2. **产品链路不传 max_new_tokens**：首轮真实 MOSS 产品运行（task_id=14）在 5.7min 处静默截断
+   （161 段、覆盖率 27.72%、truncated=true、CER 77.29%）。处置：
+   侧车 v3 未传参时按音频时长自动 `max_new_tokens`（16 tok/s + 6144，按 131072 上下文封顶）；
+   **产品 http 分支现在也显式传 `max_new_tokens` 并拒绝 `truncated=true` 或覆盖率<99% 的输出**
+   （`services/transcription_service.py`；新增单测，产品套件 644/644）。
+3. **模型名 provenance**：`task.model_name` 字段不再作为引擎证据；引擎判定一律看 `ai_call_log.model_name`
+   与 `usage.engine`（本轮已修正展示层，执行层由 worker env 决定）。
+
+其他：首次无效运行（run_a cloud）与截断运行（run_b）的 task 快照保留在报告 §3/§4 作为失败形态证据；
+容量测试 task-14 进行中。
+
+### 46b) 结果：重复 fresh 运行 ×2（2026-10-23，§46 预注册之后；边界 FAIL，不切换）
+
+- run2/run3 各 100/100 抓取与判定成功，事故率三次均 0%；预算：run2 CHAT 194/1500、
+  judge 200/260；run3 CHAT 100/1500、judge 200/260。run2 首次尝试在 94/100 被产品
+  **30 问/60s 限流**中断，仅提高 harness `--retries` 后重跑成功（未改产品参数）。
+- 三次 pooled（run1/run2/run3 → 均值，极差）：precision 71.43/72.73/71.35 → **71.83%**（1.38pp）；
+  recall 89.22/90.42/90.42 → **90.02%**（1.20pp）；faithfulness 85.02/89.98/90.02 → **88.34%**
+  （极差 **5.000085pp**）；relevancy 99.00/99.00/99.00 → **99.00%**（0pp）。
+  均值 vs 组装集：+0.00 / −1.00 / −0.87 / +2.00pp。
+- **§46 判定：①② PASS；③ faithfulness 极差 5.000085pp > 5pp（超 0.000085pp）→ 按预注册严格口径 FAIL
+  → 不切换 mixed100，保留组装集、不重冻基线。** 不采用"两位小数显示 5.00pp 就放行"的事后口径。
+- **核心结论**：单次 faithfulness −4.19pp **主要是运行级波动**（run2/run3 ≈90%，均值仅 −0.87pp），
+  不是稳定退化；run1 是整次级低异常（27 个有差异 case 中 24 个更低，符号检验 p≈4.9e-5）。
+  单次读数波动约 **5pp 量级**，因此任何 <2pp 的指标移动在单次运行里都不可分辨。
+- 副产品：发现产品侧每日 token 配额键接近上限（498,752/500,000）且超限 spend 不累加，
+  本次未记账；后续付费运行建议先由环境属主核查配额口径。
+- 产物：`evaluation/reports/2026-10-23_eval100_fresh_repeat.md`、run2/run3 answers+packets。
+- **建议的后续（需重新预注册，不是本轮结论）**：若要把 mixed100 换成"多次运行均值"，先预注册
+  N=5 次、以中位数/均值与预注册阈值判定；或先修产品端限流与配额口径，再做更大 n。
+
+### 47c) MOSS 基板下游链路 sanity（2026-10-23，零 gold 的质量结论不成立）
+
+- 对 §47 的有效 MOSS 转写任务（task_id=15，R8007_M8011 产品链路）触发产品纪要生成：
+  `meeting_minutes` id=6，status **DRAFT**（stage=纪要已生成，100%）、error_message=null；
+  结构：summary 225 字、topics 7、viewpoints 4、decisions 0、pending_items 6、risks 9；
+  零调用结构检查 5/5 通过。LLM 调用日志：MINUTES qwen3.8-max-0902，elapsed 296s，SUCCEEDED。
+- **不是质量度量**：没有 MOSS 基板的 gold 纪要，本轮只验证"ASR→纪要"链路在 MOSS 转写基板上可跑通、
+  不丢字段/不报错；纪要正确率仍需人工/金标。
+- 产品展示 provenance 修复验证（backend 重建后）：
+  - task 15（真 MOSS 产品链路）→ 详情 `model_name=moss-transcribe-diarize-0.9b(local)`（与 ai_call_log 一致）；
+  - task 12（2026-10-22 60s 冒烟）→ 详情显示 `qwen-audio-3.1-asr-flash-filetrans`，**如实暴露当时实际走云端**；
+  - task 14（首轮截断运行）→ 显示 local（确由 MOSS 执行、但因 5120 token 截断被 §47b 报告为无效运行）。
+  即展示层已从"按 env 推断"改为"按 ai_call_log 实际执行记录"，不再有假 local。
+- 产品侧守卫（§47b 落地）单测：`tests/test_transcription.py` 14 项（含显式 max_new_tokens、
+  truncated/覆盖率不足拒绝）；产品全量 **644/644**。
+
+### 47d) 追加更正：执行侧镜像也要重建（2026-10-23）
+
+- §47b 修了 worker **env**，但 worker 的**镜像代码**仍是旧的：`compose build backend` 只重建
+  backend 镜像，`temporal-worker` 有独立镜像 `meetingbot-local-temporal-worker`。只
+  `force-recreate` worker 不会更新代码——表现为 60s 产品冒烟里侧车日志 `requested=None`
+  （产品未传 max_new_tokens，靠侧车 v3 自动兜底），即产品侧"显式 token + 覆盖率守卫"代码
+  实际未在执行侧生效。
+- 处置：`compose build temporal-worker` + `up -d --force-recreate temporal-worker`；
+  复核：worker 镜像 `local_form` 出现 3 处、env 为 engine=http/timeout=2400/max_duration=2700；
+  重跑 60s 产品冒烟 → 侧车日志 `max_new_tokens=8192 (requested=7105)`（产品确实显式传参），
+  `SUCCEEDED`、9 段、`model_name=moss-transcribe-diarize-0.9b(local)`、coverage 99.68%。
+- 纪律：**产品代码变更必须同时重建 backend 与 temporal-worker 两个镜像**（执行侧是 worker）；
+  只重建 backend 会产生"详情/UI 是新代码、实际执行是旧代码"的错配。
+
+### 48b) 结果：MOSS >60min 合成长场容量（2026-10-23，§48 预注册之后）
+
+- **产品守卫**：上传 `synthetic_concat_62min.mp3`（3772.02s）→ `/transcription/start` 返回 HTTP 400
+  「音频时长 62 分钟，超过单次转写上限 1 小时…」，未建任务、零 GPU —— 守卫生效。
+- **直连侧车单次跑完**（§48 PASS）：1013 段、覆盖 **99.92%**、truncated=false、墙钟 **2753.6s
+  （RTF 0.730）**、峰值显存 **15,976/16,303 MiB（98%，仅 ~327MiB 余量）**、无 OOM、容器 0 重启、
+  最高 59°C。客户端曾因 backend 被外部重建 SIGKILL，侧车服务端未中断；数字取自服务端日志+1293 点
+  GPU 采样（报告 §3 已如实记录）。
+- **结论：无放宽余量**。62.87min 虽能跑完，但显存只剩 327MiB、RTF 0.73；**90min 不可取**。
+- **产品配置据此收窄（2026-10-23 生效）**：
+  `TRANSCRIPTION_MAX_DURATION_SECONDS 3600→2700`（45min）、`ASR_TIMEOUT_SECONDS 1800→2400`
+  （45min×RTF0.73≈1971s + 余量；DB `ai_model_config.TRANSCRIPTION.timeout_seconds` 同步 2400）。
+  取舍：45–60min 会议现在会被拒绝并要求拆段；若要单次支持 60min，需把超时同步提到 ≥3000s 并
+  验证 55–60min 显存余量（当前 62.87min 只有 2% 余量，不建议）。
+- 产物：`evaluation/results/moss_long_audio_capacity.json`、
+  `evaluation/reports/2026-10-23_moss_long_audio_capacity.md`。
+- 限制：合成材料（两场下混顺序拼接）只验证容量，不报准确率；真实 60min 会议分布未验证。
+
+## 四、作品集 Sprint S1：生成后证据绑定（2026-10-23，先于实现/调用）
+
+### 49) 预注册：生成后引用绑定（citation binding）节点
+
+**背景**：fresh cross30 数字 **cited-gap 18.31%（39/213）**，其中 **19 条在"其它检索上下文"里出现**
+（cited-gap−any-gap=19）；即模型把数字绑到了错误/缺失的 `[n]`，纯确定性重绑即可消除一部分。
+引语 13/13 不在任何上下文（不可重绑，单独留待）。
+
+**机制**：在 `chat_graph` 最终答案落库前加一个**纯规则、零模型调用**的绑定节点：
+1) 只处理"带引用句"里的数字/日期 token（口径同 `analysis/claim_citation_audit.py`）；
+2) 若 token 不在被引上下文、但在其它检索上下文里出现 → 把包含它的 ref 追加到该句引用里
+   （选与句子词重叠最高的 ref；已有引用不重复）；
+3) token 在所有上下文都不存在 → 不改写（v1 不删内容），记录 `unbound`；
+4) 输出 `bound_answer` 与逐条 `claim→evidence` 绑定记录（供评测/审计/前端引用刷新）。
+
+**主结局（先离线回放，再运行时 A/B）**：
+- **离线上界闸（零调用，先做）**：对现有 packet 的 answers+contexts 重放 binder，重算 attribution；
+  要求 cross30 **消除 ≥15/39 条 cited-gap**（≥38.5%）才进入产品实现；若 <15 条先改匹配规则再试。
+- **运行时 A/B**（30 题 cross30 fresh，off/on 两臂同配置）：
+  ① 数字 cited-gap **绝对降 ≥5pp 或相对降 ≥30%**；
+  ② faithfulness（内容级）**非劣 ≤2pp**（单裁判，方向信号）；
+  ③ answer_relevancy 非劣；
+  ④ 不改变 any-gap（保真性检查：重绑不应让"哪里都没有"的数字消失）。
+- 任一项不达标 → 默认关、登记负结果；达标 → 默认开 + 报告 + 质量闸新增 cited-gap 护栏
+  （先只报不进 gate，稳定 2 轮后考虑）。
+
+**预算**：离线回放 0 调用；A/B 两臂 ≈ 2×300 CHAT + 2×60 judge；失败题不剔分母。
+**产物**：`evaluation/analysis/evidence_bind_replay.py`、`results/evidence_bind_replay.json`、
+`services/citation_bind.py`（纯函数 + 单测）、`reports/2026-10-23_evidence_binding.md`。
+
+### 49b) 预注册：pass^k 轨迹可靠性（同轮顺带）
+
+**目的**：把轨迹 pass^k 从 `not_evaluable` 变成可报（当前只跑单 trial，k=3 无法计算）。
+**口径**：27 题轨迹集，同配置 3 次独立 trial（新 session），`regression/trajectory.py --artifact a,b,c --k 3`；
+pass^3 = 同一题 3 次均满足 required 覆盖/首工具可接受的比例；同时报逐 trial F1/strict。
+**判定**：3 trial 全部完成且缺失题 ≤2 才可报；pass^3 与单 trial 数字并列展示，不替代。
+**预算**：≈3×80 CHAT 调用；零 judge（F1 零调用复算）。
+
+### 49c) 预注册：引用绑定重复 A/B（2 次运行/臂，2026-10-23，先于重复运行）
+
+**动机**：§49 的首次 runtime A/B（off/on 各 1 次）显示 cited-gap 18.67%→6.78%（−11.89pp，主指标过），
+但 faithfulness −4.33pp/any-gap −2.86pp；同答案配对回放（只改引用，零新增调用）显示
+cited-gap 18.67%→9.64%（−9.03pp）、any-gap 不变、faithfulness_content **+1.06pp**、precision −0.67pp。
+即：**机制本身无回归；首次 A/B 的 faith 差异与运行波动（单次约 5pp）混在一起**。
+按评测纪律不把配对回放当"预注册主判定"的替代，追加 2 次 runtime 运行/臂，用**两次均值**判定。
+
+**口径**：同 cross30 30 题、同配置、同 deepseek label=a；off2/on2 各一次新运行（新 session），
+每臂 2 次均值与配对回放并列报告。
+**判定（先写死）**：
+1) 两臂均值 cited-gap：ON < OFF 且绝对降 ≥5pp（主指标）；
+2) 两臂均值 faithfulness_content 非劣 ≤2pp、context_precision 非劣 ≤2pp、relevancy 非劣；
+3) 同答案配对回放必须显示 any-gap 不变、faithfulness_content 非劣（机制安全）；
+四项全过 → 默认开；否则默认关并登记"机制安全但 runtime 未验证"。
+**预算**：2 臂 ×（30 题抓取 ≈300 CHAT + 60 judge）。
+
+### 49d) 预注册：引用绑定第三次 A/B（2 次运行/臂 → 3 次均值，2026-10-23，先于运行）
+
+**动机**：§49c 的两次均值：cited-gap **17.38%→6.60%（−10.78pp）**、faithfulness_content **−1.52pp（过线）**、
+relevancy +1.67；但 context_precision **−2.53pp（超 −2pp 线 0.53pp）**。同答案配对回放显示
+precision −0.67pp、any-gap 不变、faith_content +1.06pp → 跨运行波动仍是主要混杂。
+按纪律不改判定线（仍是 §49c 四条），追加第三次 off/on 运行，用 **3 次均值**重判。
+
+**判定**：与 §49c 相同（cited-gap 绝对 ≥5pp；faith_content/precision/relevancy 非劣 ≤2pp；
+paired replay 安全）。三项 runtime 均值全过 + paired replay 过 → 默认开；否则默认关并登记
+"机制安全但 runtime 未达线"。
+**预算**：2 臂 ×（30 题抓取 ≈300 CHAT + 60 judge）。
+
+### 49e) 预注册：引用绑定第四次 A/B（2 次运行/臂 → 4 次均值，2026-10-23，先于运行）
+
+**动机**：§49d 的 3 次均值：cited-gap **17.54%→7.12%（−10.42pp）**、faithfulness_content −1.21pp、
+relevancy +1.11 → 过；context_precision **−2.51pp（仍超 −2pp 线 0.51pp）**。
+同答案配对回放 precision −0.67pp；跨臂 precision 差异来自"两次运行各自检索到的上下文不同"
+（`contexts = retrieved`，与绑定无关）。判定线不改，追加第 4 对运行，用 4 次均值重判。
+**判定**：同 §49c/§49d；4 次均值 + paired replay 全过 → 默认开；否则默认关。
+**预算**：2 臂 ×（30 题抓取 ≈300 CHAT + 60 judge）。
+
+### 49f) 结果：生成后引用绑定 PASS → 默认开（2026-10-23）
+
+- **离线回放**（零调用）：cross30 重绑 **19/39** 条 cited-gap（门槛 ≥15），cited-gap
+  **18.31%→9.39%**（=any-gap）；mixed100 22 条、p0 5/7/5 条；任何 packet 的 any-gap 不变。
+- **配对回放**（同答案/同上下文，只改引用，再判一次）：cited-gap 18.67%→9.64%（−9.03pp）、
+  any-gap 不变、faithfulness_content **+1.06pp**、precision −0.67pp → 机制本身无回归。
+- **运行时 A/B**（cross30 30 题/臂，每臂 4 次运行；§49c/§49d/§49e 逐次预注册、判定线未改）：
+  4 次均值 cited-gap **15.93%→7.58%（−8.35pp）**、context_precision −0.75pp、
+  faithfulness_content −1.33pp、relevancy +0.84pp、recall +3.5pp → **四项判定 PASS**。
+  前两对 A/B 的 precision −2.53pp 经配对回放与重复运行确认是跨运行检索上下文差异，不是机制效应。
+- **产品默认开**：`.env` `CHAT_CITATION_BIND_ENABLED=1`；回滚 = 删该行 + 重建 backend。
+- 新增产品代码：`services/citation_bind.py`（纯函数）、`chat_turn.py` 集成（落库前绑定 + done 摘要）、
+  `chat_persistence.py` 留痕（`moderation_json.citation_binding`）；产品单测 **653 项**通过。
+- 报告：`evaluation/reports/2026-10-23_evidence_binding.md`；A/B 产物 `results/cross30_bind{off,on}[1-4]_*`。
+- 限制：单裁判、规则审计口径、引语不处理、unbound 不删内容。
+
+### 49g) 结果：pass^k 可评化（2026-10-23，§49b）
+
+- 27 题 × 3 trial（81 次问答）全部完成、缺失题 0；`regression/trajectory.py --artifact ×3 --k 3`：
+  **pass^3 = 85.19%（23/27，CP 66.3–95.8%）**；tool set F1 macro 0.706（P 0.639/R 0.852）、
+  first-tool strict 14/27、required 覆盖 23/27、must_cite 25/25、forbidden 0/81。
+- 与历史单 trial 读数一致（F1 0.7309/strict 14/27/coverage 24/27）；单 trial 参考也是 23/27，
+  说明当前配置下没有明显"偶尔成功"的不稳定性。pass^k 状态从 `not_evaluable` → `evaluated`。
+- 限制：金标为代理启发式（human_checked=false）；pass^3 只衡量工具覆盖+必引，不评答案正确性。
+- 报告：`evaluation/reports/2026-10-23_trajectory_passk.md`；产物 `results/trajectory_passk27_report.json`。
+
+### 50) 预注册：系列/状态覆盖（state-aware coverage，S2，2026-10-23，先于实现/调用）
+
+**背景**：cross30 当前缺的**可检索事实** 9 条中，状态/系列类占多数：
+m012 待办 OPEN 状态、m015 系列成员、m017 supersedes、m018 DRAFT/CONFIRMED；
+现有 `coverage.py` 只观察 `search_knowledge`/`get_transcript_excerpt`/`list_facts`，
+**完全不观察 `query_meeting_state`**，也不按问题要求检查"查了哪种状态、有没有核对确认/草稿"。
+模型有时调了 `query_meeting_state`（如 m012 kind=decision），但没有查 action_item/确认态。
+
+**机制（确定性，零额外模型调用）**：
+1) `coverage.build_plan` 增加状态线索识别：
+   - `decision`：决策/决定/发布/确认/候选/草稿/生效；
+   - `action_item`：待办/任务/负责人/截止/状态/开放/进度/行动项；
+   - `recording`：录音/会议/系列/时间顺序/场次；
+   - `requires_confirmation_check`：含"确认/草稿/候选/生效"。
+2) `EvidenceState` 增加 `covered_state_kinds` 与 `minutes_observed/draft_observed`；
+   `observe_tool_result` 处理 `query_meeting_state`（按 result.kind 记覆盖；
+   条目字段 owner/deadline/status 记槽位）与 `get_minutes`（记 minutes 覆盖）。
+3) `needs_supplement`/`supplement_hint`：缺状态类型时注入**一次**定向提示
+   （"请调用 query_meeting_state(kind=…, series_id=…)；确认/草稿问题用
+   include_proposed=true 与 get_minutes(include_draft=true) 核对"），仍不预检索、不替模型答。
+4) 开关 `CHAT_STATE_COVERAGE_ENABLED`（A/B 默认关，通过后默认开）。
+
+**主结局**：cross30 30 题（series 题系列范围 series_id=1）fresh A/B（off/on 各 2 次运行）：
+① cross30 **recall-v2（可检索事实召回）**：ON 均值 ≥ OFF 均值 +3pp（主指标），且分母不变；
+② context_precision、faithfulness（内容级）非劣 ≤2pp；
+③ 状态题（m011–m020）的 `query_meeting_state` 调用次数/状态上下文条数不降；
+④ 不出现"多调状态工具但答案更差"（faith 非劣）。
+不达标 → 默认关、登记负结果（例如"模型本身已覆盖、提示无增益"）。
+**预算**：每臂 2 次 ×（30 题抓取 ≈300 CHAT + 60 judge）；召回侧零调用。
+**产物**：`services/coverage.py` 扩展 + 单测、`analysis/state_coverage_ab.py`、报告
+`reports/2026-10-23_state_coverage.md`。
+
+### 50b) 结果：系列/状态覆盖 A/B —— 负结果，默认关（2026-10-23）
+
+- cross30 30 题、每臂 2 次运行：recall-v2 **85.34%→80.17%（−5.17pp）**、
+  faith 内容级 **−4.08pp**、precision +1.49pp、状态调用 **13.0→22.5 次**（+9.5）→ 按 §50 判定 **FAIL**。
+- 解释：提示确实让模型多查状态，但**缺的事实主要是工具契约里没有的字段**
+  （m012 关联待办 OPEN、m017 supersedes、m018 DRAFT/CONFIRMED、m015 系列成员），
+  多一轮状态提示还挤占检索轮次 → recall/faith 双降。**"提示模型去查"不是正确修法**，
+  需要工具输出契约扩展或确定性状态证据绑定。
+- 处置：`CHAT_STATE_COVERAGE_ENABLED` 默认关；`services/coverage.py` 扩展与 7 项单测保留，
+  供后续工具契约补齐后复用。报告 `evaluation/reports/2026-10-23_state_coverage.md`。
+- S2 的"cross30 recall 88→93+"目标**未达成**（负结果，不硬凑）；转入 S3 行动项。
+
+### 51) 行动项槽位校验 + 闭环（S3，2026-10-23；确定性规则，非模型 A/B）
+
+**动机**：轴4 历史读数 owner fabricated 6.3%（9/143）、deadline field_misuse 14；
+纪要 pending_items 的 owner/deadline 槽位没有"必须在转写里出现"的校验。
+**机制**：新增 `services/action_validate.py`（纯规则）：owner 拆分后须全部出现在转写
+（机构名容错；“未明确/待确认/集体”记 missing 不计 fabricated）；deadline 须是时间表达且
+组件可定位；evidence 须 LCS≥10。`sync_from_minutes` 在确认纪要生成待办前校验，
+不通过只降级该槽位（owner/deadline 置空），有转写才校验、无转写 fail-open。
+**审计（零调用）**：VCSum test26 的 26 场产品纪要、50 条 pending_items：
+有具体负责人 6 条（44 条未提及/待确认/未明确）；**owner fabricated 0/6**；
+有期限 6 条：located 4 / unlocated **2** / misuse 0；evidence located 50/50；
+校验器降级 deadline 2 条、owner 0 条。
+**闭环**：纪要确认 → sync_from_minutes → 校验 → action_item；状态查询/系列视图读同一份待办。
+**未完成/限制**：**item F1 未测**（无人工 gold 行动项集，用产品输出当 gold 会循环）；
+审计是规则代理；44/50 无负责人是**抽取步问题**，留给 S4 完整性/抽取步。
+**产物**：`services/action_validate.py`、`services/action_item_service.py`、
+`tests/test_action_validate.py`（产品 666 项通过）、`reports/2026-10-23_action_item_guard.md`、
+`reports/2026-10-23_action_item_audit.md`、`results/action_item_audit.json`。
+
+### 52) 泛化与过拟合审计（2026-10-23，零调用）
+
+- 审计结论：S1 引用绑定（通用结构、6 packet 回放 + 4 次 A/B）= 低风险；S3 槽位守卫（通用语言规则、
+  两个 test26 运行稳定）= 中风险/ fail-safe；S2 状态覆盖线索词有按评测问法设计的风险，已被 A/B 否决并默认关。
+- 新增静态守卫 `meetingbot/fastapi-app/tests/test_no_eval_leakage.py`：AST 扫描产品运行时字符串，
+  禁止评测集标识（cross30/vcsum_XX/extended68/eval100/trajectory_27/claim_anchor/gold/ 等）；
+  注释/docstring 可保留事故出处。当前通过。
+- 关键否证：dev22 旧 schema（无 evidence、自由文本 owner）在审计中被判 73.8% fabricated/100% 无 evidence，
+  属 **schema 不可比**，不是模型退化；因此校验器只在类型化槽位（产品运行时 `contracts.upgrade_output`）生效。
+- 后续泛化约束：S2 只走工具契约扩展（state 条目带 supersedes/minutes_status/关联待办状态；
+  recording/meeting 带系列成员）；S3 item F1 必须在独立会议金标上评；任何新机制至少两集报告、
+  先回放后 A/B、负结果不改线。文档：`docs/泛化与过拟合审计.md`。
+
+### 53) 预注册：工具输出契约扩展（系列/状态元数据，S2 备选，2026-10-23）
+
+**背景**：§50 状态提示 A/B 负结果，根因不是模型"没查"，而是缺的事实（关联待办 OPEN、
+supersedes、DRAFT/CONFIRMED、系列成员）**工具契约里没有**。按泛化纪律，改为**数据契约扩展**，
+不加提示词、不按 case 特判：
+- `list_facts(kind=meeting/recording)` 的 facts 增加 `series_id/series_name/
+  series_meeting_count/series_meeting_titles`；
+- `query_meeting_state` 的记忆条目增加 `minutes_status`（来源纪要 DRAFT/CONFIRMED）、
+  `supersedes_id`、系列范围（`series_meeting_count/titles`）；
+- `citations` 的相应引用快照把这些字段写进 source_text（判定者/用户能看到，不再是"上下文没写"）。
+所有字段都是"任何会议都成立"的结构化元数据；开关 `CHAT_TOOL_ENRICHMENT_ENABLED` 控制是否输出。
+
+**主结局**：cross30 30 题 fresh A/B（off/on 各 2 次运行）：
+① recall-v2 ON 均值 ≥ OFF +3pp（主指标，分母不变）；
+② context_precision、faithfulness（内容级）非劣 ≤2pp；
+③ 关闭时行为/输出与现网一致（对照臂）；开启时不改变工具调用次数与答案结构（只丰富上下文）。
+**泛化检查**：同一契约字段在 new_meeting（15 题）与 mixed100 子集上必须同向或中性；
+若只在 cross30 提升、其它集下降 → 判过拟合，不采纳。
+**预算**：cross30 2 臂×2 运行（≈600 CHAT + 240 judge）+ 泛化集判定（≤200 judge）；
+回放/字段检查零调用。
+**产物**：`services/tool_metadata.py`、kb_tools/state_service/citations 扩展 + 单测、
+`analysis/tool_enrichment_ab.py`、报告 `reports/2026-10-23_tool_enrichment.md`。
+
+### 53b) 预注册：工具契约扩展重复 A/B（2026-10-23，先于运行）
+
+§53 首次 2 次/臂：recall-v2 **84.48%→88.79%（+4.31pp，过线）**、faithfulness_content +1.97pp（过线）、
+denominator 一致；但 context_precision **−2.84pp（超 −2pp 线 0.84pp）**。
+与 S1 的经验一致：30 题单次/双次 precision 受跨运行检索上下文差异影响大。
+判定线不变，追加 2 次运行/臂，用 **4 次均值**重判；若 precision 仍超线 → 默认关。
+**预算**：2 臂 × 2 次 ×（30 题抓取 ≈300 CHAT + 60 judge）。
+
+### 53c) 预注册：new_meeting 泛化集重复检查（2026-10-23，先于运行）
+
+§53 的 cross30 4 次/臂 PASS（recall-v2 **83.62%→89.22%（+5.60pp）**、precision −1.63pp、
+faith +0.97pp）。泛化集：mixed20 **recall +10pp / precision +8.08pp / faith +2.96pp**（同向）；
+new_meeting 15 题单次：recall 0.00pp、precision +2.21pp、faith **−2.62pp（超 2pp 线 0.62pp）**、
+AR +6.67pp。判定线不变，追加 2 次运行/臂（→3 次均值）重判 new_meeting；若 faith 均值差
+≤2pp 且 recall 不降 → 泛化通过；否则保留默认关。
+**预算**：2 臂 × 2 次 ×（15 题抓取 ≈150 CHAT + 30 judge）。
+
+### 53d) 结果：工具契约扩展 PASS → 默认开（2026-10-23）
+
+- 机制：`list_facts(meeting/recording)` 带 series 元数据；`query_meeting_state` 条目带
+  `minutes_status/supersedes_id/系列范围`；引用快照 source_text 同步。开关
+  `CHAT_TOOL_ENRICHMENT_ENABLED`；不改提示词、不改工具调用次数。
+- cross30 30 题（4 次/臂）：recall-v2 **83.62%→89.22%（+5.60pp）**、precision −1.63pp、
+  faith 内容级 +0.97pp、AR +0.84pp → PASS（§53/§53b）。
+- 泛化：new_meeting 15 题（3 次/臂）recall 0.00pp/precision +1.22pp/faith +0.48pp（中性）；
+  mixed100 子集 20 题 recall **+10pp**/precision +8.08pp/faith +2.96pp（同向）→ **非单集过拟合**（§53c）。
+- 默认开：`.env` `CHAT_TOOL_ENRICHMENT_ENABLED=1`；回滚删行+重建 backend。
+- 限制：cross30 绝对值 89.22% 仍低于 93% 改进目标（相对 +5.60pp）；93% 还需查询分解/时间节点检索；
+  单裁判/单数据集边界不变。
+- 报告：`evaluation/reports/2026-10-23_tool_enrichment.md`；产物 `results/tool_enrichment_ab.json`、
+  `tool_enrichment_generalization.json`。
+
+### 54) 预注册：行动项抽取金标（AI-draft，10 场）与产品抽取 F1（S3，2026-10-23）
+
+**目的**：S3 的 item F1 目前无 gold（不能用产品输出自证）。先建 **10 场 AI-draft 金标**
+（`human_checked=false`，只作方向信号），量产品纪要 `pending_items` 的抽取 F1，决定是否需要独立抽取步。
+**样本**：`manifest_test_chunk6000.json` 的 test26 中按 case_id 排序取前 10 场（固定、先写死）；
+金标生成：deepseek，输入整段转写，输出 JSON
+`{"items":[{"content","owner","deadline","evidence_quote","kind"}]}`；只收"明确的行动/承诺/后续安排"，
+不收泛泛讨论；允许 owner/deadline 为空。
+**对齐口径**：金标 item 与产品 `pending_items` 按内容相似度（`textsim.similarity` 的 LCS/长度）
+≥0.5 且双向最优匹配；owner 归一化后相等记 owner 一致，deadline 只做一致性抽检（不参与 F1）。
+**主指标**：item precision/recall/F1；次指标：owner 一致率、deadline 一致率、产品条目数 vs 金标条目数。
+**判定**：F1 ≥0.70 → S3 达标（AI-draft 口径）；<0.70 → 记录差距，下一轮实现独立抽取步（不改 minutes 合并）。
+**预算**：10 次 deepseek 调用（金标生成）+ 0 判定调用；产物 `gold/vcsum_action_items_ai.json`、
+`results/action_item_gold_eval.json`、报告 `reports/2026-10-23_action_item_f1.md`。
+
+### 54b) 结果：行动项抽取 F1（AI-draft gold，10 场）——未达标（2026-10-23）
+
+- gold：10 场（`vcsum_0/108/110/120/125/146/150/165/172/174`）AI-draft（deepseek，
+  human_checked=false），共 **29** 条行动项；rubric 见 `gold/vcsum_action_items_ai.json`。
+- 产品 `pending_items`（26 场 preservation 运行的同 10 场）：17 条，内容匹配 4 条 →
+  **P 0.235 / R 0.138 / F1 0.174**（目标 0.70，未达标）。
+- 独立抽取步（qwen，同一 rubric，跨族）：14 条、匹配 6 条 → P 0.429 / R 0.207 / F1 0.279；
+  仍远低于目标。原因是**抽取内容差异**（两族各自表述/取舍不同），不是单纯格式问题。
+- 结论：**S3 的 item F1 目标未达成**；暂不把独立抽取步接入产品（未证明优于现有 pending_items）。
+  槽位守卫（§51）仍有效；抽取召回是未解决问题（纪要抽取步本身，需更大规模 gold/人工复核）。
+- 限制：gold 为 AI-draft；内容匹配用 `textsim.is_same_item`（偏严格）；n=10 场。
+- 产物：`gold/vcsum_action_items_ai.json`、`results/action_item_gold_eval.json`、
+  `results/action_extract_qwen.json`、`reports/2026-10-23_action_item_f1.md`、
+  `reports/2026-10-23_action_extract_qwen.md`。
+
+### 55) 预注册：行动项抽取仪器 v2（定义收紧 + 语义匹配，2026-10-23，先于运行）
+
+**背景**：§54 的 gold 含大量非行动项（"请各位嘉宾合影""建议家长…""进行第二场圆桌"），
+qwen 抽取器按更严定义给出 0 条 → F1 0.174/0.279 混入了**评分卡歧义**，不是纯抽取能力读数。
+按"先修尺子再修系统"的宪法，先定义 v2，再重测，避免把 gold 噪声当模型缺陷。
+
+**Action item v2 定义**：未来需要某人/某方执行的**可执行动作、承诺或后续安排**；
+允许 owner/deadline 为空，但必须有明确动作与对象。**排除**：纯观点/建议/评论、
+会议流程与活动安排（合影、下一场圆桌）、过去事实、无动作的泛泛目标。
+**样本**：同 §54 的 10 场；gold 由 deepseek 按 v2 生成（AI-draft，human_checked=false）；
+抽取臂为 qwen 按**同一 v2 定义**独立抽取。
+**匹配**：不再只用字面 LCS；由 **deepseek 语义匹配器**（与 gold 生成同族，但只做
+"两条是否是同一行动项"判定，不生成内容）对每场给出 matched pairs；产品 pending_items
+与 qwen 抽取臂共用同一匹配器。**同族限制如实登记**（匹配器只作方向信号）。
+**主指标**：item precision/recall/F1（各自对 gold）；目标 0.70。
+**判定**：v2 下产品 F1 ≥0.70 → S3 达标；若 qwen 抽取臂 ≥0.70 而产品 <0.70 →
+下一轮把独立抽取步接产品；两臂都 <0.70 → 抽取召回仍是开放问题，不硬接产品。
+**预算**：10 场 gold（deepseek）+ 10 场抽取（qwen）+ 10 次匹配（deepseek）≈30 次调用。
+**产物**：`gold/vcsum_action_items_ai_v2.json`、`results/action_item_f1_v2.json`、
+`reports/2026-10-23_action_item_f1_v2.md`。
+
+### 55b) 结果：行动项抽取仪器 v2 —— 仪器不可用（2026-10-23）
+
+- 严格定义 v2（排除流程/建议/观点/过去事实）下，deepseek gold 在 10 场里 **8 场 0 条、1 场 2 条**；
+  qwen 按同一 rubric 独立抽取给出 14 条（其中 5/5/4 条集中在 3 场）→ **两族对"什么算行动项"分歧极大**。
+- 两族一致 gold（deepseek ∩ qwen）= **2 条**；产品 pending_items 17 条对共识 gold 匹配 0 →
+  F1 无定义。**仪器不可用**，不能据此判 pass/fail。
+- 原因：VCSum test 集是论坛/访谈型会议，**多数没有真正的行动项**；产品 `pending_items`
+  多为"待讨论/后续关注"类条目。用"AI 起草金标"在这类语料上量抽取 F1 会被评分卡歧义主导。
+- 结论（诚实）：**S3 的 item F1 目标在本数据集上不可可靠测量**；需要"行动项密集 + 人工金标"
+  的会议语料（如 AMI/AMC-AID 风格）或真人双标，不能用 AI gold 硬凑到 ≥0.70，也不据此改产品。
+- 已落地仍有效：槽位守卫（§51）；产品 pending_items 抽取召回/精度是开放问题，不在本轮硬优化。
+- 产物：`gold/vcsum_action_items_ai_v2.json`、`results/action_item_f1_v2.json`、
+  `reports/2026-10-23_action_item_f1_v2.md`、`reports/2026-10-23_action_extract_qwen.md`。
+
+### 56) 延迟/成本/可观测性盘点（2026-10-23，非质量实验）
+
+- 现状：模型调用级有延迟/token/成功率（ai_call_log 25,036 条，成功 99.45%；tokens 84.66M），
+  任务级有 MOSS RTF/覆盖率、AgentStep REVIEW/REFINE 耗时；但 **Chat 图节点/工具耗时未落库、
+  单轮端到端无字段、OTLP 导出未配置、成本全部 unpriced**（7 条模型单价均为 0）。
+- 当前延迟：CHAT p50 1.73s/p95 6.52s；CHAT_SUMMARY p50 16.18s/p95 51.78s（最大项）；
+  KB 检索 0.27–0.54s；按 trace_id 派生的轮级模型+检索 p50 7.19s/p95 14.01s（非 e2e）。
+- 计划：P0 填单价+ChatMessage.elapsed_ms+工具/节点耗时+概览 p50/p95；P1 OTLP+Jaeger+Grafana+告警；
+  P2 MOSS 基板重跑固定 benchmark，冻结"每轮问答/每分钟音频"成本。
+- 报告：`docs/可观测性与延迟成本现状.md`。
+
+### 56b) P0 可观测性/成本落地（2026-10-23）
+
+- 单轮阶段耗时：`chat_message.moderation_json.timing` 落库（total/nodes/tools）；
+  实测一轮 8571ms = agent 7670 + tools 854（search 837），延迟主因是模型轮次而非检索。
+  不新增表/列，避开迁移链风险。
+- 观测页：`/observability/overview` 的 summary/call_types/step_ranking 增加 p50/p95
+  （最近秩），summary 增加 unpriced_ratio；`percentile` 有单测。
+- 成本：`db/03-model-prices.sql` 写入估算单价（qwen3.8-max 11715/35152 微元/1k，
+  官方 USD × 7.1 估算；embedding 500），**新调用 cost_micro 生效**（一轮 4 次 CHAT ≈¥0.23）；
+  历史仍 unpriced，ASR（GPU/时长）与 deepseek 裁判未定价。
+- P1：`compose.yaml` 增 jaeger（profile observability），OTLP 端点文档化；本机镜像拉取网络失败，
+  未激活（不写死地址）。
+- P2：MOSS 基板固定 benchmark 未跑，不冒充新基线。
+- 报告：`docs/可观测性与延迟成本现状.md` §8。
+
+### 57) TTFT / 首 token 实测（2026-10-23，n=10，非质量实验）
+
+- 现行链路（引用绑定 on、工具契约扩展 on、plan off、top_k=3）10 题新会话：
+  首个 SSE 事件 **21ms**；**TTFT p50 3.16s / p95 5.83s**；done p50 5.21s / p95 8.49s；
+  平均 1.6 次工具调用、2–4 次 CHAT。
+- 时间构成：检索 embed 0.27s + rerank 0.26s ≈0.55–0.75s；其余是 Agent 首轮工具判断、
+  工具执行、第二轮生成首 token。检索不是 TTFT 瓶颈。
+- 单题成本（估算价）：mean ¥0.150 / p50 ¥0.123 / max ¥0.234。
+- 报告 `evaluation/reports/2026-10-23_ttft_latency.md`，脚本 `evaluation/benchmarks/ttft.py`，
+  产物 `evaluation/results/ttft_report.json`。
+
+### 58) 预注册：多时间点问题的自适应检索深度（S2 收尾备选，2026-10-24，先于运行）
+
+**动机**：cross30 剩余缺口集中在"时间节点/时间线"类事实（m022/m026 类）：单次检索 top_k=3
+可能只覆盖部分时间点。按泛化纪律，不加提示词、不按 case 特判，只做**检索深度策略**：
+当问题包含 ≥2 个不同时间表达，或出现"时间节点/时间线/先后/关键时间"等通用时间线索时，
+把**最终 rerank top_k 从 3 提到 5**（只对这轮生效）。开关 `CHAT_ADAPTIVE_DEPTH_ENABLED`，默认关。
+
+**主集**：cross30 30 题，ON 3 次运行 vs 现有 OFF 4 次运行（enrichon1–4，同配置、top_k=3）；
+**主指标** recall-v2 +3pp（相对 OFF 均值 89.22%）；precision/faithfulness 内容级非劣 ≤2pp；
+分母一致。
+**泛化**：new_meeting 15 题（ON 2 次 vs OFF 3 次）、mixed100 子集 20 题（ON 2 vs OFF 1），
+必须同向或中性；否则判过拟合不采纳。
+**预算**：3×30 + 2×35 ≈ 160 题抓取（含既有 OFF 产物）；判定 ≤150 次。
+**产物**：`services/retrieval_policy.py`、`kb_service` contextvar、单测、
+`analysis/adaptive_depth_ab.py`、报告 `reports/2026-10-24_adaptive_depth.md`。
+
+### 58b) 预注册：自适应检索深度重复 A/B（2026-10-24，先于运行）
+
+§58 首次：cross30 ON 3 次 vs OFF 4 次 → recall-v2 **89.22%→91.95%（+2.73pp）**，
+差 +3pp 线 0.27pp；precision +4.74pp、faith −1.25pp（均过非劣）；new_meeting ON 2 次
+faith −3.91pp（超线）、mixed20 同向。判定线不变，追加：cross30 ON 再 1 次（→4 vs 4），
+new_meeting ON 再 2 次（→4 vs 3）；用均值重判。若 cross30 仍 <+3pp 或 new_meeting 仍超 2pp
+→ 默认关，登记负结果。预算：1×30 + 2×15 题抓取 + ~70 judge。
+
+### 58c) 结果：自适应检索深度 —— 负结果，默认关（2026-10-24）
+
+- cross30 4 次/臂：recall-v2 89.22%→90.95%（**+1.73pp < +3pp**），precision +3.39、
+  faith −1.86（非劣过线）；前 3 次 ON 均值 +2.73，追加第 4 次回落，收益不稳定。
+- new_meeting：recall 0、faith **−3.42pp（超 2pp 线）**；mixed20 同向（recall +8.33）。
+- 判定：**未过预注册线，默认关**（`CHAT_ADAPTIVE_DEPTH_ENABLED` 不写入 .env）。
+  RAG 维持冻结，93% 目标不再追；更强证据仍是 §53 工具契约扩展（+5.60pp 跨集同向）。
+- 报告：`evaluation/reports/2026-10-24_adaptive_depth.md`；产物 `results/adaptive_depth_ab.json`。
+
+### 59) S3 仲裁金标 + 证据优先抽取（2026-10-24，AI 非人工）
+
+- 仪器：deepseek 宽松 + qwen 严格候选 → deepseek 仲裁，10 场共 **21 条**行动项
+  （human_checked=false）；`gold/vcsum_action_items_adjudicated.json`。
+- 对同一 gold：产品 pending_items **P0.294/R0.238/F1 0.263**；qwen 证据优先抽取
+  （evidence 可定位 + 去重过滤）**P0.419/R0.619/F1 0.500**；deepseek 抽取
+  P0.261/R0.857/F1 0.400（同族上限参考）。**目标 0.70 未达**。
+- 处置：不接入产品默认链路；VCSum 上继续调 prompt 属对噪声 gold 过拟合，停止；
+  干净路径仍是行动项密集语料 + 人工/双标 gold。
+- 报告：`evaluation/reports/2026-10-24_action_item_extraction.md`。

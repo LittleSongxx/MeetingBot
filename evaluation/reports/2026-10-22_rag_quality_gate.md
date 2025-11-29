@@ -58,3 +58,16 @@ claim/citation 审计（fresh cross30）：9.4% 的数字断言不在任何上�
 - 用 `quality_gate.py` 作为所有 RAG 改动的硬门槛；
 - 对 9.4% 缺口做 claim 校验/时间绑定修复；
 - 扩 unseen-meeting holdout 后重设阈值。
+
+---
+
+## 6. 勘误与后续（2026-10-22，Lead 复核后）
+
+1. **§2 表格里的阈值与 `evaluation/quality_gate.py` 的 `FLOORS` 不一致**（本报告写的
+   p0 precision≥0.58、cross30 precision≥0.60、faithfulness≥0.85 等，代码是 0.55/0.55/0.80…）。
+   **一律以代码为准**；本轮已把代码与基线改为"旧口径 + recall-v2 双行 + 每指标 95% CI +
+   产物 sha256 校验和"（见 `evaluation/reports/2026-10-22_recall_instrument_fix.md`）。
+2. **cross30 的 context_recall 75.86% 是旧口径**：14 条缺失事实里 11 条是检索材料按定义无法包含的
+   系统元数据/否定性结论；可检索口径 recall-v2 = **88.00%（44/50）**（初稿按单审计分类算得 93.62%/44-47；round2 独立验证用同题 packet 反证 4 条可检索并更正）。引用时必须写清口径。
+3. 本报告 §1 的 "P0 6 题×3" 是重复测量（同一批 6 题 3 轮），不是 18 个独立样本；CI 已在本轮
+   质量闸输出里按合并计数给出，只作量级参考。
