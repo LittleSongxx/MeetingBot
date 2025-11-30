@@ -6,9 +6,11 @@ import asyncio
 import logging
 import os
 import time
+from datetime import timedelta
 from typing import Any
 
 from common import access
+from common.times import now
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from models import ActionItem, ChatMessage, ChatSession, Meeting, MeetingSeries, User
 from tortoise.expressions import Q
@@ -243,9 +245,27 @@ async def _record_summary_timing(message_id: int, elapsed_ms: int) -> None:
     await ChatMessage.filter(id=row.id).update(moderation_json=moderation)
 
 
+async def _acquire_summary_lease(session_id: int, ttl_seconds: int = 300) -> bool:
+    """跨进程摘要租约：空或已过期才可抢占；进程崩溃靠过期自愈。"""
+    current = now()
+    until = current + timedelta(seconds=max(60, ttl_seconds))
+    updated = await ChatSession.filter(id=int(session_id)).filter(
+        Q(summary_lock_until__isnull=True) | Q(summary_lock_until__lt=current)
+    ).update(summary_lock_until=until)
+    return updated == 1
+
+
+async def _release_summary_lease(session_id: int) -> None:
+    await ChatSession.filter(id=int(session_id)).update(summary_lock_until=None)
+
+
 async def _summarize_in_background(session_id: int, biz_id: int) -> None:
     started = time.perf_counter()
+    leased = False
     try:
+        leased = await _acquire_summary_lease(session_id)
+        if not leased:
+            return
         async with _summary_lock(session_id):
             session = await ChatSession.get_or_none(id=int(session_id))
             if session is None:
@@ -254,6 +274,8 @@ async def _summarize_in_background(session_id: int, biz_id: int) -> None:
     except Exception:  # noqa: BLE001 - 后台摘要失败不能影响问答
         logger.exception("会话 %s 的后台滚动摘要失败", session_id)
     finally:
+        if leased:
+            await _release_summary_lease(session_id)
         await _record_summary_timing(biz_id, int((time.perf_counter() - started) * 1000))
 
 

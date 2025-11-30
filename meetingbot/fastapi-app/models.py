@@ -826,6 +826,9 @@ class ChatSession(Model):
     # 于是"哪些消息已经进过摘要"不必再猜——没有水位线就只能整段重算或重复计入
     summary = fields.TextField(null=True)
     summary_upto_message_id = fields.IntField(default=0)
+    # 跨进程摘要租约：后台摘要持有时写入到期时间，过期可被其他进程抢占；
+    # 进程崩溃不会永久锁死，最多等租约过期（默认 5 分钟）
+    summary_lock_until = fields.DatetimeField(null=True)
     # 对应 chat_session.status：ACTIVE / DELETED（删除是软删，保留消息供审计）
     status = fields.CharField(max_length=30, default="ACTIVE")
     # 对应 chat_session.message_count：会话列表直接读它，不为此对消息表做聚合

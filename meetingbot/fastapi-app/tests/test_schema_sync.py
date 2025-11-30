@@ -239,7 +239,10 @@ class MigrationChainTest(unittest.TestCase):
     """
 
     def _replay(self) -> tuple[dict[str, set[str]], list[str]]:
-        paths = sorted(MIGRATIONS_DIR.glob("*.py"))
+        # 迁移链必须按**数字序号**重放：字符串序会把 10/11 排到 1 前面，
+        # 导致“先 ALTER 后建表”的假失败（真实 aerich 也按 int(version) 排序）。
+        paths = sorted(MIGRATIONS_DIR.glob("*.py"),
+                       key=lambda path: int(path.name.split("_", 1)[0]))
         tables: dict[str, set[str]] = {}
         problems: list[str] = []
         for path in paths:
