@@ -228,9 +228,11 @@ async def build_observability(current_user: User, date_from: str | None, date_to
             call_type["failed_count"] += 1
 
         # 按模型配置主键累计，两个配置用同一个模型名也分开统计，模型排行表用
-        model = model_map.setdefault(log.model_config_id, {"model_config_id": log.model_config_id, "model_name": log.model_name, "call_count": 0, "failed_count": 0, "elapsed_ms": 0, "total_tokens": 0, "cost_micro": 0})
+        model = model_map.setdefault(log.model_config_id, {"model_config_id": log.model_config_id, "model_name": log.model_name, "call_count": 0, "failed_count": 0, "elapsed_ms": 0, "total_tokens": 0, "cost_micro": 0, "ttft_samples": []})
         model["call_count"] += 1
         model["elapsed_ms"] += log.elapsed_ms
+        if int(log.ttft_ms or 0) > 0:
+            model["ttft_samples"].append(int(log.ttft_ms))
         model["total_tokens"] += current_total
         model["cost_micro"] += cost_micro
         if log.status == "FAILED":
@@ -256,6 +258,9 @@ async def build_observability(current_user: User, date_from: str | None, date_to
     for item in model_map.values():
         item["success_rate"] = round((item["call_count"] - item["failed_count"]) * 100 / item["call_count"], 2)
         item["average_elapsed_ms"] = round(item.pop("elapsed_ms") / item["call_count"], 2)
+        model_ttft = item.pop("ttft_samples")
+        item["p50_ttft_ms"] = percentile(model_ttft, 50)
+        item["p95_ttft_ms"] = percentile(model_ttft, 95)
         model_ranking.append(item)
     # 调用次数多的排前面，次数相同按模型名排
     model_ranking.sort(key=lambda item: (-item["call_count"], item["model_name"]))
