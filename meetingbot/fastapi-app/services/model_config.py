@@ -11,7 +11,7 @@ from models import AiModelConfig, ModelRoute
 
 # 可路由的调用类型/用途。路由为空时回退到 fallback_purpose（默认不改变现有行为）。
 ROUTE_KEYS = (
-    "MINUTES", "AGENT", "SPEAKER", "CHAT", "CHAT_SUMMARY",
+    "MINUTES", "AGENT", "SPEAKER", "CHAT", "CHAT_SUMMARY", "CHAT_FIRST_HOP",
     "KB_QUERY_PLAN", "KB_CONTEXTUALIZE", "ONLINE_EVAL_JUDGE",
 )
 # 这些路由目标会做结构化输出（JSON schema）；启动时校验其能力，

@@ -10,9 +10,9 @@ import time
 from typing import Any, AsyncIterator
 from uuid import uuid4
 
-from common import tracing
+from common import providers, tracing
 from common.times import now
-from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langgraph.prebuilt import ToolNode
 from models import ChatMessage, ChatSession, Meeting, MeetingSeries, TranscriptionTask, User
 from tortoise.expressions import F
@@ -26,6 +26,7 @@ from services import (
     intent_router,
     kb_service,
     kb_tools,
+    model_config,
     model_factory,
     moderation,
     prompt_injection,
@@ -36,7 +37,12 @@ from services import (
     turn_filter,
 )
 from services.agent_runtime import GuardrailChain
-from services.chat_memory import build_memory, maybe_summarize
+from services.chat_memory import (
+    build_memory,
+    maybe_summarize,
+    schedule_summary,
+    summary_async_enabled,
+)
 from services.chat_persistence import _persist_turn, turn_tokens
 from services.chat_prompts import CHAT_CALL_TYPE, SUMMARY_CALL_TYPE, get_model_config, question_message
 from services.chat_runtime import ChatRuntime, reset_current, set_current
@@ -117,6 +123,67 @@ def _resume_answer_text(prefix: str, streamed: str,
     return chat_graph.final_answer(final_state) or prefix
 
 
+FIRST_HOP_ENV = "CHAT_FIRST_HOP_ENABLED"
+
+
+def first_hop_enabled() -> bool:
+    value = (os.getenv(FIRST_HOP_ENV) or "1").strip().lower()
+    return value not in {"0", "false", "no", "off"}
+
+
+async def resolve_first_hop_config(config: Any) -> Any | None:
+    """首轮工具决策模型：默认 CHEAP，可用 model_route.CHAT_FIRST_HOP 覆盖。
+
+    只换**首轮、还没有工具结果**的那一次调用；最终回答仍用主模型。
+    找不到/不支持 tools/required 时返回 None，整条链路保持原行为。
+    """
+    if not first_hop_enabled():
+        return None
+    try:
+        candidate = await model_config.resolve_route("CHAT_FIRST_HOP", "CHEAP")
+    except Exception:  # noqa: BLE001 - 优化失败不能影响主链路
+        logger.exception("首轮快模型不可用，退回主模型")
+        return None
+    if candidate.id == config.id:
+        return None
+    if not providers.supports_tool_calling(candidate.base_url):
+        return None
+    try:
+        thinking = model_factory.reasoning_enabled(candidate, CHAT_CALL_TYPE)
+    except Exception:  # noqa: BLE001
+        return None
+    if not providers.supports_required_tool_choice(candidate.base_url, thinking=thinking):
+        return None
+    return candidate
+
+
+PREFETCH_ENV = "CHAT_PREFETCH_ENABLED"
+
+# 只对短、事实型问题做预检索；聚合/对比/原因类问题需要多工具，硬预取只会误导。
+_SIMPLE_QUESTION_MARKERS = (
+    "谁", "什么时候", "几点", "哪天", "哪一天", "哪一年", "多少", "多久",
+    "负责人", "截止", "时间", "日期", "是否",
+)
+_COMPLEX_QUESTION_MARKERS = (
+    "所有", "全部", "哪些", "分别", "对比", "为什么", "怎么", "如何",
+    "关系", "原因", "分析", "总结", "逐条", "列出",
+)
+
+
+def prefetch_enabled() -> bool:
+    value = (os.getenv(PREFETCH_ENV) or "0").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
+def should_prefetch(question: str) -> bool:
+    text = (question or "").strip()
+    if not text or len(text) > 60:
+        return False
+    if any(marker in text for marker in _COMPLEX_QUESTION_MARKERS):
+        return False
+    return any(marker in text for marker in _SIMPLE_QUESTION_MARKERS)
+
+
 async def stream_answer(session: ChatSession, question: str, *, user: User,
                         model: Any = None,
                         resume_row: ChatMessage | None = None) -> AsyncIterator[tuple[str, dict[str, Any]]]:
@@ -130,6 +197,8 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         yield ("error", {"message": "问题不能为空"})
         return
     turn_started = time.perf_counter()
+    first_token_at: float | None = None
+    summary_ms = 0
     # 每轮先清掉上一轮的深度覆盖，再按本轮问题决定是否加宽检索截断口。
     # ContextVar 按请求任务隔离；这里是防御性清理，避免同任务多轮测试串扰。
     kb_service.clear_top_k_override()
@@ -162,8 +231,11 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
             run_status="RUNNING", trace_id=trace_id)
         thread_id = f"chat-turn-{assistant_row.id}"
         await ChatMessage.filter(id=assistant_row.id).update(thread_id=thread_id)
-        # 摘要调用也归到本轮 biz_id，才能被 AUX_CALL_TYPES 计入日预算
-        await maybe_summarize(session, biz_id=assistant_row.id)
+        # 摘要默认在回答完成后异步跑；关闭异步时保留旧的同步路径（可回滚）。
+        if not summary_async_enabled():
+            summary_started = time.perf_counter()
+            await maybe_summarize(session, biz_id=assistant_row.id)
+            summary_ms = int((time.perf_counter() - summary_started) * 1000)
     else:
         assistant_row = resume_row
         trace_id = resume_row.trace_id or uuid4().hex
@@ -199,6 +271,9 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     if smalltalk.is_smalltalk(text):
         model_tools = []
         tools = []
+    first_hop_config = None
+    if model is None and model_tools:
+        first_hop_config = await resolve_first_hop_config(config)
     graph = chat_graph.build_chat_graph(chat_checkpoint.get_checkpointer())
     budget = chat_graph.budget_from_env()
     intent_decision: dict[str, Any] | None = None
@@ -373,7 +448,8 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
             # 的判定在 model_factory 里），判不了就退回图里的"提醒"路径。
             # 实测背景：修复前 27 轮里 24 轮首轮不检索，多花约 26% token。
             first_round_tool_choice=model_factory.first_round_tool_choice(config, CHAT_CALL_TYPE),
-            forced_first_tool=forced_first_tool),
+            forced_first_tool=forced_first_tool,
+            first_hop_config=first_hop_config),
         tools=_tool_node(tools),
         cost_micro_of=lambda usage: model_factory.cost_micro(config, usage),
         evidence=evidence_state,
@@ -406,6 +482,61 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     # 恢复的轮次已经过了首轮：不要把后续 token 当"开场白"缓冲
     model_round = 1 if resume_row is not None else 0
     first_round_buffer = ""
+    # 简单事实题先做一次确定性检索，再让 Agent 基于工具结果直接回答：
+    # 省掉"首轮模型决定调哪个工具"的一次完整调用（实测约 0.8–1.3s）。
+    # 只在开关打开且问题足够窄时启用；预检索失败/无命中就退回原 Agent 路径。
+    if (resume_row is None and state_in is not None and model_tools
+            and prefetch_enabled() and should_prefetch(text)):
+        search_tool = next((item for item in tools
+                            if getattr(item, "name", "") == "search_knowledge"), None)
+        if search_tool is not None:
+            prefetch_id = f"prefetch-{uuid4().hex[:8]}"
+            prefetch_args = {"query": text}
+            started = time.perf_counter()
+            yield ("tool_start", {"name": "search_knowledge", "call_id": prefetch_id,
+                                  "arguments": prefetch_args})
+            prefetch_result: str | None = None
+            prefetch_ok = False
+            try:
+                prefetch_result = await search_tool.ainvoke(prefetch_args)
+                prefetch_ok = True
+            except Exception as error:  # noqa: BLE001 - 预取失败退回主路径
+                logger.warning("会话 %s 的预检索失败，退回 Agent 路径：%s",
+                               session.id, str(error)[:300])
+            elapsed = int((time.perf_counter() - started) * 1000)
+            tool_timings.append({"name": "search_knowledge", "call_id": prefetch_id,
+                                 "elapsed_ms": elapsed})
+            text_result = str(prefetch_result or "")
+            parsed = None
+            if prefetch_ok:
+                try:
+                    parsed = json.loads(text_result)
+                except (TypeError, ValueError):
+                    parsed = None
+                if isinstance(parsed, dict):
+                    security_flags.extend(parsed.get("injection_flags") or [])
+            yield ("tool_end", {"name": "search_knowledge", "call_id": prefetch_id,
+                                "summary": chat_graph.summarize_tool_result(
+                                    "search_knowledge", text_result)})
+            fresh = registry.since(emitted_refs)
+            for citation in fresh:
+                yield ("citation", citation.as_dict())
+            emitted_refs += len(fresh)
+            # 只有拿到可读结果才注入；无命中/失败时保持原路径（首轮 required 仍有效）
+            has_payload = (isinstance(parsed, dict)
+                           and bool(parsed.get("hits") or parsed.get("facts")
+                                    or parsed.get("segments") or parsed.get("items")))
+            if prefetch_ok and has_payload:
+                state_in.setdefault("messages", []).extend([
+                    AIMessage(content="", tool_calls=[{
+                        "name": "search_knowledge", "args": prefetch_args,
+                        "id": prefetch_id, "type": "tool_call"}]),
+                    ToolMessage(content=text_result, tool_call_id=prefetch_id,
+                                name="search_knowledge"),
+                ])
+                # 已经检索过：不让图把它当成"首轮没检索"再提醒一轮
+                state_in["tool_calls"] = 1
+                model_round = 1
     runtime_token = set_current(runtime)
     try:
         async for event in graph.astream_events(
@@ -428,6 +559,8 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
                 message = event.get("data", {}).get("output")
                 if model_round == 1 and getattr(message, "tool_calls", None) and first_round_buffer:
                     # 首轮确实发起了检索：把它前面的开场白补发给用户
+                    if first_token_at is None:
+                        first_token_at = time.perf_counter()
                     chunks.append(first_round_buffer)
                     yield ("token", {"text": first_round_buffer})
                 first_round_buffer = ""
@@ -439,6 +572,8 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
                 if model_round == 0:
                     first_round_buffer += piece
                 else:
+                    if first_token_at is None:
+                        first_token_at = time.perf_counter()
                     chunks.append(piece)
                     yield ("token", {"text": piece})
             elif name == "on_tool_start" and node == "tools":
@@ -574,8 +709,12 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         deduped_security.append(flag)
     security_snapshot = {"flags": deduped_security, "blocked": False}
     turn_elapsed_ms = int((time.perf_counter() - turn_started) * 1000)
-    timing = {"total_ms": turn_elapsed_ms, "nodes": node_timings,
-              "tools": tool_timings}
+    first_token_ms = (int((first_token_at - turn_started) * 1000)
+                      if first_token_at is not None else 0)
+    timing = {"total_ms": turn_elapsed_ms,
+              "first_token_ms": first_token_ms,
+              "summary_ms": summary_ms,
+              "nodes": node_timings, "tools": tool_timings}
     tokens = await turn_tokens(
         assistant_row.id,
         call_types=(CHAT_CALL_TYPE, SUMMARY_CALL_TYPE, "KB_QUERY_EMBED",
@@ -603,6 +742,10 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     if failure:
         yield ("error", {"message": failure, "message_id": assistant_row.id})
         return
+    # 回答已落库、done 之前排队后台摘要：不占用首 token/本轮延迟，下一轮读到旧摘要
+    # 也仍是正确结果（水位线未前移，最多多压一次）。
+    if summary_async_enabled():
+        schedule_summary(session.id, assistant_row.id)
     yield ("done", {
         "message_id": assistant_row.id, "stop_reason": stop_reason,
         "notice": chat_graph.STOP_NOTICE.get(stop_reason, ""),

@@ -1,0 +1,127 @@
+{
+  "generated_at": "2026-10-26T19:02:34+0800",
+  "base_url": "http://127.0.0.1:19091",
+  "qa_set": "/home/song/code/Agent/media_agent/AIMeeting/evaluation/results/qa_new_meeting_15.json",
+  "summary": {
+    "n": 10,
+    "ttft_ms": {
+      "mean": 2153.5,
+      "p50": 2092.6,
+      "p95": 2152.0,
+      "max": 3216.9
+    },
+    "first_event_ms": {
+      "p50": 20.7,
+      "p95": 22.0
+    },
+    "done_ms": {
+      "mean": 4626.2,
+      "p50": 4156.6,
+      "p95": 5427.2,
+      "max": 8182.7
+    },
+    "mean_tool_calls": 1.1
+  },
+  "rows": [
+    {
+      "case_id": "n01",
+      "question": "会议主持人是谁？",
+      "message_id": 10288,
+      "first_event_ms": 22.01670300019032,
+      "ttft_ms": 2118.6081809992174,
+      "done_ms": 4350.3361089988175,
+      "tool_calls": 1,
+      "event_count": 58
+    },
+    {
+      "case_id": "n02",
+      "question": "知识库当前覆盖率和目标覆盖率分别是多少？",
+      "message_id": 10290,
+      "first_event_ms": 22.645425000519026,
+      "ttft_ms": 3216.875466001511,
+      "done_ms": 5427.232385000025,
+      "tool_calls": 1,
+      "event_count": 62
+    },
+    {
+      "case_id": "n03",
+      "question": "知识库还有哪些主题没有覆盖？",
+      "message_id": 10292,
+      "first_event_ms": 20.71204599997145,
+      "ttft_ms": 2122.1709230012493,
+      "done_ms": 8182.667750999826,
+      "tool_calls": 2,
+      "event_count": 172
+    },
+    {
+      "case_id": "n04",
+      "question": "计划新增多少条FAQ、负责人是谁、什么时候完成？",
+      "message_id": 10294,
+      "first_event_ms": 21.832151000126032,
+      "ttft_ms": 2074.648214998888,
+      "done_ms": 4841.681993999373,
+      "tool_calls": 1,
+      "event_count": 74
+    },
+    {
+      "case_id": "n05",
+      "question": "智能客服灰度什么时候开始、放量比例多少？",
+      "message_id": 10296,
+      "first_event_ms": 19.220689999201568,
+      "ttft_ms": 1882.4705290007842,
+      "done_ms": 3929.4441630008805,
+      "tool_calls": 1,
+      "event_count": 58
+    },
+    {
+      "case_id": "n06",
+      "question": "灰度回滚要求多长时间内完成？",
+      "message_id": 10298,
+      "first_event_ms": 19.538975999239483,
+      "ttft_ms": 1856.83401300048,
+      "done_ms": 4156.584201000442,
+      "tool_calls": 1,
+      "event_count": 41
+    },
+    {
+      "case_id": "n07",
+      "question": "全量上线最早什么时候？",
+      "message_id": 10300,
+      "first_event_ms": 21.74357100011548,
+      "ttft_ms": 2092.6486419994035,
+      "done_ms": 3827.941543999259,
+      "tool_calls": 1,
+      "event_count": 50
+    },
+    {
+      "case_id": "n08",
+      "question": "账单API稳定性验证的截止时间是什么？",
+      "message_id": 10302,
+      "first_event_ms": 21.695432000342407,
+      "ttft_ms": 2152.0107079995796,
+      "done_ms": 4474.899746999654,
+      "tool_calls": 1,
+      "event_count": 60
+    },
+    {
+      "case_id": "n09",
+      "question": "客户满意度CSAT的目标是多少？",
+      "message_id": 10304,
+      "first_event_ms": 20.570627999404678,
+      "ttft_ms": 1925.6641329993727,
+      "done_ms": 3233.8674269994954,
+      "tool_calls": 1,
+      "event_count": 37
+    },
+    {
+      "case_id": "n10",
+      "question": "这个季度的客户支持预算是多少？",
+      "message_id": 10306,
+      "first_event_ms": 19.95853399967018,
+      "ttft_ms": 2093.341865000184,
+      "done_ms": 3837.2219240009144,
+      "tool_calls": 1,
+      "event_count": 46
+    }
+  ]
+}

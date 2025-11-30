@@ -206,6 +206,12 @@ def build_tool_model(config: AiModelConfig, tools: list[dict[str, Any]], call_ty
     return bound.bind_tools(list(tools))
 
 
+def first_round_tool_choice_for(config: AiModelConfig, call_type: str,
+                                prompt_chars: int = 0) -> str:
+    """按目标配置判定首轮 tool_choice（fast model 与主模型可能不同）。"""
+    return first_round_tool_choice(config, call_type, prompt_chars)
+
+
 def first_round_tool_choice(config: AiModelConfig, call_type: str, prompt_chars: int = 0) -> str:
     """首轮的工具选择策略：能力允许就 `required`，否则 `auto`（退回"提醒"路径）。
 
@@ -432,11 +438,16 @@ async def stream_chat(
 
     for attempt in range(1, attempts + 1):
         started = perf_counter()
+        first_token_at: float | None = None
         accumulated: Any = None
         answer_chars = 0
         try:
             async for chunk in active.astream(messages):
                 text = _chunk_text(chunk)
+                # 首 token 的判据是“第一个有输出的 chunk”：正文或 tool_call 参数都算。
+                # 工具调用轮没有正文，但模型确实已经开始输出，不能记 0。
+                if first_token_at is None and _chunk_has_output(chunk):
+                    first_token_at = perf_counter()
                 if text:
                     emitted = True
                     answer_chars += len(text)
@@ -456,6 +467,8 @@ async def stream_chat(
                         "total_tokens": input_tokens + output_tokens,
                     }})
             elapsed_ms = int((perf_counter() - started) * 1000)
+            ttft_ms = (int((first_token_at - started) * 1000)
+                       if first_token_at is not None else 0)
             await AiCallLog.create(
                 **tracing.call_fields(),
                 request_id="AIC" + uuid4().hex.upper(),
@@ -465,6 +478,7 @@ async def stream_chat(
                 response_size=len(str(getattr(message, "content", "") or "").encode("utf-8")),
                 status="SUCCEEDED",
                 elapsed_ms=elapsed_ms,
+                ttft_ms=ttft_ms,
                 usage_json=usage,
                 cost_micro=_cost_micro(config, usage),
             )
@@ -475,6 +489,8 @@ async def stream_chat(
         except Exception as error:  # noqa: BLE001 - 逐类分流后再抛，与 invoke_json 同款
             detail = (str(error) or type(error).__name__)[:2000]
             elapsed_ms = int((perf_counter() - started) * 1000)
+            ttft_ms = (int((first_token_at - started) * 1000)
+                       if first_token_at is not None else 0)
             await AiCallLog.create(
                 **tracing.call_fields(),
                 request_id="AIC" + uuid4().hex.upper(),
@@ -483,6 +499,7 @@ async def stream_chat(
                 request_size=request_size, response_size=answer_chars,
                 status="FAILED",
                 elapsed_ms=elapsed_ms,
+                ttft_ms=ttft_ms,
                 error_message=f"[尝试 {attempt}/{attempts}] {detail}",
             )
             if attempt < attempts and not emitted and is_transient(error):
@@ -543,6 +560,14 @@ def _chunk_text(chunk: Any) -> str:
     return str(content or "")
 
 
+def _chunk_has_output(chunk: Any) -> bool:
+    """这个流式 chunk 是否已经有模型输出：正文或 tool_call 参数。"""
+    if _chunk_text(chunk):
+        return True
+    return any(getattr(chunk, attribute, None) for attribute in
+               ("tool_call_chunks", "tool_calls"))
+
+
 def has_tool_result(messages: list[Any]) -> bool:
     """消息流里有没有工具结果——**"这一轮是不是首轮"的判据**。
 
@@ -564,6 +589,7 @@ def make_model_caller(
     model: Any = None,
     first_round_tool_choice: str = TOOL_CHOICE_AUTO,
     forced_first_tool: str | None = None,
+    first_hop_config: AiModelConfig | None = None,
 ) -> Callable[[list[Any]], Awaitable[Any]]:
     """把一次流式调用包成状态图要的"调模型"动作：进去是消息列表，出来是 AIMessage。
 
@@ -575,15 +601,27 @@ def make_model_caller(
     之后自动回到 `auto`（模型已经查到东西了，再强制它继续调工具是错的）。
     """
     async def call_model(messages: list[Any]) -> Any:
+        # 首轮工具决策可以交给更快的 CHEAP 模型，最终回答仍走主模型。
+        # 测试/显式注入 model 时不切换，避免改变既有单测的形状。
+        target_config = config
+        target_model = model
+        if (first_hop_config is not None and model is None
+                and not has_tool_result(messages)):
+            target_config = first_hop_config
+            target_model = None
         choice: Any = TOOL_CHOICE_AUTO
         if not has_tool_result(messages):
             if forced_first_tool:
                 choice = {"type": "function", "function": {"name": forced_first_tool}}
+            elif target_config is first_hop_config:
+                # 不同供应商对 required 的支持不同，按目标配置重新判定。
+                choice = first_round_tool_choice_for(target_config, call_type)
             elif first_round_tool_choice != TOOL_CHOICE_AUTO:
                 choice = first_round_tool_choice
         message: Any = None
-        async for kind, payload in stream_chat(config, messages, tools=tools, call_type=call_type,
-                                               biz_id=biz_id, label=label, model=model,
+        async for kind, payload in stream_chat(target_config, messages, tools=tools,
+                                               call_type=call_type, biz_id=biz_id,
+                                               label=label, model=target_model,
                                                tool_choice=choice):
             if kind == "message":
                 message = payload

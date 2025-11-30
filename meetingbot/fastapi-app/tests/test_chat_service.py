@@ -113,6 +113,30 @@ class ChatServiceTest(unittest.IsolatedAsyncioTestCase):
                 events.append((kind, payload))
         return events, session, search
 
+    async def test_prefetch_simple_fact_skips_first_model_turn(self):
+        """简单事实题先检索，模型首轮直接基于 ToolMessage 回答，不再走"模型选工具"一轮。"""
+        events = []
+        session = await chat_service.create_session(self.user)
+        model = ScriptedChatModel(rounds=[AIMessage(content="主持人是张晨[1]。")])
+        with patch.dict(os.environ, {"CHAT_PREFETCH_ENABLED": "1"}), \
+                patch.object(kb_service, "search_knowledge",
+                             AsyncMock(return_value=[self._hit()])):
+            async for kind, payload in chat_service.stream_answer(
+                    session, "会议主持人是谁？", user=self.user, model=model):
+                events.append((kind, payload))
+        kinds = [kind for kind, _ in events]
+        self.assertEqual(kinds[0], "meta")
+        self.assertIn("tool_start", kinds)
+        self.assertIn("tool_end", kinds)
+        self.assertIn("citation", kinds)
+        self.assertEqual(events[-1][0], "done")
+        done = [payload for kind, payload in events if kind == "done"][0]
+        self.assertEqual(done["stop_reason"], chat_graph.STOP_FINISHED)
+        self.assertEqual(len(model.rounds), 1, "不应再有首轮工具决策调用")
+        assistant = await ChatMessage.filter(session_id=session.id, role="ASSISTANT").first()
+        self.assertEqual([item["name"] for item in (assistant.tools_json or [])],
+                         ["search_knowledge"])
+
     async def test_tool_round_trip_yields_protocol_events_in_order(self):
         script = [
             AIMessage(content="", tool_calls=[_tool_call("search_knowledge", {"query": "上线时间"})]),
@@ -372,6 +396,28 @@ class MemoryTest(unittest.IsolatedAsyncioTestCase):
                 patch.object(chat_service.logger, "exception") as logged:
             self.assertFalse(await chat_service.maybe_summarize(session))
         logged.assert_called_once()
+
+    async def test_async_summary_runs_after_answer_and_records_timing(self):
+        """CHAT_SUMMARY_ASYNC=1 时摘要由后台任务执行，不阻塞本轮。"""
+        from services.chat_memory import schedule_summary, wait_summary_tasks
+
+        session = await chat_service.create_session(self.user)
+        await self._seed(session, 14)
+        session = await chat_service.get_session(session.id, self.user)
+        assistant = await ChatMessage.create(
+            session_id=session.id, role="ASSISTANT", content="",
+            moderation_json={"timing": {"total_ms": 1}})
+        with patch.dict(os.environ, {
+                "CHAT_HISTORY_WINDOW": "4", "CHAT_SUMMARY_THRESHOLD": "6",
+                "CHAT_SUMMARY_ASYNC": "1"}), \
+                patch.object(chat_service.model_factory, "invoke_json",
+                             AsyncMock(return_value="异步摘要")):
+            schedule_summary(session.id, assistant.id)
+            await wait_summary_tasks()
+        session = await chat_service.get_session(session.id, self.user)
+        self.assertEqual(session.summary, "异步摘要")
+        row = await ChatMessage.get(id=assistant.id)
+        self.assertIn("summary_ms", (row.moderation_json or {}).get("timing", {}))
 
     async def test_failed_assistant_turns_stay_out_of_context(self):
         session = await chat_service.create_session(self.user)

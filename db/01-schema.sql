@@ -101,6 +101,7 @@ CREATE TABLE `ai_call_log`  (
   `response_size` bigint NOT NULL DEFAULT 0 COMMENT '模型返回JSON字节数',
   `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '调用状态：SUCCEEDED、FAILED',
   `elapsed_ms` bigint NOT NULL DEFAULT 0 COMMENT '调用耗时毫秒',
+  `ttft_ms` bigint NOT NULL DEFAULT 0 COMMENT '首 token 延迟毫秒；非流式或未测到为 0',
   `usage_json` json NULL COMMENT '模型返回的usage统计',
   `cost_micro` bigint NOT NULL DEFAULT 0 COMMENT '本次调用成本（微元，1e-6 元），按调用时的单价与真实用量算出',
   `trace_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '链路追踪ID（同一次业务操作的多次调用共享）',

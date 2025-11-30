@@ -84,6 +84,18 @@ STATE_PROTOCOL = (
 )
 
 
+TOOL_CALLING_PROTOCOL = (
+    "\n\n【工具调用纪律】\n"
+    "1. 首轮若确实需要多个互相独立的工具（彼此不依赖对方的返回），必须在同一轮"
+    "一次性并发发起全部工具调用，不要一轮只发一个；确有先后依赖时才拆到后续轮次。\n"
+    "2. 需要调用工具的轮次只输出工具调用，不要输出解释性正文、开场白或"
+    "「我先查一下」这类过渡句；正文留到拿到工具结果后的回答轮。\n"
+    "3. 已拿到工具结果的回答轮，关键槽位（负责人/协作人/截止时间/时长/数量/时间点等）"
+    "齐全时直接回答，不要为同一事实重复检索；只有缺上述槽位、或【资料覆盖规则】"
+    "要求补查未确认纪要/转写时才继续检索，且不要重复相同参数的工具调用。"
+)
+
+
 EVIDENCE_PROTOCOL = (
     "\n\n【证据边界规则】\n"
     "1. 每个具体事实/数字/日期/引语，必须能在其引用 [n] 对应的工具结果原文中找到；"
@@ -141,9 +153,10 @@ async def get_system_prompt() -> str:
     template = await PromptTemplate.filter(code="CHAT_ANSWER", enabled=True).first()
     body = (template.system_prompt if template else "") or DEFAULT_SYSTEM_PROMPT
     # 内容审核的第二层：生成约束。未配置词表时它返回空串（不留一句空话）。
+    # 工具调用纪律紧跟工具选择规则：先定「选哪个工具」，再约束「怎么调、何时停」。
     # 资料覆盖规则放在引用协议之前：引用协议始终是最后一块结构性约束。
     return (body.strip() + SOURCE_COVERAGE_PROTOCOL + AGGREGATION_PROTOCOL
-            + STATE_PROTOCOL
+            + STATE_PROTOCOL + TOOL_CALLING_PROTOCOL
             + (EVIDENCE_PROTOCOL if os.getenv("EVIDENCE_CONSTRAINT_ENABLED", "0").strip().lower()
                not in {"0", "false", "no", "off"} else "")
             + prompt_injection.system_guards()

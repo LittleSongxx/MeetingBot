@@ -216,10 +216,12 @@ async def build_observability(current_user: User, date_from: str | None, date_to
                 day["failed_count"] += 1
 
         # 按调用类型累计次数、耗时、Token 和失败数，调用类型分布图用
-        call_type = call_type_map.setdefault(log.call_type, {"call_type": log.call_type, "call_count": 0, "failed_count": 0, "elapsed_ms": 0, "total_tokens": 0, "cost_micro": 0, "elapsed_samples": []})
+        call_type = call_type_map.setdefault(log.call_type, {"call_type": log.call_type, "call_count": 0, "failed_count": 0, "elapsed_ms": 0, "total_tokens": 0, "cost_micro": 0, "elapsed_samples": [], "ttft_samples": []})
         call_type["call_count"] += 1
         call_type["elapsed_ms"] += log.elapsed_ms
         call_type["elapsed_samples"].append(int(log.elapsed_ms or 0))
+        if int(log.ttft_ms or 0) > 0:
+            call_type["ttft_samples"].append(int(log.ttft_ms))
         call_type["total_tokens"] += current_total
         call_type["cost_micro"] += cost_micro
         if log.status == "FAILED":
@@ -241,8 +243,11 @@ async def build_observability(current_user: User, date_from: str | None, date_to
         # 累计耗时换成平均耗时；样本同时算 p50/p95（最近秩，空样本为 0）
         item["average_elapsed_ms"] = round(item.pop("elapsed_ms") / item["call_count"], 2)
         samples = item.pop("elapsed_samples")
+        ttft_samples = item.pop("ttft_samples")
         item["p50_elapsed_ms"] = percentile(samples, 50)
         item["p95_elapsed_ms"] = percentile(samples, 95)
+        item["p50_ttft_ms"] = percentile(ttft_samples, 50)
+        item["p95_ttft_ms"] = percentile(ttft_samples, 95)
         call_types.append(item)
     # 调用次数多的排前面，次数相同按类型名排
     call_types.sort(key=lambda item: (-item["call_count"], item["call_type"]))
@@ -285,6 +290,7 @@ async def build_observability(current_user: User, date_from: str | None, date_to
     step_ranking.sort(key=lambda item: (-item["call_count"], item["step_type"]))
 
     all_elapsed = [int(log.elapsed_ms or 0) for log in logs]
+    all_ttft = [int(log.ttft_ms or 0) for log in logs if int(log.ttft_ms or 0) > 0]
     failed_count = sum(log.status == "FAILED" for log in logs)
     succeeded_runs = sum(run.status == "SUCCEEDED" for run in runs)
     failed_steps = sum(step.status == "FAILED" for step in steps)
@@ -323,6 +329,9 @@ async def build_observability(current_user: User, date_from: str | None, date_to
             "average_elapsed_ms": round(sum(all_elapsed) / len(all_elapsed), 2) if all_elapsed else 0,
             "p50_elapsed_ms": percentile(all_elapsed, 50),
             "p95_elapsed_ms": percentile(all_elapsed, 95),
+            "average_ttft_ms": round(sum(all_ttft) / len(all_ttft), 2) if all_ttft else 0,
+            "p50_ttft_ms": percentile(all_ttft, 50),
+            "p95_ttft_ms": percentile(all_ttft, 95),
             "input_tokens": total_input_tokens,
             "output_tokens": total_output_tokens,
             "total_tokens": total_tokens,
