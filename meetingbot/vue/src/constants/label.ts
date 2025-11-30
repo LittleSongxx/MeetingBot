@@ -29,6 +29,7 @@ export const MODEL_ROUTE_OPTIONS: { label: string; value: string }[] = [
   { label: '说话人匹配', value: 'SPEAKER' },
   { label: '知识问答', value: 'CHAT' },
   { label: '会话摘要', value: 'CHAT_SUMMARY' },
+  { label: '首轮工具决策', value: 'CHAT_FIRST_HOP' },
   { label: '检索查询规划', value: 'KB_QUERY_PLAN' },
   { label: '检索上下文改写', value: 'KB_CONTEXTUALIZE' },
   // 在线评测的裁判模型：可用更强/更便宜的模型单独指定
