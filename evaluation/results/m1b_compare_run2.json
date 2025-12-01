@@ -1,0 +1,80 @@
+{
+  "meta": {
+    "baseline": [
+      "results/ragas_official_run1.json",
+      "results/ragas_official_run2.json",
+      "results/ragas_official_run3.json"
+    ],
+    "new": "results/m1b_ragas_run2.json",
+    "n_paired": 100,
+    "baseline_label": "r1",
+    "new_label": "r1-m1"
+  },
+  "metrics": {
+    "faithfulness": {
+      "baseline_mean": 0.6685171502822042,
+      "new_mean": 0.8774832630893237,
+      "mean_diff": 0.20896611280711946,
+      "diff_ci": [
+        0.15593070901764455,
+        0.2634112652055425
+      ],
+      "wins": 75,
+      "ties": 8,
+      "losses": 16,
+      "n": 99,
+      "nulls_new": 1
+    },
+    "answer_relevancy": {
+      "baseline_mean": 0.907067293532303,
+      "new_mean": 0.8986394674183654,
+      "mean_diff": -0.008427826113938445,
+      "diff_ci": [
+        -0.045608796556285566,
+        0.030458896586929553
+      ],
+      "wins": 40,
+      "ties": 0,
+      "losses": 60,
+      "n": 100,
+      "nulls_new": 0
+    },
+    "context_precision": {
+      "baseline_mean": 0.6958941264085075,
+      "new_mean": 0.7076459034371999,
+      "mean_diff": 0.01175177702869276,
+      "diff_ci": [
+        -0.02565001870214759,
+        0.051585297414404346
+      ],
+      "wins": 12,
+      "ties": 77,
+      "losses": 10,
+      "n": 99,
+      "nulls_new": 1
+    },
+    "context_recall": {
+      "baseline_mean": 0.8813131313131313,
+      "new_mean": 0.9023569023569025,
+      "mean_diff": 0.021043771043771045,
+      "diff_ci": [
+        -0.018518518518518517,
+        0.06397306397306397
+      ],
+      "wins": 6,
+      "ties": 89,
+      "losses": 4,
+      "n": 99,
+      "nulls_new": 1
+    }
+  },
+  "cases": {},
+  "gates": {
+    "faith_pp": 20.896611280711948,
+    "faith_ci_lower_pp": 15.593070901764456,
+    "pass_faith": true,
+    "noninferior_ar": true,
+    "noninferior_cr": true,
+    "noninferior_cp": true
+  }
+}

@@ -1,0 +1,9 @@
+# RAGAS 官方口径重测 · 独立环境（勿并入产品 venv）
+# install:
+#   cd evaluation
+#   uv venv --python 3.10 .venv-ragas
+#   uv pip install --python .venv-ragas/bin/python -r requirements-ragas.txt
+# full transitive lock: requirements-ragas.lock.txt (uv pip freeze)
+ragas==0.4.3
+openai==3.3.0
+langchain-openai==1.7.3

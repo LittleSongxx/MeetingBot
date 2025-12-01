@@ -1,0 +1,3800 @@
+{
+  "judge": {
+    "model": "deepseek-flash",
+    "base_url": "https://api.deepseek.com",
+    "temperature": 0.0,
+    "provider": "openai-compatible"
+  },
+  "embedding": {
+    "model": "qwen3.7-text-embedding",
+    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "dim": "1024"
+  },
+  "prompt_language": "en-official",
+  "ragas_version": "0.4.3",
+  "python": "3.10.12",
+  "label": "r1",
+  "run": "run3",
+  "packet_path": "/home/song/code/Agent/media_agent/AIMeeting/evaluation/results/eval100_scope_fixed_packet.json",
+  "packet_sha256": "50c5102607a36a3b2e72fec69b35e91bd556a4e3698d66c96f17294a58e40cf7",
+  "refs_path": "/home/song/code/Agent/media_agent/AIMeeting/evaluation/gold/qa_ref_answers.json",
+  "refs_sha256": "60a0c41f46edf108c51f5dde8e7ddec0c713239fa45b05031da3827d9ef52c5c",
+  "refs_human_checked": false,
+  "limit": 0,
+  "strictness": 3,
+  "concurrency": 20,
+  "metrics": [
+    "faithfulness",
+    "answer_relevancy",
+    "context_precision",
+    "context_recall"
+  ],
+  "started_at": "2026-10-27T11:13:13.902776+00:00",
+  "estimated_judge_calls": 955,
+  "finished_at": "2026-10-27T11:29:49.434774+00:00",
+  "wall_seconds": 992.7,
+  "n_cases_scored": 100,
+  "cases": [
+    {
+      "case_id": "m001",
+      "question": "发布公告与对外通稿分别由谁负责、什么时候完成？",
+      "source_set": "cross30",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.7142857142857143,
+        "answer_relevancy": 0.9308357038620652,
+        "context_precision": 0.0,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 33.4,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 124.8,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 39.7,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 9.3,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m002",
+      "question": "两段录音里分别提到了哪些风险？",
+      "source_set": "cross30",
+      "n_contexts": 8,
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9965712557668839,
+        "context_precision": 0.0,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 31.7,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 123.9,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 94.2,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.8,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m003",
+      "question": "发布时间的结论在两段录音里一致吗？分别怎么说？",
+      "source_set": "cross30",
+      "n_contexts": 8,
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.8785319988111245,
+        "context_precision": 0.0,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 32.5,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 125.8,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 92.5,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 14.4,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m004",
+      "question": "两段录音分别是上午还是下午的会、主题分别是什么？",
+      "source_set": "cross30",
+      "n_contexts": 8,
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7409581698099825,
+        "context_precision": 0.0,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 29.2,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 119.5,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 89.1,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 11.0,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m005",
+      "question": "灰度这件事在两段录音里分别讨论到什么？",
+      "source_set": "cross30",
+      "n_contexts": 8,
+      "scores": {
+        "faithfulness": 0.8,
+        "answer_relevancy": 0.9352124341948452,
+        "context_precision": 0.0,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 45.5,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 120.4,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 90.8,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 11.9,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m006",
+      "question": "测试回归与对外通稿分别由谁负责？",
+      "source_set": "cross30",
+      "n_contexts": 6,
+      "scores": {
+        "faithfulness": 0.7368421052631579,
+        "answer_relevancy": 0.8671272181627532,
+        "context_precision": 0.0,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 32.0,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 106.0,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 75.5,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 18.7,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m007",
+      "question": "移动端附件下载与报表导出这两个问题，分别在哪段录音里讨论、怎么处理？",
+      "source_set": "cross30",
+      "n_contexts": 8,
+      "scores": {
+        "faithfulness": 0.8620689655172413,
+        "answer_relevancy": 0.8545487696401214,
+        "context_precision": 0.0,
+        "context_recall": 0.5
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 86.3,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 88.7,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 72.8,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 13.0,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m008",
+      "question": "两段录音里的验收/回归要求分别是什么？",
+      "source_set": "cross30",
+      "n_contexts": 8,
+      "scores": {
+        "faithfulness": 0.9444444444444444,
+        "answer_relevancy": 0.9886782882380322,
+        "context_precision": 0.0,
+        "context_recall": 0.6666666666666666
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 33.9,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 79.8,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 74.8,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.4,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m009",
+      "question": "移动端附件下载问题在两段录音里分别是什么状态和安排？",
+      "source_set": "cross30",
+      "n_contexts": 8,
+      "scores": {
+        "faithfulness": 0.8333333333333334,
+        "answer_relevancy": 0.9388127656189492,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 30.1,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 74.0,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 71.1,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 11.7,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m010",
+      "question": "客服支持与运营支持在两段录音里分别有什么安排？",
+      "source_set": "cross30",
+      "n_contexts": 8,
+      "scores": {
+        "faithfulness": 0.9444444444444444,
+        "answer_relevancy": 0.85355213916611,
+        "context_precision": 0.16666666665,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 23.7,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 47.6,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 46.5,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 6.8,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m011",
+      "question": "产品发布评审系列里，已经人工确认的发布决策是什么？",
+      "source_set": "cross30",
+      "n_contexts": 1,
+      "scores": {
+        "faithfulness": 0.2857142857142857,
+        "answer_relevancy": 0.9688515894876287,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 19.2,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 80.1,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 8.2,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 11.6,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m012",
+      "question": "系列里移动端附件下载进度修复这件事，现在是已确认的决策还是未确认的候选？",
+      "source_set": "cross30",
+      "n_contexts": 1,
+      "scores": {
+        "faithfulness": 0.45454545454545453,
+        "answer_relevancy": 0.8720896348542125,
+        "context_precision": 0.9999999999,
+        "context_recall": 0.5
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 30.9,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 74.2,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 9.1,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 5.7,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m013",
+      "question": "系列当前还开着哪些待办？负责人和截止时间分别是什么？",
+      "source_set": "cross30",
+      "n_contexts": 2,
+      "scores": {
+        "faithfulness": 0.35714285714285715,
+        "answer_relevancy": 0.7853974811022478,
+        "context_precision": 0.0,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 28.4,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 82.6,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 24.2,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.8,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m014",
+      "question": "系列里「回答先给结论，再给依据」这条偏好是谁的、是否已确认？",
+      "source_set": "cross30",
+      "n_contexts": 1,
+      "scores": {
+        "faithfulness": 0.625,
+        "answer_relevancy": 0.5389432703880777,
+        "context_precision": 0.0,
+        "context_recall": 0.25
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 75.0,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 76.7,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 6.6,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 17.5,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m015",
+      "question": "这个系列包含哪几段录音？它们的时间顺序是什么？",
+      "source_set": "cross30",
+      "n_contexts": 2,
+      "scores": {
+        "faithfulness": 0.4117647058823529,
+        "answer_relevancy": 0.9567389868403745,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 31.7,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 77.5,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 20.9,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 15.0,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m016",
+      "question": "系列里最近一次会议形成的结论是什么？",
+      "source_set": "cross30",
+      "n_contexts": 7,
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.7199722743312248,
+        "context_precision": 0.0,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 32.0,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 67.6,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 62.6,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 16.7,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m017",
+      "question": "系列里发布决策有没有被后续会议替代或修改？",
+      "source_set": "cross30",
+      "n_contexts": 4,
+      "scores": {
+        "faithfulness": 0.2727272727272727,
+        "answer_relevancy": 0.8413524838650966,
+        "context_precision": 0.49999999995,
+        "context_recall": 0.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 26.9,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 77.4,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 75.7,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 15.9,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m018",
+      "question": "系列里报表导出相关的决定是否已经确认生效？",
+      "source_set": "cross30",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.3333333333333333,
+        "answer_relevancy": 0.9381069549502518,
+        "context_precision": 0.3333333333,
+        "context_recall": 0.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 30.5,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 54.1,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 63.0,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.2,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m019",
+      "question": "系列里未确认的候选记忆应该怎么处理、能不能直接当作事实回答？",
+      "source_set": "cross30",
+      "n_contexts": 2,
+      "scores": {
+        "faithfulness": 0.1875,
+        "answer_relevancy": 0.8534671056173568,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 20.5,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 47.5,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 19.7,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.1,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m020",
+      "question": "项目现在处于什么状态？下一步要做什么？",
+      "source_set": "cross30",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.6111111111111112,
+        "answer_relevancy": 0.8493082155091324,
+        "context_precision": 0.0,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 20.4,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 44.4,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 24.8,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.2,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m021",
+      "question": "上午会和下午会分别是在什么时间开的？谁先谁后？",
+      "source_set": "cross30",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.9333333333333333,
+        "answer_relevancy": 0.9590574489707917,
+        "context_precision": 0.0,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 25.6,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 86.9,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 38.2,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.6,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m022",
+      "question": "从灰度开始到正式发布，中间有哪些关键时间节点？",
+      "source_set": "cross30",
+      "n_contexts": 4,
+      "scores": {
+        "faithfulness": 0.7894736842105263,
+        "answer_relevancy": 0.9695137315925466,
+        "context_precision": 0.0,
+        "context_recall": 0.5
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 27.3,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 100.7,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 46.6,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 15.6,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m023",
+      "question": "移动端附件下载修复的截止时间在正式发布之前还是之后？",
+      "source_set": "cross30",
+      "n_contexts": 1,
+      "scores": {
+        "faithfulness": 0.6363636363636364,
+        "answer_relevancy": 0.9842165263746755,
+        "context_precision": 0.9999999999,
+        "context_recall": 0.5
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 24.8,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 88.6,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 4.1,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 4.9,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m024",
+      "question": "8月30日18:00、8月31日12:00、8月31日17:00 这三个时间点分别对应什么事项？",
+      "source_set": "cross30",
+      "n_contexts": 8,
+      "scores": {
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.5332917513642866,
+        "context_precision": 0.16666666665,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 33.2,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 89.4,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 78.4,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 16.4,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m025",
+      "question": "下午会里，报表导出异步改造和灰度发布排期哪个先、哪个后？",
+      "source_set": "cross30",
+      "n_contexts": 6,
+      "scores": {
+        "faithfulness": 0.9333333333333333,
+        "answer_relevancy": 0.9390874300391082,
+        "context_precision": 0.0,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 26.5,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 87.7,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 66.6,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.3,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m026",
+      "question": "发布当天的时间安排是什么：几点正式发布、几点同步发通稿？",
+      "source_set": "cross30",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.5833333333333334,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.9999999999,
+        "context_recall": 0.5
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 29.3,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 82.3,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 74.6,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 17.5,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m027",
+      "question": "首周复盘和首周运行日报分别在什么时间提交？",
+      "source_set": "cross30",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.8,
+        "answer_relevancy": 0.9909302426396239,
+        "context_precision": 0.3333333333,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 29.3,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 80.0,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 36.0,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.6,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m028",
+      "question": "发布前一日 18:00 之前必须完成什么？",
+      "source_set": "cross30",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.7185782760576037,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 29.3,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 63.1,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 29.3,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.9,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m029",
+      "question": "两个功能问题（报表导出、消息推送免打扰）的处理时间线分别是什么？",
+      "source_set": "cross30",
+      "n_contexts": 5,
+      "scores": {
+        "faithfulness": 0.9565217391304348,
+        "answer_relevancy": 0.842393030371857,
+        "context_precision": 0.0,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 25.1,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 58.3,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 45.3,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.9,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m030",
+      "question": "灰度三个阶段的时间节奏是什么？回滚需要多久？",
+      "source_set": "cross30",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.7894736842105263,
+        "answer_relevancy": 0.9382367219326412,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 23.4,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 49.1,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 23.6,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 8.4,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m031",
+      "question": "上午会的主持人是谁？",
+      "source_set": "holdoutA",
+      "n_contexts": 4,
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.974680941928494,
+        "context_precision": 0.6388888888675925,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 19.2,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 75.6,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 44.5,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 11.6,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m032",
+      "question": "下午会是谁汇报功能验收情况？",
+      "source_set": "holdoutA",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.5,
+        "answer_relevancy": 0.9890074966332101,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 21.8,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 73.9,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 43.7,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 6.6,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m033",
+      "question": "报表导出压测暴露了哪两个关键数字？",
+      "source_set": "holdoutA",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.6666666666666666,
+        "answer_relevancy": 0.9582108993581052,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 27.8,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 76.4,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 36.1,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.4,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m034",
+      "question": "灰度回滚为什么能最快5分钟切回旧版本？",
+      "source_set": "holdoutA",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.5714285714285714,
+        "answer_relevancy": 0.9960491144809115,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 67.1,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 73.1,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 38.6,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.8,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m035",
+      "question": "V2.0的17个需求验收结果如何？",
+      "source_set": "holdoutA",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.6,
+        "answer_relevancy": 0.9253005978623611,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 29.4,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 74.7,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 35.3,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 14.1,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m036",
+      "question": "消息推送免打扰设置最后是什么状态？",
+      "source_set": "holdoutA",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.6666666666666666,
+        "answer_relevancy": 0.8921545914374404,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 27.9,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 48.8,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 36.0,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 13.6,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m037",
+      "question": "灰度期间的值班排班表由谁提交、什么时候？",
+      "source_set": "holdoutA",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.7692307692307693,
+        "answer_relevancy": 0.9927081882485463,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 62.3,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 68.2,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 59.8,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.9,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m038",
+      "question": "首周运行日报由谁负责、什么时候发？",
+      "source_set": "holdoutA",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.9285714285714286,
+        "answer_relevancy": 0.9655421954826265,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 34.4,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 59.0,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 40.3,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.6,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m039",
+      "question": "发布公告需要包含哪些入口？",
+      "source_set": "holdoutA",
+      "n_contexts": 4,
+      "scores": {
+        "faithfulness": 0.5,
+        "answer_relevancy": 1.0,
+        "context_precision": 0.6388888888675925,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 30.2,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 49.8,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 51.4,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.5,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m040",
+      "question": "客服常见问题知识库需要覆盖哪些问题类型？",
+      "source_set": "holdoutA",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.8095238095238095,
+        "answer_relevancy": 0.9719419959773749,
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 31.4,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 44.2,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 33.3,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 29.7,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m041",
+      "question": "为什么删除关联过业务记录的用户会被阻止？",
+      "source_set": "holdoutA",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.8888888888888888,
+        "answer_relevancy": 0.9999990087302534,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 27.6,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 72.4,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 44.4,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.5,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m042",
+      "question": "任务负责人分配风险有什么可操作建议？",
+      "source_set": "holdoutA",
+      "n_contexts": 1,
+      "scores": {
+        "faithfulness": 0.0,
+        "answer_relevancy": 0.9825157857564162,
+        "context_precision": 0.9999999999,
+        "context_recall": 0.5
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 26.0,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 71.5,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 9.7,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 7.1,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m043",
+      "question": "灰度期间需要重点监控哪些指标？",
+      "source_set": "holdoutA",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.7272727272727273,
+        "answer_relevancy": 1.0,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 31.8,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 69.8,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 36.0,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 8.8,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m044",
+      "question": "容量评估的结论是什么？",
+      "source_set": "holdoutA",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.375,
+        "answer_relevancy": 0.999999217680719,
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 25.1,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 70.7,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 43.5,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.2,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m045",
+      "question": "对外通稿由谁定稿、什么时候定稿？",
+      "source_set": "holdoutA",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.4166666666666667,
+        "answer_relevancy": 0.9832450983772604,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 28.4,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 76.5,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 35.1,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 16.5,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m046",
+      "question": "发布当天上午10点安排什么？",
+      "source_set": "holdoutA",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.3333333333333333,
+        "answer_relevancy": 0.9961958325651908,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 21.1,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 72.7,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 61.7,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 36.5,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m047",
+      "question": "移动端附件下载修复任务的协作人是谁？",
+      "source_set": "holdoutA",
+      "n_contexts": 4,
+      "scores": {
+        "faithfulness": 0.35714285714285715,
+        "answer_relevancy": 0.9999991316167353,
+        "context_precision": 0.5833333333041666,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 67.6,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 75.2,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 50.7,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 8.4,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m048",
+      "question": "首周复盘要分析哪几类数据？",
+      "source_set": "holdoutA",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.7333333333333333,
+        "answer_relevancy": 0.8650688819320829,
+        "context_precision": 0.8333333332916666,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 29.6,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 58.3,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 45.6,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 5.0,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m049",
+      "question": "知识索引构建期间如果资料更新，应该怎么处理？",
+      "source_set": "holdoutA",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.9959394875668854,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 23.7,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 55.0,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 36.4,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 15.3,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m050",
+      "question": "阻断任务未按时完成会触发什么？",
+      "source_set": "holdoutA",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.7,
+        "answer_relevancy": 0.9999999511183884,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 30.4,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 46.5,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 36.2,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.6,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m051",
+      "question": "李月开场说这次会议的目标是什么？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.9166666666666666,
+        "answer_relevancy": 0.8048799014182405,
+        "context_precision": 0.0,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 26.7,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 82.5,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 75.2,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 4.1,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m052",
+      "question": "上午会介绍的灰度覆盖比例从多少扩到多少？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.5,
+        "answer_relevancy": 0.9728324163443302,
+        "context_precision": 0.8333333332916666,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 30.9,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 83.3,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 33.4,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 9.9,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m053",
+      "question": "灰度复盘里登录成功率和下单链路成功率分别是多少？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.8571428571428571,
+        "answer_relevancy": 0.983792861036395,
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 31.7,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 94.6,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 35.1,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 6.6,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m054",
+      "question": "新版本看板访问量和凭证上传率分别提升多少？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.2857142857142857,
+        "answer_relevancy": 0.8077272636245033,
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 29.2,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 96.3,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 39.3,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 13.2,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m055",
+      "question": "灰度期间后端接口稳定性如何？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.9090909090909091,
+        "answer_relevancy": 0.8977921845343793,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 30.0,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 93.8,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 32.5,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 9.0,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m056",
+      "question": "测试团队回归需要覆盖哪些模块？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9341938600508816,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 28.6,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 68.4,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 64.6,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 49.0,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m057",
+      "question": "移动端附件下载问题影响核心会议流程吗？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.9090909090909091,
+        "answer_relevancy": 0.9591961259765885,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 60.3,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 56.1,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 28.6,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 11.8,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m058",
+      "question": "首周运行日报需要汇总哪些数据？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.875,
+        "answer_relevancy": 0.9995375953371258,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 23.3,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 55.3,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 26.9,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.1,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m059",
+      "question": "发布公告需要写清哪些入口？",
+      "source_set": "holdoutD",
+      "n_contexts": 4,
+      "scores": {
+        "faithfulness": 0.6363636363636364,
+        "answer_relevancy": 0.9999989866014564,
+        "context_precision": 0.6388888888675925,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 17.9,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 53.7,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 30.9,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.5,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m060",
+      "question": "发布当天10:00要做什么？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.9428104678684708,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 24.2,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 41.6,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 20.1,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.5,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m061",
+      "question": "报表导出在正式发布时怎么处理？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.922162580476396,
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 34.0,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 84.8,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 34.8,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 9.9,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m062",
+      "question": "报表导出异步改造需要多少工作日？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.8571428571428571,
+        "answer_relevancy": 0.9981735504876598,
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 33.1,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 82.3,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 45.8,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 18.3,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m063",
+      "question": "缓存方案为什么没有采用？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.8095238095238095,
+        "answer_relevancy": 0.9852753792196304,
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 30.6,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 81.5,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 36.5,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.4,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m064",
+      "question": "灰度按什么维度切流？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.7777777777777778,
+        "answer_relevancy": 0.9191045320232155,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 21.0,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 80.6,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 38.2,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.7,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m065",
+      "question": "回滚时数据库改动需要动数据吗？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.8,
+        "answer_relevancy": 0.9999999516045817,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 23.4,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 83.1,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 42.4,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 5.7,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m066",
+      "question": "阻断任务未完成会触发什么？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.5,
+        "answer_relevancy": 0.9999999582617408,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 30.0,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 74.8,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 38.5,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 58.0,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m067",
+      "question": "会议最后复述了哪三项结论？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.625,
+        "answer_relevancy": 0.7664891364168082,
+        "context_precision": 0.8333333332916666,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 31.8,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 65.2,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 61.7,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.6,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m068",
+      "question": "客服知识库由谁负责、什么时候完成？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.8,
+        "answer_relevancy": 0.8061417954359141,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 23.0,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 56.8,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 28.1,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 8.4,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m069",
+      "question": "发布后要观察哪两个运营指标？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.5,
+        "answer_relevancy": 0.9757229818640086,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 19.7,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 48.4,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 25.5,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.1,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m070",
+      "question": "9月1日9:00发布的范围包括哪些能力？",
+      "source_set": "holdoutD",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.875,
+        "answer_relevancy": 0.9769504905363452,
+        "context_precision": 0.8333333332916666,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 19.6,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 43.3,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 23.8,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 11.9,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m071",
+      "question": "会议主持人是谁？",
+      "source_set": "newmeeting",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.6363636363636364,
+        "answer_relevancy": 0.6742304083789228,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 31.7,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 84.7,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 35.1,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 11.7,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m072",
+      "question": "知识库当前覆盖率和目标覆盖率分别是多少？",
+      "source_set": "newmeeting",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.6666666666666666,
+        "answer_relevancy": 0.9657074121546154,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 29.9,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 83.0,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 42.6,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.9,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m073",
+      "question": "知识库还有哪些主题没有覆盖？",
+      "source_set": "newmeeting",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.8888888888888888,
+        "answer_relevancy": 0.8098676795958232,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 21.0,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 81.3,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 36.7,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 5.0,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m074",
+      "question": "计划新增多少条FAQ、负责人是谁、什么时候完成？",
+      "source_set": "newmeeting",
+      "n_contexts": 4,
+      "scores": {
+        "faithfulness": 0.6666666666666666,
+        "answer_relevancy": 0.9946150965434638,
+        "context_precision": 0.999999999975,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 29.1,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 90.5,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 54.3,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 13.4,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m075",
+      "question": "智能客服灰度什么时候开始、放量比例多少？",
+      "source_set": "newmeeting",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.4444444444444444,
+        "answer_relevancy": 0.9845846803243156,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 33.4,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 85.5,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 37.5,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 15.9,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m076",
+      "question": "灰度回滚要求多长时间内完成？",
+      "source_set": "newmeeting",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.25,
+        "answer_relevancy": 0.9343427347174621,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 30.0,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 74.6,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 81.3,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 60.3,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m077",
+      "question": "全量上线最早什么时候？",
+      "source_set": "newmeeting",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.625,
+        "answer_relevancy": 0.9999999547306381,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 30.8,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 66.5,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 34.5,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 14.2,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m078",
+      "question": "账单API稳定性验证的截止时间是什么？",
+      "source_set": "newmeeting",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.7,
+        "answer_relevancy": 0.9988772235193443,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 23.5,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 56.3,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 29.5,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.0,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m079",
+      "question": "客户满意度CSAT的目标是多少？",
+      "source_set": "newmeeting",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.9999990333781795,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 20.1,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 48.8,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 29.5,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.9,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m080",
+      "question": "这个季度的客户支持预算是多少？",
+      "source_set": "newmeeting",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.14285714285714285,
+        "answer_relevancy": 0.994932308573128,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 20.3,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 39.5,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 21.9,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.2,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m081",
+      "question": "知识库补齐和智能客服灰度之间是什么决策关系？",
+      "source_set": "newmeeting",
+      "n_contexts": 4,
+      "scores": {
+        "faithfulness": 0.6666666666666666,
+        "answer_relevancy": 0.8978255457443535,
+        "context_precision": 0.7499999999625,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 28.2,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 88.7,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 42.4,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 7.4,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m082",
+      "question": "退款政策文档由谁更新、什么时候完成？",
+      "source_set": "newmeeting",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.7777777777777778,
+        "answer_relevancy": 0.9482383528029187,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 31.5,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 92.0,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 39.0,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 18.2,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m083",
+      "question": "会议识别出的主要风险是什么？",
+      "source_set": "newmeeting",
+      "n_contexts": 2,
+      "scores": {
+        "faithfulness": 0.7,
+        "answer_relevancy": 0.8406730877393535,
+        "context_precision": 0.49999999995,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 30.6,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 89.5,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 22.3,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 13.9,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m084",
+      "question": "下一次检查会定在什么时候？",
+      "source_set": "newmeeting",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.625,
+        "answer_relevancy": 1.0000000000000002,
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 23.9,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 81.8,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 34.8,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 3.1,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m085",
+      "question": "两段录音分别主要讨论什么？",
+      "source_set": "newmeeting",
+      "n_contexts": 6,
+      "scores": {
+        "faithfulness": 0.72,
+        "answer_relevancy": 0.8580650486844651,
+        "context_precision": 0.0,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 28.9,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 90.3,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 69.9,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 16.4,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m086",
+      "question": "上午会讨论了几个议题？分别是什么？",
+      "source_set": "holdoutB",
+      "n_contexts": 4,
+      "scores": {
+        "faithfulness": 0.4,
+        "answer_relevancy": 0.7607377011015143,
+        "context_precision": 0.0,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 29.2,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 84.1,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 49.3,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 17.5,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m087",
+      "question": "主持人说会议预计持续多久？",
+      "source_set": "holdoutB",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.3333333333333333,
+        "answer_relevancy": 0.8926436470313762,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 29.2,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 61.4,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 68.9,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 15.1,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m088",
+      "question": "灰度期间后端接口有没有出现500错误？",
+      "source_set": "holdoutB",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.8,
+        "answer_relevancy": 0.9905321841903998,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 25.1,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 59.7,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 31.8,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.6,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m089",
+      "question": "会议纪要模型调用的成功率和平均耗时是多少？",
+      "source_set": "holdoutB",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.5714285714285714,
+        "answer_relevancy": 0.9873247965284179,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 22.7,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 53.0,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 29.3,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.6,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m090",
+      "question": "Agent工具调用成功率是多少？",
+      "source_set": "holdoutB",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.4444444444444444,
+        "answer_relevancy": 0.9999990514471202,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 21.8,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 46.3,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 23.4,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 15.1,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m091",
+      "question": "新版本任务看板访问量和任务完成凭证上传率分别提升多少？",
+      "source_set": "holdoutB",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.6666666666666666,
+        "answer_relevancy": 0.968178762509024,
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 28.0,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 82.1,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 38.8,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 10.8,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m092",
+      "question": "用户反馈最集中的两个问题是什么？",
+      "source_set": "holdoutB",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9999999552765436,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 32.9,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 85.5,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 40.4,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.9,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m093",
+      "question": "权限验证覆盖了哪四类账号？",
+      "source_set": "holdoutB",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.5,
+        "answer_relevancy": 0.0,
+        "context_precision": 0.0,
+        "context_recall": 0.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 29.6,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 91.3,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 41.2,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 2.4,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m094",
+      "question": "运营建议发布后增加哪两个观察指标？",
+      "source_set": "holdoutB",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9910406426297241,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 32.1,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 89.6,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 39.6,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 14.5,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m095",
+      "question": "客服希望知识问答的引用包含哪些信息？",
+      "source_set": "holdoutB",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.7,
+        "answer_relevancy": 0.9999988758318473,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 33.7,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 90.4,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 36.2,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 12.0,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m096",
+      "question": "9月1日正式发布的功能范围包括哪些能力？",
+      "source_set": "holdoutB",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.75,
+        "answer_relevancy": 0.9999993104939221,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 28.4,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 70.9,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 35.1,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 55.3,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m097",
+      "question": "测试团队承诺什么时候完成回归并提交凭证？",
+      "source_set": "holdoutB",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.8,
+        "answer_relevancy": 0.990849566562899,
+        "context_precision": 0.9999999999666667,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 66.7,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 55.9,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 30.1,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 11.7,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m098",
+      "question": "对外通稿初稿需要根据什么调整、删掉哪部分？",
+      "source_set": "holdoutB",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.375,
+        "answer_relevancy": 0.9501414799556812,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 23.4,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 60.8,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 27.7,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 8.4,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m099",
+      "question": "产品公告和对外通稿为什么要在发布前一天定稿？",
+      "source_set": "holdoutB",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 0.7142857142857143,
+        "answer_relevancy": 0.9926731196692234,
+        "context_precision": 0.9999999999,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 18.4,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 46.7,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 28.5,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 8.4,
+          "attempts": 1
+        }
+      }
+    },
+    {
+      "case_id": "m100",
+      "question": "报表导出异步改造需要多长时间？",
+      "source_set": "holdoutB",
+      "n_contexts": 3,
+      "scores": {
+        "faithfulness": 1.0,
+        "answer_relevancy": 0.9875386053380547,
+        "context_precision": 0.99999999995,
+        "context_recall": 1.0
+      },
+      "reasons": {
+        "faithfulness": "",
+        "answer_relevancy": "",
+        "context_precision": "",
+        "context_recall": ""
+      },
+      "errors": {},
+      "timings": {
+        "faithfulness": {
+          "seconds": 17.6,
+          "attempts": 1
+        },
+        "answer_relevancy": {
+          "seconds": 37.5,
+          "attempts": 1
+        },
+        "context_precision": {
+          "seconds": 32.5,
+          "attempts": 1
+        },
+        "context_recall": {
+          "seconds": 9.2,
+          "attempts": 1
+        }
+      }
+    }
+  ],
+  "summary": {
+    "overall": {
+      "faithfulness": {
+        "mean": 0.673388,
+        "n_numeric": 100,
+        "n_null": 0
+      },
+      "answer_relevancy": {
+        "mean": 0.907393,
+        "n_numeric": 100,
+        "n_null": 0
+      },
+      "context_precision": {
+        "mean": 0.695833,
+        "n_numeric": 100,
+        "n_null": 0
+      },
+      "context_recall": {
+        "mean": 0.889167,
+        "n_numeric": 100,
+        "n_null": 0
+      }
+    },
+    "by_source_set": {
+      "cross30": {
+        "faithfulness": 0.68487,
+        "answer_relevancy": 0.839479,
+        "context_precision": 0.25,
+        "context_recall": 0.713889,
+        "n_cases": 30
+      },
+      "holdoutA": {
+        "faithfulness": 0.614686,
+        "answer_relevancy": 0.974428,
+        "context_precision": 0.934722,
+        "context_recall": 0.975,
+        "n_cases": 20
+      },
+      "holdoutD": {
+        "faithfulness": 0.759176,
+        "answer_relevancy": 0.932639,
+        "context_precision": 0.856944,
+        "context_recall": 0.95,
+        "n_cases": 20
+      },
+      "newmeeting": {
+        "faithfulness": 0.617355,
+        "answer_relevancy": 0.926797,
+        "context_precision": 0.883333,
+        "context_recall": 1.0,
+        "n_cases": 15
+      },
+      "holdoutB": {
+        "faithfulness": 0.670344,
+        "answer_relevancy": 0.900777,
+        "context_precision": 0.866667,
+        "context_recall": 0.933333,
+        "n_cases": 15
+      }
+    }
+  }
+}

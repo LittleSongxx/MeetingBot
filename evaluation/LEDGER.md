@@ -3290,3 +3290,182 @@ new_meeting ON 再 2 次（→4 vs 3）；用均值重判。若 cross30 仍 <+3p
 - 处置：不接入产品默认链路；VCSum 上继续调 prompt 属对噪声 gold 过拟合，停止；
   干净路径仍是行动项密集语料 + 人工/双标 gold。
 - 报告：`evaluation/reports/2026-10-24_action_item_extraction.md`。
+
+---
+
+## 预注册：2026-10-27 RAGAS 官方口径重测（r1 仪器）
+
+> 状态：**先于任何 r1 评分调用写死**（截至本行，r1 只完成 reference 构造，未发生 judge 调用）。后续只追加结果与偏差记录，**不改判定线**。
+> 仪器标签：**r1**（与既有 a/b/c/d/e/g 并列）。**r1 数字禁止与既有自研口径 71.83/90.02/88.34/99.00 相减或写"提升/下降"**——换仪器 = 绝对数重述。
+
+### 1. 目的
+
+用 **RAGAS 官方库（0.4.3）** 对现有 mixed100 packet 做一次"只换尺子、不换被测对象"的离线重测，产出一版可冻结、可回源的 RAGAS 口径最终证据；作为第二台仪器与现有自研四指标并排报告。
+
+### 2. 数据与冻结（先于评分固定）
+
+| 项 | 值 |
+|---|---|
+| 评测 packet | `results/eval100_scope_fixed_packet.json`，sha256 `50c5102607a36a3b2e72fec69b35e91bd556a4e3698d66c96f17294a58e40cf7` |
+| 样本 | 100 题 / 167 条 gold facts / 0 道不可答题；平均 3.55 段上下文/题 |
+| reference | `gold/qa_ref_answers.json`，sha256 `60a0c41f46edf108c51f5dde8e7ddec0c713239fa45b05031da3827d9ef52c5c` |
+| reference 方法 | `gold_facts_sentence_template`：1 条 gold fact → 1 句陈述句；**只读 expected_facts，不读 answer/contexts**；`human_checked=false`，另出 30 条人工抽检 CSV |
+| 重跑范围 | **不重新检索、不重新生成**；固定 packet 的 answer/contexts 重判 |
+
+### 3. 仪器
+
+- `ragas==0.4.3`（`ragas.metrics.collections`，`ascore(**kwargs)→MetricResult`）；独立 venv `evaluation/.venv-ragas`。
+- 判官：`deepseek-flash`，`temperature=0`，`https://api.deepseek.com/v1`，Instructor 结构化输出。
+- embedding：`qwen3.7-text-embedding`（百炼 compatible-mode `/embeddings`，`EMBEDDING_DIM=1024`）。
+- 并发 8、`AsyncOpenAI(timeout=60, max_retries=3)`；prompt 语言：**英文官方 prompt**（若 pilot 后适配中文，另开 `r1-zh` 标签并重算 α，不混入 r1）。
+- 四指标类：`Faithfulness`、`AnswerRelevancy(strictness=3)`、`ContextPrecision`（with reference）、`ContextRecall`（with reference）。
+
+### 4. 四指标定义与分母（按官方源码，不按文档转述）
+
+| 指标 | 输入 | 分母 | 备注 |
+|---|---|---|---|
+| faithfulness | user_input, response, retrieved_contexts | judge 拆出的断言数 | 空断言 → NaN，单列不并分母；raw 为主口径，内容级另列 |
+| answer_relevancy | user_input, response | case 数 | strictness=3 反推问题 + 余弦均值 × noncommittal 惩罚；分数可越界 |
+| context_precision | user_input, reference, retrieved_contexts | **被判有用的切片数**（AP 公式分母） | 全 0 → 0.0（不是 NaN）；每切片 1 次调用 |
+| context_recall | user_input, retrieved_contexts, reference | **reference 句子数** | reference=167 句；按句归因 |
+
+### 5. 运行协议与统计
+
+- **pilot**：20 题分层（p0/cross30/new_meeting 各 6/7/7，固定随机种子），检查：四指标可算、NaN/0.0 边界、10 条答案拆断言 3 次的稳定性（句数波动）、实际调用数与预算相符；pilot 结果**不进入最终证据**。
+- **full**：100 题 × **N=3 次**（同 packet/refs/judge/embedding；每次独立 run，不复用判分缓存）；报告每次读数 + 3 次均值 + 极差 + SD。
+- **CI**：case 级 cluster bootstrap（1000 次重采样），同时给 Wilson/CP 近似作对照；分 p0/cross30/new_meeting/mixed100 分层报；**不报加权总分**。
+- 每题保存四指标 score/reason；null（NaN）单列，不计 0、不进分母。
+
+### 6. 失败与无效
+
+- 单 case/指标失败记录 `errors` 并继续；**不静默丢弃**。
+- 某指标 null 比例 >5% → 该次 run 判无效，重跑；重跑仍失败则报告"不可测"。
+- 预算：pilot ≤300 次 judge 调用；full 每次 ≤1,200 次；总 ≤4,000 次（约 $2 量级）；超预算即停并记录。
+
+### 7. 判定
+
+本次是**取证**不是门禁：不设"通过/不通过"阈值；只给四指标读数 + CI + 边界。是否切换为产品主口径，另案预注册。
+
+### 8. 冻结与记录
+
+- 产物：`results/ragas_official_*.json` + `reports/2026-10-27_ragas_official.md`；记录 ragas 版本、judge、embedding、prompt 语言、packet sha、refs sha、调用数、成本、失败数。
+- 新基线：`baselines/ragas_official_baseline.json`（独立文件，**不改** `quality_gate_baseline.json` 既有 17 行）；若后续并入质量闸，另开预注册。
+- 简历/作品集只引用冻结后的 r1 四指标，并带"RAGAS 0.4.3 / judge / embedding / n=100 / N=3"标注。
+
+### 9. 不做
+
+- 不改产品代码、不重跑检索/生成、不 import 产品内部实现；
+- 不与旧自研数字相减、不报加权总分、不把 AI-draft reference 当人工金标；
+- 不在同一 r1 标签里混中文/英文 prompt 或换 judge/embedding 型号。
+
+### RAGAS-1 结果（2026-10-27，r1 仪器）
+
+- 运行：100 题 × **N=3**（同 packet/refs/judge/embedding），三次均 **0 null**；耗时约 16–17 分钟/次。
+- 四指标（case 级均值；3 次均值 [bootstrap 95% CI]；极差）：
+  - faithfulness **0.6687** [0.6270, 0.7134]，极差 0.0088
+  - answer_relevancy **0.9071** [0.8724, 0.9358]，极差 0.0030
+  - context_precision **0.6973** [0.6124, 0.7817]，极差 0.0029
+  - context_recall **0.8825** [0.8208, 0.9333]，极差 0.0100
+- 分层（3 次合并）：cross30 CP 0.2523 / CR 0.6917；holdoutA CP 0.9375 / CR 0.9750；holdoutB 0.8667/0.9333；holdoutD 0.8569/0.9500；newmeeting 0.8846/1.0000。
+- 产物：`results/ragas_official_run{1,2,3}.json`、`results/ragas_official_aggregate.json`、`baselines/ragas_official_baseline.json`、`reports/2026-10-27_ragas_official.md`；packet sha `50c510…`、refs sha `60a0c4…`。
+- 偏差/边界（如实）：① reference 由 `expected_facts` 自动生成、`human_checked=false`；② 单裁判 deepseek-flash、未做人工校准；③ context_recall 三次几乎相同（judge 确定性），分辨率有限；④ cross30 的 CP 显著低于 holdout 系（多会议多切片 + AP 排序惩罚），说明该仪器对"检索排序"敏感；⑤ faithfulness 低于自研口径（判官/拆句/元陈述差异），**不是系统退步**；⑥ r1 仅作第二台仪器，不替换既有主口径；如需成为主口径，另案预注册。
+
+---
+
+## 预注册：2026-10-27 优化实验 OPT-1（M1 答案 grounded 协议）
+
+> 状态：先于 M1 抓取写死；只允许追加结果，不改判定线。
+
+### 1. 背景与假设
+r1 基线（100 题×3）：faithfulness **66.87%**、context_precision **69.73%**、context_recall 88.25%、answer_relevancy 90.71%。错误分析显示 faithfulness 与"元陈述/依据段"显著负相关、与长答案/过多上下文相关。
+**M1 假设**：把 `CHAT_ANSWER` 改为 grounded 协议（每条结论紧贴 [n]、推断标【推断】、不单列依据段、不输出内部 ID、资料不足只说明缺失项）后，**faithfulness 相对基线提升 ≥5pp**，且 CR/AR/CP 非劣（−2pp 内）。
+
+### 2. 仪器与数据
+- 仪器：r1（ragas 0.4.3；judge deepseek-flash temp=0；embedding qwen3.7-text-embedding）；reference 沿用 `gold/qa_ref_answers.json`（sha `60a0c4…`）。
+- 数据：`results/qa_eval100_fresh.json` 100 题；**per-case scope**（用 case 的 meeting_ids/series_ids 新建 session）；重新抓取 answer/contexts，生成 `results/m1_packet.json`。
+- 基线：`results/ragas_official_run{1,2,3}.json`（同 packet 的 r1 读数）。
+- 只改 `prompt_template` 中 `CHAT_ANSWER` 的 system/user prompt；产品代码与 env 不变。旧 prompt 备份：`results/prompt_CHAT_ANSWER_backup_20261027.json`。
+
+### 3. 统计与判定
+- paired by case：每个 case 的 r1 指标 = 3 次基线均值 vs M1 单次（筛选）；报 mean diff + case-level bootstrap 95% CI。
+- 筛选（N=1）：faithfulness 提升 ≥5pp 且 95% CI 下界 >0，且 context_recall/answer_relevancy/context_precision 非劣（−2pp 内）。
+- 通过则补跑 N=2（合计 3 次）确认；不通过则从备份**回滚 prompt** 并登记负结果（不保留失败改动）。
+- 预算：抓取 100 题约 15–25 分钟；r1 每次约 16 分钟、<$1；M1 抓取 + 判定合计 <$3。
+- 护栏：不改评测仪器、不按 case 打补丁、不为了 RAGAS 删除引用卡片/来源（产品 UX 不变）。
+
+### OPT-1 结果（M1 第一次，2026-10-27）
+
+- 抓取：`results/m1_packet.json`（100/100，0 失败；per-case scope）；r1 判定 1 次（`results/m1_ragas_run1.json`，1 个 faith/CP/CR null）。
+- paired vs r1 基线（`results/m1_compare_run1.json` / `reports/2026-10-27_m1_ab.md`）：
+  - faithfulness **66.85% → 82.58%（+15.73pp；CI [+10.41, +21.09]）**：PASS
+  - answer_relevancy 90.71% → 88.90%（−1.81pp；CI [−5.46, +2.07]）：非劣 PASS（贴线）
+  - context_recall 88.13% → 91.75%（+3.62pp；CI [+0.59, +7.41]）：PASS
+  - context_precision 69.59% → 67.13%（−2.46pp；CI [−6.54, +1.49]）：**非劣 FAIL（−2pp 线）**
+- 形态：答案 362→154 字、元陈述 208→16 句；但上下文 3.55→3.87/题、最大 13（M1 提示里"给出可继续检索的范围"诱导了额外检索）。
+- 判定：M1 假设"faith 提升"成立，但 CP 非劣未过 → **整体 gate FAIL**，不直接判 M1 通过；按预注册"失败即改"，进入 M1b：保留 grounded 协议、去掉"给出可继续检索范围"等诱导额外检索的句子，重新抓取判定（同一预注册，作为 M1 的第二次迭代；不改判定线）。
+
+### OPT-1 结果（M1b，2026-10-27）
+
+- 调整：保留 grounded 协议，去掉"给出可继续检索的范围"等诱导额外检索的句子；上下文 3.87→3.53/题（回到基线 3.55），答案 154→112 字。
+- 抓取 `results/m1b_packet.json`（100/100，0 失败）；r1 判定 1 次（`results/m1b_ragas_run1.json`，3 个 null metric values）。
+- paired vs r1 基线（`results/m1b_compare_run1.json` / `reports/2026-10-27_m1b_ab.md`）：
+  - faithfulness **66.85% → 88.97%（+22.12pp；CI [+16.98, +27.31]）**：PASS
+  - answer_relevancy 90.71% → 89.45%（−1.25pp；CI [−5.00, +2.55]）：非劣 PASS
+  - context_precision 69.59% → 71.44%（+1.85pp；CI [−2.38, +6.40]）：非劣 PASS
+  - context_recall 88.13% → 89.98%（+1.85pp；CI [−2.19, +6.14]）：非劣 PASS
+- 判定：**M1b 通过 OPT-1 全部预注册门**（faith 提升 + CR/AR/CP 非劣）。按预注册补跑 N=2 确认（合计 3 次），确认后把 M1b 作为当前 prompt 冻结；旧 prompt 备份在 `results/prompt_CHAT_ANSWER_backup_20261027.json`，M1 版本备份在 `results/prompt_CHAT_ANSWER_m1_20261027.json`。
+
+### OPT-1 最终结果（M1b，N=3，2026-10-27）
+
+- 3 次运行均值（r1，`results/m1b_aggregate.json`）：faithfulness **88.25%**（CI [83.91, 91.92]）、answer_relevancy **89.64%**、context_precision **71.35%**、context_recall **89.70%**；三次极差 ≤1.35pp。
+- paired vs 基线（3 次均值）：faithfulness **+21.38pp**、answer_relevancy **−1.07pp**、context_precision **+1.62pp**、context_recall **+1.45pp**；**3 次运行各自都过 OPT-1 全部门**（faith CI 下界 >0；AR/CP/CR 非劣 −2pp）。
+- 形态：答案 362→112 字、元陈述 208→16 句；上下文回到 3.53/题（基线 3.55）。
+- **决定：保留 M1b grounded 协议 prompt**（当前 DB 生效），冻结 `baselines/ragas_official_m1b_baseline.json`；prompt 备份 `results/prompt_CHAT_ANSWER_m1b_20261027.json`，prompt sha256 `e5ade1e0…46c8`；旧 prompt 备份 `results/prompt_CHAT_ANSWER_backup_20261027.json`（可回滚）。
+- 说明：3 次共 3/1,200 个指标值为 null（1 个 case/次，0.75%，<5% 无效线）；AR −1.07pp 属非劣，不许与旧自研口径相减。
+
+---
+
+## 预注册：2026-10-27 优化实验 OPT-2（M2b rerank 分数下限）
+
+> 状态：先于 M2b 抓取写死；M1b 已冻结为当前基线。
+
+### 假设
+当前 rerank 后不设分数下限（`RERANK_SCORE_FLOOR=0`），低分切片仍进入工具结果；RAGAS context_precision 对排序敏感。**M2b 假设**：设 `RERANK_SCORE_FLOOR=0.3` 后，context_precision 相对 M1b 基线 **+3pp 以上**，且 context_recall 非劣（−2pp）、faithfulness/answer_relevancy 非劣（−2pp）。
+
+### 仪器/数据/对照
+- 仪器 r1（同 judge/embedding/reference）；数据：同 100 题，per-case scope 重新抓取 answer/contexts → `results/m2b_packet.json`。
+- 基线：M1b 三次运行（`results/m1b_ragas_run{1,2,3}.json`；prompt sha `e5ade1e0…46c8`）。
+- 仅改 `.env` 一行 `RERANK_SCORE_FLOOR=0.3` 并重建 backend；不改代码/prompt。失败则删掉该行、重建 backend 回滚。
+
+### 判定
+- 筛选 N=1：CP 提升 ≥3pp 且 CR/faith/AR 非劣（−2pp）；通过则保留 floor 并补跑确认；不通过回滚并登记负结果。
+- 预算：抓取约 5–10 分钟；r1 一次约 20 分钟、<$1。
+
+### OPT-2 结果（M2b rerank floor=0.3，2026-10-27）
+
+- 抓取：`results/m2b_packet.json`（100/100，0 失败）；与 M1b 对比：上下文条数 **均值 3.53/题、最大 13、空上下文 1 例——与 M1b 完全一致**；92/100 题上下文文本完全相同（8 题差异为模型/检索非确定性）。
+- 机制核对：`rerank_score_floor()` 是**相对 top_score 的比例**（`score >= top_score * floor`），0.3 这个阈值没有筛掉任何切片 → 该臂实际上**未改变检索**。
+- 判定：**负结果/无效臂**——不是"floor 没用"，而是 0.3 对当前重排分数分布是惰性的；不进入 RAGAS 判定（避免把同一检索结果判成两个读数、重复付费）。已回滚 `.env`（删除 floor 行）并重建 backend，产品回到 M1b 配置。
+- 下一步：若继续 M2b，应先做**检索侧离线分数分布诊断**（拿真实 rerank 分数分布，再选 0.5/0.8 等会实际生效的阈值），而不是盲扫；或转 M2 全局上下文压缩（需改代码/引用重映射）。
+
+### OPT-2 修订：先做 rerank 分数分布诊断（2026-10-27）
+
+- 0.3 相对阈值惰性（见上）后，先取真实重排分数分布再选阈值，杜绝盲扫。
+- 方法：临时把 `RERANK_TOP_K` 提到 20（floor=0）、重建 backend，用 `/kb/search` 对 100 题逐题取最多 20 条带 score 的切片；诊断后恢复 `RERANK_TOP_K=3`。
+- 诊断产出：`results/rerank_distribution.json`；据此选候选 floor（如 0.5/0.8），先在**检索侧离线**用 RAGAS context_precision/context_recall 模拟（不生成答案），再把通过者做一次完整 M2b 抓取+判定。
+- 判定线不变：CP 提升 ≥3pp、CR/faith/AR 非劣（−2pp）。
+
+### OPT-2 最终结论（M2b rerank floor，2026-10-27）：负结果/不适用
+
+- 尺寸诊断（`results/rerank_distribution.json`，100 题 × 每题最多 20 条带 score）：
+  - top score 中位 **0.978**（p10 0.789，min 0.385）；第 2/top 中位 **0.961**、第 3/top 中位 **0.897**——得分高度压缩。
+  - 相对 floor 保留条数（20 条中）：0.3→14.98、0.5→9.73、0.8→4.35、0.9→2.84 条。
+- 关键事实：当前 `RERANK_TOP_K=3`，所以 **floor≤0.8 时 top3 基本不变化**（0.8 平均仍保留 4.35 条）；0.9 才可能把部分查询压到 2–3 条，但只剩 2.84 条且对多会议/多查询场景减少有限，同时 CR 风险上升。0.3 完全惰性（M2b 抓取已验证上下文逐题不变）。
+- 判定：**M2b floor 不是当前 context_precision 的有效杠杆**，不再做 live A/B（避免刷同义读数）；已恢复 `RERANK_TOP_K=3`、无 floor，product 回到 M1b 配置。M2 若继续，应走"全局上下文压缩/减少多轮检索累积"（需代码与引用编号重映射），而不是 floor。
+
+### M2 决策（2026-10-27，优化阶段收口）
+
+- 既有审计 `docs/调研-RAG与Agent通用优化.md` §6/§7 已否决：turn filter、dedupe、rerank score floor、top_k 截断、加候选深度、加长全局 prompt；重开条件均为"新数据流/新证据"，不是原样重跑。
+- M2b 实测：floor 0.3 惰性；分数分布显示 floor≤0.8 不影响 top3，0.9 才边际压缩且 CR 风险上升 → **floor 不是 CP 的有效杠杆**。
+- M2 全局压缩若按已有 turn filter 近似实现，属于已否决机制原样重开；若按研究建议做"句级裁剪（含问题实体/数字）"，需新增数据流与引用安全设计（P1-3），不是本轮可安全 A/B 的范围。
+- **决定：本轮优化以 M1b 收口**（faith +21.38pp、CP +1.62pp、CR +1.45pp、AR −1.07pp 非劣）；M2 作为独立后续项（预注册后再做），不在本轮硬上。
