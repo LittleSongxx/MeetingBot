@@ -1,0 +1,69 @@
+{
+  "frozen_at": "2026-10-28",
+  "label": "r1",
+  "ragas_version": "0.4.3",
+  "judge": {
+    "model": "deepseek-flash",
+    "base_url": "https://api.deepseek.com",
+    "temperature": 0.0,
+    "provider": "openai-compatible"
+  },
+  "embedding": {
+    "model": "qwen3.7-text-embedding",
+    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "dim": "1024"
+  },
+  "prompt_language": "en-official",
+  "packet_sha256": "ac068833159b78d234afe1e8e70f232c9644bbfdc8869f2e62770e48736fd803",
+  "refs_sha256": "60a0c41f46edf108c51f5dde8e7ddec0c713239fa45b05031da3827d9ef52c5c",
+  "refs_human_checked": false,
+  "n_runs": 3,
+  "n_cases": 100,
+  "metrics": {
+    "faithfulness": {
+      "mean": 0.8956942174262436,
+      "range": 0.028042328042328202,
+      "sd": 0.014028309831972762,
+      "bootstrap_95": [
+        0.8525546469990917,
+        0.9344423066645288
+      ],
+      "n_numeric": 99
+    },
+    "answer_relevancy": {
+      "mean": 0.917237904441308,
+      "range": 0.008453129260519887,
+      "sd": 0.004807337508423361,
+      "bootstrap_95": [
+        0.891586997199196,
+        0.9399374084048886
+      ],
+      "n_numeric": 100
+    },
+    "context_precision": {
+      "mean": 0.6944865319464325,
+      "range": 0.005471380472327425,
+      "sd": 0.003158902988391276,
+      "bootstrap_95": [
+        0.6058361391353254,
+        0.776613355737573
+      ],
+      "n_numeric": 99
+    },
+    "context_recall": {
+      "mean": 0.9057239057239058,
+      "range": 0.0,
+      "sd": 0.0,
+      "bootstrap_95": [
+        0.84006734006734,
+        0.9562289562289561
+      ],
+      "n_numeric": 99
+    }
+  },
+  "run_files": [
+    "evaluation/results/hybrid1_ragas_run1.json",
+    "evaluation/results/hybrid1_ragas_run2.json",
+    "evaluation/results/hybrid1_ragas_run3.json"
+  ]
+}
