@@ -83,6 +83,7 @@
 - 事实类问题走**具名参数查询**，不做自由文本转 SQL（那同时带来注入面与幻觉 SQL）
 - 三道硬闸由代码兜住：最大轮数、token/成本预算、停滞检测——终止由模型判定，上限必须由代码守
 - 回答逐 token 经 SSE 推送（`astream_events` v2，15 秒心跳，反代禁用缓冲），引用编号由宿主分配、答案写 `[n]`，页面渲染成可点回原句的卡片
+- **答案 grounded 协议**：每条事实性结论紧贴引用编号 `[n]`；推断显式标【推断】；无引用支持的解释不写；系列/跨会议/否定确认题先完整回应再给依据（Hybrid 条件风格）
 - **状态查询**：`query_meeting_state` 只返回人工确认过的决策/结论、有效待办与本人偏好；待办状态以 `action_item` 为准，未确认候选不得当事实
 - **注入防护**：转写/材料/工具结果一律标注为 `trust=untrusted`，指令层级写进系统提示；命中只加警示与留痕，不改证据原文（否则引用无法定位）
 - **MCP**：同一组工具以 streamable HTTP 挂在 `/mcp`（stateless），鉴权复用同一个 JWT 校验（含密码指纹），权限判在工具内部——所以中间件（限流/追踪）随父应用自动继承，也不存在"MCP 侧忘了判权"这条路
@@ -199,7 +200,7 @@ cp meetingbot/fastapi-app/.env.example meetingbot/fastapi-app/.env
 ```bash
 make -C evaluation smoke    # 零调用回归：契约不变量 / 证据可定位率 / 问答引用不变量 / 可靠性复算
 make -C evaluation test     # 评测侧单测（336 项）
-cd meetingbot/fastapi-app && .venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # 产品侧单测（675 项，6 项条件跳过）
+cd meetingbot/fastapi-app && .venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # 产品侧单测（683 项，6 项条件跳过）
 cd meetingbot/vue && npm ci && npm run type-check && npm run lint && npm run test   # 前端：类型 / lint / 单测
 ```
 
@@ -235,7 +236,6 @@ cd meetingbot/vue && npm ci && npm run type-check && npm run lint && npm run tes
 | 首次真实运行的四个产品缺陷 | `LEDGER.md` · 本轮真实运行暴露的产品缺陷 |
 | 轴 5 检索与回答的基线口径 | `LEDGER.md` · 预注册：轴5 检索与回答四指标基线 |
 | 全部撤回与存疑结论 | `LEDGER.md` · 存疑与已撤回 |
-| 项目后续推进路线（作品集视角：Agent 机制优化 + 闭环 + 包装，2026-10-23） | [docs/项目推进-深度分析与路线图.md](docs/项目推进-深度分析与路线图.md) |
 | 质量指标全面分析与本轮通用优化方案（2026-10-22） | [docs/质量指标全面分析与通用优化方案.md](docs/质量指标全面分析与通用优化方案.md) · [docs/质量指标全景与缺口分析.md](docs/质量指标全景与缺口分析.md) |
 | 答案级证据校验与有界修复实验（+0.5/+1.7pp，未过 +5pp，不产品化） | `LEDGER.md` · §40 预注册 / §40b 结果 |
 | 引用证据快照补全、RAG 质量闸归属错分离（产品侧零调用修复） | `services/citations.py`、`services/rag_quality.py`；单测 `tests/test_citations.py`、`tests/test_rag_quality.py` |
@@ -246,26 +246,21 @@ cd meetingbot/vue && npm ci && npm run type-check && npm run lint && npm run tes
 | 轨迹 pass^k 可评化（pass^3=85.19%，k=3，81 trial；此前 not_evaluable） | [pass^k 报告](evaluation/reports/2026-10-23_trajectory_passk.md) · `LEDGER.md §49b/§49g` |
 | 生成后引用绑定（默认开，零模型调用；cited-gap 4 次 A/B −8.35pp，配对回放 faith +1.06pp） | [evidence binding 报告](evaluation/reports/2026-10-23_evidence_binding.md) · `services/citation_bind.py` · `LEDGER.md §49–§49f` |
 | 单次 100 题 fresh 运行 + 重复运行 ×2（P0-2；单次波动≈5pp，三次均值 −0.87pp 但极差 5.000085pp>5pp → 保留组装集） | [eval100 fresh run](evaluation/reports/2026-10-22_eval100_fresh_run.md) · [重复运行报告](evaluation/reports/2026-10-23_eval100_fresh_repeat.md) · `LEDGER.md §43/§43b/§46/§46b` |
+| RAGAS 0.4.3 官方口径 + Hybrid 条件回答风格（100 题×3；faith 89.57 / AR 91.72 / CR 90.57 / CP 69.45；CP 官方目标 75–80，不混旧自研口径） | [hybrid final](evaluation/reports/2026-10-28_hybrid_final.md) · [baseline](evaluation/baselines/ragas_official_hybrid_baseline.json) · `LEDGER.md §OPT-4` |
 | MOSS 本地 SA-ASR 直接采用（8/8 自身指标；产品链路 13.99% vs 直连 12.35%，+1.64pp；长场容量 62.87min→守卫 2700s/超时 2400s） | [docs/MOSS-ASR启用.md](docs/MOSS-ASR启用.md) · [自身指标](evaluation/reports/2026-10-22_moss_own_metrics.md) · [产品链路验证](evaluation/reports/2026-10-23_moss_product_link.md) · [长场容量](evaluation/reports/2026-10-23_moss_long_audio_capacity.md) · `LEDGER.md §45/§47/§48` |
 | 缺失类审查意见的前提语义校验（只对 MISSING_DEADLINE 要求时间语义，含软期限；MISSING_OWNER 不做线索过滤，避免误伤合法意见） | `services/contracts.py`；单测 `tests/test_contracts.py` |
 | MOSS 执行侧修复（worker env/镜像、显式 max_new_tokens、覆盖率守卫、实际模型名展示） | `services/transcription_service.py`、`api/transcription.py`、`scripts/moss_asr_server.py`；单测 `tests/test_transcription.py` · `LEDGER.md §47b/§47d` |
 | Claim 级人工锚点包 + 子 Agent 代审校准（α=0.426<0.70 → claim 级裁判只作方向信号） | [evaluation/gold/claim_anchor_cross30_100.csv](evaluation/gold/claim_anchor_cross30_100.csv) · `evaluation/gold/claim_anchor_score.py` · [evaluation/reports/2026-10-22_claim_anchor_calibration.md](evaluation/reports/2026-10-22_claim_anchor_calibration.md) · `LEDGER.md §44/§44b` |
 
-## 作品集入口（2026-10-25）
+## 评测与项目文档入口
 
 - [质量仪表盘](docs/quality_dashboard.html)（零调用生成：五轴记分卡、机制 A/B、质量闸）
-- [作品集一页纸](docs/作品集一页纸.md)（架构、指标、三个案例、demo 脚本、面试问答、负结果）
-- [项目推进路线](docs/项目推进-深度分析与路线图.md)
-- [RAG 收口报告](evaluation/reports/2026-10-23_rag_closeout.md)（冻结读数、机制状态、已知缺口）
 - [指标现状与优化决策](docs/指标现状与优化决策.md)（达标/收口/待优化一页总表）
-
+- [RAGAS 官方口径最终报告](evaluation/reports/2026-10-28_hybrid_final.md) · [冻结基线](evaluation/baselines/ragas_official_hybrid_baseline.json)（100 题×3；Hybrid 回答风格前后对比与 CP 口径边界）
+- [RAG 收口（历史）](evaluation/reports/2026-10-23_rag_closeout.md)（旧自研口径冻结读数）
 - [TTFT / 首 token 实测](evaluation/reports/2026-10-23_ttft_latency.md)（RAG 链路延迟分解）
-
-- [延迟/成本/可观测性现状](docs/可观测性与延迟成本现状.md)（已测/未测、缺口、P0–P2 计划）
-
-
+- [延迟 / 成本 / 可观测性现状](docs/可观测性与延迟成本现状.md)（已测/未测与 P0–P2 计划）
 - [泛化与过拟合审计](docs/泛化与过拟合审计.md)（机制风险表、静态守门测试、后续泛化约束）
-
 
 ## 这个仓库里没有的东西
 
@@ -273,7 +268,7 @@ cd meetingbot/vue && npm ci && npm run type-check && npm run lint && npm run tes
 - **没有外部基础设施依赖**：PostgreSQL / Redis 都在 compose 里（不映射宿主端口）；模型走 OpenAI 兼容接口；换供应商除改 `.env` 外，还要求该供应商支持 `MINUTES/AGENT/SPEAKER` 的 strict `json_schema`（启动时会校验）。Redis 故障时限流与预算闸 fail-open（放行并记日志），不阻断业务；PG 不可用时检索不可用（由 no_retrieval 闸标注）、checkpoint 不启用（已落库消息不受影响）。
 - **没有内置敏感词表**：合规口径取决于部署地与业务，词表由 `MODERATION_WORDS` / `MODERATION_WORDS_FILE` 提供；未配置时审核如实报"未启用"。
 - **没有密钥**：`.env` 与任何密钥都不在版本控制内，仓库只有 `.env.example`。
-- **没有个人资料与生成式架构图目录**：仓库只含项目代码、评测资产与实拍截图；个人求职材料（简历/调研/复盘）在 `docs/resume/`，已在 `.gitignore` 排除，不入公开仓库。
+- **没有个人资料**：仓库只含项目代码、评测资产、项目文档与实拍截图；简历、JD/面经调研、复盘、作品集等个人求职材料不入公开仓库（`docs/resume/` 及 `analysis/` 下的相关文件已在 `.gitignore` 排除）。
 
 ## 许可
 

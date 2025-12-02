@@ -55,3 +55,13 @@ ai_meeting/
 .idea/
 .vscode/
 *.log
+
+# --- 个人求职材料（扩展：JD/面经/简历/作品集，不入公开仓库）---
+analysis/jd/
+analysis/interview/
+analysis/audit/简历技术核验.md
+analysis/简历项目评估与优化-*.md
+docs/作品集一页纸.md
+
+# --- 个人求职/作品集规划文档（不入公开仓库）---
+docs/项目推进-深度分析与路线图.md
