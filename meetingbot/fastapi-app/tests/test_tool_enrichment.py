@@ -47,5 +47,23 @@ class ToolEnrichmentTest(unittest.TestCase):
         self.assertNotIn("替代关系", text)
 
 
+    def test_state_citation_supersedes_uses_production_kind_field(self):
+        """生产 query_meeting_state 条目用 kind，不是 state_type；必须同样进 supersedes 分支。"""
+        result = {"kind": "decision", "notice": "", "items": [{
+            "content": "9月1日发布", "kind": "decision", "status": "CONFIRMED",
+            "state_id": 1, "supersedes_id": None,
+        }]}
+        pairs = citations._from_state(result)
+        text = pairs[0][1].source_text or ""
+        self.assertIn("替代关系：无", text)
+
+    def test_state_citation_includes_user_scope(self):
+        result = {"kind": "preference", "notice": "", "items": [{
+            "content": "回答先给结论", "kind": "preference", "status": "CONFIRMED",
+            "scope_type": "USER", "scope_id": 1,
+        }]}
+        pairs = citations._from_state(result)
+        self.assertIn("用户 1", pairs[0][1].source_text or "")
+
 if __name__ == "__main__":
     unittest.main()
