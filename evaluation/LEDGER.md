@@ -3469,3 +3469,55 @@ r1 基线（100 题×3）：faithfulness **66.87%**、context_precision **69.73%
 - M2b 实测：floor 0.3 惰性；分数分布显示 floor≤0.8 不影响 top3，0.9 才边际压缩且 CR 风险上升 → **floor 不是 CP 的有效杠杆**。
 - M2 全局压缩若按已有 turn filter 近似实现，属于已否决机制原样重开；若按研究建议做"句级裁剪（含问题实体/数字）"，需新增数据流与引用安全设计（P1-3），不是本轮可安全 A/B 的范围。
 - **决定：本轮优化以 M1b 收口**（faith +21.38pp、CP +1.62pp、CR +1.45pp、AR −1.07pp 非劣）；M2 作为独立后续项（预注册后再做），不在本轮硬上。
+
+---
+
+## 预注册：2026-10-27 优化实验 OPT-3（P1 答案风格）
+
+> 状态：先于 P1 抓取写死；基线 = M1b 三次运行。
+
+### 假设
+在 M1b grounded 协议上增加"直接回答/否定式先回应/不写建议式套话/数字日期与引用一致/只写有 [n] 支持内容"后，**answer_relevancy 达到 ≥90%**、**faithfulness 达到 ≥90%**，且 context_recall/context_precision 非劣（−2pp）。
+
+### 数据/仪器/对照
+- 数据：同 100 题，per-case scope 重新抓取 → `results/m1c_packet.json`；仪器 r1（同 judge/embedding/reference）。
+- 基线：`results/m1b_ragas_run{1,2,3}.json`（M1b，prompt sha `e5ade1e0…`）。
+- 改动：仅 `CHAT_ANSWER` system/user prompt；M1b prompt 备份 `results/prompt_CHAT_ANSWER_m1b_20261027.json`；失败回滚。
+- 判定：N=1 筛选；faith≥90 且 AR≥90 且 CR/CP 非劣（−2pp）→ 补跑 N=2 确认；否则回滚并登记负结果。
+- 预算：抓取 5–10 分钟；r1 一次约 20 分钟、<$1。
+
+### OPT-3 结果（P1 答案风格，2026-10-28）
+
+- 抓取 `results/m1c_packet.json`（100/100）；r1 1 次（`results/m1c_ragas_run1.json`）。
+- 读数：faithfulness **87.56%**、answer_relevancy **90.32%**、context_precision 71.02%、context_recall **91.08%**。
+- 相对 M1b（3 次均值）：AR +0.68pp（≥90 达成）、CR +1.37pp（≥90 达成）、faith −0.69pp（CI [−4.68,+3.12]，噪声内但未达 90）、CP −0.34pp。
+- 判定：AR/CR 达标，faith 未达 90 → **不直接采纳**；进入 P1b：保留"直接回答"风格，同时加"回答长度约束/不展开无关背景/不重复事实"，目标把 faith 拉回 ≥90 并保持 AR/CR。
+- 当前 DB prompt 为 P1；P1 前 M1b prompt 备份 `results/prompt_CHAT_ANSWER_m1b_20261027.json`；P1 备份将写 `results/prompt_CHAT_ANSWER_p1_20261028.json`。
+
+### OPT-3b 结果（P1b 长度约束，2026-10-28）
+
+- 抓取 `results/m1d_packet.json`；r1 1 次：faithfulness **88.36%**、answer_relevancy **90.01%**、context_precision 71.12%、context_recall **90.24%**。
+- 相对 M1b：faith +0.11pp（CI [−3.63,+4.00]，噪声内）、AR +0.38pp、CR +0.53pp、CP −0.23pp；AR/CR 已达 90，faith 仍差 ~1.6pp。
+- low-faith 形态：大量 case faith=0.5——答案首句有 [n] 支持，但第二条"解释句"（如"她在开场时主导议程…""该决策由李月提出"）无原文支持，被 RAGAS 判 unsupported。→ 进入 P1c：只写引用直接支持的事实、删除无依据的解释/背景/推断句。
+- 当前 prompt 备份：P1b 将写入 `results/prompt_CHAT_ANSWER_p1b_20261028.json`；M1b/P1 备份已在。
+
+### OPT-3c 结果（P1c 只写有引用支持的事实，2026-10-28）
+
+- 抓取 `results/m1e_packet.json`；r1 1 次：faithfulness **91.69%**、answer_relevancy 87.88%、context_precision 70.14%、context_recall **91.25%**。
+- 相对 M1b：faith +3.44pp、CR +1.55pp、AR −1.76pp、CP −1.21pp。
+- 判定：faith/CR 达 90，但 AR 掉到 87.88（<90）→ 不采纳；进入 P1d：保留"只写有引用支持的事实"，但要求第一句完整回应问题（含对象/时间/条件）+ 最多 1–2 句有 [n] 支持的依据，目标是 faith/AR/CR 同时 ≥90。
+- 当前 prompt 备份：P1c 将写 `results/prompt_CHAT_ANSWER_p1c_20261028.json`。
+
+### OPT-3 结果汇总（P1 答案风格系列，2026-10-28）
+
+| 臂 | prompt 备份 | faith | AR | CP | CR | 判定 |
+|---|---|---:|---:|---:|---:|---|
+| M1b（基线） | `prompt_CHAT_ANSWER_m1b_20261027.json` | 88.25 | 89.64 | 71.35 | 89.70 | 基线 |
+| P1（m1c） | `prompt_CHAT_ANSWER_p1_20261028.json` | 87.56 | **90.32** | 71.02 | **91.08** | AR/CR 达标，faith 退 |
+| P1b（m1d，N=3） | `prompt_CHAT_ANSWER_p1b_20261028.json` | 87.58 | **90.01** | 71.21 | **90.24** | AR/CR 达标，faith 差 2.4pp |
+| P1c（m1e，N=1） | `prompt_CHAT_ANSWER_p1c_20261028.json` | **91.69** | 87.88 | 70.14 | **91.25** | faith/CR 达标，AR 差 2.1pp |
+| P1d（m1f，N=1） | 已应用后未单独备份（可从 P1c 重放） | 87.94 | 83.55 | 71.97 | 90.49 | AR 明显退步，淘汰 |
+
+- 结论：**没有单条 prompt 在 overall 同时让 faith/AR/CR ≥90**；P1b（AR/CR 达标）与 P1c（faith/CR 达标）各差一项，差距都集中在 cross30（P1b cross30：faith 0.825/AR 0.809/CR 0.744；非 cross30：0.909/0.939/0.971）。
+- 下一步候选：**按问题类型/意图分派回答风格**（cross30/否定式用 P1b，简单事实/多事实列举用 P1c），或 P2 结构化覆盖；需新预注册。CP 仍走"官方目标 75–80 或自定义 fact-aligned"路线，不硬刷官方 90。
+- 当前产品状态（重要）：Docker Desktop/WSL daemon 已停（`docker ps` 无法连接），**DB 中最后应用的 prompt 是 P1d（AR 差），不是 P1b/P1c**。Docker 恢复后应先从备份恢复 P1b 或 M1b；恢复脚本见 `evaluation/tools/restore_prompt.py`。
