@@ -1,1 +1,0 @@
-# 跨会议 gold AI 复核摘要（人工审核待办）\n\n- 样本：30 题 / 58 条 expected_fact\n- AI 判定：{"supported": 55, "partial": 3}\n- 复核模型：deepseek-flash\n- `human_checked=false`：本表是 AI 预审，不是人工金标。\n- 人工回填入口：`cross_gold_human_review_30.csv`（human_approve / human_note 两列）。\n- partial/unsupported 的 proposed_fact 已写入 gold；若人工否认可回退并记录。\n

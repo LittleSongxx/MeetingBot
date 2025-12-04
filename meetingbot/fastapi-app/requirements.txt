@@ -1,40 +1,49 @@
-fastapi~=0.124.2
-uvicorn~=0.38.0
-tortoise-orm~=0.25.1
-python-multipart~=0.0.20
-starlette~=0.50.0
-aiomysql~=0.3.2
-pydantic~=2.12.5
-cryptography
-PyJWT~=2.10.1
-httpx~=0.28.1
-python-docx~=1.2.0
-reportlab~=4.4.3
-# LangChain: ChatOpenAI calls Bailian through its OpenAI-compatible API,
-# JsonOutputParser parses the JSON object returned by the model
-langchain-core==1.6.1
-langchain-openai==1.6.0
-# LangGraph: the minutes self-review loop is a state graph
-langgraph==1.2.11
-# LangGraph checkpoint：在线问答的 thread 状态落在 PostgreSQL（与 BM25 共用实例，
-# 不同 schema）。checkpoint 4.3+ 是 langgraph-checkpoint-postgres 3.2 的硬要求。
-langgraph-checkpoint>=4.3.0,<5
-langgraph-checkpoint-postgres==3.2.0
-psycopg[binary,pool]>=3.2.0
-orjson>=3.11.5
-bcrypt~=5.0.0
-temporalio==1.34.0
-# MCP: 把知识库工具以 Model Context Protocol 暴露给外部客户端（挂载在 /mcp）。
-# 2.x 里 FastMCP 已更名为 MCPServer（同样的东西，只是名字），
-# streamable_http_app(stateless_http=True) 与 session_manager 都还在。
-mcp~=2.3
-# Redis：限流与问答预算的集中式计数（多副本共享一份，见 common/ratelimit.py）。
-# 未配置 REDIS_URL 时退回进程内存实现，因此它只在多副本部署下是必需依赖。
-redis~=6.4
-# 可观测：指标用 Prometheus 文本暴露（/metrics），追踪用 OTel API 发 span。
-# OTel 的 SDK 与 OTLP 导出器只在配置了 OTEL_EXPORTER_OTLP_ENDPOINT 时才真正启用，
-# 没配时 span 直接丢弃（默认关闭外部上报，见 common/tracing.py）。
-prometheus-client~=0.26
-opentelemetry-api~=1.45
-opentelemetry-sdk~=1.45
-opentelemetry-exporter-otlp-proto-http~=1.45
+# =============================================================
+# AI Meeting Minutes Assistant - backend requirements
+#
+# Python 3.12.10
+#
+# All versions are pinned. Do not use ~= or >=.
+#
+# Install (run inside the fastapi-app directory):
+#   python -m venv .venv
+#   .venv\Scripts\activate
+#   pip install -r requirements.txt
+#
+# NOTE: keep this file ASCII-only. Old pip (<= 23.x) on Chinese
+# Windows decodes requirements.txt with the GBK locale codec and
+# crashes on UTF-8 comments (UnicodeDecodeError: 'gbk' codec ...).
+# =============================================================
+
+# ---------- Web framework / runtime ----------
+fastapi==0.141.1
+uvicorn==0.53.0
+starlette==1.7.0
+python-multipart==0.0.32
+pydantic==2.13.5
+
+# ---------- Database / ORM ----------
+tortoise-orm==1.1.8
+aiomysql==0.3.2
+# Tortoise 1.x resolves "Asia/Shanghai" through the standard library
+# zoneinfo module. Windows ships no system timezone database, so this
+# package is required; without it every datetime field raises
+# ZoneInfoNotFoundError.
+tzdata==2026.4
+
+# ---------- Auth ----------
+PyJWT==2.13.0
+cryptography==50.0.1
+
+# ---------- LangChain ----------
+# ChatOpenAI calls Bailian through its OpenAI-compatible API,
+# JsonOutputParser parses the JSON object returned by the model.
+langchain-core==1.6.4
+langchain-openai==1.6.5
+# LangGraph: the minutes self-review loop is a state graph.
+langgraph==1.2.12
+httpx==0.28.1
+
+# ---------- Document export ----------
+python-docx==1.2.0
+reportlab==4.4.3

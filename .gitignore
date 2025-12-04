@@ -1,4 +1,4 @@
-# --- Python ---
+# ---------------- Python ----------------
 **/__pycache__/
 *.pyc
 **/.venv/
@@ -6,62 +6,23 @@
 .pytest_cache/
 .ruff_cache/
 
-# --- Node / 前端构建产物 ---
+# ---------------- Node / 前端构建产物 ----------------
 **/node_modules/
-meetingbot/vue/.npm-cache/
 meetingbot/vue/dist/
-# 锁文件由**消费它的 npm 版本**生成（镜像与 CI 用的 node:22 自带 npm 10）：
-# npm 11 写出来的锁，npm 10 的 `npm ci` 会以 "Missing: esbuild@..." 拒绝。
-# 换依赖后请在 node:22 容器里跑 `npm install` 重新生成锁，不要在本地 npm 11 下生成。
+# 锁文件由使用它的 npm 版本生成（镜像与 CI 用 node:22 自带 npm 10）：
+# 换依赖后请在 node:22 容器里重新生成 package-lock.json，不要在更高版本 npm 下生成。
 
-# --- 密钥与环境（样例 .env.example 保留）---
+# ---------------- 环境与密钥（示例文件 .env.example 保留） ----------------
 .env
-meetingbot/fastapi-app/.env
 
-# --- 本地运行数据 ---
-storage/
-meetingbot/fastapi-app/files/
-output/
+# ---------------- 本地运行数据与日志 ----------------
+*.log
+meetingbot/fastapi-app/files/meeting_material/
 
-# --- 个人资料与架构图目录（不入库）---
-.zcode/
-architecture/
-架构图/
-AI应用_*面试*.md
-
-# --- 评测大文件：音频与语料（可由脚本按清单复得）---
-evaluation/asr/first_test/audio/
-*.mp3
-*.wav
-evaluation/benchmarks/source/
-
-# --- 评测运行时产物（项目自身决定不入库）---
-evaluation/benchmarks/results/
-evaluation/benchmarks/preflight*/
-evaluation/results/tmp/
-evaluation/results/metrics.json
-evaluation/results/METRICS_REPORT.md
-
-.DS_Store
-
-# --- 个人求职材料（简历/JD 调研/面经/复审，不入公开仓库）---
+# ---------------- 个人资料与编辑器 ----------------
 docs/resume/
-
-# --- 根目录误重定向残留与本地备份 ---
-/asr-sidecar
-ai_meeting/
-
-# --- 编辑器 / 日志 ---
+architecture/
+.zcode/
 .idea/
 .vscode/
-*.log
-
-# --- 个人求职材料（扩展：JD/面经/简历/作品集，不入公开仓库）---
-analysis/jd/
-analysis/interview/
-analysis/audit/简历技术核验.md
-analysis/简历项目评估与优化-*.md
-docs/作品集一页纸.md
-
-# --- 个人求职/作品集规划文档（不入公开仓库）---
-docs/项目推进-深度分析与路线图.md
+.DS_Store

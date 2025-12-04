@@ -1,9 +1,0 @@
-[tool.aerich]
-# 迁移工具配置：只给 aerich 用，产品运行时不需要它。
-#   cd meetingbot/fastapi-app
-#   MYSQL_HOST=... MYSQL_DATABASE=... .venv/bin/python -m aerich migrate --name 这次改了什么
-#   MYSQL_HOST=... MYSQL_DATABASE=... .venv/bin/python -m aerich upgrade
-# 详见 DEPLOYMENT.md 的「表结构变更」一节。
-tortoise_orm = "settings.TORTOISE_ORM"
-location = "./migrations"
-src_folder = "./."
