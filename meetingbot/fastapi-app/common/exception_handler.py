@@ -1,0 +1,55 @@
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from starlette import status
+from starlette.responses import JSONResponse
+
+
+# 自定义异常类
+class CustomException(Exception):
+    def __init__(self, message: str, code: str = "500"):
+        # message 是给用户看的提示，前端直接弹出来
+        self.message = message
+        # code 默认 500 表示普通业务失败；登录失效传 401，无权限传 403
+        self.code = code
+
+
+def setup_exceptions(app: FastAPI):
+    @app.exception_handler(CustomException)
+    async def custom_exception_handler(request: Request, exc: CustomException):
+        return JSONResponse(
+            # http总是返回200
+            status_code=status.HTTP_200_OK,
+            # 把异常里的 code 和 message 放进统一结构，前端按 code 分支处理
+            content={"code": exc.code, "msg": exc.message}
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def validate_exception_handler(request: Request, exc: RequestValidationError):
+        # 参数类型或结构不对时，先在后端控制台打出明细便于排查
+        print("捕获到422错误:", exc.errors())
+        """处理422异常"""
+        # 返回统一格式
+        # 页面上只显示一句笼统提示，不把字段级报错抛给用户
+        return JSONResponse(
+            # http总是返回200
+            status_code=status.HTTP_200_OK,
+            content={"code": "500", "msg": "请求参数错误"}
+        )
+
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception):
+        # 没被业务代码处理的异常，控制台打出原始信息
+        print("捕获到系统错误:", repr(exc))
+        """处理所有异常"""
+        # 返回统一格式
+        response = JSONResponse(
+            # http总是返回200
+            status_code=status.HTTP_200_OK,
+            content={"code": "500", "msg": "系统错误"}
+        )
+        # 允许所有源（与你的 CORS 配置一致）
+        # 兜底处理器不经过 CORS 中间件，这里手工补上跨域响应头，否则浏览器读不到响应体
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
