@@ -1,0 +1,110 @@
+name: meetingbot-aim-local
+
+# =============================================================================
+# AI 会议纪要助手（MeetingBot）本地 Docker 编排
+#
+# 约定：
+#   - 项目名固定 meetingbot-aim-local，容器/卷名前缀由此产生；
+#   - 只把 127.0.0.1:${BACKEND_PORT}/${WEB_PORT} 暴露到宿主机，MySQL 不映射端口；
+#   - 不允许任何宿主 bind mount：数据库初始化 SQL 打进 db 镜像，上传文件与
+#     MySQL 数据都在命名卷（files / mysql_data）里；
+#   - 所有后端变量来自仓库根 .env（compose 用同一份 .env 做 ${...} 插值）。
+#
+# 单进程限制（不要再加副本/worker）：
+#   转写、纪要生成、纪要自检三类耗时任务全部跑在 backend 进程内——
+#   asyncio.create_task 起协程、进程内字典去重、FastAPI lifespan 里 recover_* 恢复。
+#   没有消息队列、没有独立 worker、没有分布式锁，所以：
+#     * backend 只能 --workers 1（Dockerfile 已固定）；
+#     * backend 只能有一个副本 —— 扩副本会让同一任务被领两次、SSE 进度只落在
+#       其中一个进程上；
+#     * 需要横向扩展时必须先把任务编排外置（MQ/worker），属于后续演进，不是
+#       改 compose 就能解决的事。
+# =============================================================================
+
+services:
+  # MySQL 8.4：表结构与种子数据由 db/Dockerfile 打进镜像，
+  # 仅在 mysql_data 卷为空时由 docker-entrypoint-initdb.d 执行一次。
+  db:
+    build: ./db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ai_meeting}
+      MYSQL_USER: ${MYSQL_USER:-meetingbot}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?请在 .env 设置 MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?请在 .env 设置 MYSQL_ROOT_PASSWORD}
+      TZ: ${TZ:-Asia/Shanghai}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  # 后端 API 服务（容器内 9090，宿主机只绑定回环地址）。
+  # MySQL 连接地址在 compose 网络内固定为 db:3306，覆盖 .env 里的本地开发默认值。
+  backend:
+    build: ./meetingbot/fastapi-app
+    restart: unless-stopped
+    # 运行时必须存在仓库根 .env（缺失时 db 服务的 ${...:?} 与后端 JWT fail-fast 都会拦下）；
+    # 标 required:false 只是让 `docker compose config -q` 在仅有 .env.example 时也能做静态校验。
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      MYSQL_HOST: db
+      MYSQL_PORT: "3306"
+      SQL_ECHO: "false"
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-19092}:9090"
+    volumes:
+      # 命名卷：上传的会议资料与生成的导出文件；不落宿主目录
+      - files:/app/files
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9090/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # 前端：nginx 托管 Vite 构建产物，并把 /api/、/files/ 反代到 backend:9090，
+  # 浏览器只访问 18083 一个源（同源部署，无跨域）。
+  web:
+    build: ./meetingbot/vue
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${WEB_PORT:-18083}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  # 可选：后端测试服务。跑 Dockerfile 的 test 阶段（requirements-dev.txt + unittest），
+  # 不依赖 db（测试用 sqlite 内存库），只在显式启用 profile 时启动：
+  #   ./scripts/compose.sh --profile test run --rm test
+  test:
+    profiles: ["test"]
+    build:
+      context: ./meetingbot/fastapi-app
+      target: test
+    env_file:
+      - path: .env
+        required: false
+
+volumes:
+  # MySQL 数据；删卷 = 清空数据库（含已初始化表结构与所有业务数据）
+  mysql_data:
+  # 上传的会议资料与导出文件
+  files:
