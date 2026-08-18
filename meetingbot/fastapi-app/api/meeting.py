@@ -19,8 +19,8 @@ from models import (
     MeetingMaterial,
     MeetingMinutes,
     MeetingParticipant,
-    TranscriptSegment,
     TranscriptionTask,
+    TranscriptSegment,
     User,
 )
 

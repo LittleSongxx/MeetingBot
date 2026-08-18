@@ -1,12 +1,14 @@
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from pydantic import BaseModel, ConfigDict
 
 from common.auth import get_current_user, require_admin
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
+from common.security import hash_password
 from common.times import format_datetime
+from common.urls import to_relative_url
 from models import (
     AgentRun,
     Department,
@@ -14,8 +16,8 @@ from models import (
     MeetingMaterial,
     MeetingMinutes,
     MeetingParticipant,
-    TranscriptSegment,
     TranscriptionTask,
+    TranscriptSegment,
     User,
 )
 
@@ -59,8 +61,8 @@ async def user_dict(user: User) -> dict:
         "username": user.username,
         # 表格“姓名”列
         "name": user.name,
-        # 表格“头像”列的图片地址
-        "avatar": user.avatar,
+        # 表格“头像”列的图片地址；历史数据里的绝对地址归一化成相对路径
+        "avatar": to_relative_url(user.avatar),
         # 表格“角色”列，页面翻译成“管理员”或“员工”
         "role": user.role,
         # 表格“电话”列
@@ -146,8 +148,8 @@ async def add(payload: UserPayload, _: User = Depends(require_admin)):
     await User.create(
         # 来自弹窗账号输入框
         username=payload.username,
-        # 密码留空时用固定初始密码，员工登录后可在第 3 章自行修改
-        password=payload.password or "123456",
+        # 密码留空时用固定初始密码，落库前先做 bcrypt 哈希
+        password=hash_password(payload.password or "123456"),
         # 姓名留空时用账号填充，保证 name 字段非空
         name=payload.name or payload.username,
         # 头像地址由上传回调写入
@@ -211,7 +213,11 @@ async def delete(user_id: int, current_user: User = Depends(require_admin)):
 
 
 @router.delete("/deleteBatch")
-async def delete_batch(ids: List[int], current_user: User = Depends(require_admin)):
+async def delete_batch(
+    # ids 由前端以 JSON 数组 body 提交（axios delete 的 data 字段）
+    ids: List[int] = Body(...),
+    current_user: User = Depends(require_admin),
+):
     # 批量勾选里含当前登录账号时同样拦住
     if current_user.id in ids:
         raise CustomException("不能删除当前登录账号")

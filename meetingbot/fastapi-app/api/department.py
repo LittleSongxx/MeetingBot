@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends
 from pydantic import BaseModel, ConfigDict
 
 from common.auth import get_current_user, require_admin
@@ -104,7 +104,11 @@ async def validate_delete(ids: List[int]):
 
 @router.delete("/deleteBatch")
 # ids 来自前端 request.delete 配置项里的 data，也就是表格勾选出的 data.ids
-async def delete_batch(ids: List[int], _: User = Depends(require_admin)):
+async def delete_batch(
+    # ids 由前端以 JSON 数组 body 提交（axios delete 的 data 字段）
+    ids: List[int] = Body(...),
+    _: User = Depends(require_admin),
+):
     # 勾选的部门里只要有一个还挂着员工，整批都不删，页面弹出“请先调整部门下的员工”
     await validate_delete(ids)
     # 校验通过后按ID集合一次性删除 department 表里的这些记录

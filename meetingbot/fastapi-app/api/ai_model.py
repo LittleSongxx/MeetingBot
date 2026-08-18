@@ -95,7 +95,7 @@ async def add(payload: AiModelPayload, _: User = Depends(require_admin)):
     # 本次要启用时，先把同用途下已启用的配置全部停用，保证一个用途只有一条生效
     if payload.enabled:
         await AiModelConfig.filter(model_type=payload.model_type, enabled=True).update(enabled=False)
-    config = await AiModelConfig.create(
+    await AiModelConfig.create(
         name=payload.name,
         model_type=payload.model_type,
         provider=payload.provider,

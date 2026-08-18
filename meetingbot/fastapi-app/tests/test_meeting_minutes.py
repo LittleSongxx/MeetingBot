@@ -23,8 +23,8 @@ from models import (
     MeetingMinutes,
     MeetingParticipant,
     PromptTemplate,
-    TranscriptSegment,
     TranscriptionTask,
+    TranscriptSegment,
     User,
 )
 from services.minutes_service import MinutesResult, execute_minutes

@@ -17,8 +17,8 @@ from models import (
     MeetingMaterial,
     MeetingMinutes,
     MeetingParticipant,
-    TranscriptSegment,
     TranscriptionTask,
+    TranscriptSegment,
     User,
 )
 from services.speaker_service import suggest_speakers
@@ -430,11 +430,10 @@ async def match_speaker(
     if not await label_query.exists():
         raise CustomException("说话人标签不存在")
     # 传了用户时校验他确实是这场会议的参会人员，不能匹配到无关员工
-    if payload.user_id is not None:
-        if not await MeetingParticipant.filter(
-            meeting_id=task.meeting_id, user_id=payload.user_id
-        ).exists():
-            raise CustomException("只能匹配该会议的参会人员")
+    if payload.user_id is not None and not await MeetingParticipant.filter(
+        meeting_id=task.meeting_id, user_id=payload.user_id
+    ).exists():
+        raise CustomException("只能匹配该会议的参会人员")
     # 整批更新：同一标签下的所有片段一次性写入同一个 speaker_user_id
     # user_id 为 None 时相当于把这批片段的匹配清空
     await label_query.update(speaker_user_id=payload.user_id)
@@ -455,5 +454,5 @@ async def suggest_speaker_match(task_id: int, current_user: User = Depends(get_c
         suggestions = await suggest_speakers(task.id, task.meeting_id, current_user.id)
     except Exception as error:
         # 服务层抛的是普通异常，转成 CustomException 让前端拿到中文提示而不是 500
-        raise CustomException(str(error) or type(error).__name__)
+        raise CustomException(str(error) or type(error).__name__) from error
     return Result.success(suggestions)

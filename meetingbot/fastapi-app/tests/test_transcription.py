@@ -1,7 +1,7 @@
-import unittest
 import shutil
 import subprocess
 import tempfile
+import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -24,8 +24,8 @@ from models import (
     Meeting,
     MeetingMaterial,
     MeetingParticipant,
-    TranscriptSegment,
     TranscriptionTask,
+    TranscriptSegment,
     User,
 )
 from services.transcription_service import execute_transcription, parse_segments, prepare_audio_chunks
