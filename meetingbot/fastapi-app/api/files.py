@@ -54,8 +54,8 @@ async def upload_file(
         raise
     finally:
         await file.close()
-    # 返回可直接访问的下载地址，前端把它写进 data.user.avatar
-    return Result.success("http://127.0.0.1:9090/files/download/" + storage_name)
+    # 返回相对地址：换机器/换端口/上 HTTPS 都由前端按当前站点 origin 拼接
+    return Result.success("/files/download/" + storage_name)
 
 
 # 文件下载

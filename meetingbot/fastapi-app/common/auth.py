@@ -1,19 +1,27 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 import jwt
 from fastapi import Header
 
 from common.exception_handler import CustomException
+from common.security import password_fingerprint
 from models import User
 from settings import JWT_ALGORITHM, JWT_EXPIRE_HOURS, JWT_SECRET
+
+logger = logging.getLogger(__name__)
 
 
 def create_token(user: User) -> str:
     # 过期时间按 JWT_EXPIRE_HOURS 计算，超过后 PyJWT 解析时直接判定过期
     expire_time = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRE_HOURS)
-    # sub 保存用户ID，后续请求靠它反查当前登录用户
-    # role 一并写进去，exp 是 JWT 规范里的过期时间字段
-    payload = {"sub": str(user.id), "role": user.role, "exp": expire_time}
+    # sub 保存用户ID；pv 是当前密码哈希的指纹，改密后旧 token 立即失效
+    payload = {
+        "sub": str(user.id),
+        "role": user.role,
+        "pv": password_fingerprint(user.password),
+        "exp": expire_time,
+    }
     # 用配置里的密钥和算法签名，结果就是返回给前端的 Token 字符串
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
@@ -28,14 +36,18 @@ async def get_current_user(token: str | None = Header(default=None)) -> User:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         # 签发时 sub 存的是字符串形式的用户ID，这里转回整数
         user_id = int(payload.get("sub"))
-    except (jwt.InvalidTokenError, TypeError, ValueError):
+        password_version = payload.get("pv")
+    except (jwt.InvalidTokenError, TypeError, ValueError) as error:
         # Token 被篡改、已过期、sub 缺失或不是数字，统一按登录失效处理
-        raise CustomException("登录状态已失效，请重新登录", "401")
+        raise CustomException("登录状态已失效，请重新登录", "401") from error
     # 拿 Token 里的用户ID回查数据库，而不是直接信任 Token 里的其他字段
     user = await User.get_or_none(id=user_id)
-    # 账号已被第 2 章删除，或被管理员停用，即使 Token 没过期也不放行
+    # 账号已被删除，或被管理员停用，即使 Token 没过期也不放行
     if user is None or user.status != "NORMAL":
         raise CustomException("账号不存在或已被停用", "401")
+    # 改过密码后旧 token 的 pv 与当前库中哈希指纹不一致，要求重新登录
+    if password_version != password_fingerprint(user.password):
+        raise CustomException("密码已变更，请重新登录", "401")
     return user
 
 

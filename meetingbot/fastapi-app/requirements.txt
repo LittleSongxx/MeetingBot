@@ -34,6 +34,8 @@ tzdata==2026.4
 # ---------- Auth ----------
 PyJWT==2.13.0
 cryptography==50.0.1
+# 密码哈希（登录/注册/改密/管理员建号）
+bcrypt==4.3.0
 
 # ---------- LangChain ----------
 # ChatOpenAI calls Bailian through its OpenAI-compatible API,
