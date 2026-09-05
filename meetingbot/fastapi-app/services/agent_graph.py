@@ -35,6 +35,8 @@ class ReviewState(TypedDict, total=False):
     max_rounds: int
     # 审查节点发现运行已被中断时置为 True，路由直接结束
     interrupted: bool
+    # 中断恢复时若上一版修订稿没落库，这里带上上一轮问题清单，入口直接进重写步
+    resume_issues: list[dict]
 
     # 下面四个由 agent_service 注入，图只管调用时机
     # async (working, round_no) -> 审查结果 dict
@@ -54,6 +56,9 @@ async def review_node(state: ReviewState) -> ReviewState:
         return {"interrupted": True}
     # 本轮轮次号 = 已完成轮次 + 1
     round_no = state.get("round_no", 0) + 1
+    # 轮数上限兜底：恢复路径可能让轮次超过上限，这时不再调用模型，直接按通过收尾
+    if round_no > state.get("max_rounds", 0):
+        return {"round_no": round_no, "passed": True}
     # 调注入的审查函数，传入当前这一版纪要
     result = await state["review"](state["working"], round_no)
     issues = result.get("issues") or []
@@ -99,6 +104,11 @@ def route_after_refine(state: ReviewState) -> str:
     return "review"
 
 
+def route_start(state: ReviewState) -> str:
+    """入口路由：中断恢复时若上一版修订稿没落库，直接从重写步继续。"""
+    return "refine" if state.get("resume_issues") else "review"
+
+
 def build_review_graph():
     """把节点和边组装成状态图。
 
@@ -111,8 +121,8 @@ def build_review_graph():
     graph.add_node("refine", refine_node)
     graph.add_node("finalize", finalize_node)
 
-    # 从审查开始
-    graph.add_edge(START, "review")
+    # 通常从审查开始；中断恢复时若上一版修订稿未落库，则从重写步继续
+    graph.add_conditional_edges(START, route_start, {"review": "review", "refine": "refine"})
     # 条件边：下一步去哪由 route_after_review 读状态决定
     graph.add_conditional_edges(
         "review",
