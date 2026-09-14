@@ -1,14 +1,27 @@
 import asyncio
 import json
+import logging
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from models import AiModelConfig, Meeting, MeetingMaterial, MeetingMinutes, PromptTemplate, TranscriptSegment, TranscriptionTask, User
+from models import (
+    AiModelConfig,
+    Meeting,
+    MeetingMaterial,
+    MeetingMinutes,
+    PromptTemplate,
+    TranscriptionTask,
+    TranscriptSegment,
+    User,
+)
 from services.model_factory import invoke_json
+from settings import MAX_CHUNK_CHARS
 
-# 单段最多拼接多少字符，transcript_chunks 按这个长度把转写切成多段分别提取
-MAX_CHUNK_CHARS = 12000
+logger = logging.getLogger(__name__)
+
+# 单段最多拼接多少字符由 settings.MAX_CHUNK_CHARS 决定（默认 12000），
+# transcript_chunks 按这个长度把转写切成多段分别提取
 # 纪要ID到后台协程的映射，schedule_minutes 用它判断同一份纪要是否已经在跑
 _running_minutes: dict[int, asyncio.Task] = {}
 # 纪要生成共用的信号量，第一次调用 get_semaphore 时创建
@@ -128,10 +141,15 @@ async def transcript_chunks(task_id: int) -> list[str]:
 
 
 async def execute_minutes(minutes_id: int):
+    # 领取式抢占：重复调度或多进程时，只有一个执行者能把这一行从「等待」改成「已领取」
+    claimed = await MeetingMinutes.filter(id=minutes_id, status="GENERATING").exclude(stage="已领取").update(stage="已领取")
+    if not claimed:
+        return
     # 只处理状态是 GENERATING 的记录，中途被删掉或者已经跑完的直接跳过
     minutes = await MeetingMinutes.get_or_none(id=minutes_id, status="GENERATING")
     if minutes is None:
         return
+    logger.info("纪要生成开始", extra={"minutes_id": minutes.id, "source_task_id": minutes.source_task_id})
     try:
         meeting = await Meeting.get(id=minutes.meeting_id)
         config = await AiModelConfig.get(id=minutes.model_config_id)
@@ -164,6 +182,7 @@ async def execute_minutes(minutes_id: int):
                 "MINUTES_MERGE",
             )
         data = result.model_dump()
+        logger.info("纪要生成完成", extra={"minutes_id": minutes.id, "chunks": len(chunks)})
         # 六块内容一次性写回，状态转成 DRAFT，第 12 章从这里接手修订和确认
         await MeetingMinutes.filter(id=minutes.id).update(
             status="DRAFT", stage="纪要已生成", progress=100, summary=data["summary"],
@@ -171,6 +190,7 @@ async def execute_minutes(minutes_id: int):
             pending_items_json=data["pending_items"], risks_json=data["risks"], error_message=None,
         )
     except Exception as error:
+        logger.exception("纪要生成失败", extra={"minutes_id": minutes_id})
         # 任何一步失败都落到 FAILED，原因写进 error_message，页面上可以点重试
         await MeetingMinutes.filter(id=minutes.id).update(status="FAILED", stage="纪要生成失败", error_message=str(error)[:2000])
 
@@ -193,11 +213,15 @@ def schedule_minutes(minutes_id: int):
     task.add_done_callback(lambda _: _running_minutes.pop(minutes_id, None))
 
 
-async def recover_minutes_tasks():
-    # 服务上次被关掉时状态还停在 GENERATING 的，重新调度一遍
-    ids = await MeetingMinutes.filter(status="GENERATING").values_list("id", flat=True)
+async def recover_minutes_tasks() -> int:
+    # 上次进程退出时被领取但没跑完的，先退回可领取状态，再统一重新调度
+    await MeetingMinutes.filter(status="GENERATING", stage="已领取").update(stage="等待恢复执行")
+    ids = list(await MeetingMinutes.filter(status="GENERATING").values_list("id", flat=True))
     for minutes_id in ids:
         schedule_minutes(minutes_id)
+    if ids:
+        logger.info("纪要生成任务已重新入队", extra={"count": len(ids)})
+    return len(ids)
 
 
 async def material_name_of_minutes(minutes_id: int | None) -> str | None:

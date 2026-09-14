@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import shutil
 import subprocess
 import tempfile
@@ -8,17 +9,19 @@ from uuid import uuid4
 
 import httpx
 
-from common.times import now
 from api.meeting_material import MATERIAL_DIR
+from common.times import now
 from models import (
     AiCallLog,
     AiModelConfig,
     MeetingMaterial,
-    TranscriptSegment,
     TranscriptionTask,
+    TranscriptSegment,
 )
+from settings import CHUNK_SECONDS
 
-CHUNK_SECONDS = 1200
+logger = logging.getLogger(__name__)
+
 _running_tasks: dict[int, asyncio.Task] = {}
 _semaphore: asyncio.Semaphore | None = None
 
@@ -353,7 +356,7 @@ def parse_segments(
     response_segments = result.get("segments") or []
     parsed = []
     max_end_ms = 0
-    for index, item in enumerate(response_segments):
+    for _index, item in enumerate(response_segments):
         content = str(item.get("text") or "").strip()
         # 跳过空白片段，不占用序号
         if not content:
@@ -415,6 +418,7 @@ async def execute_transcription(task_id: int):
     if updated == 0:
         return
     task = await TranscriptionTask.get(id=task_id)
+    logger.info("转写任务开始", extra={"task_id": task.id, "material_id": task.material_id})
     try:
         # 资料可能在排队期间被删掉
         material = await MeetingMaterial.get_or_none(id=task.material_id)
@@ -475,6 +479,7 @@ async def execute_transcription(task_id: int):
                     for segment in all_segments
                 ]
             )
+            logger.info("转写任务完成", extra={"task_id": task.id, "segments": len(all_segments), "chunks": len(chunks)})
             await TranscriptionTask.filter(id=task.id).update(
                 status="SUCCEEDED",
                 stage="转写完成",
@@ -487,6 +492,7 @@ async def execute_transcription(task_id: int):
                 finished_at=now(),
             )
     except Exception as error:
+        logger.exception("转写任务失败", extra={"task_id": task_id})
         # 任何一步失败都把任务标成 FAILED 并记下原因，页面上出现“重试”按钮
         await TranscriptionTask.filter(id=task.id).update(
             status="FAILED",
@@ -514,7 +520,7 @@ def schedule_transcription(task_id: int):
     task.add_done_callback(lambda _: _running_tasks.pop(task_id, None))
 
 
-async def recover_transcription_tasks():
+async def recover_transcription_tasks() -> int:
     # 上次进程退出时正在执行的任务，内存里的协程已经没了，状态却停在 PROCESSING
     # 先把它们退回 PENDING，才能被 execute_transcription 的抢占条件接住
     await TranscriptionTask.filter(status="PROCESSING").update(
@@ -522,6 +528,9 @@ async def recover_transcription_tasks():
         stage="等待恢复执行",
     )
     # 连同本来就在排队的任务一起取出来重新排队
-    task_ids = await TranscriptionTask.filter(status="PENDING").values_list("id", flat=True)
+    task_ids = list(await TranscriptionTask.filter(status="PENDING").values_list("id", flat=True))
     for task_id in task_ids:
         schedule_transcription(task_id)
+    if task_ids:
+        logger.info("转写任务已重新入队", extra={"count": len(task_ids)})
+    return len(task_ids)
