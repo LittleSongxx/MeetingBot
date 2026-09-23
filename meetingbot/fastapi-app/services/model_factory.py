@@ -10,6 +10,7 @@
 音视频转写走百炼录音文件识别接口，由 transcription_service 用 httpx 直接调用，不经过这里。
 """
 
+import logging
 from time import perf_counter
 from typing import Any, Callable
 from uuid import uuid4
@@ -20,6 +21,8 @@ from langchain_openai import ChatOpenAI
 
 from common.model_json import build_schema_instruction, parse_model_json
 from models import AiCallLog, AiModelConfig
+
+logger = logging.getLogger(__name__)
 
 
 def build_chat_model(config: AiModelConfig, schema: dict, schema_name: str) -> Runnable:
@@ -99,6 +102,10 @@ async def invoke_json(
     except Exception as error:
         # 有些异常 str() 出来是空字符串，这时记类型名，页面上的失败原因不会是空白
         detail = (str(error) or type(error).__name__)[:2000]
+        logger.warning(
+            "模型调用失败",
+            extra={"call_type": call_type, "biz_id": biz_id, "model": config.model_name, "error": detail},
+        )
         # 失败也留一条日志，第 17 章的观测页据此统计失败率
         await AiCallLog.create(
             request_id="AIC" + uuid4().hex.upper(),

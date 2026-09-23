@@ -1,7 +1,11 @@
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from starlette import status
 from starlette.responses import JSONResponse
+
+logger = logging.getLogger(__name__)
 
 
 # 自定义异常类
@@ -26,7 +30,7 @@ def setup_exceptions(app: FastAPI):
     @app.exception_handler(RequestValidationError)
     async def validate_exception_handler(request: Request, exc: RequestValidationError):
         # 参数类型或结构不对时，先在后端控制台打出明细便于排查
-        print("捕获到422错误:", exc.errors())
+        logger.warning("请求参数校验失败", extra={"errors": exc.errors()})
         """处理422异常"""
         # 返回统一格式
         # 页面上只显示一句笼统提示，不把字段级报错抛给用户
@@ -39,7 +43,7 @@ def setup_exceptions(app: FastAPI):
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
         # 没被业务代码处理的异常，控制台打出原始信息
-        print("捕获到系统错误:", repr(exc))
+        logger.exception("未处理异常：%r", exc)
         """处理所有异常"""
         # 返回统一格式
         response = JSONResponse(
