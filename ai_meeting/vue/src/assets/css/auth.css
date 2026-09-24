@@ -1,0 +1,134 @@
+/* 登录页和注册页共用的样式 */
+
+.auth-container {
+    height: 100vh;
+    display: flex;
+    background-color: #fff;
+}
+
+/* 左半屏：深蓝底的系统介绍区，说明这套系统把一场会议处理成什么 */
+.auth-intro {
+    width: 52%;
+    background-color: #12314f;
+    padding: 60px 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.auth-brand {
+    display: flex;
+    align-items: center;
+}
+
+.auth-brand img {
+    width: 34px;
+    height: 34px;
+}
+
+.auth-brand span {
+    margin-left: 10px;
+    font-size: 17px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: .5px;
+}
+
+.auth-headline {
+    font-size: 30px;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.5;
+    margin-bottom: 14px;
+}
+
+.auth-subline {
+    font-size: 15px;
+    color: #93aec7;
+    line-height: 1.8;
+    max-width: 430px;
+}
+
+/* 会议处理链路，每一步对应系统里的一个页面 */
+.auth-steps {
+    margin-top: 40px;
+}
+
+.auth-step {
+    display: flex;
+    align-items: baseline;
+    padding: 11px 0;
+    border-top: 1px solid #1d4064;
+}
+
+.auth-step:last-child {
+    border-bottom: 1px solid #1d4064;
+}
+
+.auth-step-no {
+    width: 34px;
+    font-size: 13px;
+    color: #5d84a8;
+    font-variant-numeric: tabular-nums;
+}
+
+.auth-step-text {
+    font-size: 15px;
+    color: #cfe0ee;
+}
+
+.auth-foot {
+    font-size: 13px;
+    color: #5d84a8;
+}
+
+/* 右半屏：表单区 */
+.auth-form-side {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.auth-form-box {
+    width: 100%;
+    max-width: 340px;
+}
+
+.auth-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: #1f2d3d;
+    margin-bottom: 8px;
+}
+
+.auth-tip {
+    font-size: 13px;
+    color: #8a94a6;
+    margin-bottom: 28px;
+    line-height: 1.7;
+}
+
+.auth-switch {
+    font-size: 13px;
+    color: #8a94a6;
+    text-align: center;
+}
+
+.auth-switch a {
+    color: #0066bc;
+    margin-left: 4px;
+    cursor: pointer;
+}
+
+.auth-switch a:hover {
+    text-decoration: underline;
+}
+
+/* 窄屏时左边的介绍区收起，只保留表单 */
+@media (max-width: 900px) {
+    .auth-intro {
+        display: none;
+    }
+}

@@ -1,0 +1,94 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    color: #333;
+    font-size: 14px;
+}
+
+a {
+    text-decoration: none;
+}
+
+.card {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 14px;
+    border: 1px solid #ebeef3;
+    box-shadow: 0 1px 2px rgba(31, 45, 61, .04);
+}
+
+
+.line1 {
+    word-break: break-all;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1; /* 超出几行省略 */
+    overflow: hidden;
+}
+ .line2 {
+     word-break: break-all;
+     text-overflow: ellipsis;
+     display: -webkit-box;
+     -webkit-box-orient: vertical;
+     -webkit-line-clamp: 2; /* 超出几行省略 */
+     overflow: hidden;
+ }
+.line3 {
+    word-break: break-all;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3; /* 超出几行省略 */
+    overflow: hidden;
+}
+
+.line4 {
+    word-break: break-all;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4; /* 超出几行省略 */
+    overflow: hidden;
+}
+
+
+.dark1{
+    width: 20%;
+    text-align: center;
+}
+
+
+/* 表格：浅灰表头 + 细分隔线，和白色卡片、白色菜单保持同一套克制的配色 */
+.el-table th.el-table__cell {
+    background-color: #fafbfc !important;
+    color: #4a5568 !important;
+    font-weight: 600;
+    border-bottom: 1px solid #ebeef3 !important;
+}
+
+.el-table td.el-table__cell {
+    border-bottom: 1px solid #f2f4f7 !important;
+}
+
+.el-table tbody tr:hover > td.el-table__cell {
+    background-color: #f5f8fc !important;
+}
+
+.el-table tbody tr.current-row > td.el-table__cell {
+    background-color: #eef4fb !important;
+}
+
+.el-table {
+    --el-table-border-color: #ebeef3;
+    color: #1f2d3d;
+}
+
+/* 分页靠右，和表格右边缘对齐 */
+.el-pagination {
+    justify-content: flex-end;
+}
