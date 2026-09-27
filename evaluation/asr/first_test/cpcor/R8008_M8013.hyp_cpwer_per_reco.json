@@ -1,0 +1,37 @@
+{
+  "R8008_M8013": {
+    "error_rate": 0.363860002236386,
+    "errors": 3254,
+    "length": 8943,
+    "insertions": 261,
+    "deletions": 2225,
+    "substitutions": 768,
+    "reference_self_overlap": {
+      "overlap_rate": 0,
+      "overlap_time": 0,
+      "total_time": 3
+    },
+    "hypothesis_self_overlap": {
+      "overlap_rate": 0,
+      "overlap_time": 0,
+      "total_time": 3
+    },
+    "missed_speaker": 0,
+    "falarm_speaker": 0,
+    "scored_speaker": 3,
+    "assignment": [
+      [
+        "SPK8047",
+        "1"
+      ],
+      [
+        "SPK8048",
+        "2"
+      ],
+      [
+        "SPK8049",
+        "0"
+      ]
+    ]
+  }
+}

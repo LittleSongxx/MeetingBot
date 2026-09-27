@@ -1,0 +1,13 @@
+{
+  "meeting": "R8003_M8001",
+  "condition": ".best_c3600",
+  "reference_chars": 11731,
+  "hypothesis_chars": 9876,
+  "segments": 351,
+  "cer": {
+    "raw": 0.2828,
+    "no_punct": 0.2172,
+    "normalized": 0.2153
+  },
+  "note": "金标=近讲话戴 TextGrid；假设=产品远场单声道链路；CER 三口径"
+}

@@ -1,0 +1,24 @@
+{
+  "meetings": [
+    {
+      "session": "R8003_M8001",
+      "task": "evaluation/asr/first_test/task_R8003_M8001.single.json",
+      "ref_speakers": 4,
+      "hyp_speakers": 4,
+      "cpcor": 0.2767,
+      "cer_no_punct": 0.2444,
+      "delta_cp": 0.0323,
+      "meeteval_raw": {
+        "errors": 2821,
+        "length": 10195,
+        "falarm_speaker": 0,
+        "scored_speaker": 4
+      }
+    }
+  ],
+  "macro": {
+    "cpcor": 0.2767,
+    "cer_no_punct": 0.2444,
+    "delta_cp": 0.0323
+  }
+}

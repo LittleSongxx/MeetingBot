@@ -1,0 +1,13 @@
+{
+  "meeting": "R8007_M8010",
+  "condition": ".moss",
+  "reference_chars": 17028,
+  "hypothesis_chars": 1832,
+  "segments": 142,
+  "cer": {
+    "raw": 0.9222,
+    "no_punct": 0.9212,
+    "normalized": 0.9212
+  },
+  "note": "金标=近讲话戴 TextGrid；假设=产品远场单声道链路；CER 三口径"
+}

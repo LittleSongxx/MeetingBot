@@ -1,0 +1,54 @@
+{
+  "meetings": [
+    {
+      "session": "R8001_M8004",
+      "task": "/home/song/code/Agent/media_agent/AIMeeting/evaluation/asr/first_test/task_R8001_M8004.json",
+      "ref_speakers": 4,
+      "hyp_speakers": 8,
+      "cpcor": 0.7042,
+      "cer_no_punct": 0.382,
+      "delta_cp": 0.3222,
+      "meeteval_raw": {
+        "errors": 7546,
+        "length": 10715,
+        "falarm_speaker": 4,
+        "scored_speaker": 4
+      }
+    },
+    {
+      "session": "R8003_M8001",
+      "task": "/home/song/code/Agent/media_agent/AIMeeting/evaluation/asr/first_test/task_R8003_M8001.json",
+      "ref_speakers": 4,
+      "hyp_speakers": 8,
+      "cpcor": 0.9142,
+      "cer_no_punct": 0.2414,
+      "delta_cp": 0.6728,
+      "meeteval_raw": {
+        "errors": 9320,
+        "length": 10195,
+        "falarm_speaker": 4,
+        "scored_speaker": 4
+      }
+    },
+    {
+      "session": "R8007_M8010",
+      "task": "/home/song/code/Agent/media_agent/AIMeeting/evaluation/asr/first_test/task_R8007_M8010.json",
+      "ref_speakers": 4,
+      "hyp_speakers": 8,
+      "cpcor": 0.9234,
+      "cer_no_punct": 0.472,
+      "delta_cp": 0.4514,
+      "meeteval_raw": {
+        "errors": 13571,
+        "length": 14697,
+        "falarm_speaker": 4,
+        "scored_speaker": 4
+      }
+    }
+  ],
+  "macro": {
+    "cpcor": 0.8473,
+    "cer_no_punct": 0.3651,
+    "delta_cp": 0.4821
+  }
+}
