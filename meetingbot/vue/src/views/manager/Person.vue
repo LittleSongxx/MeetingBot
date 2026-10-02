@@ -10,8 +10,8 @@
             :show-file-list="false"
             class="avatar-uploader"
         >
-          <!-- 已有头像时把它当成点击区域，点图片即可重新选择 -->
-          <img v-if="data.user.avatar" :src="data.user.avatar" class="avatar" />
+          <!-- 已有头像时把它当成点击区域，点图片即可重新选择；avatar 可能是 /files/... 相对路径 -->
+          <img v-if="data.user.avatar" :src="resolveAssetUrl(data.user.avatar)" class="avatar" />
           <!-- 没有头像时显示一个加号占位框 -->
           <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
         </el-upload>
@@ -52,6 +52,7 @@
 import { reactive } from "vue";
 import request from "@/utils/request.js";
 import {ElMessage} from "element-plus";
+import { resolveAssetUrl } from "@/utils/url.js";
 
 const baseUrl = import.meta.env.VITE_BASE_URL
 

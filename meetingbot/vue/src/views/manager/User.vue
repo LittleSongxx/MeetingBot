@@ -26,12 +26,12 @@
         <el-table-column prop="username" label="账号" />
         <el-table-column prop="avatar" label="头像" width="80">
           <template #default="scope">
-            <!-- 没有上传头像的用户这一格留空 -->
+            <!-- 没有上传头像的用户这一格留空；后端返回的可能是 /files/... 相对路径，统一拼成完整地址 -->
             <el-image
                 v-if="scope.row.avatar"
                 style="width: 40px; height: 40px; border-radius: 50%; display: block"
-                :src="scope.row.avatar"
-                :preview-src-list="[scope.row.avatar]"
+                :src="resolveAssetUrl(scope.row.avatar)"
+                :preview-src-list="[resolveAssetUrl(scope.row.avatar)]"
                 preview-teleported
             ></el-image>
           </template>
@@ -146,6 +146,7 @@ import { reactive } from 'vue'
 import { Delete, Edit } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request.js'
+import { resolveAssetUrl } from '@/utils/url.js'
 
 const baseUrl = import.meta.env.VITE_BASE_URL
 

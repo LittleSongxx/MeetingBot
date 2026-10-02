@@ -9,8 +9,8 @@
       <el-table stripe :data="data.tableData">
         <el-table-column prop="avatar" label="头像" width="80">
           <template #default="scope">
-            <!-- el-avatar 在 src 为空时显示默认灰色头像，不需要额外判空 -->
-            <el-avatar :size="40" :src="scope.row.avatar"></el-avatar>
+            <!-- el-avatar 在 src 为空时显示默认灰色头像，不需要额外判空；相对路径统一拼成完整地址 -->
+            <el-avatar :size="40" :src="resolveAssetUrl(scope.row.avatar)"></el-avatar>
           </template>
         </el-table-column>
         <el-table-column prop="name" label="姓名" />
@@ -27,6 +27,7 @@
 import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/request.js'
+import { resolveAssetUrl } from '@/utils/url.js'
 
 const data = reactive({
   // 从第 1 章登录时写入的 xm-user 缓存里读当前登录用户，用于显示部门名称

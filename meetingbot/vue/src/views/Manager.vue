@@ -14,8 +14,8 @@
       <div class="manager-header-right">
         <el-dropdown style="cursor: pointer">
           <div style="padding-right: 20px; display: flex; align-items: center">
-            <!-- 头像地址取自 data.user.avatar，也就是 user 表的 avatar 字段 -->
-            <img style="width: 32px; height: 32px; border-radius: 50%;" :src="data.user.avatar" alt="">
+            <!-- 头像地址取自 data.user.avatar，也就是 user 表的 avatar 字段，可能是 /files/... 相对路径 -->
+            <img style="width: 32px; height: 32px; border-radius: 50%;" :src="resolveAssetUrl(data.user.avatar)" alt="">
             <!-- 姓名取自 data.user.name -->
             <span style="margin-left: 8px; color: #1f2d3d">{{ data.user.name }}</span><el-icon color="#8a94a6" style="margin-left: 4px"><arrow-down /></el-icon>
           </div>
@@ -100,6 +100,7 @@
 import { reactive } from "vue";
 import router from "@/router/index.js";
 import {ElMessage} from "element-plus";
+import { resolveAssetUrl } from "@/utils/url.js";
 
 const data = reactive({
   // 第 1 章登录时写入的 xm-user 缓存，顶部头像、姓名和左侧菜单的角色判断都读它
