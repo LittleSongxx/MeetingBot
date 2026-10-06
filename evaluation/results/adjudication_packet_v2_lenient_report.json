@@ -1,0 +1,583 @@
+{
+  "labelled_count": 88,
+  "label_distribution": {
+    "partial": 37,
+    "unsupported": 25,
+    "supported": 25,
+    "derivable": 1
+  },
+  "grounded_binary_distribution": {
+    "flagged": 62,
+    "clean": 26
+  },
+  "per_stratum_adjudicated_label": {
+    "reviewer_UNSUPPORTED": {
+      "partial": 11,
+      "unsupported": 12,
+      "supported": 5
+    },
+    "reviewer_MISSING_ITEM": {
+      "unsupported": 2,
+      "partial": 2,
+      "supported": 1
+    },
+    "unflagged": {
+      "supported": 14,
+      "partial": 12,
+      "unsupported": 4
+    },
+    "proxy_only": {
+      "partial": 10,
+      "derivable": 1,
+      "unsupported": 6,
+      "supported": 3
+    },
+    "reviewer_MISSING_OWNER": {
+      "partial": 2,
+      "unsupported": 1,
+      "supported": 2
+    }
+  },
+  "agreement_adjudicator_vs_reviewer": {
+    "n": 88,
+    "raw_agreement": 0.5454545454545454,
+    "raw_agreement_95": [
+      0.435761260707918,
+      0.6520015451473713
+    ],
+    "kappa": 0.1389432485322895,
+    "expected_agreement": 0.47210743801652894,
+    "note": "kappa is unstable at this n; the raw rate and its exact interval carry the reading"
+  },
+  "agreement_adjudicator_vs_proxy": {
+    "n": 88,
+    "raw_agreement": 0.4318181818181818,
+    "raw_agreement_95": [
+      0.32658652047307235,
+      0.5417708040882583
+    ],
+    "kappa": 0.07094594594594598,
+    "expected_agreement": 0.3884297520661157,
+    "note": "kappa is unstable at this n; the raw rate and its exact interval carry the reading"
+  },
+  "agreement_reviewer_vs_proxy": {
+    "n": 88,
+    "raw_agreement": 0.3409090909090909,
+    "raw_agreement_95": [
+      0.24316670561868592,
+      0.44969777203478545
+    ],
+    "kappa": -0.42410714285714285,
+    "expected_agreement": 0.5371900826446281,
+    "note": "kappa is unstable at this n; the raw rate and its exact interval carry the reading"
+  },
+  "binaries_adjudicator_vs_reviewer": {
+    "n": 88,
+    "confusion": {
+      "both_flagged": 30,
+      "only_adjudicator_flagged": 32,
+      "only_reviewer_flagged": 8,
+      "both_clean": 18
+    },
+    "pabak": 0.09090909090909083,
+    "prevalence_index": 0.13636363636363635,
+    "bias_index": 0.2727272727272727,
+    "error_rate": {
+      "reviewer_flagged_but_adjudicator_did_not": {
+        "successes": 8,
+        "total": 38,
+        "rate": 0.21052631578947367,
+        "wilson_95": [
+          0.11074791842995879,
+          0.363457794753274
+        ],
+        "clopper_pearson_95": [
+          0.0955411154558709,
+          0.37318828360163947
+        ],
+        "note": "exact interval is primary; Wilson shown for comparison"
+      },
+      "adjudicator_flagged_but_reviewer_did_not": {
+        "successes": 32,
+        "total": 62,
+        "rate": 0.5161290322580645,
+        "wilson_95": [
+          0.39447459605660673,
+          0.6359014016175426
+        ],
+        "clopper_pearson_95": [
+          0.3856391239740544,
+          0.6450272431725395
+        ],
+        "note": "exact interval is primary; Wilson shown for comparison"
+      }
+    },
+    "reading": "两个方向的错误率必须分开读：若只有一个方向大，说明是**系统性偏差**而非随机分歧，此时 κ 被患病率压扁，不能作为「无一致性」的证据。"
+  },
+  "binaries_adjudicator_vs_proxy": {
+    "n": 88,
+    "confusion": {
+      "both_flagged": 16,
+      "only_adjudicator_flagged": 46,
+      "only_proxy_flagged": 4,
+      "both_clean": 22
+    },
+    "pabak": -0.13636363636363635,
+    "prevalence_index": 0.06818181818181818,
+    "bias_index": 0.4772727272727273,
+    "error_rate": {
+      "proxy_flagged_but_adjudicator_did_not": {
+        "successes": 4,
+        "total": 20,
+        "rate": 0.2,
+        "wilson_95": [
+          0.08065766257979809,
+          0.4160174322518936
+        ],
+        "clopper_pearson_95": [
+          0.05733399705003228,
+          0.4366140029966685
+        ],
+        "note": "exact interval is primary; Wilson shown for comparison"
+      },
+      "adjudicator_flagged_but_proxy_did_not": {
+        "successes": 46,
+        "total": 62,
+        "rate": 0.7419354838709677,
+        "wilson_95": [
+          0.6211887265285199,
+          0.8344512385837193
+        ],
+        "clopper_pearson_95": [
+          0.6150275466710184,
+          0.8447300065357934
+        ],
+        "note": "exact interval is primary; Wilson shown for comparison"
+      }
+    },
+    "reading": "两个方向的错误率必须分开读：若只有一个方向大，说明是**系统性偏差**而非随机分歧，此时 κ 被患病率压扁，不能作为「无一致性」的证据。"
+  },
+  "binaries_reviewer_vs_proxy": {
+    "n": 88,
+    "confusion": {
+      "both_flagged": 0,
+      "only_reviewer_flagged": 38,
+      "only_proxy_flagged": 20,
+      "both_clean": 30
+    },
+    "pabak": -0.31818181818181823,
+    "prevalence_index": 0.3409090909090909,
+    "bias_index": 0.20454545454545456,
+    "error_rate": {
+      "proxy_flagged_but_reviewer_did_not": {
+        "successes": 20,
+        "total": 20,
+        "rate": 1.0,
+        "wilson_95": [
+          0.8388748419471806,
+          1.0
+        ],
+        "clopper_pearson_95": [
+          0.8315665290169136,
+          1.0
+        ],
+        "note": "exact interval is primary; Wilson shown for comparison"
+      },
+      "reviewer_flagged_but_proxy_did_not": {
+        "successes": 38,
+        "total": 38,
+        "rate": 1.0,
+        "wilson_95": [
+          0.908190131774416,
+          0.9999999999999999
+        ],
+        "clopper_pearson_95": [
+          0.9074872385841191,
+          1.0
+        ],
+        "note": "exact interval is primary; Wilson shown for comparison"
+      }
+    },
+    "reading": "两个方向的错误率必须分开读：若只有一个方向大，说明是**系统性偏差**而非随机分歧，此时 κ 被患病率压扁，不能作为「无一致性」的证据。"
+  },
+  "discordant_items": [
+    {
+      "anonymous_id": "item_006",
+      "case_id": "vcsum_97",
+      "field": "topics",
+      "stratum": "unflagged",
+      "adjudicated_label": "partial",
+      "item_text": "特高压对清洁能源输送的意义 刘东升介绍特高压定义、特点及对清洁能源远距离大规模输送的必要性，指出其可解决清洁能源产地与用电中心逆向分布、距离1000至4000公里的输送问题，是清洁能源革命和生态建设必不可少的技术。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_009",
+      "case_id": "vcsum_21",
+      "field": "risks",
+      "stratum": "unflagged",
+      "adjudicated_label": "unsupported",
+      "item_text": "灾害救援经验缺乏沉淀与传承，下一次灾难时新人可能从零开始，导致重复踩坑。 模型建议：建立灾害响应知识库与经验复盘机制，将历次响应的方法论产品化并开放共享；此建议为模型建议，非会议决定。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_010",
+      "case_id": "vcsum_21",
+      "field": "topics",
+      "stratum": "unflagged",
+      "adjudicated_label": "unsupported",
+      "item_text": "线上会议开始前的技术调试与嘉宾等待 会议正式开始前后，参会者调试摄像头、麦克风、连麦、链接分享、报名与直播评论可见性，并等待梁达、声宇等嘉宾；期间发言人2反映无法连麦、只能看到发言看不到人，怀疑是网络或运营商问题，发言人3尝试退出手机改用电脑测试但电脑显示不出来，最终仍用手机，发言人1判断可能是网络问题。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_012",
+      "case_id": "vcsum_0",
+      "field": "topics",
+      "stratum": "proxy_only",
+      "adjudicated_label": "partial",
+      "item_text": "圆桌开场与嘉宾介绍 主持人杨淼介绍本场圆桌主题“量变到质变 DeFi 请回答2021”，并邀请四位嘉宾分别自我介绍：Default 商务总监陈涛、Piggy 协议开发团队负责人 Ron、临时科技创始人邓永凯、虎符交易所合伙人卢炳泉。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_017",
+      "case_id": "vcsum_146",
+      "field": "pending_items",
+      "stratum": "reviewer_UNSUPPORTED",
+      "adjudicated_label": "supported",
+      "item_text": "初中生家长如何为以后的高考和三加三新高考选科做准备，会议提出该问题但未形成具体待办安排。",
+      "direction": "reviewer flagged, adjudicator did not",
+      "reviewer_issue_type": "UNSUPPORTED",
+      "reviewer_detail": "该“如何为三加三新高考选科做准备”的提问在会上已由赵老师当场具体作答（读费劲的书、不放弃物理、先确定物理再选成绩高的科目、学好数学与写作），并非留待后续处理的未决事项，纪要把它列入未决事项且只写“未形成具体待办安排”，低估了原文已有的回应内容。"
+    },
+    {
+      "anonymous_id": "item_020",
+      "case_id": "vcsum_125",
+      "field": "pending_items",
+      "stratum": "proxy_only",
+      "adjudicated_label": "unsupported",
+      "item_text": "两套设备测量结果不一致时以哪个为准的行业痛点问题，会议请周总和赵总讨论，但未形成结论或后续跟进安排。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_023",
+      "case_id": "vcsum_172",
+      "field": "pending_items",
+      "stratum": "reviewer_UNSUPPORTED",
+      "adjudicated_label": "supported",
+      "item_text": "话题三“效果：学本教学的引爆价值和撬动功能”尚待继续交流，主持人已邀请张喜奎局长作交流，其后续发言内容未在分段结果中呈现，待跟进。",
+      "direction": "reviewer flagged, adjudicator did not",
+      "reviewer_issue_type": "UNSUPPORTED",
+      "reviewer_detail": "该待办称话题三“效果”尚待继续交流、张喜奎局长的发言内容未呈现。但转写第66—69轮显示张局长已就话题三作完整发言（二十五所学校实践、中考与高考成绩、英语教师朱玲获全国一等奖、李秀芬获全国优秀教育工作者等），其后孙淑志校长（第71—74轮）、王雎芬主任（第76—80轮）继续就话题三交流。话题三已实际完成，不构成会议留下的未决事项。"
+    },
+    {
+      "anonymous_id": "item_024",
+      "case_id": "vcsum_86",
+      "field": "topics",
+      "stratum": "proxy_only",
+      "adjudicated_label": "unsupported",
+      "item_text": "运营模式与人员优化创新 发言人3提出在运营模式上做创新，举例在将开的公寓前厅只放5人、取消GSM角色，前台兼顾迎宾与引导电梯，强调人员优化依赖动线设计而非硬性调整。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_026",
+      "case_id": "vcsum_208",
+      "field": "pending_items",
+      "stratum": "reviewer_UNSUPPORTED",
+      "adjudicated_label": "supported",
+      "item_text": "在线教育如何进一步促进深度学习的发生，会议主持人向海量教育集团提问，但转写片段中未见明确后续安排或结论。",
+      "direction": "reviewer flagged, adjudicator did not",
+      "reviewer_issue_type": "UNSUPPORTED",
+      "reviewer_detail": "纪要将会讨论题‘线上教育究竟是加大还是缩小教育两极分化’列为待决事项并称‘仍待进一步探讨’，但原文中主持人提问后叶翠薇校长已发表观点，会议并未明确留下后续探讨安排。"
+    },
+    {
+      "anonymous_id": "item_027",
+      "case_id": "vcsum_4",
+      "field": "topics",
+      "stratum": "proxy_only",
+      "adjudicated_label": "partial",
+      "item_text": "元宇宙的定义、理解与当前阶段 主持人提出第一个问题，请嘉宾谈对元宇宙定义的理解。嘉宾分别给出虚拟空间/虚拟社会、关于宇宙的宇宙、未来新生活形态等不同理解，强调概念宽泛、千人千面；同时讨论当前所处阶段，认为互联网时代人类已进入虚拟世界，今年走红是量变引起质变，若终极元宇宙形态为100，当前仅处于2到3阶段。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_029",
+      "case_id": "vcsum_146",
+      "field": "topics",
+      "stratum": "unflagged",
+      "adjudicated_label": "partial",
+      "item_text": "从职业目标倒推学业路径 刘柏旭分享初二时因对量化交易感兴趣，从招聘要求倒推读研、本科专业、高中和初中准备，并据此提前学习高中内容和数理基础。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_032",
+      "case_id": "vcsum_172",
+      "field": "viewpoints",
+      "stratum": "unflagged",
+      "adjudicated_label": "partial",
+      "item_text": "学本教学背景下的名师培养具有长程设计系统性强、延训一体指导性强、任务驱动实践性强三个特点。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_034",
+      "case_id": "vcsum_108",
+      "field": "risks",
+      "stratum": "unflagged",
+      "adjudicated_label": "unsupported",
+      "item_text": "高度集中控制的自动驾驶系统一旦中央电脑出问题，可能导致全城车辆连锁报废，系统联系越紧密毁灭性越大。 模型建议：在讨论未来城市技术架构时，纳入单点故障与冗余设计议题；此为模型建议，非会议决定。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_040",
+      "case_id": "vcsum_110",
+      "field": "topics",
+      "stratum": "reviewer_MISSING_ITEM",
+      "adjudicated_label": "supported",
+      "item_text": "徐汇与微软、仪电的战略合作历程 方区长回顾2016年5月徐汇与微软、仪电启动战略合作共建双创社区，全球第八家微软创投加速器落户仪电华鑫园区；2018世界人工智能大会上三方签署新一轮战略合作备忘录，上海微软亚洲研究院和微软仪电人工智能创新研究院落户徐汇滨江。",
+      "direction": "reviewer flagged, adjudicator did not",
+      "reviewer_issue_type": "MISSING_ITEM",
+      "reviewer_detail": "原文第5轮方区长在介绍微软创投加速器落户之后，还给出该加速器的成效数据：已成为全球八家中效益最好的一家，截止到去年累计五期有76家创业企业在此加速，总估值达826亿元人民币。纪要 topics 第3项（index 2，'徐汇与微软、仪电的战略合作历程'）只记录了加速器落户，未记录这组可核验的成效数据，属重要遗漏。"
+    },
+    {
+      "anonymous_id": "item_041",
+      "case_id": "vcsum_236",
+      "field": "topics",
+      "stratum": "proxy_only",
+      "adjudicated_label": "partial",
+      "item_text": "雷山妇女项目经验分享 发言人7介绍其在雷山开展妇女生殖健康知识培训、苗族刺绣等手工艺传承、防骗信息指导、支持妇女种生姜（从三五人增至30人）等，并欢迎到雷山参观。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_043",
+      "case_id": "vcsum_4",
+      "field": "viewpoints",
+      "stratum": "proxy_only",
+      "adjudicated_label": "partial",
+      "item_text": "不认为三到五年内会出现大一统的元宇宙公司和元宇宙世界并占掉大家互联网50%或80%的时间；更可能是虚拟世界层层递进、分开满足不同需求；短期看大厂推的硬件数据，达到一定体量时是投内容的时候，量起不来不必着急；中长期若交互技术革命，可能诞生新平台（游戏、直播、类游戏类直播类社交都有可能），可能出现类似抖音的机会。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_045",
+      "case_id": "vcsum_38",
+      "field": "topics",
+      "stratum": "unflagged",
+      "adjudicated_label": "partial",
+      "item_text": "考研目标院校选择（第一主题） 多位学长学姐围绕考研目标院校选择进行分享，核心观点包括：择校是备考第一步，需找准个人诉求；综合院校实力与自身能力匹配；关注历年考察范围、参考书目、报录比；考虑城市偏好与未来发展方向。发言人6介绍保研比例趋势（由约1比500、1比600趋向1比1000），建议分析专业优劣势、降低考研风险，同时不建议在院校选择上",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_047",
+      "case_id": "vcsum_208",
+      "field": "topics",
+      "stratum": "proxy_only",
+      "adjudicated_label": "partial",
+      "item_text": "在线教育网络学习的价值与路径选择 发言人2提出在线教育应区分以考试成绩为目的和以成长为目的两条路径，主张更应寻找以成长为目的的学习路径，并思考什么是最有价值的知识和最有意义的教育。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_050",
+      "case_id": "vcsum_172",
+      "field": "topics",
+      "stratum": "proxy_only",
+      "adjudicated_label": "unsupported",
+      "item_text": "河北现代学校推进学本教学的五个措施与成效 河北现代学校自2016年自发推进学本教学，追求两个减轻和两个提高（减轻教师教学负担、减轻学生学业负担，提高教师教学效益、提高学生学习效益），采取五项措施：一是完善管理评价制度；二是加强教学常规管理六检查（备课、上课、教研、作业及限训、改错本、三清效果）；三是优化小组建设与管理（364小组模式：三人",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_052",
+      "case_id": "vcsum_185",
+      "field": "topics",
+      "stratum": "proxy_only",
+      "adjudicated_label": "partial",
+      "item_text": "呼吁政府落实民办教育公平政策 发言人3以宿州市及埇桥区人口与公办园数量为例，指出普惠园指标（90%入园率、80%普惠园、50%公办园）在全省排名靠后，呼吁上级领导引导政府树立大教育观、从财政拨款落实民办教育促进法中的公平政策，并加大对民办学校基础教育的投入。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_053",
+      "case_id": "vcsum_108",
+      "field": "summary",
+      "stratum": "proxy_only",
+      "adjudicated_label": "unsupported",
+      "item_text": "本次为第二届浙江国际青年艺术周期间，中国美术学院与未来事务管理局联合举办的科幻圆桌论坛，含两场公开讨论。第一场主题“世界观的建构与创作”，副题“位面造物主的皮下聚会”，由李兆鑫主持，嘉宾为江波、陈楸帆、万象峰年、姜珺，围绕人类历史上最了不起的创造者、世界观创作背后的隐性工作、工具与方法、理想世界等展开。第二场主题“未来城市”，由于震主持，",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_054",
+      "case_id": "vcsum_208",
+      "field": "risks",
+      "stratum": "unflagged",
+      "adjudicated_label": "partial",
+      "item_text": "发言人3指出，如果把在线课单一地通过直播方式公开，单向传输有时效果不尽如人意，需要丰富形式、关注学生体验和思维。 模型建议：在线课堂应避免单一单向直播，可结合练习、会议室讨论、直播回放、课后靶向练习等多种形式，把学生体验和思维放在核心。此建议为模型建议，非会议决定。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_055",
+      "case_id": "vcsum_0",
+      "field": "viewpoints",
+      "stratum": "unflagged",
+      "adjudicated_label": "partial",
+      "item_text": "Default 从2018年底就开始专注做 DeFi，是国内最早提出 DeFi 协议矩阵概念的项目；目前已做全资产类协议、USDX 稳定币、黄金代币三驾马车，并做了交易聚合器和借贷。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_058",
+      "case_id": "vcsum_86",
+      "field": "topics",
+      "stratum": "unflagged",
+      "adjudicated_label": "partial",
+      "item_text": "嘉宾对“重新选择是否仍选现有领域”的回答 主持人向在座嘉宾抛出问题：如果有一次重新选择的机会，是否还会选择现在的工作或工作领域。嘉宾裸心集团首席品牌官、圭月联合创始人Close、酒店内容作者凡森、杨妹等分别作答，均表示会继续选择现有领域。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_059",
+      "case_id": "vcsum_97",
+      "field": "topics",
+      "stratum": "reviewer_UNSUPPORTED",
+      "adjudicated_label": "supported",
+      "item_text": "四代核电研发与国际市场参与 王鑫回应关于铅冷快堆进展、高温气冷堆及中广核国际项目的问题，介绍四代堆技术路线、攻关方向及商业化预期，提出未来8至10年可能进行商业化运作。",
+      "direction": "reviewer flagged, adjudicator did not",
+      "reviewer_issue_type": "UNSUPPORTED",
+      "reviewer_detail": "该条目称王鑫“回应关于铅冷快堆进展、高温气冷堆及中广核国际项目的问题”，但转写中王鑫（发言人2）只回答了铅冷快堆研发进展、石岛湾高温气冷堆路线、三/四代堆关系及8至10年商业化预期，对“中广核参与英国欣克利角、国际市场表现与未来预期”的提问始终没有作答；条目标题“国际市场参与”在原文中没有对应回应内容，属确定性被夸大。其余内容（四代堆技术"
+    },
+    {
+      "anonymous_id": "item_061",
+      "case_id": "vcsum_193",
+      "field": "pending_items",
+      "stratum": "reviewer_UNSUPPORTED",
+      "adjudicated_label": "supported",
+      "item_text": "用3至4分钟从教育角度、特别是核心素养层面梳理出可给到家长、行之有效的教育理念或迫在眉睫的行动，并请金老师先发言。",
+      "direction": "reviewer flagged, adjudicator did not",
+      "reviewer_issue_type": "UNSUPPORTED",
+      "reviewer_detail": "该条把主持人第56轮提出的“3到4分钟梳理”列为未决事项（pending_items），但该请求在会议内即被执行：金老师按主持人指定先行发言并给出梳理内容，其后张老师、林老师依次补充，会议在主持人致谢中结束；原文没有为该“梳理”留下待办、待确认或后续跟进安排，也无任何“未完成/下次再做”的表述。"
+    },
+    {
+      "anonymous_id": "item_065",
+      "case_id": "vcsum_108",
+      "field": "topics",
+      "stratum": "proxy_only",
+      "adjudicated_label": "unsupported",
+      "item_text": "差序分析矩阵与出奇系统 发言人6阐述其系统以差序分析矩阵和出奇为核心，学生经历居正、出奇、规正三阶段；最感兴趣的是误差与校正如何归纳小易以建构大同，认为误差挑战统一结构时令人欣喜（闻过则喜），但当前整个架构完全手工完成。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_067",
+      "case_id": "vcsum_208",
+      "field": "pending_items",
+      "stratum": "reviewer_MISSING_OWNER",
+      "adjudicated_label": "supported",
+      "item_text": "发言人3表示正在制定一站式的混合学习方案，但未明确方案完成时间、审批流程或后续跟进安排。",
+      "direction": "reviewer flagged, adjudicator did not",
+      "reviewer_issue_type": "MISSING_OWNER",
+      "reviewer_detail": "该待办条的 owner 字段填为「待确认」，basis 标为 not_mentioned，但其自身 content 已写明「发言人3表示正在制定一站式的混合学习方案」，原文也明确是发言人3（河北保定师范附属学校王淑英校长）以「我们」的口吻承诺在制定该方案。原文已明示执行主体，owner 不应记为待确认。"
+    },
+    {
+      "anonymous_id": "item_069",
+      "case_id": "vcsum_4",
+      "field": "risks",
+      "stratum": "unflagged",
+      "adjudicated_label": "partial",
+      "item_text": "元宇宙当前技术尚未成熟，画面、AR/VR设施等基础设施存在瓶颈；VR本质只是显示革命，当前瓶颈在人类向系统传达信息的方式多年未变，若交互方式无突破，元宇宙发展可能受限，距离终极形态仍有很长路径。 模型建议：持续跟踪底层计算、通信协议、AR/VR硬件以及交互技术（尤其信息输出/输入方式）等技术节点进展，关注AI交互、脑机接口等方向突破，作为",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_071",
+      "case_id": "vcsum_23",
+      "field": "pending_items",
+      "stratum": "reviewer_MISSING_OWNER",
+      "adjudicated_label": "supported",
+      "item_text": "会议进入下一讨论环节：请各位专家谈一谈密评工作开展中实际遇到的问题以及如何解决这些问题，首先请罗主任谈一谈。该讨论在转写片段结束时尚未展开，属于待跟进事项。",
+      "direction": "reviewer flagged, adjudicator did not",
+      "reviewer_issue_type": "MISSING_OWNER",
+      "reviewer_detail": "原文主持人明确安排了该待跟进讨论的首位发言人——“我们还是先请罗主任谈一谈”，即该事项的发言/跟进人可核验为罗主任；而纪要 pending_items[0] 的 owner 记为“待确认”（basis: not_mentioned），与原文明示的安排不一致。若认为该环节归属全体圆桌专家，也应在 owner 中体现“先请罗主任”这一原文信息"
+    },
+    {
+      "anonymous_id": "item_074",
+      "case_id": "vcsum_201",
+      "field": "viewpoints",
+      "stratum": "unflagged",
+      "adjudicated_label": "partial",
+      "item_text": "职业发展高度个性化、没有一定之规，可借鉴强化学习的探索与利用平衡（EE trade-off）：不断与环境交互、持续学习调优，早期广泛涉猎，后期聚焦深挖，形成T字型人才结构。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_077",
+      "case_id": "vcsum_176",
+      "field": "topics",
+      "stratum": "proxy_only",
+      "adjudicated_label": "partial",
+      "item_text": "洋葱学院的创业初衷与使命 杨林峰介绍三位联合创始人从公益项目出发，关注教育公平与学习体验，希望让中国学生的学习体验更愉悦、科学，进而促进教育公平。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_078",
+      "case_id": "vcsum_193",
+      "field": "topics",
+      "stratum": "proxy_only",
+      "adjudicated_label": "partial",
+      "item_text": "核心素养与培养什么样的人 讨论围绕核心素养、心理素养、能力模型展开，认为培养什么样的人是教育目标导向的基本问题；数学带来的逻辑思维能力与语文带来的表达沟通能力是最不能丢的两项基础能力，其他为衍生能力。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_079",
+      "case_id": "vcsum_193",
+      "field": "viewpoints",
+      "stratum": "unflagged",
+      "adjudicated_label": "partial",
+      "item_text": "儿童辩证思维到25岁左右可能还不成熟，经历从动作思维、形象思维到语言思维，由逻辑思维、形式逻辑思维到辩证逻辑思维的发展。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_080",
+      "case_id": "vcsum_31",
+      "field": "viewpoints",
+      "stratum": "proxy_only",
+      "adjudicated_label": "partial",
+      "item_text": "校长应该是学校的总设计师，要看到未来十年、二十年、三十年甚至一百年的发展。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_082",
+      "case_id": "vcsum_165",
+      "field": "topics",
+      "stratum": "unflagged",
+      "adjudicated_label": "partial",
+      "item_text": "宣传部朱部长的引导做法 朱部长强调乡村自媒体源自乡村、充满活力，是塑造乡村文明清风、参与乡村治理的重要新生力量；应肯定其独特魅力和重要作用，认真总结成功经验并加强引导与培育、推广经验。讲解者归纳为“推广成功经验”这一对策。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_083",
+      "case_id": "vcsum_146",
+      "field": "risks",
+      "stratum": "proxy_only",
+      "adjudicated_label": "unsupported",
+      "item_text": "生物和地理若未考到满分，会显著增加初三整体压力，这是发言人1基于家长经验提出的风险。 模型建议：初二阶段可评估生地复习投入，但具体时间分配应由家庭自行决定，非会议决议。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_086",
+      "case_id": "vcsum_146",
+      "field": "viewpoints",
+      "stratum": "proxy_only",
+      "adjudicated_label": "partial",
+      "item_text": "初二阶段应把更多时间投入生物和地理，因为这两科相对容易拿满分，且生地满分可减少初三在历史和化学上的时间消耗。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_087",
+      "case_id": "vcsum_193",
+      "field": "risks",
+      "stratum": "unflagged",
+      "adjudicated_label": "partial",
+      "item_text": "发言人2提到收到不少微信，包括搞心理学的家长担心孩子学业会不会学不好，因为负担减轻，反映家长对双减后学业质量的焦虑。 模型建议：可通过家长教育、理念提升缓解焦虑，但会议未形成具体跟进安排。",
+      "direction": "adjudicator flagged, reviewer did not"
+    },
+    {
+      "anonymous_id": "item_088",
+      "case_id": "vcsum_31",
+      "field": "risks",
+      "stratum": "unflagged",
+      "adjudicated_label": "unsupported",
+      "item_text": "关于校长资讯委员会是否解散存在不同意见：有校长提出应解散，发言人个人认为应加强、提升、完善。 模型建议：可安排专门讨论以明确该委员会定位与存续安排；此为模型建议，非会议决定。",
+      "direction": "adjudicator flagged, reviewer did not"
+    }
+  ],
+  "sampling_note": "The sample is stratified, so raw agreement rates are not the population rates and only the kappa comparisons between the three columns are meaningful. Read kappa, not the raw rate, when comparing reviewer against proxy.",
+  "framing": "This is AI-versus-AI agreement, not human validity. It bounds how reproducible the judgement is, and its discordance list is the input to a human review; it does not license calling any number a fact accuracy or human acceptance rate."
+}

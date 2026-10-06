@@ -1,0 +1,505 @@
+{
+  "purpose": "Holdout 双臂的**内容级**判定：词法代理饱和后唯一能分辨优化轮效果的仪器。\n\n## 预注册（看数据之前写死）\n\n- 抽样：每场每臂固定种子抽 5 个列表条目（topics/viewpoints/decisions/\n  pending_items/risks），同一场的两臂分别独立抽取（条目不同——比的是分布不是配对条目）；\n- 判定：qwen 盲态四分类（与 ai_adjudicate.SYSTEM_PROMPT 逐字相同，含 D1–D5），\n  窗口 = 条目在产品格式转写中的定位段；\n- 主读数：条目级 grounded 率（supported+derivable 占比），两臂各 n≈30；\n  逐场配对（n=6）Wilcoxon（wilcox+pratt 并报）；\n- 次读数：partial/unsupported 分布（无依据内容的形态）。\n\n边界：单裁判（qwen）+ n=6 场——与既有全部内容级读数同样的限制；\n结论口径是\"方向把关\"，不是效果宣称。\n\n运行：PYTHONPATH=evaluation python evaluation/metrics/holdout_content_judgment.py           --authorized-llm-calls 65\n",
+  "labels": {
+    "hc_vcsum_103_baseline_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口仅讨论疫情、线上化、音乐人迭代等，未提及娱乐行业变现逻辑或商业规划与创意灵魂的张力。",
+      "arm": "baseline",
+      "case_id": "vcsum_103"
+    },
+    "hc_vcsum_103_baseline_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及艺人发展起伏、暴起暴落或心态规划不足等内容。",
+      "arm": "baseline",
+      "case_id": "vcsum_103"
+    },
+    "hc_vcsum_103_baseline_03": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "纪要条目称音乐经纪人收入与人才流动，转写窗口未提及收入或人才流动。",
+      "arm": "baseline",
+      "case_id": "vcsum_103"
+    },
+    "hc_vcsum_103_baseline_04": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写仅提到疫情反复、生活受影响、很多活动转到线上和落地活动调整，未提及疫情持续时间比预期长、市场不稳定或对收入造成持续影响。",
+      "arm": "baseline",
+      "case_id": "vcsum_103"
+    },
+    "hc_vcsum_103_baseline_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及艺人培养，也未出现盖房子或建筑师相关比喻。",
+      "arm": "baseline",
+      "case_id": "vcsum_103"
+    },
+    "hc_vcsum_103_treated_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "纪要条目所述“速成操作模式的地基风险”在转写窗口中没有任何对应表述或可推出依据。",
+      "arm": "treated",
+      "case_id": "vcsum_103"
+    },
+    "hc_vcsum_103_treated_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及音乐赋能多元业态、流动式运营或多板块裂变相关内容",
+      "arm": "treated",
+      "case_id": "vcsum_103"
+    },
+    "hc_vcsum_103_treated_03": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "纪要条目为抽象标题式断言，转写窗口未直接陈述‘后疫情时代的行业重整与反思’这一完整概念。",
+      "arm": "treated",
+      "case_id": "vcsum_103"
+    },
+    "hc_vcsum_103_treated_04": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及艺人培训需兼顾专业能力、演艺生态、艺德与心态",
+      "arm": "treated",
+      "case_id": "vcsum_103"
+    },
+    "hc_vcsum_103_treated_05": {
+      "label": "supported",
+      "operation": "",
+      "reason": "条目概括了窗口中讨论音乐人能否通过创作实现财富自由的话题，核心断言在转写中有直接依据。",
+      "arm": "treated",
+      "case_id": "vcsum_103"
+    },
+    "hc_vcsum_111_baseline_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及文化周期性，也未比较八九十年代音乐",
+      "arm": "baseline",
+      "case_id": "vcsum_111"
+    },
+    "hc_vcsum_111_baseline_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "窗口未提出或描述“流行音乐教学循环系统与实践”这一概念或相关断言",
+      "arm": "baseline",
+      "case_id": "vcsum_111"
+    },
+    "hc_vcsum_111_baseline_03": {
+      "label": "partial",
+      "operation": "",
+      "reason": "条目概括了经典属性与教育引导，但“传播/市场检验属性”在窗口中未被直接陈述。",
+      "arm": "baseline",
+      "case_id": "vcsum_111"
+    },
+    "hc_vcsum_111_baseline_04": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "窗口未提及爵士音乐、其从高等教育元素转向大众普适元素或相关方法经验，也未体现发言人1就此向孙教授提问。",
+      "arm": "baseline",
+      "case_id": "vcsum_111"
+    },
+    "hc_vcsum_111_baseline_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口中未提及宣发从业者与学校互动的相关内容",
+      "arm": "baseline",
+      "case_id": "vcsum_111"
+    },
+    "hc_vcsum_111_treated_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "纪要条目只是抽象主题，转写窗口未直接陈述音乐教育的普适性与社会属性这一断言。",
+      "arm": "treated",
+      "case_id": "vcsum_111"
+    },
+    "hc_vcsum_111_treated_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及学生创作受社会诱惑和压力影响、迎合平台视频或偏离艺术本体。",
+      "arm": "treated",
+      "case_id": "vcsum_111"
+    },
+    "hc_vcsum_111_treated_03": {
+      "label": "partial",
+      "operation": "",
+      "reason": "转写中确有发言人询问宣发市场工作者能否进校互动，但未提及‘胡老师’，也未说明该事项未获回应或安排。",
+      "arm": "treated",
+      "case_id": "vcsum_111"
+    },
+    "hc_vcsum_111_treated_04": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写中明确提到民乐等教学不大考虑市场问题，并会造成从人才到学生的脱节问题。",
+      "arm": "treated",
+      "case_id": "vcsum_111"
+    },
+    "hc_vcsum_111_treated_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "标题式断言未陈述任何可核验事实，窗口未表达流行音乐根基与时代对比的完整结论",
+      "arm": "treated",
+      "case_id": "vcsum_111"
+    },
+    "hc_vcsum_118_baseline_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及资本思维与退出机制相关内容",
+      "arm": "baseline",
+      "case_id": "vcsum_118"
+    },
+    "hc_vcsum_118_baseline_02": {
+      "label": "partial",
+      "operation": "",
+      "reason": "窗口提到很多矿业企业家走出去栽了很大跟头，但未说明原因是未充分考虑非矿因素。",
+      "arm": "baseline",
+      "case_id": "vcsum_118"
+    },
+    "hc_vcsum_118_baseline_03": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口中未提及下午旷网会、项目路演，也未涉及资本思维和退出机制理念。",
+      "arm": "baseline",
+      "case_id": "vcsum_118"
+    },
+    "hc_vcsum_118_baseline_04": {
+      "label": "partial",
+      "operation": "",
+      "reason": "转写提到不能简单认为在中国做过就能海外投资、失败率较大，但纪要具体化为照搬中国思维或拷贝设计方案，属于补入细节。",
+      "arm": "baseline",
+      "case_id": "vcsum_118"
+    },
+    "hc_vcsum_118_baseline_05": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写明确提到协会已有应对之策且下午会做进一步分享，并涉及政治、政策、法律风险。",
+      "arm": "baseline",
+      "case_id": "vcsum_118"
+    },
+    "hc_vcsum_118_treated_01": {
+      "label": "partial",
+      "operation": "",
+      "reason": "转写仅提到下午分享资本市场认可什么项目，未明确包含储量核实注意事项及具体内容待下午呈现的表述。",
+      "arm": "treated",
+      "case_id": "vcsum_118"
+    },
+    "hc_vcsum_118_treated_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及中国矿业政策门槛或国内前景",
+      "arm": "treated",
+      "case_id": "vcsum_118"
+    },
+    "hc_vcsum_118_treated_03": {
+      "label": "partial",
+      "operation": "",
+      "reason": "陈碧斌姓名在窗口未出现，其余核心断言有依据但补入了人名细节",
+      "arm": "treated",
+      "case_id": "vcsum_118"
+    },
+    "hc_vcsum_118_treated_04": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写中明确提到风险控制要大于追求收益、不要一时脑热、品位高也要充分考虑非矿因素，纪要核心断言与之对应。",
+      "arm": "treated",
+      "case_id": "vcsum_118"
+    },
+    "hc_vcsum_118_treated_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口中没有任何关于发言人7、明年第九届会议或相关期望与决议的内容。",
+      "arm": "treated",
+      "case_id": "vcsum_118"
+    },
+    "hc_vcsum_160_baseline_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "窗口未提及中学阶段，也未明确断言这是关于该阶段孩子的教育主题",
+      "arm": "baseline",
+      "case_id": "vcsum_160"
+    },
+    "hc_vcsum_160_baseline_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口中未出现发言人3关于紫玉问题复杂、泛化、症状难推因果、背景不足或无法找到症结中心的任何表述。",
+      "arm": "baseline",
+      "case_id": "vcsum_160"
+    },
+    "hc_vcsum_160_baseline_03": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及父母期待与欣赏对孩子的影响相关内容。",
+      "arm": "baseline",
+      "case_id": "vcsum_160"
+    },
+    "hc_vcsum_160_baseline_04": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口只提到孩子暑假荨麻疹及心理因素干预，未涉及爱哭爱生气的情绪处理。",
+      "arm": "baseline",
+      "case_id": "vcsum_160"
+    },
+    "hc_vcsum_160_baseline_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口讨论的是生命与情感教育及荨麻疹心理问题，未提及自恋、偏执或企业家精神。",
+      "arm": "baseline",
+      "case_id": "vcsum_160"
+    },
+    "hc_vcsum_160_treated_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及离异家庭孩子沟通相关内容",
+      "arm": "treated",
+      "case_id": "vcsum_160"
+    },
+    "hc_vcsum_160_treated_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口讨论的是生命与情感教育、荨麻疹与心理因素等，并未提及夫妻健康吵架与关系修复。",
+      "arm": "treated",
+      "case_id": "vcsum_160"
+    },
+    "hc_vcsum_160_treated_03": {
+      "label": "supported",
+      "operation": "",
+      "reason": "窗口中明确提到孩子暑假荨麻疹过敏及心理因素影响的问题",
+      "arm": "treated",
+      "case_id": "vcsum_160"
+    },
+    "hc_vcsum_160_treated_04": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未出现家长应欣赏孩子特点或不应期待其做不到的事的相关断言",
+      "arm": "treated",
+      "case_id": "vcsum_160"
+    },
+    "hc_vcsum_160_treated_05": {
+      "label": "partial",
+      "operation": "",
+      "reason": "转写中“大学心理咨询太不专业”由发言人4说出，纪要却归为马老师观点，且窗口未说明马老师持此看法",
+      "arm": "treated",
+      "case_id": "vcsum_160"
+    },
+    "hc_vcsum_3_baseline_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口讨论的是基础研究成果转化和选题取向，未提及电动车电池技术路线选择。",
+      "arm": "baseline",
+      "case_id": "vcsum_3"
+    },
+    "hc_vcsum_3_baseline_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口中未提及5月30日或新型安全电池学术沙龙预告相关内容",
+      "arm": "baseline",
+      "case_id": "vcsum_3"
+    },
+    "hc_vcsum_3_baseline_03": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口仅提到产业化难度非常大，并未出现九死一生、挑战比科研更大或存在失败风险等表述。",
+      "arm": "baseline",
+      "case_id": "vcsum_3"
+    },
+    "hc_vcsum_3_baseline_04": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写明确提到实验室控制了三个月、产业链国内外上下游均受影响，并说对石墨烯研究领域和产业有很大影响。",
+      "arm": "baseline",
+      "case_id": "vcsum_3"
+    },
+    "hc_vcsum_3_baseline_05": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及石墨烯、5G器件材料或替代机会与应用方向受限等内容。",
+      "arm": "baseline",
+      "case_id": "vcsum_3"
+    },
+    "hc_vcsum_3_treated_01": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "转写窗口未提及新冠疫情或石墨烯研究及行业影响",
+      "arm": "treated",
+      "case_id": "vcsum_3"
+    },
+    "hc_vcsum_3_treated_02": {
+      "label": "supported",
+      "operation": "",
+      "reason": "纪要中的核心断言均可在转写窗口中找到直接依据",
+      "arm": "treated",
+      "case_id": "vcsum_3"
+    },
+    "hc_vcsum_3_treated_03": {
+      "label": "supported",
+      "operation": "",
+      "reason": "纪要内容直接复述了转写中发言人3关于产业化九死一生且挑战可能比科研更大的原话。",
+      "arm": "treated",
+      "case_id": "vcsum_3"
+    },
+    "hc_vcsum_3_treated_04": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "条目只是主题短语，未构成可由转写窗口直接支撑的具体断言。",
+      "arm": "treated",
+      "case_id": "vcsum_3"
+    },
+    "hc_vcsum_3_treated_05": {
+      "label": "supported",
+      "operation": "",
+      "reason": "纪要内容与转写中关于传统锂电安全性挑战及电动车熄火的表述基本一致。",
+      "arm": "treated",
+      "case_id": "vcsum_3"
+    },
+    "hc_vcsum_54_baseline_01": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写明确提到受邀担任圆桌论坛主持并围绕新时代教师素养与能力提升话题交流。",
+      "arm": "baseline",
+      "case_id": "vcsum_54"
+    },
+    "hc_vcsum_54_baseline_02": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "纪要条目是在评论转写质量并列举疑似识别错误，属于对文本本身的判断，转写窗口并未陈述这些词是识别错误或会影响理解。",
+      "arm": "baseline",
+      "case_id": "vcsum_54"
+    },
+    "hc_vcsum_54_baseline_03": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写明确提到科技改变生活、通信工具强大，学生信息来源延伸导致教育空间放大。",
+      "arm": "baseline",
+      "case_id": "vcsum_54"
+    },
+    "hc_vcsum_54_baseline_04": {
+      "label": "unsupported",
+      "operation": "",
+      "reason": "纪要条目仅给出标题，未提供可判断的具体时间断言，无法由窗口蕴含。",
+      "arm": "baseline",
+      "case_id": "vcsum_54"
+    },
+    "hc_vcsum_54_baseline_05": {
+      "label": "partial",
+      "operation": "",
+      "reason": "转写仅提到第一个议题并说大家可以看一下，未明确展开；但‘后续讨论待进行’属补入的未发生状态细节。",
+      "arm": "baseline",
+      "case_id": "vcsum_54"
+    },
+    "hc_vcsum_54_treated_01": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写明确提到嘉宾身份不一样，包括名校长和专职督学。",
+      "arm": "treated",
+      "case_id": "vcsum_54"
+    },
+    "hc_vcsum_54_treated_02": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写明确提到围绕论坛主题背景做简要介绍，并说明新时代背景及教师素养与能力提升主题。",
+      "arm": "treated",
+      "case_id": "vcsum_54"
+    },
+    "hc_vcsum_54_treated_03": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写明确提到嘉宾所在学校的学段体制不同，并列举高中、初中、十二年一贯制等例子。",
+      "arm": "treated",
+      "case_id": "vcsum_54"
+    },
+    "hc_vcsum_54_treated_04": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写明确提到嘉宾所在学校的历史不同，并举例不同建校年限，能支撑该条目核心断言。",
+      "arm": "treated",
+      "case_id": "vcsum_54"
+    },
+    "hc_vcsum_54_treated_05": {
+      "label": "supported",
+      "operation": "",
+      "reason": "转写明确提到信息时代师生知识储备、认知观念、价值追求更加丰富多元",
+      "arm": "treated",
+      "case_id": "vcsum_54"
+    }
+  },
+  "n_sampled": {
+    "vcsum_3.baseline": 5,
+    "vcsum_54.baseline": 5,
+    "vcsum_103.baseline": 5,
+    "vcsum_111.baseline": 5,
+    "vcsum_118.baseline": 5,
+    "vcsum_160.baseline": 5,
+    "vcsum_3.treated": 5,
+    "vcsum_54.treated": 5,
+    "vcsum_103.treated": 5,
+    "vcsum_111.treated": 5,
+    "vcsum_118.treated": 5,
+    "vcsum_160.treated": 5
+  },
+  "summary": {
+    "per_arm": {
+      "baseline": {
+        "n_items": 30,
+        "mean_grounded_rate": 0.1333,
+        "label_distribution": {
+          "unsupported": 22,
+          "partial": 4,
+          "supported": 4
+        }
+      },
+      "treated": {
+        "n_items": 30,
+        "mean_grounded_rate": 0.4,
+        "label_distribution": {
+          "unsupported": 14,
+          "supported": 12,
+          "partial": 4
+        }
+      }
+    },
+    "per_case": {
+      "vcsum_103": {
+        "baseline": 0.0,
+        "treated": 0.2
+      },
+      "vcsum_111": {
+        "baseline": 0.0,
+        "treated": 0.2
+      },
+      "vcsum_118": {
+        "baseline": 0.2,
+        "treated": 0.2
+      },
+      "vcsum_160": {
+        "baseline": 0.0,
+        "treated": 0.2
+      },
+      "vcsum_3": {
+        "baseline": 0.2,
+        "treated": 0.6
+      },
+      "vcsum_54": {
+        "baseline": 0.4,
+        "treated": 1.0
+      }
+    },
+    "paired_wilcoxon": {
+      "n_pairs": 6,
+      "n_nonzero": 5,
+      "n_zero": 1,
+      "w_plus": 15.0,
+      "w_minus": 0,
+      "statistic": 0,
+      "p_value_two_sided": 0.0625,
+      "method": "exact enumeration of sign assignments",
+      "pratt": {
+        "w_plus": 20.0,
+        "w_minus": 0,
+        "statistic": 0,
+        "p_value_two_sided": 0.0625,
+        "method": "exact enumeration (pratt ranking)"
+      },
+      "zero_convention_note": "primary p uses the wilcox convention (zeros dropped before ranking); pratt ranks zeros together with nonzeros then drops them -- quote both"
+    }
+  }
+}
