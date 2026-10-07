@@ -14,7 +14,7 @@
 [![docker compose](https://img.shields.io/badge/docker--compose-5%20services-2496ED?style=flat-square&logo=docker&logoColor=white)](compose.yaml)
 [![license](https://img.shields.io/badge/license-MIT-3DA639?style=flat-square)](LICENSE)
 
-![登录页](docs/assets/screenshots/meetingbot-login.png)
+![登录页](docs/assets/screenshots/login.png)
 
 ## 一场会议在这里经历什么
 
@@ -22,19 +22,19 @@
 
 **② 转写**：FFmpeg 抽单声道音轨后走云 ASR 单请求直传（说话人分离），逐段落到数据库；片段支持人工修订，说话人拿不准时可以一键让 LLM 从参会人名单里给建议。
 
-![转写片段](docs/assets/screenshots/meetingbot-transcription-detail.png)
+![转写片段](docs/assets/screenshots/transcription-detail.png)
 
 **③ 纪要**：单遍长上下文调用生成六字段结构化纪要——概要、议题、观点、决策、待办、风险；每个字段带类型化槽位与证据来源，契约层把「不许凭空断言」做成数据结构不变量。
 
-![纪要六字段详情](docs/assets/screenshots/meetingbot-minutes-detail.png)
+![纪要六字段详情](docs/assets/screenshots/minutes-detail.png)
 
 **④ 自检**：LangGraph 状态机跑「审查 → 重写 → 复审」反思环，Agent 对着转写原文核对六块内容，全程 SSE 流式推给前端；修订稿必须人工确认才会覆盖原纪要。
 
-![Agent 自检](docs/assets/screenshots/meetingbot-agent-detail.png)
+![Agent 自检](docs/assets/screenshots/agent-detail.png)
 
 **⑤ 确认归档**：确认后的纪要一键导出 Word / PDF；运行观测页把每次模型调用记账——成功率、Token 用量、失败原因，卡的住的证据都在。
 
-![运行观测](docs/assets/screenshots/meetingbot-observability.png)
+![运行观测](docs/assets/screenshots/observability.png)
 
 ## 转写：谁在什么时候说了什么
 
