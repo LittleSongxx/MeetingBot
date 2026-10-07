@@ -17,7 +17,7 @@
             <!-- 头像地址取自 data.user.avatar，也就是 user 表的 avatar 字段 -->
             <img style="width: 32px; height: 32px; border-radius: 50%;" :src="fileUrl(data.user.avatar)" alt="">
             <!-- 姓名取自 data.user.name -->
-            <span style="margin-left: 8px; color: #1f2d3d">{{ data.user.name }}</span><el-icon color="#8a94a6" style="margin-left: 4px"><arrow-down /></el-icon>
+            <span style="margin-left: 8px; color: rgba(17, 24, 39, .95)">{{ data.user.name }}</span><el-icon color="rgba(17, 24, 39, .55)" style="margin-left: 4px"><arrow-down /></el-icon>
           </div>
           <template #dropdown>
             <el-dropdown-menu>

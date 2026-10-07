@@ -36,7 +36,7 @@
       <el-button v-if="data.uploading > 0" link type="danger" style="margin-left: 8px"
                  @click="cancelUpload">取消上传</el-button>
       <!-- 上传按钮旁显示允许的文件类别、500MB 大小限制和音视频时长提示 -->
-      <span style="margin-left: 15px; color: #909399"
+      <span style="margin-left: 15px; color: rgba(17, 24, 39, .55)"
         >支持录音、视频、文档、压缩包和图片，单个文件最大500MB；音视频建议上传一小时以内的，太长会影响纪要自检的准确度</span
       >
     </div>
@@ -85,7 +85,7 @@
       <el-form label-width="90px" style="padding: 6px 10px 0">
         <!-- 只读展示要转写的资料文件名，值由 startTranscription 写进 transcriptionForm.fileName -->
         <el-form-item label="资料">
-          <span style="color: #4a5568">{{ data.transcriptionForm.fileName }}</span>
+          <span style="color: rgba(17, 24, 39, .75)">{{ data.transcriptionForm.fileName }}</span>
         </el-form-item>
         <!-- 语言下拉框写入 transcriptionForm.language：四个语言代码，空字符串表示自动识别 -->
         <el-form-item label="音频语言">
@@ -96,7 +96,7 @@
             <el-option label="韩语" value="ko"></el-option>
             <el-option label="自动识别" value=""></el-option>
           </el-select>
-          <div style="color: #8a94a6; font-size: 12px; line-height: 1.7; margin-top: 6px">
+          <div style="color: rgba(17, 24, 39, .55); font-size: 12px; line-height: 1.7; margin-top: 6px">
             选的是这段音频的主要语言。中文会议里夹杂英文词汇时选“中文”即可，模型照常识别其中的英文；
             整段说的是什么语言不确定时选“自动识别”，由模型自己判断。
           </div>
@@ -124,23 +124,23 @@
       <pre v-else-if="data.preview.kind === 'text'" style="max-height: 62vh; overflow: auto; margin: 0; white-space: pre-wrap; word-break: break-all; font-size: 13px; line-height: 1.8">{{ data.preview.text }}</pre>
       <!-- Word 文档由后端读出文字，这里按段落还原，标题段落加粗放大 -->
       <div v-else-if="data.preview.kind === 'docx'" style="max-height: 62vh; overflow: auto; line-height: 1.9">
-        <div style="margin-bottom: 10px; color: #8a94a6; font-size: 13px">
+        <div style="margin-bottom: 10px; color: rgba(17, 24, 39, .55); font-size: 13px">
           浏览器无法直接打开 Word 文档，这里展示的是文档中的文字内容，排版和图片请下载后查看
         </div>
         <template v-for="(block, index) in data.preview.blocks" :key="index">
-          <div v-if="block.type === 'heading'" style="font-size: 16px; font-weight: 600; color: #1f2d3d; margin: 16px 0 6px">{{ block.text }}</div>
+          <div v-if="block.type === 'heading'" style="font-size: 16px; font-weight: 600; color: rgba(17, 24, 39, .95); margin: 16px 0 6px">{{ block.text }}</div>
           <!-- 表格块的第一行作为表头，其余行作为数据行，scope.row[col] 取对应列的单元格文字 -->
           <el-table v-else-if="block.type === 'table'" :data="block.rows.slice(1)" size="small" border style="margin: 8px 0">
             <el-table-column v-for="(head, col) in block.rows[0]" :key="col" :label="head" show-overflow-tooltip>
               <template #default="scope">{{ scope.row[col] }}</template>
             </el-table-column>
           </el-table>
-          <div v-else style="color: #4a5568">{{ block.text }}</div>
+          <div v-else style="color: rgba(17, 24, 39, .75)">{{ block.text }}</div>
         </template>
       </div>
       <!-- 压缩包只列内部文件清单，不解压也不读取里面的内容 -->
       <div v-else-if="data.preview.kind === 'zip'">
-        <div style="margin-bottom: 10px; color: #8a94a6; font-size: 13px">
+        <div style="margin-bottom: 10px; color: rgba(17, 24, 39, .55); font-size: 13px">
           共 {{ data.preview.entries.length }} 个条目，仅展示压缩包内的文件清单
         </div>
         <el-table :data="data.preview.entries" size="small" border max-height="55vh">

@@ -397,14 +397,14 @@ loadMeetings()
 .section-tip {
   margin-left: 10px;
   font-weight: normal;
-  color: #909399;
+  color: rgba(17, 24, 39, .55);
 }
 .suggestion-reason {
   margin-top: 4px;
-  color: #909399;
+  color: rgba(17, 24, 39, .55);
   line-height: 1.6;
 }
 .suggestion-empty {
-  color: #c0c4cc;
+  color: rgba(17, 24, 39, .35);
 }
 </style>

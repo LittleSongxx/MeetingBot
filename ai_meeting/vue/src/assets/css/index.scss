@@ -1,7 +1,16 @@
-@forward "element-plus/theme-chalk/src/common/var.scss" with ($colors: (
-  "primary": ("base": #0066bc),
-  "success": ("base": #46b61f),
-  "warning": ("base": #ffad00),
-  "danger": ("base": #e52f2f),
-  "info": ("base": #47afdc),
-));
+/* Element Plus 主题定制：主色板与圆角对齐 NewsClaw 设计语言（品牌蓝 #2563eb / 12px 圆角家族） */
+@forward "element-plus/theme-chalk/src/common/var.scss" with (
+  $colors: (
+    "primary": ("base": #2563eb),
+    "success": ("base": #10b981),
+    "warning": ("base": #f59e0b),
+    "danger": ("base": #ef4444),
+    "info": ("base": #64748b),
+  ),
+  $border-radius: (
+    "base": 8px,
+    "small": 6px,
+    "round": 20px,
+    "circle": 100%,
+  )
+);

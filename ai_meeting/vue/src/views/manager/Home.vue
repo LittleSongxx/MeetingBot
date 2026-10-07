@@ -156,13 +156,13 @@ loadMinutes()
 .home-hello {
   font-size: 18px;
   font-weight: 600;
-  color: #1f2d3d;
+  color: rgba(17, 24, 39, .95);
 }
 
 .home-sub {
   margin-top: 6px;
   font-size: 13px;
-  color: #8a94a6;
+  color: rgba(17, 24, 39, .55);
 }
 
 /* 四张统计卡片一行排开，窄屏时自动折行 */
@@ -179,31 +179,31 @@ loadMinutes()
 }
 
 .home-metric:hover {
-  border-color: #0066bc;
+  border-color: #2563eb;
 }
 
 .home-metric-label {
   font-size: 13px;
-  color: #8a94a6;
+  color: rgba(17, 24, 39, .55);
 }
 
 .home-metric-value {
   margin: 8px 0 4px;
   font-size: 26px;
   font-weight: 600;
-  color: #1f2d3d;
+  color: rgba(17, 24, 39, .95);
 }
 
 .home-metric-unit {
   margin-left: 4px;
   font-size: 13px;
   font-weight: normal;
-  color: #8a94a6;
+  color: rgba(17, 24, 39, .55);
 }
 
 .home-metric-hint {
   font-size: 12px;
-  color: #8a94a6;
+  color: rgba(17, 24, 39, .55);
 }
 
 .home-columns {
@@ -218,15 +218,15 @@ loadMinutes()
   justify-content: space-between;
   font-size: 15px;
   font-weight: 600;
-  color: #1f2d3d;
+  color: rgba(17, 24, 39, .95);
   padding-bottom: 10px;
-  border-bottom: 1px solid #ebeef3;
+  border-bottom: 1px solid rgba(17, 24, 39, .10);
 }
 
 .home-panel-head a {
   font-size: 13px;
   font-weight: normal;
-  color: #0066bc;
+  color: #2563eb;
   cursor: pointer;
 }
 
@@ -235,7 +235,7 @@ loadMinutes()
   align-items: center;
   justify-content: space-between;
   padding: 11px 0;
-  border-bottom: 1px solid #f2f4f7;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .home-row:last-child {
@@ -249,7 +249,7 @@ loadMinutes()
 
 .home-row-title {
   font-size: 14px;
-  color: #1f2d3d;
+  color: rgba(17, 24, 39, .95);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -258,7 +258,7 @@ loadMinutes()
 .home-row-sub {
   margin-top: 4px;
   font-size: 12px;
-  color: #8a94a6;
+  color: rgba(17, 24, 39, .55);
 }
 
 @media (max-width: 1100px) {

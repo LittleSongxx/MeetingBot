@@ -1,16 +1,19 @@
-/* 登录页和注册页共用的样式 */
+/* 登录页和注册页共用的样式：浅灰底上的双栏白卡，左栏品牌蓝渐变介绍区
+   （色板与 NewsClaw 一致：品牌蓝 #2563eb → #1d4ed8、12px 圆角、细边框） */
 
 .auth-container {
     height: 100vh;
     display: flex;
-    background-color: #fff;
+    background-color: var(--mb-bg);
+    padding: 24px;
 }
 
-/* 左半屏：深蓝底的系统介绍区，说明这套系统把一场会议处理成什么 */
+/* 左半屏：品牌蓝渐变底的系统介绍区，说明这套系统把一场会议处理成什么 */
 .auth-intro {
     width: 52%;
-    background-color: #12314f;
-    padding: 60px 64px;
+    background: linear-gradient(160deg, #2563eb 0%, #1d4ed8 100%);
+    border-radius: 16px 0 0 16px;
+    padding: 56px 60px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -24,6 +27,7 @@
 .auth-brand img {
     width: 34px;
     height: 34px;
+    border-radius: 10px;
 }
 
 .auth-brand span {
@@ -44,7 +48,7 @@
 
 .auth-subline {
     font-size: 15px;
-    color: #93aec7;
+    color: rgba(255, 255, 255, .72);
     line-height: 1.8;
     max-width: 430px;
 }
@@ -58,33 +62,37 @@
     display: flex;
     align-items: baseline;
     padding: 11px 0;
-    border-top: 1px solid #1d4064;
+    border-top: 1px solid rgba(255, 255, 255, .18);
 }
 
 .auth-step:last-child {
-    border-bottom: 1px solid #1d4064;
+    border-bottom: 1px solid rgba(255, 255, 255, .18);
 }
 
 .auth-step-no {
     width: 34px;
     font-size: 13px;
-    color: #5d84a8;
+    color: rgba(255, 255, 255, .55);
     font-variant-numeric: tabular-nums;
 }
 
 .auth-step-text {
     font-size: 15px;
-    color: #cfe0ee;
+    color: rgba(255, 255, 255, .92);
 }
 
 .auth-foot {
     font-size: 13px;
-    color: #5d84a8;
+    color: rgba(255, 255, 255, .55);
 }
 
-/* 右半屏：表单区 */
+/* 右半屏：白色表单卡，与左栏拼成一张完整的圆角卡片 */
 .auth-form-side {
     flex: 1;
+    background-color: var(--mb-card);
+    border: 1px solid var(--mb-border);
+    border-left: none;
+    border-radius: 0 16px 16px 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -99,25 +107,25 @@
 .auth-title {
     font-size: 22px;
     font-weight: 600;
-    color: #1f2d3d;
+    color: var(--mb-text);
     margin-bottom: 8px;
 }
 
 .auth-tip {
     font-size: 13px;
-    color: #8a94a6;
+    color: var(--mb-text-2);
     margin-bottom: 28px;
     line-height: 1.7;
 }
 
 .auth-switch {
     font-size: 13px;
-    color: #8a94a6;
+    color: var(--mb-text-2);
     text-align: center;
 }
 
 .auth-switch a {
-    color: #0066bc;
+    color: var(--mb-brand);
     margin-left: 4px;
     cursor: pointer;
 }
@@ -128,7 +136,16 @@
 
 /* 窄屏时左边的介绍区收起，只保留表单 */
 @media (max-width: 900px) {
+    .auth-container {
+        padding: 0;
+    }
+
     .auth-intro {
         display: none;
+    }
+
+    .auth-form-side {
+        border: none;
+        border-radius: 0;
     }
 }
