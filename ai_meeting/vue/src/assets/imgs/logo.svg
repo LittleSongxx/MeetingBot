@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="MeetingBot">
+  <defs>
+    <linearGradient id="mb-g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="44" fill="url(#mb-g)"/>
+  <circle cx="100" cy="37" r="7" fill="#ffffff"/>
+  <rect x="97" y="42" width="6" height="16" rx="3" fill="#ffffff"/>
+  <path d="M40 78 a22 22 0 0 1 22-22 h76 a22 22 0 0 1 22 22 v44 a22 22 0 0 1-22 22 H84 l-26 24 v-24 H62 a22 22 0 0 1-22-22 z" fill="#ffffff"/>
+  <rect x="60" y="77" width="80" height="11" rx="5.5" fill="#2563eb"/>
+  <rect x="60" y="96" width="56" height="11" rx="5.5" fill="#2563eb"/>
+  <path d="M60 124 l10 10 l20-20" fill="none" stroke="#2563eb" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
