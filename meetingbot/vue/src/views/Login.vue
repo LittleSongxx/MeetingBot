@@ -41,7 +41,8 @@
             <el-button size="large" type="primary" style="width: 100%" :loading="data.loading" @click="login">登录</el-button>
           </el-form-item>
         </el-form>
-        <div class="auth-switch">
+        <!-- 注册入口由构建变量 VITE_REGISTER_ENABLED 控制：生产环境关闭注册时整行都不渲染 -->
+        <div v-if="registerEnabled" class="auth-switch">
           <!-- 表单下方的切换链接，没有账号的员工点“注册一个”进入 /register -->
           还没有账号？<a @click="router.push('/register')">注册一个</a>
         </div>
@@ -65,6 +66,9 @@ const steps = [
   { no: '04', text: 'Agent 对照原文自检修订' },
   { no: '05', text: '人工确认后导出归档' }
 ]
+
+// 是否显示“注册一个”入口：开发环境为 true，生产环境在 .env.production 里关闭
+const registerEnabled = import.meta.env.VITE_REGISTER_ENABLED === 'true'
 
 const data = reactive({
   // 账号和密码两个输入框共同绑定这个对象，登录请求会把它整体作为请求体提交

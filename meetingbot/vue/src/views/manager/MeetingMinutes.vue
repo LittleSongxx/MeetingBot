@@ -242,9 +242,28 @@
 import { defineComponent, h, onUnmounted, reactive } from 'vue'
 import { useRoute } from 'vue-router'
 import router from '@/router/index.js'
-import { ElButton, ElInput, ElMessage, ElMessageBox } from 'element-plus'
+import { ElButton, ElInput, ElMessage, ElMessageBox, ElOption, ElSelect } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import request from '@/utils/request.js'
+
+// 风险级别是后端用 Literal["LOW", "MEDIUM", "HIGH"] 校验的枚举值，
+// 页面上一律用下拉框选择、用中文展示，手输中文会让保存请求被后端拒绝
+const levelOptions = [
+  { label: '低', value: 'LOW' },
+  { label: '中', value: 'MEDIUM' },
+  { label: '高', value: 'HIGH' }
+]
+// 把存储值翻译成中文，未知值原样返回
+const levelText = level => levelOptions.find(item => item.value === level)?.label || level || '-'
+// 详情里每个字段的展示值：风险级别翻成中文，其余为空时显示短横线
+const fieldText = (key, value) => (key === 'level' ? levelText(value) : value || '-')
+// 旧数据里可能存着中文级别或空值，打开修订时统一转成后端枚举值，避免保存时参数校验失败
+const normalizeLevel = level => {
+  if (levelOptions.some(item => item.value === level)) {
+    return level
+  }
+  return { '低': 'LOW', '中': 'MEDIUM', '高': 'HIGH' }[level] || 'MEDIUM'
+}
 
 const MinutesSection = defineComponent({
   // title 是这一块的标题，items 是数组内容，fields 决定取哪些字段、显示成什么中文
@@ -258,8 +277,10 @@ const MinutesSection = defineComponent({
               h('div', { class: 'minutes-item', key: index }, [
                 // 条目前面标上序号，和修订弹窗里的序号对得上
                 h('strong', `${index + 1}. `),
-                // 每个字段一行「中文标题：值」，值为空时显示短横线
-                ...props.fields.map(field => h('p', { key: field[0] }, `${field[1]}：${item[field[0]] || '-'}`))
+                // 每个字段一行「中文标题：值」，值为空时显示短横线，风险级别显示中文
+                ...props.fields.map(field =>
+                  h('p', { key: field[0] }, `${field[1]}：${fieldText(field[0], item[field[0]])}`)
+                )
               ])
             )
           : [h('p', '无')])
@@ -274,10 +295,11 @@ const EditSection = defineComponent({
   emits: ['update:modelValue'],
   setup(props, { emit }) {
     // “新增”：在原数组末尾追加一个空白条目，fields 里每个字段都初始化成空字符串
+    // 风险级别给了合法的默认值，避免新增的条目没选级别就保存时被后端枚举校验拒绝
     const add = () =>
       emit('update:modelValue', [
         ...(props.modelValue || []),
-        Object.fromEntries(props.fields.map(field => [field[0], '']))
+        Object.fromEntries(props.fields.map(field => [field[0], field[0] === 'level' ? 'MEDIUM' : '']))
       ])
     // 删除图标：过滤掉下标为 index 的条目，把剩下的数组交还给父组件
     const remove = index =>
@@ -317,16 +339,31 @@ const EditSection = defineComponent({
                 // 就看不出这个框是负责人还是期限了
                 return h('div', { key: field[0], class: isLongText ? 'edit-field edit-field-full' : 'edit-field' }, [
                   h('label', { class: 'edit-field-label' }, field[1]),
-                  h(ElInput, {
-                    // 输入框的值直接读写条目对象上的字段，item 是 data.form 数组里的同一个对象
-                    modelValue: item[field[0]],
-                    'onUpdate:modelValue': value => {
-                      item[field[0]] = value
-                    },
-                    placeholder: field[1],
-                    type: isLongText ? 'textarea' : 'text',
-                    autosize: { minRows: 2, maxRows: 5 }
-                  })
+                  // 风险级别只能从 LOW/MEDIUM/HIGH 里选，其余字段用普通输入框
+                  field[0] === 'level'
+                    ? h(
+                        ElSelect,
+                        {
+                          // 下拉框直接读写条目对象上的 level 字段
+                          modelValue: item[field[0]],
+                          'onUpdate:modelValue': value => {
+                            item[field[0]] = value
+                          },
+                          placeholder: '请选择' + field[1],
+                          style: 'width: 100%'
+                        },
+                        () => levelOptions.map(option => h(ElOption, { key: option.value, label: option.label, value: option.value }))
+                      )
+                    : h(ElInput, {
+                        // 输入框的值直接读写条目对象上的字段，item 是 data.form 数组里的同一个对象
+                        modelValue: item[field[0]],
+                        'onUpdate:modelValue': value => {
+                          item[field[0]] = value
+                        },
+                        placeholder: field[1],
+                        type: isLongText ? 'textarea' : 'text',
+                        autosize: { minRows: 2, maxRows: 5 }
+                      })
                 ])
               })
             )
@@ -416,6 +453,8 @@ const openEdit = id =>
     if (res.code === '200') {
       // 深拷贝一份进 data.form，弹窗里改到一半点取消不会污染表格数据
       data.form = JSON.parse(JSON.stringify(res.data))
+      // 风险级别归一化成 LOW/MEDIUM/HIGH，修订弹窗的下拉框才能正确回显
+      data.form.risks = (data.form.risks || []).map(item => ({ ...item, level: normalizeLevel(item.level) }))
       data.editVisible = true
     } else ElMessage.error(res.msg)
   })
