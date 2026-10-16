@@ -111,7 +111,8 @@ meetingbot/
 │   ├── common/                      # 基础设施：认证 / 限流 / JSON 修复 / 供应商能力表
 │   └── tests/                       # 产品侧零调用测试
 ├── vue/                             # 前端：14 个管理页面
-└── ../meetingbot.sql                # 建库脚本 + 种子数据（空卷初始化时导入）
+db/                                  # 建库脚本：01-schema.sql（结构）+ 02-seed.sql（演示数据）
+                                     # 空卷初始化时按序导入；结构真源是 models.py，有漂移测试兜底
 evaluation/                          # 评测体系（与产品代码物理隔离，只允许登记在案的四处委托）
 ├── README.md / DESIGN.md            # 评测宪法与四层设计书
 ├── LEDGER.md                        # 结论账本：可引用结论 + 撤回记录

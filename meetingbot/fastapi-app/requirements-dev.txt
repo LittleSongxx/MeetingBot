@@ -9,3 +9,6 @@
 ruff==0.17.1
 pre-commit~=4.7
 pytest~=9.1
+# 表结构迁移（改 models.py 之后生成 ALTER）。产品运行时不需要它，
+# 所以放在开发依赖而不是 requirements.txt。用法见 DEPLOYMENT.md「表结构变更」。
+aerich~=0.10
