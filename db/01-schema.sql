@@ -339,4 +339,83 @@ CREATE TABLE `user`  (
   INDEX `idx_user_status`(`status` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 13 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '统一用户表' ROW_FORMAT = Dynamic;
 
+-- ----------------------------
+-- Table structure for kb_index_task
+-- ----------------------------
+DROP TABLE IF EXISTS `kb_index_task`;
+CREATE TABLE `kb_index_task`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '索引任务ID',
+  `meeting_id` int NOT NULL COMMENT '所属会议ID',
+  `source_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '来源类型：TRANSCRIPT转写、MINUTES纪要',
+  `source_id` int NOT NULL COMMENT '来源ID：转写任务是transcription_task.id，纪要是meeting_minutes.id',
+  `model_config_id` int NOT NULL COMMENT '嵌入模型配置ID',
+  `initiator_id` int NOT NULL COMMENT '发起人用户ID',
+  `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PENDING' COMMENT '任务状态：PENDING、PROCESSING、SUCCEEDED、FAILED',
+  `stage` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '等待执行' COMMENT '当前阶段文案（给页面看）',
+  `progress` int NOT NULL DEFAULT 0 COMMENT '进度百分比',
+  `retry_count` int NOT NULL DEFAULT 0 COMMENT '已重试次数',
+  `max_retry` int NOT NULL DEFAULT 3 COMMENT '最大重试次数',
+  `document_id` int NULL DEFAULT NULL COMMENT '本次产出的知识库文档ID',
+  `chunk_count` int NOT NULL DEFAULT 0 COMMENT '切片总数',
+  `embedded_count` int NOT NULL DEFAULT 0 COMMENT '已写入向量的切片数（重试时只补没嵌入的）',
+  `error_message` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '失败原因',
+  `started_at` datetime(6) NULL DEFAULT NULL COMMENT '开始时间',
+  `finished_at` datetime(6) NULL DEFAULT NULL COMMENT '结束时间',
+  `create_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  `update_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_kb_index_source`(`source_type` ASC, `source_id` ASC) USING BTREE,
+  INDEX `idx_kb_index_meeting`(`meeting_id` ASC) USING BTREE,
+  INDEX `idx_kb_index_status`(`status` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '知识库索引任务表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for kb_document
+-- ----------------------------
+DROP TABLE IF EXISTS `kb_document`;
+CREATE TABLE `kb_document`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '知识库文档ID',
+  `meeting_id` int NOT NULL COMMENT '所属会议ID（检索按会议可见性过滤的依据）',
+  `source_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '来源类型：TRANSCRIPT、MINUTES',
+  `source_id` int NOT NULL COMMENT '来源ID',
+  `task_id` int NOT NULL COMMENT '产出这份文档的索引任务ID',
+  `authority` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'RAW' COMMENT '权威级别：RAW转写原话、CONFIRMED人已确认的纪要',
+  `content_hash` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '来源内容指纹，用于判断是否需要重建',
+  `chunk_count` int NOT NULL DEFAULT 0 COMMENT '切片数',
+  `embed_model` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '嵌入模型名',
+  `embed_dim` int NOT NULL DEFAULT 0 COMMENT '向量维度',
+  `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'SUCCEEDED' COMMENT '状态：SUCCEEDED、FAILED',
+  `error_message` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '失败原因',
+  `create_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_kb_document_meeting`(`meeting_id` ASC) USING BTREE,
+  INDEX `idx_kb_document_source`(`source_type` ASC, `source_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '知识库文档版本表' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for kb_chunk
+-- ----------------------------
+DROP TABLE IF EXISTS `kb_chunk`;
+CREATE TABLE `kb_chunk`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '切片ID（同时是 Qdrant 里的 point id）',
+  `document_id` int NOT NULL COMMENT '所属知识库文档ID',
+  `meeting_id` int NOT NULL COMMENT '所属会议ID',
+  `chunk_no` int NOT NULL COMMENT '文档内顺序号',
+  `chunk_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '切片类型：TRANSCRIPT_WINDOW转写窗口、MINUTES_ITEM纪要条目',
+  `text` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '切片正文',
+  `speaker` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '说话人标签（转写窗口）',
+  `start_ms` bigint NULL DEFAULT NULL COMMENT '起始毫秒（转写窗口）',
+  `end_ms` bigint NULL DEFAULT NULL COMMENT '结束毫秒（转写窗口）',
+  `field` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '所属纪要字段（纪要条目）',
+  `item_index` int NULL DEFAULT NULL COMMENT '该字段内的条目序号（纪要条目）',
+  `origin` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '条目来源标注：stated、derived、model_inferred',
+  `evidence_json` json NULL COMMENT '条目自带的证据（引用校验用）',
+  `token_count` int NOT NULL DEFAULT 0 COMMENT '字符数粗估（预算与截断用，不是精确 token）',
+  `embedded` tinyint(1) NOT NULL DEFAULT 0 COMMENT '向量是否已写入：0否、1是',
+  `create_time` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_kb_chunk_no`(`document_id` ASC, `chunk_no` ASC) USING BTREE,
+  INDEX `idx_kb_chunk_meeting`(`meeting_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '知识库切片表' ROW_FORMAT = Dynamic;
+
 SET FOREIGN_KEY_CHECKS = 1;
