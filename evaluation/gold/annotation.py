@@ -39,6 +39,7 @@ if __package__ in (None, ""):
 
 
 RESULTS_DIR = Path(__file__).resolve().parents[1] / "results"
+EVALUATION_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_OWNER_PACKET = RESULTS_DIR / "annotation_owner_deadline.json"
 DB_DIR = RESULTS_DIR / "db"
 
@@ -254,6 +255,52 @@ def build_validity_packet(packet_path: Path = RESULTS_DIR / "adjudication_packet
     }
 
 
+INTENT_PACKET = RESULTS_DIR / "annotation_intent.json"
+
+# 意图判据：写在一张表里，标注者按表判，不按感觉判（与 validity 四分类同款纪律）
+INTENT_CRITERIA: list[dict[str, str]] = [
+    {"label": "single_fact", "meaning": "问一个具体事实（时间、数值、负责人、某一条决定）",
+     "criterion": "答案是一句话能说清的一个事实，不需要罗列。例：发布公告的截止时间是什么"},
+    {"label": "aggregation", "meaning": "枚举/聚合：问「有哪些」「哪几项」「分别是什么」",
+     "criterion": "答案天然是列表（≥2 项）。例：首周复盘要看哪五项数据"},
+    {"label": "cross_meeting", "meaning": "跨会议（本语料是跨两段录音）汇总",
+     "criterion": "答案必须来自两段录音，或多场会议的比较/汇总。例：两段录音里的风险分别是什么"},
+    {"label": "procedure", "meaning": "流程与机制解释：问「怎么处理」「流程是怎样的」「为什么这样做」",
+     "criterion": "答案描述的是一套流程、规则或机制，而不是单一事实或清单。例：资料更新时索引会怎么处理"},
+    {"label": "smalltalk", "meaning": "寒暄或与会议无关的请求",
+     "criterion": "答案不该来自会议资料（打招呼、道谢、问能力边界、问天气）。这一类没有金标事实"},
+]
+
+
+def build_intent_packet(*, qa_path: Path | None = None) -> dict[str, Any]:
+    """把标注集的意图标签抽成**人工确认包**：不带代理标签，强制盲判。
+
+    为什么盲判：`qa_seed.json` 里的 `intent` 是代理起草的（`intent_source=agent_draft`）。
+    要让 F1 有意义，先得有一批**独立人工标注**——包里因此只给问题文本与判据，
+    代理标签留在原文件里不出现，避免锚定。
+    """
+    source = json.loads((qa_path or (EVALUATION_DIR / "gold" / "qa_seed.json")).read_text(
+        encoding="utf-8"))
+    items = []
+    for case in source["cases"]:
+        items.append({
+            "anonymous_id": case["id"],
+            "question": case["question"],
+            "labels": {label["label"]: None for label in INTENT_CRITERIA},
+            "note": "",
+        })
+    return {
+        "packet_version": 1,
+        "protocol": "verification",
+        "why": ("意图标签决定路由走向，而路由判错比不路由更糟；因此先取独立人工标注，"
+                "再谈逐类 F1。代理标签（intent_source=agent_draft）不放进包里，避免锚定。"),
+        "labels_allowed": [label["label"] for label in INTENT_CRITERIA],
+        "criteria": INTENT_CRITERIA,
+        "annotators_required": 3,
+        "items": items,
+    }
+
+
 def alpha_report(labels: Mapping[str, Any]) -> dict[str, Any]:
     """从 `{unit_id: {coder: label}}` 算 α + PABAK + 逐类别。"""
     units: list[list[Any]] = []
@@ -280,6 +327,8 @@ def main(argv: Iterable[str] | None = None) -> int:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--build-owner-deadline", action="store_true")
     parser.add_argument("--build-validity", action="store_true")
+    parser.add_argument("--build-intent", action="store_true",
+                        help="构建意图标注包（盲判：代理标签不进包）")
     parser.add_argument("--sample", type=int, default=120)
     parser.add_argument("--seed", type=int, default=20260926)
     parser.add_argument("--output", type=Path, default=None)
@@ -287,6 +336,8 @@ def main(argv: Iterable[str] | None = None) -> int:
                         help="已标注的 {unit_id: {coder: label}} JSON，算 α")
     parser.add_argument("--export-csv", type=Path, default=None,
                         help="把 owner/deadline 标注包导出成 CSV（每行一个待判项，众包平台直接可用）")
+    parser.add_argument("--export-intent-csv", type=Path, default=None,
+                        help="把意图标注包导出成 CSV（每行一题，标签列留空）")
     parser.add_argument("--export-validity-csv", type=Path, default=None,
                         help="把 validity 四分类包导出成 CSV（裁判校准用：S/D/X/C 盲判）")
     args = parser.parse_args(list(argv) if argv is not None else None)
@@ -305,6 +356,25 @@ def main(argv: Iterable[str] | None = None) -> int:
         destination.write_text(json.dumps(packet, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"wrote {destination}：{len(packet['items'])} 条"
               f"（模型已判语料 {packet['corpus_with_model_labels']} 条）")
+        return 0
+    if args.build_intent:
+        packet = build_intent_packet()
+        destination = args.output or INTENT_PACKET
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(json.dumps(packet, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"wrote {destination}：{len(packet['items'])} 题"
+              f"（判据 {len(packet['criteria'])} 类；代理标签不进包）")
+        return 0
+    if args.export_intent_csv:
+        import csv as _csv
+        source = json.loads(INTENT_PACKET.read_text(encoding="utf-8"))
+        with args.export_intent_csv.open("w", encoding="utf-8-sig", newline="") as handle:
+            writer = _csv.writer(handle)
+            writer.writerow(["anonymous_id", "question", "label", "confidence", "note"])
+            for item in source["items"]:
+                writer.writerow([item["anonymous_id"], item["question"], "", "", ""])
+        print(f"wrote {args.export_intent_csv}：{len(source['items'])} 行"
+              f"（判据见 ANNOTATION_GUIDE.md 的意图一节）")
         return 0
     if args.export_csv:
         import csv as _csv

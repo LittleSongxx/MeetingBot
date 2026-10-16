@@ -397,16 +397,48 @@ class ChatChecksTest(unittest.TestCase):
 
     def test_qa_set_is_well_formed(self):
         qa_set = json.loads((EVALUATION_DIR / "gold" / "qa_seed.json").read_text(encoding="utf-8"))
-        self.assertGreaterEqual(len(qa_set["cases"]), 20, "标注集太小就称不上 ground truth")
+        self.assertGreaterEqual(len(qa_set["cases"]), 100,
+                                "意图 F1 需要 100+ 条（27 条只够看方向）")
+        taxonomy = qa_set["annotation"]["intent_taxonomy"]
         ids = [case["id"] for case in qa_set["cases"]]
         self.assertEqual(len(ids), len(set(ids)), "id 不能重复")
         for case in qa_set["cases"]:
             self.assertTrue(case["question"].strip())
+            self.assertIn(case["intent"], taxonomy, case["id"])
+            # 标注来源要如实分层：代理起草的不许冒充人工标注
+            self.assertIn(case["intent_source"], ("agent_draft", "human"), case["id"])
+            if case["intent"] == "smalltalk":
+                # 寒暄轮没有会议金标——它们考的是"不该去检索、也不该编内容"
+                self.assertFalse(case.get("expected_facts"), case["id"])
+                self.assertNotIn("source", case, case["id"])
+                continue
             self.assertTrue(case["expected_facts"], case["id"])
             self.assertIn(case["source"]["task_id"], (6, 7), case["id"])
+            self.assertTrue(case["source"]["segments"], case["id"])
         # 宪法第 3 条：小样本只作方向信号，这一点必须写在数据里
         self.assertIn("方向信号", qa_set["discipline"])
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class IntentAnnotationTest(unittest.TestCase):
+    """意图标注包：盲判（代理标签不进包）+ 判据齐备。"""
+
+    def test_packet_is_blind_and_covers_every_case(self):
+        from gold import annotation
+        packet = annotation.build_intent_packet()
+        qa_set = json.loads((EVALUATION_DIR / "gold" / "qa_seed.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(packet["items"]), len(qa_set["cases"]))
+        for item in packet["items"]:
+            self.assertTrue(item["question"].strip())
+            self.assertEqual(set(item["labels"]), set(packet["labels_allowed"]))
+            self.assertTrue(all(value is None for value in item["labels"].values()))
+            # 代理标签不许进包（会锚定人工标注）：条目里既没有意图值也没有它的来源
+            self.assertNotIn("intent", item)
+            self.assertNotIn("intent_source", item)
+        # 每一类都要有判据（标注者按表判，不按感觉判）
+        self.assertEqual(len(packet["criteria"]), len(packet["labels_allowed"]))
+        for criterion in packet["criteria"]:
+            self.assertTrue(criterion["meaning"] and criterion["criterion"])

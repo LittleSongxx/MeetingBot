@@ -136,7 +136,18 @@ def summarize(artifact: Mapping[str, Any] | None,
         if turn is None:
             skipped.append({"case_id": case.get("id"), "reason": "没有这一轮的产物"})
             continue
-        task_id = int((case.get("source") or {}).get("task_id") or 0)
+        source = case.get("source") or {}
+        if not source.get("segments"):
+            # 寒暄类没有金标片段：它们考的是"不该去检索"，不是检索覆盖
+            skipped.append({"case_id": case.get("id"), "reason": "这一题没有金标片段（寒暄类）"})
+            continue
+        if case.get("also_in"):
+            # 跨录音问题：切片的载荷里没有 task_id，而两段录音的时间轴都从 0 开始，
+            # 光看时间窗分不出命中来自哪一段——**判不了就如实跳过**，不猜
+            skipped.append({"case_id": case.get("id"),
+                            "reason": "跨录音问题：切片载荷不带 task_id，映射不回是哪段录音"})
+            continue
+        task_id = int(source.get("task_id") or 0)
         starts = segment_starts(sources, task_id)
         if not starts:
             skipped.append({"case_id": case.get("id"),
