@@ -301,6 +301,23 @@ def build_report(
     # 问题——「这套链路跑得稳不稳、贵不贵」，而它与会议内容无关。
     if results_root is not None:
         report["reliability"] = reliability.build_report(results_root)
+    # 轴5 检索与回答：读已存档的判定产物（一次授权运行产出），**零模型调用**。
+    # 与 citation_level 同款：只做"报告 + 回归护栏"，值缺失就显式标注不可用。
+    axis5_path = EVALUATION_DIR / "results" / "rag_packet.json"
+    if axis5_path.exists():
+        try:
+            stored = json.loads(axis5_path.read_text(encoding="utf-8"))
+            report["axis5"] = {
+                "source": str(axis5_path.relative_to(EVALUATION_DIR)),
+                "summary": stored.get("summary"),
+                "adjudicator_disclosure": stored.get("adjudicator_disclosure"),
+                "case_count": stored.get("case_count"),
+            }
+        except (OSError, ValueError) as error:
+            report["axis5"] = {"unavailable": f"{type(error).__name__}: {error}"}
+    else:
+        report["axis5"] = {"unavailable": "未找到轴5 判定产物；先跑 judges/rag.py --build/--judge"}
+
     # 问答引用（阶段 2 新增子系统的两条零调用不变量）：引用能否在被引内容里定位、
     # 引用有没有越权。没有抓取样本时如实报"无样本"，不报 0% 也不报 100%。
     artifact = chat_checks.load_artifact()
@@ -479,6 +496,48 @@ def _render_citation_level(block: Mapping[str, Any]) -> list[str]:
         "",
         f"判定方：{(block.get('adjudicator_disclosure') or {}).get('model_used', '未知')}"
         f"（{(block.get('adjudicator_disclosure') or {}).get('model_used') and '独立族' or ''}）。",
+        "",
+    ]
+    return lines
+
+
+def _render_axis5(block: Mapping[str, Any]) -> list[str]:
+    """轴5 检索与回答：四个指标各自报，**不合成总分**（宪法第 6 条）。
+
+    这一节读的是**已存档的判定产物**（一次授权运行的产出），本套件本身零调用；
+    判定模型的族写在披露里，换裁判 = 换仪器，历史绝对数要重述。
+    """
+    lines = ["## 轴5 检索与回答（四个指标各自报，无加权总分）", ""]
+    if block.get("unavailable"):
+        lines += [f"不可用：{block['unavailable']}", ""]
+        return lines
+    summary = block.get("summary") or {}
+    if not summary:
+        lines += [f"产物 `{block.get('source')}` 里还没有判定结果（先跑 --judge）", ""]
+        return lines
+    disclosure = block.get("adjudicator_disclosure") or {}
+    lines += [
+        f"来源：`{block.get('source')}`（{block.get('case_count')} 个 case）。",
+        f"判定模型：`{disclosure.get('model_used')}`（provider {disclosure.get('provider')}）——"
+        f"{disclosure.get('not_gold') or ''}",
+        "",
+        "| 指标 | 点估计 | 95% 区间（Clopper–Pearson） |",
+        "|---|---|---|",
+    ]
+    for label, key in (("context precision", "context_precision"),
+                       ("context recall", "context_recall"),
+                       ("faithfulness", "faithfulness"),
+                       ("answer relevancy", "answer_relevancy")):
+        lines.append(f"| {label} | {_pct((summary.get(key) or {}).get('rate'), 1)} "
+                     f"| {_interval(summary.get(key) or {})} |")
+    lines += [
+        "",
+        f"判定覆盖：{summary.get('cases_judged')}/{summary.get('cases_total')} 个 case"
+        f"（未判的不进分母）；无金标的 case：{summary.get('cases_step_without_gold')} 个。",
+        "",
+        summary.get("reading") or "",
+        "",
+        summary.get("not_measured") or "",
         "",
     ]
     return lines
@@ -964,6 +1023,7 @@ def format_markdown(report: Mapping[str, Any]) -> str:
             "",
         ]
 
+    lines += _render_axis5(report.get("axis5") or {})
     lines += _render_citation_level(report.get("citation_level") or {})
     lines += _render_chat_citations(report.get("chat_citations") or {})
     lines += _render_reliability(report.get("reliability") or {})

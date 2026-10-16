@@ -74,6 +74,9 @@ def main() -> int:
     ])
     marker = "### 问答引用（零调用不变量，每次 `make smoke` 跑）"
     text = LEDGER.read_text(encoding="utf-8")
+    if "### 轴5 检索与回答（2026-10-16 首测）" in text:
+        print("LEDGER 里已有轴5 首测一节，跳过（不重复插入）")
+        return 0
     if marker not in text:
         print("LEDGER 里找不到插入点", file=sys.stderr)
         return 2
