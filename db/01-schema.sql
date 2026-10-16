@@ -454,6 +454,7 @@ CREATE TABLE `chat_message`  (
   `citations_json` json NULL COMMENT '这一轮用到的引用快照（切片会被重建删除，引用必须留得下来）',
   `tools_json` json NULL COMMENT '工具调用轨迹（页面折叠展示）',
   `moderation_json` json NULL COMMENT '内容审核留痕（命中词与处置动作，不含上下文）',
+  `plan_json` json NULL COMMENT '查询规划（改写/意图/建议工具/触发词/开关状态）',
   `stop_reason` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '结束原因：finished、max_rounds、budget_tokens、budget_cost、budget_tools、stalled',
   `error_message` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '本轮失败原因',
   `token_count` int NOT NULL DEFAULT 0 COMMENT '本轮 token 用量',

@@ -641,6 +641,10 @@ class ChatMessage(Model):
     # 对应 chat_message.moderation_json：这一轮的审核留痕（命中词与处置动作）。
     # 只存词与位置，不存命中处的上下文——留痕不该复制一份违规原文
     moderation_json = fields.JSONField(null=True)
+    # 对应 chat_message.plan_json：这一轮的**查询规划**（相对时间/指代改写、意图、
+    # 建议工具、触发词、开关状态）。存它的理由与引用快照同款：结论要能归因——
+    # 出错的到底是"改写错了"还是"检索没找到"，没有这一份就只能猜
+    plan_json = fields.JSONField(null=True)
     # 对应 chat_message.stop_reason：finished / max_rounds / budget_* / stalled，
     # 用户看到的是它对应的中文提示，观测看到的是这个值
     stop_reason = fields.CharField(max_length=30, null=True)

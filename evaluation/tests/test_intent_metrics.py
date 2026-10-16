@@ -115,3 +115,27 @@ class RealSeedSetTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CaptureGateTest(unittest.TestCase):
+    """抓取入口的预算闸：缺授权、授权不足、缺 token 都必须拒绝执行。"""
+
+    def test_requires_an_explicit_budget(self):
+        from judges import intent
+        self.assertEqual(intent.main(["--token", "t"]), 2)
+
+    def test_requires_enough_budget_for_every_case(self):
+        from judges import intent
+        self.assertEqual(intent.main(["--token", "t", "--authorized-llm-calls", "3"]), 2)
+
+    def test_requires_a_token(self):
+        from judges import intent
+        self.assertEqual(intent.main(["--authorized-llm-calls", "999"]), 2)
+
+    def test_artifact_records_product_switches(self):
+        """开关必须由**被测进程**自报：抓取进程的 env 与容器的 env 是两个空间。"""
+        from judges import intent
+        artifact = intent._artifact("http://x", {"kb_query_plan_enabled": True},
+                                    [{"case_id": "q01", "intent": "single_fact"}])
+        self.assertTrue(artifact["captured_from"]["product_switches"]["kb_query_plan_enabled"])
+        self.assertIn("captured_at", artifact["captured_from"])

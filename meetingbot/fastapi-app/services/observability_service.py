@@ -99,6 +99,8 @@ CALL_TYPE_OWNERSHIP: dict[str, str] = {
     "KB_QUERY_EMBED": "CHAT",
     # 检索结果重排：同一条助手消息发起，因此同样归到这条问答上
     "KB_RERANK": "CHAT",
+    # 查询规划（相对时间/指代改写 + 意图）：同样归到这条问答
+    "KB_QUERY_PLAN": "CHAT",
 }
 
 
