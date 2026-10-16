@@ -18,7 +18,7 @@
 
 ## 一场会议在这里经历什么
 
-**① 上传**：会议资料页上传音视频，按内容哈希去重，同一份文件不会存两遍。
+**① 上传**：会议资料页上传音视频，按内容哈希去重（同一会议内同一份文件不会存两遍）。
 
 **② 转写**：FFmpeg 抽单声道音轨后走云 ASR 单请求直传（说话人分离），逐段落到数据库；片段支持人工修订，说话人拿不准时可以一键让 LLM 从参会人名单里给建议。
 
@@ -53,7 +53,7 @@
 
 ## 自检：改完必须人工确认
 
-- 审查、重写、复审三个动作由 LangGraph 编排，图本身不碰数据库和模型，动作注入，可独立测试
+- 审查、重写、汇总、中断检查四个动作由 LangGraph 编排，图本身不碰数据库和模型，动作注入，可独立测试
 - 每一步的输入输出、判定依据存 `agent_step`，运行状态机覆盖中断与恢复
 - SSE 把步骤实时推到前端，长任务不用轮询
 - 修订稿与原稿并存，人工确认前不覆盖；确认后原稿进入历史
@@ -104,15 +104,15 @@ flowchart LR
 - **安全**：bcrypt 哈希 · JWT 密码指纹（改密即吊销）· 登录限流 · 服务端 MIME + nosniff · 统一权限口径
 
 ```
-ai_meeting/
+meetingbot/
 ├── fastapi-app/                     # 后端
 │   ├── api/                         # 路由：会议 / 资料 / 转写 / 纪要 / 自检 / 观测 / 配置
 │   ├── services/                    # 领域服务：契约层 / 模型工厂 / 反思环 / Temporal 工作流
 │   ├── common/                      # 基础设施：认证 / 限流 / JSON 修复 / 供应商能力表
 │   └── tests/                       # 产品侧零调用测试
 ├── vue/                             # 前端：14 个管理页面
-└── ../ai_meeting.sql                # 建库脚本 + 种子数据（空卷初始化时导入）
-evaluation/                          # 评测体系（与产品代码物理隔离，不 import 产品实现）
+└── ../meetingbot.sql                # 建库脚本 + 种子数据（空卷初始化时导入）
+evaluation/                          # 评测体系（与产品代码物理隔离，只允许登记在案的四处委托）
 ├── README.md / DESIGN.md            # 评测宪法与四层设计书
 ├── LEDGER.md                        # 结论账本：可引用结论 + 撤回记录
 ├── asr/ benchmarks/ judges/ gate/ gold/ regression/ lib/ tests/
@@ -123,7 +123,7 @@ docs/assets/                         # logo 与 README 实拍截图
 ## 快速开始
 
 ```bash
-cp ai_meeting/fastapi-app/.env.example ai_meeting/fastapi-app/.env
+cp meetingbot/fastapi-app/.env.example meetingbot/fastapi-app/.env
 # 编辑 .env，至少填：
 #   MYSQL_PASSWORD / MYSQL_ROOT_PASSWORD   数据库口令
 #   JWT_SECRET                             openssl rand -hex 32
@@ -133,7 +133,7 @@ cp ai_meeting/fastapi-app/.env.example ai_meeting/fastapi-app/.env
 ./scripts/compose.sh up -d --build       # 五服务全起
 ```
 
-配置统一从 `ai_meeting/fastapi-app/.env` 读取（密钥不进根目录、不进镜像、不进版本控制）。种子数据带示例会议、转写、纪要与模型配置；管理员账号见 `.env` 的 `APP_ADMIN_USERNAME / APP_ADMIN_PASSWORD`（首次启动自动建号）。
+配置统一从 `meetingbot/fastapi-app/.env` 读取（密钥不进根目录、不进镜像、不进版本控制）。种子数据带示例会议、转写、纪要与模型配置；管理员账号见 `.env` 的 `APP_ADMIN_USERNAME / APP_ADMIN_PASSWORD`（首次启动自动建号）。
 
 | 入口 | 地址 |
 |---|---|
@@ -146,12 +146,12 @@ cp ai_meeting/fastapi-app/.env.example ai_meeting/fastapi-app/.env
 ```bash
 make -C evaluation smoke    # 零调用回归：契约不变量 / 可定位率 / 可靠性复算（不需任何模型凭据）
 make -C evaluation test     # 评测侧单测
-cd ai_meeting/fastapi-app && .venv/bin/python -m pytest tests/ -q   # 产品侧单测（内存 SQLite + Mock 模型）
+cd meetingbot/fastapi-app && .venv/bin/python -m pytest tests/ -q   # 产品侧单测（内存 SQLite + Mock 模型）
 ```
 
-产品侧本地环境：`cd ai_meeting/fastapi-app && uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements.txt`（pip 等价亦可）。
+产品侧本地环境：`cd meetingbot/fastapi-app && uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r requirements.txt`（pip 等价亦可）。
 
-评测体系分四层入口：`smoke`（零调用回归）/ `deep`（裁判判读）/ `gate`（留出集门禁）/ `gold`（金标注与裁判校准）。公开评测集（AliMeeting / VCSum）的语料与音频不入库，用 `evaluation/benchmarks/download_alimeeting.py` 按清单复得；live 运行有预算护栏并必须显式开启。
+评测体系分四层入口：`smoke`（零调用回归）/ `deep`（裁判判读）/ `gate`（留出集门禁）/ `gold`（金标注与裁判校准）——`evaluation/README.md` 把这套写成"三层入口 ＋ 一个金标锚"，两种数法指的是同一份 `Makefile`：`gold` 是校准锚，算第三层的一部分还是独立一层而已。公开评测集（AliMeeting / VCSum）的语料与音频不入库，用 `evaluation/benchmarks/download_alimeeting.py` 按清单复得；live 运行有预算护栏并必须显式开启。
 
 ## 运维与排查入口
 
