@@ -77,10 +77,15 @@ class Actor:
 
     `allowed_meeting_ids` 在构造时算一次（一次查询），此后所有工具共用；
     它的语义与 `access.visible_meeting_ids` 完全一致，不要在任何地方另作解释。
+
+    `biz_id` 是"这次检索属于哪条业务记录"，只用于**记账归属**
+    （`ai_call_log.biz_id` → 观测页能说出"这一轮问答花了多少 token"）。
+    工具层不解释它、也不拿它判权，只透传给模型调用。
     """
 
     user: User
     allowed_meeting_ids: list[int] | None
+    biz_id: int = 0
 
     @property
     def user_id(self) -> int:
@@ -91,10 +96,11 @@ class Actor:
         return str(self.user.role)
 
     @classmethod
-    async def resolve(cls, user: User, *, requested: list[int] | None = None) -> Actor:
+    async def resolve(cls, user: User, *, requested: list[int] | None = None,
+                      biz_id: int = 0) -> Actor:
         """构造 Actor。`requested` 是本次对话锁定的会议范围（可空＝不锁定）。"""
         allowed = await access.visible_meeting_ids(user, requested=requested)
-        return cls(user=user, allowed_meeting_ids=allowed)
+        return cls(user=user, allowed_meeting_ids=allowed, biz_id=biz_id)
 
 
 def _narrow(allowed: list[int] | None, requested: list[int] | None) -> list[int] | None:
@@ -161,7 +167,7 @@ async def _search_knowledge(actor: Actor, args: SearchKnowledgeArgs) -> dict[str
     try:
         hits = await kb_service.search_knowledge(
             args.query, allowed_meeting_ids=allowed, limit=args.limit,
-            authority=args.authority)
+            authority=args.authority, biz_id=actor.biz_id)
     except kb_service.KbError as error:
         raise ToolError(str(error)) from error
     except qdrant.QdrantError as error:

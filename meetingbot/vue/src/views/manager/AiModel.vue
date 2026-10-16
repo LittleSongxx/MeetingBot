@@ -18,6 +18,7 @@
         <el-option label="会议纪要" value="MINUTES"></el-option>
         <el-option label="纪要自检" value="AGENT"></el-option>
         <el-option label="说话人匹配" value="SPEAKER"></el-option>
+        <el-option label="向量嵌入" value="EMBEDDING"></el-option>
       </el-select>
       <el-button type="info" plain @click="search">查询</el-button>
       <el-button type="warning" plain style="margin-left: 10px" @click="reset">重置</el-button>
@@ -37,6 +38,13 @@
         <!-- 这一列显示的是后端做过掩码的字符串 -->
         <el-table-column prop="api_key" label="API Key" min-width="150" />
         <el-table-column prop="timeout_seconds" label="超时秒数" width="100" />
+        <!-- 单价（微元/千 token）：成本核算按它算；0 表示未定价，观测页会单独标注 -->
+        <el-table-column label="单价(元/千token)" width="160">
+          <template #default="scope">
+            入 {{ formatMicro(scope.row.input_price_micro_per_1k) }} / 出
+            {{ formatMicro(scope.row.output_price_micro_per_1k) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="enabled" label="状态" width="90">
           <template #default="scope">
             <!-- enabled 为 true 显示绿色“已启用”，否则灰色“未启用” -->
@@ -83,6 +91,7 @@
             <el-option label="会议纪要" value="MINUTES"></el-option>
             <el-option label="纪要自检" value="AGENT"></el-option>
             <el-option label="说话人匹配" value="SPEAKER"></el-option>
+            <el-option label="向量嵌入" value="EMBEDDING"></el-option>
           </el-select>
         </el-form-item>
         <!-- 服务协议只读，切换用途时由 changeModelType 自动填，转写和另外两类不是同一种协议 -->
@@ -115,6 +124,25 @@
             style="width: 100%"
           ></el-input-number>
         </el-form-item>
+        <!-- 单价：每 1000 token 的微元数（1e-6 元）。留 0 表示未定价——
+             观测页会把"未定价"和"花了 0 元"分开显示，不会假装免费 -->
+        <el-form-item label="输入单价">
+          <el-input-number
+            v-model="data.form.input_price_micro_per_1k"
+            :min="0"
+            :step="1000"
+            style="width: 100%"
+          ></el-input-number>
+        </el-form-item>
+        <el-form-item label="输出单价">
+          <el-input-number
+            v-model="data.form.output_price_micro_per_1k"
+            :min="0"
+            :step="1000"
+            style="width: 100%"
+          ></el-input-number>
+        </el-form-item>
+        <div class="price-tip">单价单位：微元 / 1000 token（1 元 = 1000000 微元）</div>
         <!-- 启用开关，写入 data.form.enabled -->
         <el-form-item label="启用配置">
           <el-switch v-model="data.form.enabled"></el-switch>
@@ -146,6 +174,9 @@ interface AiModelRow {
   api_key: string
   model_name: string
   timeout_seconds: number
+  /** 单价：每 1000 token 的微元数（1e-6 元），0 表示未定价 */
+  input_price_micro_per_1k: number
+  output_price_micro_per_1k: number
   enabled: boolean
 }
 
@@ -160,6 +191,8 @@ interface AiModelForm {
   base_url: string
   model_name: string
   timeout_seconds: number
+  input_price_micro_per_1k: number
+  output_price_micro_per_1k: number
   enabled: boolean
 }
 
@@ -240,7 +273,15 @@ const modelTypeText = (value) =>
     MINUTES: '会议纪要',
     AGENT: '纪要自检',
     SPEAKER: '说话人匹配',
+    EMBEDDING: '向量嵌入',
   })[value] || value
+
+// 微元（1e-6 元）→ 元，去掉多余的 0；成本在库里是整数微元，展示时才换算
+const formatMicro = (value: number) => {
+  const micro = Number(value || 0)
+  if (!micro) return '0'
+  return (micro / 1_000_000).toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
+}
 
 // 四类模型的默认服务地址、模型名和超时秒数，和仓库根目录 meetingbot.sql 里的初始配置保持一致
 // 纪要、纪要自检和说话人匹配走阿里百炼的 OpenAI 兼容地址
@@ -268,6 +309,12 @@ const MODEL_DEFAULTS = {
     base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     model_name: 'qwen-plus',
     timeout_seconds: 180,
+    provider: 'OPENAI_COMPATIBLE',
+  },
+  EMBEDDING: {
+    base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model_name: 'text-embedding-v4',
+    timeout_seconds: 120,
     provider: 'OPENAI_COMPATIBLE',
   },
 }
@@ -306,6 +353,9 @@ const handleAdd = () => {
     base_url: MODEL_DEFAULTS.TRANSCRIPTION.base_url,
     model_name: MODEL_DEFAULTS.TRANSCRIPTION.model_name,
     timeout_seconds: MODEL_DEFAULTS.TRANSCRIPTION.timeout_seconds,
+    // 单价默认 0（未定价）：价格是采购事实，不预设，由管理员按合同填
+    input_price_micro_per_1k: 0,
+    output_price_micro_per_1k: 0,
     enabled: false,
   }
   // 打开配置弹窗，API 地址、模型名、超时和启用状态由上述默认值渲染。

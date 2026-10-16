@@ -160,6 +160,12 @@ class AiModelConfig(Model):
     model_name = fields.CharField(max_length=100)
     # 对应 ai_model_config.timeout_seconds
     timeout_seconds = fields.IntField(default=600)
+    # 对应 ai_model_config.input_price_micro_per_1k / output_price_micro_per_1k：
+    # 每 1000 token 的单价，单位是"微元"（1e-6 元）。用整数存是为了让成本求和
+    # 与比较不引入浮点误差（金额用浮点相加迟早对不上账）；0 表示未配置单价，
+    # 此时成本按 0 记并**在页面上标注为未定价**，而不是拿 0 冒充"免费"。
+    input_price_micro_per_1k = fields.IntField(default=0)
+    output_price_micro_per_1k = fields.IntField(default=0)
     # 对应 ai_model_config.enabled，ORM 里是布尔值，数据库里是 0 或 1
     enabled = fields.BooleanField(default=False)
     # 对应 ai_model_config.create_time
@@ -275,6 +281,13 @@ class AiCallLog(Model):
     elapsed_ms = fields.BigIntField(default=0)
     # 对应 ai_call_log.usage_json
     usage_json = fields.JSONField(null=True)
+    # 对应 ai_call_log.cost_micro：这次调用的成本（微元），由调用时所在配置的单价
+    # 与本次真实用量算出，写入这一行——成本是"这次调用"的属性，不是事后重算的
+    # 派生值（事后重算会把单价变更前的历史调用按新价重估，那是另一种数据）
+    cost_micro = fields.BigIntField(default=0)
+    # 对应 ai_call_log.trace_id：跨阶段串联用（同一次业务操作里的多次调用共享它），
+    # 为空表示该调用未参与链路追踪
+    trace_id = fields.CharField(max_length=64, null=True)
     # 对应 ai_call_log.error_message
     error_message = fields.TextField(null=True)
     # 对应 ai_call_log.create_time，写日志时自动填入
@@ -625,6 +638,9 @@ class ChatMessage(Model):
     citations_json = fields.JSONField(null=True)
     # 对应 chat_message.tools_json：工具调用轨迹（页面折叠展示"查了什么"）
     tools_json = fields.JSONField(null=True)
+    # 对应 chat_message.moderation_json：这一轮的审核留痕（命中词与处置动作）。
+    # 只存词与位置，不存命中处的上下文——留痕不该复制一份违规原文
+    moderation_json = fields.JSONField(null=True)
     # 对应 chat_message.stop_reason：finished / max_rounds / budget_* / stalled，
     # 用户看到的是它对应的中文提示，观测看到的是这个值
     stop_reason = fields.CharField(max_length=30, null=True)

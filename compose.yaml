@@ -35,6 +35,8 @@ services:
       TZ: Asia/Shanghai
       # 向量库：容器间走内部网络，不暴露到宿主
       QDRANT_URL: http://qdrant:6333
+      # 限流与问答预算的集中式计数（多副本 backend 共享一份，见 common/ratelimit.py）
+      REDIS_URL: redis://redis:6379/0
       # JWT 密钥必须显式提供（settings.py 已 fail-fast，这里再拦一道部署层）
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (openssl rand -hex 32)}
       CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-*}
@@ -50,6 +52,8 @@ services:
       temporal:
         condition: service_healthy
       qdrant:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     # 让容器能用 host.docker.internal 访问宿主机上的本地 ASR 侧车
     #（TRANSCRIPTION_ENGINE=http 时才需要；默认 dashscope 不受影响）
@@ -90,6 +94,19 @@ services:
       timeout: 5s
       retries: 12
       start_period: 10s
+
+  # 限流与配额的集中式计数：backend 多副本时进程内计数会各算一份，
+  # 阈值被隐性放大（见 common/ratelimit.py 的模块文档）
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    # 只做计数，数据可丢：不开持久化，容器重启后窗口重新开始（最坏是多放几个请求）
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   temporal:
     image: temporalio/auto-setup:1.28.1

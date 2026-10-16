@@ -51,9 +51,9 @@ async def validate_prompt(payload: PromptPayload):
     # 四项文本直接对应编辑弹窗里的字段，任一为空都无法组成模型请求
     if not payload.code or not payload.name or not payload.system_prompt or not payload.user_prompt:
         raise CustomException("Prompt编码、名称、系统指令和用户模板不能为空")
-    # 五条模板都是系统预置的，页面上只能改内容不能改编码，这里挡住编码被换成别的值
-    if payload.code not in {"MEETING_MINUTES", "MINUTES_REVIEW", "MINUTES_REFINE", "SPEAKER_MATCH"}:
-        raise CustomException("Prompt编码参数错误")
+    # 模板都是系统预置的，页面上只能改内容不能改编码，这里挡住编码被换成别的值。
+    # 这张表同时是"哪些编码有必需变量"的登记处：新增用途（如知识问答）在这里加一行，
+    # 而不是在别处再写一份白名单——两份必然漂移，而漂移的表现是"能存进去但渲染缺料"。
     required_variables = {
         "MEETING_MINUTES": {"{meeting_title}", "{transcript}"},
         # 审查要同时看纪要和原文，所以这两个变量缺一不可
@@ -61,7 +61,13 @@ async def validate_prompt(payload: PromptPayload):
         # 重写还需核对原文，不能只按审核意见补写负责人或期限。
         "MINUTES_REFINE": {"{meeting_title}", "{minutes_json}", "{issues}", "{transcript}"},
         "SPEAKER_MATCH": {"{meeting_title}", "{participants}", "{transcript}"},
-    }[payload.code]
+        # 知识问答：用户提示词是**追加在问题之后**的附加要求（见 chat_service.question_message），
+        # 问题本身由服务端保证带上，因此这里没有必需变量
+        "CHAT_ANSWER": set(),
+    }
+    if payload.code not in required_variables:
+        raise CustomException("Prompt编码参数错误")
+    required_variables = required_variables[payload.code]
     # 变量被管理员误删时，渲染出来的提示词就缺了关键材料，这里直接拒绝保存
     missing = [variable for variable in required_variables if variable not in payload.user_prompt]
     if missing:

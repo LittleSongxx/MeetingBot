@@ -4,13 +4,20 @@ from contextlib import asynccontextmanager
 import mcp_server
 import uvicorn
 from api import api_router
+from common import metrics, tracing
 from common.exception_handler import setup_exceptions
 from common.result import Result
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import Response
 from settings import TORTOISE_ORM
 from starlette.middleware.cors import CORSMiddleware
 from tortoise import connections
 from tortoise.contrib.fastapi import register_tortoise
+
+# 日志与追踪在**导入期**装好：容器启动后头几行日志就必须是结构化的，
+# 否则排查启动问题时正好缺最需要的那一段
+metrics.setup_logging()
+tracing.setup_tracing()
 
 
 # 应用生命周期钩子，yield 之前的代码在服务启动时执行一次，yield 之后的代码在服务关闭时执行
@@ -79,6 +86,20 @@ setup_exceptions(app)
 @app.get("/")
 async def root():
     return Result.success()
+
+
+@app.get("/metrics")
+async def prometheus_metrics(request: Request):
+    """Prometheus 文本格式（指标名与 OTel 语义约定的对应见 common/metrics.py）。
+
+    默认没有额外鉴权：指标里没有会议内容，且项目默认把后端端口绑在本机回环上，
+    由部署方的网络策略保护。要把采集器放到别的机器上时设 `METRICS_TOKEN`，
+    设了之后没有匹配的请求头一律 403——不这么做就等于把内部用量暴露在网络上。
+    """
+    expected = os.getenv("METRICS_TOKEN", "").strip()
+    if expected and request.headers.get("x-metrics-token") != expected:
+        raise HTTPException(status_code=403, detail="metrics token required")
+    return Response(metrics.render(), media_type="text/plain; version=0.0.4; charset=utf-8")
 
 
 @app.get("/health")

@@ -17,17 +17,21 @@ if not logger.handlers:
 
 # 自定义异常类
 class CustomException(Exception):
-    def __init__(self, message: str, code: str = "400"):
+    def __init__(self, message: str, code: str = "400", headers: dict | None = None):
         # message 是给用户看的提示，前端直接弹出来
         self.message = message
-        # code：400 业务失败（默认）/ 401 登录失效 / 403 无权限。
+        # code：400 业务失败（默认）/ 401 登录失效 / 403 无权限 / 429 限流。
         # 与 HTTP 状态码同名同义——响应现在带真实状态码，网关与监控可按码分流。
         self.code = code
+        # 附加响应头（限流用：X-RateLimit-* 与 Retry-After 必须随响应发出去，
+        # 否则客户端只能盲猜多久之后重试）
+        self.headers = headers or {}
 
 
 # CustomException.code → HTTP 状态码（防御式：未知 code 落 400 而不是 500，
 # 让"业务上不通过"永远不会被误读成"服务端故障"）
-_HTTP_BY_CODE = {"400": 400, "401": 401, "403": 403, "404": 404}
+# 429 是限流/配额用：客户端与网关都按标准语义处理（配合 Retry-After 头）
+_HTTP_BY_CODE = {"400": 400, "401": 401, "403": 403, "404": 404, "429": 429}
 
 
 def _cors_headers() -> dict[str, str]:
@@ -49,7 +53,7 @@ def setup_exceptions(app: FastAPI):
             status_code=_HTTP_BY_CODE.get(exc.code, 400),
             # body 保持 {code, msg} 结构：前端既有 code 分支继续可用
             content={"code": exc.code, "msg": exc.message},
-            headers=_cors_headers(),
+            headers={**_cors_headers(), **exc.headers},
         )
 
     @app.exception_handler(RequestValidationError)

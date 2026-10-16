@@ -30,15 +30,15 @@ import json
 import os
 from typing import Any, AsyncIterator
 
-from common import providers, qdrant
+from common import providers, qdrant, ratelimit
 from common.auth import get_current_user
 from common.exception_handler import CustomException
 from common.result import Result
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from models import AiModelConfig, ChatSession, User
 from pydantic import BaseModel, Field
-from services import chat_service
+from services import chat_service, moderation
 
 router = APIRouter(prefix="/chat")
 
@@ -46,6 +46,15 @@ router = APIRouter(prefix="/chat")
 HEARTBEAT_SECONDS = float(os.getenv("CHAT_HEARTBEAT_SECONDS", "15"))
 # 断开连接后等待落库收尾的上限：不设上限会把"客户端走了"变成"服务端挂住"
 CLOSE_PERSIST_TIMEOUT = 10.0
+
+# 提问频率：一次问答要调多次模型（贵、慢），所以按用户与 IP 各限一道。
+# 0 表示不限制。
+ASK_LIMIT_PER_USER = int(os.getenv("CHAT_ASK_LIMIT_PER_USER", "30"))
+ASK_LIMIT_PER_IP = int(os.getenv("CHAT_ASK_LIMIT_PER_IP", "60"))
+ASK_WINDOW_SECONDS = int(os.getenv("CHAT_ASK_WINDOW_SECONDS", "60"))
+# 每日 token 预算（按用户）。问答的成本与上下文长度直接相关，仅按次数限制
+# 挡不住"少数人反复问长问题"。0 表示不限制。
+DAILY_TOKEN_BUDGET = int(os.getenv("CHAT_DAILY_TOKEN_BUDGET", "500000"))
 
 
 class SessionPayload(BaseModel):
@@ -80,6 +89,8 @@ async def status(current_user: User = Depends(get_current_user)):
         "tool_calling_supported": bool(config) and providers.supports_tool_calling(config.base_url),
         "embedding_configured": embedding is not None,
         "vector_store_reachable": await qdrant.health(),
+        # 内容审核是否在跑：没配词表时如实显示"未启用"，而不是让页面以为扫过了
+        "moderation": moderation.status(),
     })
 
 
@@ -120,13 +131,15 @@ async def messages(session_id: int, limit: int = 100,
 
 
 @router.post("/stream")
-async def stream(payload: StreamPayload, current_user: User = Depends(get_current_user)):
+async def stream(payload: StreamPayload, request: Request,
+                 current_user: User = Depends(get_current_user)):
     """一次问答的 SSE 流。POST 而非 GET：问题可能很长，不该塞进查询串。"""
+    await _guard_ask(request, current_user)
     try:
         session = await chat_service.get_session(payload.session_id, current_user)
     except chat_service.ChatError as error:
         raise CustomException(str(error)) from error
-    source = chat_service.stream_answer(session, payload.question, user=current_user)
+    source = _charged_stream(session, payload.question, current_user)
     return StreamingResponse(
         _sse_frames(source),
         media_type="text/event-stream",
@@ -137,6 +150,50 @@ async def stream(payload: StreamPayload, current_user: User = Depends(get_curren
             "Connection": "keep-alive",
         },
     )
+
+
+async def _guard_ask(request: Request, current_user: User) -> None:
+    """提问前的两道闸：频率与当日 token 预算。
+
+    为什么放在**开始之前**：预算闸只有在"这一轮开始前"判定才有意义——
+    回答已经生成完再告诉用户超预算，钱已经花了。因此这里只做判定，
+    实际用量在轮次结束时按真实值记入（`_charged_stream`）。
+    """
+    client_ip = request.client.host if request.client else "unknown"
+    for kind, key, limit in (
+        ("chat-user", str(current_user.id), ASK_LIMIT_PER_USER),
+        ("chat-ip", client_ip, ASK_LIMIT_PER_IP),
+    ):
+        decision = await ratelimit.check(kind, key, limit=limit, window_seconds=ASK_WINDOW_SECONDS)
+        if not decision.allowed:
+            raise CustomException(
+                f"提问过于频繁，请 {decision.retry_after_seconds} 秒后再试",
+                "429", headers=decision.headers())
+    if DAILY_TOKEN_BUDGET > 0:
+        remaining = await ratelimit.quota_remaining(
+            "chat-tokens", str(current_user.id), limit=DAILY_TOKEN_BUDGET,
+            window_seconds=86_400)
+        if remaining <= 0:
+            raise CustomException(
+                f"今日问答额度已用完（{DAILY_TOKEN_BUDGET} token），请明天再试", "429")
+
+
+async def _charged_stream(session: ChatSession, question: str,
+                          current_user: User) -> AsyncIterator[tuple[str, dict[str, Any]]]:
+    """跑一轮问答，并把这一轮真实用掉的 token 记进当日额度。
+
+    记账放在 `finally`：无论是正常结束、模型失败还是客户端断开，用量都发生过
+    （`ai_call_log` 里有真实记录），不记就等于预算闸可以被"反复断开"绕过。
+    读不到用量时按 0 记（限流后端故障时 fail-open，见 common/ratelimit.py）。
+    """
+    used = 0
+    async for kind, payload in chat_service.stream_answer(session, question, user=current_user):
+        if kind == "done":
+            used = int((payload.get("tokens") or {}).get("total_tokens") or 0)
+        yield (kind, payload)
+    if DAILY_TOKEN_BUDGET > 0 and used:
+        await ratelimit.spend("chat-tokens", str(current_user.id), used,
+                              limit=DAILY_TOKEN_BUDGET, window_seconds=86_400)
 
 
 async def _sse_frames(source: AsyncIterator[tuple[str, dict[str, Any]]],

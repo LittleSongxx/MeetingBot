@@ -128,7 +128,8 @@ class EmployeeCanSeeLogTest(unittest.TestCase):
         return SimpleNamespace(call_type=call_type, biz_id=biz_id)
 
     def setUp(self):
-        self.owned = {"TRANSCRIPTION": {10}, "MINUTES": {20}, "AGENT": {30}}
+        self.owned = {"TRANSCRIPTION": {10}, "MINUTES": {20}, "AGENT": {30},
+                      "CHAT": {40}, "CHAT_SESSION": {41}, "KB": {50}}
 
     def test_all_minutes_call_types_map_to_minutes_ownership(self):
         from services.observability_service import employee_can_see_log
@@ -141,6 +142,28 @@ class EmployeeCanSeeLogTest(unittest.TestCase):
         for call_type in ("AGENT_REVIEW", "AGENT_REFINE", "AGENT_REVIEW_SUPPORT"):
             self.assertTrue(employee_can_see_log(self._log(call_type, 30), self.owned), call_type)
             self.assertFalse(employee_can_see_log(self._log(call_type, 20), self.owned), call_type)
+
+    def test_chat_call_types_map_to_their_own_id_spaces(self):
+        """问答的 biz_id 是助手消息 id，摘要的是会话 id——两个 ID 空间不能混。"""
+        from services.observability_service import employee_can_see_log
+        self.assertTrue(employee_can_see_log(self._log("CHAT", 40), self.owned))
+        self.assertTrue(employee_can_see_log(self._log("KB_QUERY_EMBED", 40), self.owned))
+        self.assertFalse(employee_can_see_log(self._log("CHAT", 41), self.owned))
+        self.assertTrue(employee_can_see_log(self._log("CHAT_SUMMARY", 41), self.owned))
+        self.assertFalse(employee_can_see_log(self._log("CHAT_SUMMARY", 40), self.owned))
+
+    def test_kb_embedding_maps_to_index_task_ownership(self):
+        from services.observability_service import employee_can_see_log
+        self.assertTrue(employee_can_see_log(self._log("KB_EMBEDDING", 50), self.owned))
+        self.assertFalse(employee_can_see_log(self._log("KB_EMBEDDING", 40), self.owned))
+
+    def test_every_call_type_the_product_writes_is_registered(self):
+        """登记表漏一行的表现是"观测页少一块"而不是报错，所以逐条钉住。"""
+        from services.observability_service import CALL_TYPE_OWNERSHIP
+        for call_type in ("TRANSCRIPTION", "MINUTES", "AGENT_REVIEW", "AGENT_REFINE",
+                          "AGENT_REVIEW_SUPPORT", "CHAT", "CHAT_SUMMARY", "KB_EMBEDDING",
+                          "KB_QUERY_EMBED"):
+            self.assertIn(call_type, CALL_TYPE_OWNERSHIP, call_type)
 
     def test_unknown_call_type_still_hidden(self):
         from services.observability_service import employee_can_see_log

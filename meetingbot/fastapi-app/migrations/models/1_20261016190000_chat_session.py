@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS `chat_message` (
     `content` LONGTEXT NOT NULL,
     `citations_json` JSON,
     `tools_json` JSON,
+    `moderation_json` JSON,
     `stop_reason` VARCHAR(30),
     `error_message` LONGTEXT,
     `token_count` INT NOT NULL DEFAULT 0,
