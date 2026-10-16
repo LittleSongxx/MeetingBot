@@ -27,12 +27,13 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Sequence
 
 from common import qdrant
-from common.times import now
+from common.times import now, to_local
 from models import (
     AiModelConfig,
     KbChunk,
     KbDocument,
     KbIndexTask,
+    Meeting,
     MeetingMinutes,
     TranscriptionTask,
     TranscriptSegment,
@@ -55,6 +56,11 @@ PENDING, PROCESSING, SUCCEEDED, FAILED = "PENDING", "PROCESSING", "SUCCEEDED", "
 
 # 单次写入向量库的点数：分批是为了单次请求体不要过大，也让失败重试的粒度更细
 _UPSERT_BATCH_SIZE = 64
+
+# 向量库 payload 的**结构版本**。加/改/删 payload 字段时必须 +1——它进内容指纹
+# （见 content_fingerprint），从而让旧切片在下一次索引时自动重建。
+# 历史：1 = 最早的一版（无 meeting_start_epoch）；2 = 加会议开始时间（时间过滤用）。
+PAYLOAD_SCHEMA_VERSION = 2
 
 
 class KbError(RuntimeError):
@@ -143,9 +149,17 @@ async def minutes_chunks(minutes_id: int) -> tuple[list[chunking.Chunk], str]:
     return chunks, content_fingerprint([c.text for c in chunks])
 
 
-def content_fingerprint(texts: Sequence[str]) -> str:
-    """内容指纹：切片集合变了就换指纹，据此判断要不要重建文档版本。"""
+def content_fingerprint(texts: Sequence[str], *,
+                        payload_schema: int = PAYLOAD_SCHEMA_VERSION) -> str:
+    """内容指纹：切片集合变了就换指纹，据此判断要不要重建文档版本。
+
+    **载荷结构版本也进指纹**，这一条是踩出来的：指纹原先只覆盖切片正文，
+    于是"给 payload 加一个字段"不会触发重建——旧 point 上根本没有那个新字段，
+    而查询侧一旦按它过滤，旧数据会被**静默漏掉**（过滤看起来生效了，只是少了点数据，
+    不报错、不告警）。把结构版本并进来之后，改结构 = 换指纹 = 下次索引自动重建。
+    """
     digest = hashlib.sha256()
+    digest.update(f"payload-schema:{int(payload_schema)}\x00".encode())
     for text in texts:
         digest.update(text.encode("utf-8"))
         digest.update(b"\x00")
@@ -274,7 +288,8 @@ async def execute_kb_index(kb_task_id: int) -> None:
         await KbIndexTask.filter(id=task.id).update(
             chunk_count=len(created), stage=f"正在生成向量（共 {len(created)} 片）", progress=30)
 
-        embedded = await _embed_and_store(task, config, document, created)
+        embedded = await _embed_and_store(task, config, document, created,
+                                          await _meeting_start_epoch(task.meeting_id))
         await _finish(task.id, chunk_count=len(created), embedded_count=embedded,
                       stage="索引完成", document_id=document.id)
     except KbError as error:
@@ -324,7 +339,8 @@ async def _drop_chunks(document_id: int) -> None:
 
 
 async def _embed_and_store(task: KbIndexTask, config: AiModelConfig, document: KbDocument,
-                           chunks: Sequence[KbChunk]) -> int:
+                           chunks: Sequence[KbChunk],
+                           meeting_start_epoch: int | None = None) -> int:
     """嵌入未完成的切片并写入向量库，返回已嵌入的切片数。
 
     只处理 `embedded=False`：中途失败重跑时，已写成功的部分不重复付费。
@@ -345,7 +361,7 @@ async def _embed_and_store(task: KbIndexTask, config: AiModelConfig, document: K
                 "id": chunk.id,
                 "dense": vector,
                 "sparse": kb_sparse.encode(chunk.text),
-                "payload": _payload_for(task, document, chunk),
+                "payload": _payload_for(task, document, chunk, meeting_start_epoch),
             })
         await qdrant.upsert_chunks(points)
         await KbChunk.filter(id__in=[c.id for c in batch]).update(embedded=True)
@@ -357,10 +373,20 @@ async def _embed_and_store(task: KbIndexTask, config: AiModelConfig, document: K
     return done
 
 
-def _payload_for(task: KbIndexTask, document: KbDocument, chunk: KbChunk) -> dict[str, Any]:
+async def _meeting_start_epoch(meeting_id: int) -> int | None:
+    """会议开始时间的 epoch 秒（时间过滤用）。会议不存在或没填开始时间就返回 None。"""
+    start_time = await Meeting.filter(id=meeting_id).values_list("start_time", flat=True)
+    value = start_time[0] if start_time else None
+    return int(to_local(value).timestamp()) if value else None
+
+
+def _payload_for(task: KbIndexTask, document: KbDocument, chunk: KbChunk,
+                 meeting_start_epoch: int | None) -> dict[str, Any]:
     """写进向量库的载荷：检索阶段不回表就能回答"哪场会、谁、什么时候说的"。
 
     `meeting_id` 与 `authority` 是过滤字段（权限过滤、权威性过滤），必须在这里带上。
+    `meeting_start_epoch` 是**会议日期**（不是录音内偏移）："最近七天""上周那场会"
+    这类限定按它过滤，缺了它就只能靠语义相似度碰运气（实测：那些限定一律碰不到）。
     """
     return {
         "meeting_id": task.meeting_id,
@@ -375,6 +401,7 @@ def _payload_for(task: KbIndexTask, document: KbDocument, chunk: KbChunk) -> dic
         "speaker": chunk.speaker,
         "start_ms": chunk.start_ms,
         "end_ms": chunk.end_ms,
+        "meeting_start_epoch": meeting_start_epoch,
         "text": chunk.text,
     }
 
@@ -401,12 +428,19 @@ async def search_knowledge(
     allowed_meeting_ids: Sequence[int] | None,
     limit: int = 8,
     authority: Iterable[str] | None = None,
+    chunk_type: Iterable[str] | None = None,
+    meeting_time_from: int | None = None,
+    meeting_time_to: int | None = None,
     biz_id: int = 0,
 ) -> list[Hit]:
     """混合检索。`allowed_meeting_ids` 由权限层给出，本函数不做权限判断。
 
     None 表示管理员（不过滤），空集合表示无可见会议（返回空）——两者语义不同，
     由上层的 access 层负责算清楚，这里只如实执行。
+
+    另外三组过滤都是**业务限定**（切片类型、会议时间范围），与权限一样是"必须满足"：
+    它们解决的是"下午这场会""最近七天"这类语义相似度碰不到的限定。
+    时间按**会议开始时间**过滤（epoch 秒），不是录音内偏移。
 
     `biz_id` 只影响 `ai_call_log` 的归属（哪条业务记录引发了这次嵌入调用）：
     问答传入那条助手消息的 id，接口预览传 0。0 表示"没有业务归属"，
@@ -422,6 +456,8 @@ async def search_knowledge(
     raw = await qdrant.hybrid_search(
         dense=dense, sparse=kb_sparse.encode(text), limit=limit,
         allowed_meeting_ids=allowed_meeting_ids, authority=authority,
+        chunk_type=chunk_type, meeting_time_from=meeting_time_from,
+        meeting_time_to=meeting_time_to,
     )
     hits: list[Hit] = []
     for item in raw:
