@@ -88,11 +88,21 @@ CITATION_PROTOCOL = (
     "4. 知识库里确实没有时，直接说没有找到相关记录，不要编造会议或原话。"
 )
 
-# 摘要提示词：内部压缩步骤，不是面向用户的产品提示词，因此不进 Prompt 模板表
+# 摘要提示词：内部压缩步骤，不是面向用户的产品提示词，因此不进 Prompt 模板表。
+#
+# 为什么写得这么防守：实测（2026-10-16）会话 1 的滚动摘要里**至今留着修复前的编造内容**
+# （"新版搜索响应慢""优惠券叠加规则"——这两件事会议里根本不存在，是修复前那次
+# "不检索直接答"的产物）。它们被摘要压缩之后，就成了后续轮次眼里的"事实"：
+# 记忆层的失效形态不是"忘了"，是**把错的东西记牢**——编造 → 答案 → 摘要 → 后续回答的依据。
 SUMMARY_SYSTEM_PROMPT = (
     "你是对话记录压缩助手。把给定的历史对话压成一段事实摘要，"
-    "保留：用户关心的问题、已给出的结论与它引用的会议/条目编号、尚未解决的问题。"
-    "不要补充原文没有的信息，不要评价。"
+    "保留：用户关心的问题、已给出的结论与它引用的会议/条目编号、尚未解决的问题。\n"
+    "三条硬约束：\n"
+    "1. 摘要**不是事实来源**：只压缩对话里已经出现过的内容，绝不引入原文没有的人名、"
+    "数字、日期、渠道或结论。\n"
+    "2. 只压缩**带引用编号**（如 [1]）的结论句；没有编号的叙述不要当结论写进摘要，"
+    "确有必要保留就写明它没有标注来源。\n"
+    "3. 不评价、不推断、不补全。"
 )
 SUMMARY_SCHEMA = {
     "type": "object",
@@ -224,7 +234,13 @@ def _message_dict(row: ChatMessage) -> dict[str, Any]:
 
 
 async def build_memory(session: ChatSession, user: User) -> list[Any]:
-    """系统提示词 + 滚动摘要 + 最近窗口的消息，组成下一次调用的输入。"""
+    """系统提示词 + 滚动摘要 + 最近窗口的消息，组成下一次调用的输入。
+
+    历史里的助手消息**进上下文时压成"结论 + 引用编号"**（原文完整留在库里）。
+    理由：单轮 token 实测随会话从 5.7k 涨到 26.5k，涨的主要是上一轮那份 20–30 条断言的
+    全文；而依据段逐条抄的就是检索原文——同一场会反复问时，它们下一轮还会被重新检索到，
+    留在上下文里等于把同一批切片付第二遍钱。编号留着，要细节就再检索一次（工具的用途）。
+    """
     system = await get_system_prompt()
     messages: list[Any] = [SystemMessage(system)]
     scope = list(session.scope_meeting_ids or [])
@@ -245,8 +261,64 @@ async def build_memory(session: ChatSession, user: User) -> list[Any]:
         if row.role == MESSAGE_USER:
             messages.append(HumanMessage(row.content))
         else:
-            messages.append(AIMessage(row.content))
+            messages.append(AIMessage(compress_answer(row.content or "",
+                                                      citations=_used_refs(row))))
     return messages
+
+
+def _used_refs(row: ChatMessage) -> list[int]:
+    """这条助手消息引用过的编号（落库的引用快照，与页面渲染同源）。"""
+    used = (row.citations_json or {}).get("used") or []
+    return [int(item.get("ref")) for item in used if item.get("ref")]
+
+
+# 回答里"依据段"的常见小标题。压掉的是**从这个小标题到结尾**的整段：
+# 那一段逐条抄检索原文，是上下文里最贵、也最容易在下一轮被重新检索到的部分。
+_EVIDENCE_HEADINGS = ("依据", "出处", "来源", "证据")
+# 没有依据段时的兜底：保留结论的前 N 字，并**显式标注被截断**（不假装完整）
+_COMPRESSED_KEEP_CHARS = 200
+
+
+def _heading_of(line: str) -> str:
+    """从一行里取出"小标题"：剥掉 markdown 装饰（`**`、`#`）与冒号，再去空白。"""
+    return line.strip().strip("*# ").strip("：: ").strip()
+
+
+def compress_answer(text: str, *, citations: list[int] | None = None) -> str:
+    """把一条历史回答压成"结论 + 引用编号"。原文不丢，它完整留在库里。
+
+    压缩只做两件事：砍掉依据段、附上引用编号。**不做摘要改写**——改写会让历史回答
+    带上模型的第二次概括，而"模型可以建议，不能成交"这条同样适用于记忆层：
+    进上下文的应该是上一轮的原结论，不是对这一轮的再加工。
+    """
+    body = (text or "").strip()
+    lines = body.splitlines()
+    for index, line in enumerate(lines):
+        if _heading_of(line) in _EVIDENCE_HEADINGS:
+            body = "\n".join(lines[:index]).strip()
+            break
+    else:
+        if len(body) > _COMPRESSED_KEEP_CHARS:
+            body = body[:_COMPRESSED_KEEP_CHARS] + "……（后文略）"
+    refs = sorted({int(ref) for ref in (citations or [])})
+    suffix = ("（本回答的引用编号：" + "".join(f"[{ref}]" for ref in refs)
+              + "；需要细节请重新检索原文）") if refs else "（本回答未引用条目）"
+    return f"{body}\n{suffix}" if body else suffix
+
+
+def _summary_transcript(rows: list[ChatMessage]) -> str:
+    """把一批消息渲染成摘要的输入。助手行**附上它引用过的编号**：
+    "只压缩带引用的结论"这条要求要能被满足，模型得先看得见哪些句子有引用。
+    """
+    lines = []
+    for row in rows:
+        if row.role == MESSAGE_USER:
+            lines.append(f"用户：{row.content}")
+            continue
+        refs = _used_refs(row)
+        tag = "（引用 " + " ".join(f"[{ref}]" for ref in refs) + "）" if refs else "（无引用）"
+        lines.append(f"助手{tag}：{row.content}")
+    return "\n".join(lines)
 
 
 async def maybe_summarize(session: ChatSession, *, model: Any = None) -> bool:
@@ -264,8 +336,7 @@ async def maybe_summarize(session: ChatSession, *, model: Any = None) -> bool:
         return False
     batch = rows[:overflow]
     config = await get_model_config()
-    transcript = "\n".join(
-        f"{'用户' if row.role == MESSAGE_USER else '助手'}：{row.content}" for row in batch)
+    transcript = _summary_transcript(batch)
     prompt = (f"已有摘要：\n{session.summary or '（无）'}\n\n新增对话：\n{transcript}\n\n"
               "请输出合并后的摘要。")
     try:
@@ -593,4 +664,5 @@ __all__ = [
     "delete_session", "list_messages", "build_memory", "maybe_summarize", "question_message",
     "build_tools", "stream_answer", "get_model_config", "get_system_prompt", "turn_tokens",
     "history_window", "summary_threshold", "MESSAGE_USER", "MESSAGE_ASSISTANT",
+    "compress_answer", "SUMMARY_SYSTEM_PROMPT",
 ]

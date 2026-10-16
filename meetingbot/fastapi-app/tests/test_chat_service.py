@@ -331,7 +331,8 @@ class MemoryTest(unittest.IsolatedAsyncioTestCase):
         # 1 条系统提示词 + 最近 4 条
         self.assertEqual(len(memory), 5)
         self.assertEqual(memory[0].content.startswith("你是企业会议知识助手"), True)
-        self.assertEqual(memory[-1].content, "第11条")
+        # 助手行进上下文时被压成"结论 + 引用编号"，用户行原样
+        self.assertEqual(memory[-1].content, "第11条\n（本回答未引用条目）")
 
     async def test_summary_compacts_old_messages_and_advances_the_watermark(self):
         session = await chat_service.create_session(self.user)
@@ -501,3 +502,77 @@ class SessionApiTest(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AnswerCompressionTest(unittest.TestCase):
+    """历史助手进上下文时压成"结论 + 引用编号"：原文完整留在库里（审计链不动）。
+
+    实测依据：单轮 token 随会话从 5.7k 涨到 26.5k，涨的主要是上一轮那份 20–30 条断言的
+    全文；而依据段逐条抄的就是检索原文，同一场会反复问时下一轮还会重新检索到。
+    """
+
+    ANSWER = (
+        "**结论**\n本次灰度 8 月 20 日开始，覆盖 10% 的活跃用户。\n\n"
+        "**依据**\n"
+        "1. 人工确认纪要明确记录：“复盘 8 月 20 日至 26 日灰度发布数据”[1]。\n"
+        "2. 会议转写原话中，张晨说明：“本次灰度从 8 月 20 日开始”（start_second=51）[2]。"
+    )
+
+    def test_evidence_section_is_dropped_and_refs_are_kept(self):
+        compressed = chat_service.compress_answer(self.ANSWER, citations=[2, 1])
+        self.assertIn("8 月 20 日开始", compressed)
+        self.assertNotIn("start_second=51", compressed, "依据段（逐条抄的检索原文）不该进上下文")
+        self.assertIn("[1][2]", compressed, "编号必须留着，模型才知道结论有依据")
+        self.assertLess(len(compressed), len(self.ANSWER))
+
+    def test_full_text_is_not_touched(self):
+        # 压缩是"进上下文那一份"，不改落库的那一份（这条约束由调用方保证，
+        # 这里钉住函数本身是纯函数、不改入参）
+        original = self.ANSWER
+        chat_service.compress_answer(original, citations=[1])
+        self.assertEqual(original, self.ANSWER)
+
+    def test_answer_without_evidence_section_keeps_the_head_and_says_so(self):
+        long_answer = "结论：" + "内容" * 300
+        compressed = chat_service.compress_answer(long_answer, citations=[])
+        self.assertLess(len(compressed), len(long_answer))
+        self.assertIn("后文略", compressed, "截断必须显式标注，不能假装完整")
+        self.assertIn("未引用条目", compressed)
+
+    def test_empty_answer_is_not_invented(self):
+        self.assertEqual(chat_service.compress_answer("", citations=[]), "（本回答未引用条目）")
+
+
+class SummaryGuardTest(unittest.IsolatedAsyncioTestCase):
+    """摘要加固：摘要**不是事实来源**（编造 → 答案 → 摘要 → 后续回答的依据）。"""
+
+    async def asyncSetUp(self):
+        await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["models"]},
+                            use_tz=True, timezone="Asia/Shanghai")
+        await Tortoise.generate_schemas()
+        self.user = await User.create(username="sum-t", password="x", name="张晨")
+        await AiModelConfig.create(
+            name="本地对话", model_type="AGENT", provider="OPENAI_COMPATIBLE",
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            api_key="unit-test-key", model_name="qwen-test", enabled=True)
+
+    async def asyncTearDown(self):
+        await Tortoise.close_connections()
+
+    def test_prompt_forbids_importing_facts(self):
+        prompt = chat_service.SUMMARY_SYSTEM_PROMPT
+        self.assertIn("不是事实来源", prompt)
+        self.assertIn("不要引入原文没有", prompt.replace("绝不引入原文没有", "不要引入原文没有"))
+        self.assertIn("引用编号", prompt)
+
+    async def test_assistant_rows_are_rendered_with_their_refs(self):
+        session = await chat_service.create_session(self.user)
+        await ChatMessage.create(session_id=session.id, role="USER", content="上线时间？")
+        await ChatMessage.create(
+            session_id=session.id, role="ASSISTANT", content="十月上线[1]。",
+            citations_json={"used": [{"ref": 1}, {"ref": 3}], "all": [], "unknown_refs": []})
+        await ChatMessage.create(session_id=session.id, role="ASSISTANT", content="没有依据的一句。")
+        rows = await ChatMessage.filter(session_id=session.id).order_by("id")
+        transcript = chat_service._summary_transcript(list(rows))
+        self.assertIn("助手（引用 [1] [3]）：十月上线[1]。", transcript)
+        self.assertIn("助手（无引用）：没有依据的一句。", transcript)
