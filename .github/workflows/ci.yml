@@ -68,7 +68,7 @@ jobs:
         run: make test PY=python
         working-directory: evaluation
 
-      - name: L0 零调用回归（契约不变量/可定位率/可靠性复算）
+      - name: L0 零调用回归（契约不变量/可定位率/问答引用不变量/可靠性复算）
         run: make smoke PY=python
         working-directory: evaluation
 
