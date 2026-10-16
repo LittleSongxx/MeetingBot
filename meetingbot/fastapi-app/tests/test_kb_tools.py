@@ -284,7 +284,7 @@ class KbToolsDbTest(unittest.IsolatedAsyncioTestCase):
             result = await kb_tools.execute_tool(actor, "search_knowledge", {
                 "query": "最近的调用成功率", "date_from": "2024-08-20", "date_to": "2024-08-26"})
         self.assertEqual(len(calls), 2, "带时间限定一次 + 放宽后一次")
-        self.assertIsNone(calls[1]["meeting_time_from"], "放宽时不再传时间限定")
+        self.assertIsNone(calls[1].get("meeting_time_from"), "放宽时不再传时间限定")
         self.assertTrue(result["relaxed_time_filter"])
         self.assertEqual(len(result["hits"]), 1)
         self.assertIn("已去掉时间限定重试", result["notice"])
