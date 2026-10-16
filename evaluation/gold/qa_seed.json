@@ -13,7 +13,8 @@
       "smalltalk"
     ],
     "intent_note": "意图标签由**代理起草**（**待人工确认**）：single_fact 单点事实 / aggregation 枚举聚合 / cross_meeting 跨录音（本语料只有一场会，因此是跨两段录音）汇总 / smalltalk 寒暄。case_source=agent_draft 的问题与事实同样是代理起草，待人工复核。",
-    "intent_taxonomy_revision": "v2：删掉 procedure（流程解释）。理由：它与 single_fact 的**路由动作相同**（都走检索），而两版提示词下它的 F1 从 53% 摆到 12%——这条边界不可稳定测量，只产出标签噪声。行业口径：分类只在动作不同处才有价值（Anthropic 的路由一节、Amazon REIC 分层路由）。迁移规则是机械的：问题里出现「哪些/哪几项/哪几类/分别/几个」→ aggregation，其余 → single_fact（共 15 条，逐条标了 `intent_revision`）。**标签仍全部是代理起草、待人工确认**。"
+    "intent_taxonomy_revision": "v2：删掉 procedure（流程解释）。理由：它与 single_fact 的**路由动作相同**（都走检索），而两版提示词下它的 F1 从 53% 摆到 12%——这条边界不可稳定测量，只产出标签噪声。行业口径：分类只在动作不同处才有价值（Anthropic 的路由一节、Amazon REIC 分层路由）。迁移规则是机械的：问题里出现「哪些/哪几项/哪几类/分别/几个」→ aggregation，其余 → single_fact（共 15 条，逐条标了 `intent_revision`）。**标签仍全部是代理起草、待人工确认**。",
+    "cross_source_note": "跨录音题（intent=cross_meeting）用 `source` + `also_in` 两条来源记录金标片段——答案必须同时用到两段录音。首版扩标脚本的键名写错，这 8 条的第二来源**漏写了**，2026-10-17 补齐（零调用指标此前按单来源评分，会把跨录音题算得偏低）。"
   },
   "discipline": "本集 27 条为人工标注的问题与金标事实、76 条为代理起草（待人工确认）；意图标签全部由代理起草。n 变大后仍只作**方向信号**，逐类结论必须连支持数一起报，不作产品决策依据。",
   "cases": [
@@ -1545,6 +1546,13 @@
           51,
           58
         ]
+      },
+      "also_in": {
+        "task_id": 7,
+        "segments": [
+          49,
+          50
+        ]
       }
     },
     {
@@ -1565,6 +1573,12 @@
           43,
           45
         ]
+      },
+      "also_in": {
+        "task_id": 7,
+        "segments": [
+          42
+        ]
       }
     },
     {
@@ -1582,6 +1596,12 @@
         "segments": [
           68
         ]
+      },
+      "also_in": {
+        "task_id": 7,
+        "segments": [
+          47
+        ]
       }
     },
     {
@@ -1596,6 +1616,12 @@
       "case_source": "agent_draft",
       "source": {
         "task_id": 6,
+        "segments": [
+          1
+        ]
+      },
+      "also_in": {
+        "task_id": 7,
         "segments": [
           1
         ]
@@ -1616,6 +1642,12 @@
         "segments": [
           9
         ]
+      },
+      "also_in": {
+        "task_id": 7,
+        "segments": [
+          24
+        ]
       }
     },
     {
@@ -1632,6 +1664,13 @@
         "task_id": 6,
         "segments": [
           49
+        ]
+      },
+      "also_in": {
+        "task_id": 7,
+        "segments": [
+          49,
+          50
         ]
       }
     },
@@ -1651,6 +1690,13 @@
           31,
           47
         ]
+      },
+      "also_in": {
+        "task_id": 7,
+        "segments": [
+          10,
+          19
+        ]
       }
     },
     {
@@ -1667,6 +1713,13 @@
         "task_id": 7,
         "segments": [
           7
+        ]
+      },
+      "also_in": {
+        "task_id": 6,
+        "segments": [
+          27,
+          28
         ]
       }
     },

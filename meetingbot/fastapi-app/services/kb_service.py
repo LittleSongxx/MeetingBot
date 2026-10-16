@@ -498,14 +498,21 @@ async def search_knowledge(
 
 # rerank 的调用类型（新调用类型必须登记 CALL_TYPE_OWNERSHIP，见 observability_service）
 RERANK_CALL_TYPE = "KB_RERANK"
-# 先召回多少候选再重排。取与 Qdrant 的 PREFETCH_LIMIT 同量级：再大就超出单次
-# 融合的召回深度，重排也就无从挑起了。
+# 先召回多少候选再重排。**一路召回可以宽，交给 LLM 重排的那一段要窄**：
+# 行业基准（见 docs/检索与路由：行业对齐.md 第三节）显示 LLM 重排的可用形态是
+# listwise 且只在小候选集（约 top 5–10）——点式打分未校准、候选一多就既慢又不准，
+# 甚至会把一阶段召回拖垮。因此：召回 24（= Qdrant 融合深度）→ 截到 10 交给模型。
 RERANK_CANDIDATES = qdrant.PREFETCH_LIMIT
+RERANK_WINDOW = 10
 
 RERANK_SYSTEM = (
     "你在给检索结果排序。给你一个问题与若干候选片段（各带编号）。"
     "按「这段内容能不能回答这个问题」从强到弱排序，最相关的排最前。"
-    "只是提到关键词但答不了问题的排在后面。不要解释、不要改写内容。"
+    "只是提到关键词但答不了问题的排在后面。不要解释、不要改写内容。\n"
+    "排序只有两条规则：\n"
+    "1. 覆盖了问题要点的排在前面，只沾关键词的排在后面；\n"
+    "2. **分不出高低时保持原顺序**（原顺序来自检索的融合排名，是有信息的先验，"
+    "不要凭空打乱）——并列时用原编号从小到大。"
 )
 RERANK_SCHEMA = {
     "type": "object",
@@ -549,17 +556,23 @@ def _ranking_of(parsed: Any, size: int) -> list[int]:
 
 
 async def _rerank(query: str, hits: list[Hit], *, limit: int, biz_id: int) -> list[Hit]:
-    """用一次模型调用重排候选，取前 limit 条。
+    """用一次模型调用重排**靠前的那一段**候选，取前 limit 条。
 
     为什么值得多一次调用：RRF 只看两路排名的融合，它分不出"提到了"与"回答了"——
     实测 15% 的噪声全是**同会议同主题、但答不了该问题**的窗口。
 
-    **失败绝不打断检索**：重排是增强，出错就按原顺序返回（与"索引失败不影响主流程"
-    同款判断——增强能力不该有能力把主链路弄挂）。
+    两条边界（都来自行业基准，见 `docs/检索与路由：行业对齐.md` 第三节）：
+    - **只把前 `RERANK_WINDOW` 条交给模型**：LLM 重排的可靠区间是小候选集，
+      给全量既慢又不准；
+    - **失败或输出异常时按原顺序返回**：重排是增强，不该有能力把主链路弄挂
+      （与"索引失败不影响主流程"同款判断）。
     """
+    window = min(len(hits), max(RERANK_WINDOW, int(limit)))
+    head, tail = hits[:window], hits[window:]
     listing = "\n".join(
-        f"[{index}] {hit.text[:400]}" for index, hit in enumerate(hits, start=1))
-    user = f"【问题】\n{query}\n\n【候选片段】\n{listing}\n\n请按格式输出 JSON。"
+        f"[{index}] {hit.text[:400]}" for index, hit in enumerate(head, start=1))
+    user = (f"【问题】\n{query}\n\n【候选片段（共 {len(head)} 条，请输出这 "
+            f"{len(head)} 条的完整排序）】\n{listing}\n\n请按格式输出 JSON。")
     try:
         config = await _chat_config()
         parsed = await model_factory.invoke_json(
@@ -567,4 +580,5 @@ async def _rerank(query: str, hits: list[Hit], *, limit: int, biz_id: int) -> li
     except Exception:  # noqa: BLE001 - 重排失败不该让检索失败
         logger.exception("重排失败，按原顺序返回候选（biz_id=%s）", biz_id)
         return hits[:limit]
-    return [hits[index] for index in _ranking_of(parsed, len(hits))][:limit]
+    reordered = [head[index] for index in _ranking_of(parsed, len(head))] + tail
+    return reordered[:limit]
