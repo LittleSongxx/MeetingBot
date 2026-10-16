@@ -150,6 +150,7 @@ evaluation/                          # 评测体系（与产品代码物理隔�
 ├── LEDGER.md                        # 结论账本：可引用结论 + 撤回记录
 ├── asr/ benchmarks/ judges/ gate/ gold/ regression/ lib/ tests/
 scripts/                             # compose.sh · 本地 ASR 侧车 · 索引脚本
+docs/                                # 架构.md（五处统一串联）· 容量模型.md · 问答链路分析.md
 docs/assets/                         # logo 与 README 实拍截图
 ```
 
