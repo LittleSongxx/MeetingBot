@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from common import qdrant
+from common import access, qdrant
 from common.auth import get_current_user, require_admin
 from common.exception_handler import CustomException
 from common.result import Result
@@ -141,31 +141,10 @@ async def search(payload: SearchPayload, current_user: User = Depends(get_curren
 
 async def _visible_meeting_ids(current_user: User,
                                requested: list[int] | None) -> list[int] | None:
-    """当前用户在检索范围内可见的会议 id 列表。
+    """当前用户在检索范围内可见的会议 id。
 
-    返回 None 表示"不过滤"（仅管理员）；返回空列表表示"一个都不可见"——
-    这两种情况在检索层是不同语义，不能混（混了就是不越权的反向错误：
-    要么管理员看不到东西，要么无权限的用户看到全部）。
+    口径统一在 `common.access`（这里是第六个调用点，所以不再手写一遍）。
+    返回 None 表示"不过滤"（管理员）、空列表表示"一个都不可见"——
+    检索层对这两种情况的行为不同，不能混。
     """
-    from models import Meeting
-
-    if current_user.role == "ADMIN":
-        if not requested:
-            return None
-        # 管理员指定了范围也照做，但仍要确认这些会议存在（避免拿到不存在的 id 当过滤条件）
-        existing = await Meeting.filter(id__in=requested).values_list("id", flat=True)
-        return [int(i) for i in existing]
-
-    from models import MeetingParticipant
-    from tortoise.expressions import Q
-
-    participant_ids = await MeetingParticipant.filter(
-        user_id=current_user.id).values_list("meeting_id", flat=True)
-    query = Meeting.filter(
-        Q(creator_id=current_user.id)
-        | Q(host_id=current_user.id)
-        | Q(id__in=list(participant_ids) or [-1])
-    )
-    if requested:
-        query = query.filter(id__in=requested)
-    return [int(i) for i in await query.values_list("id", flat=True)]
+    return await access.visible_meeting_ids(current_user, requested=requested)

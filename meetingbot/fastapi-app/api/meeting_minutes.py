@@ -3,6 +3,7 @@ from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote
 
+from common import access
 from common.auth import get_current_user
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
@@ -14,7 +15,6 @@ from models import (
     Meeting,
     MeetingMaterial,
     MeetingMinutes,
-    MeetingParticipant,
     PromptTemplate,
     TranscriptionTask,
     User,
@@ -31,7 +31,6 @@ from services import contracts
 from services.minutes_service import MinutesResult, cancel_minutes, material_name_of_minutes, schedule_minutes
 from starlette.responses import StreamingResponse
 from tortoise.exceptions import IntegrityError
-from tortoise.expressions import Q
 
 from api.meeting import get_accessible_meeting
 
@@ -258,15 +257,8 @@ async def select_page(meetingId: int | None = None, status: str = "", pageNum: i
         await get_accessible_meeting(meetingId, current_user)
         query = query.filter(meeting_id=meetingId)
     elif current_user.role != "ADMIN":
-        # 没指定会议时，员工只能看自己创建、主持或参与的会议下的纪要
-        participant_meeting_ids = await MeetingParticipant.filter(
-            user_id=current_user.id
-        ).values_list("meeting_id", flat=True)
-        accessible_ids = await Meeting.filter(
-            Q(creator_id=current_user.id)
-            | Q(host_id=current_user.id)
-            | Q(id__in=participant_meeting_ids)
-        ).values_list("id", flat=True)
+        # 没指定会议时，员工只能看自己创建、主持或参与的会议下的纪要（口径见 common.access）
+        accessible_ids = await access.visible_meeting_ids(current_user)
         query = query.filter(meeting_id__in=accessible_ids)
     # 状态下拉框有值时追加等值条件
     if status:
