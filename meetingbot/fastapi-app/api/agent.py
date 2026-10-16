@@ -152,8 +152,15 @@ async def _run_dict(
         # 时间线按步骤号从小到大排列
         steps = await AgentStep.filter(run_id=run.id).order_by("step_no")
         data["steps"] = [step_dict(step) for step in steps]
-        # 修订稿预览区读 revision，为 None 时不显示
-        data["revision"] = run.revised_json
+        # 修订稿预览区读 revision，为 None 时不显示。
+        # **必须过表现适配出口**：库里存的是类型化槽位（v2 起负责人/期限是
+        # `owner`/`deadline` 结构），而页面读的是适配后的 `owner_suggestion` 字符串。
+        # 直接吐库里那份会让预览里的负责人与完成时间恒显示"未指定"——
+        # 这不是展示问题，是"表现适配只有一个出口"这条不变量被绕开了。
+        data["revision"] = (
+            contracts.present_minutes_fields(contracts.upgrade_output(run.revised_json))
+            if isinstance(run.revised_json, dict) else None
+        )
         # 变更清单（读时纯计算）：确认覆盖前，人必须能看见"六字段各改了什么"，
         # 而不是拿一份整篇重写的稿子肉眼比对。修订稿可能是历史形态，先按契约收敛。
         if isinstance(run.revised_json, dict):
