@@ -88,7 +88,7 @@ evaluation/
     alimeeting_review.py / alimeeting_annotation_score.py（轴4 人工标注流水线）
   results/       判定证据（选择性跟踪：只留 LEDGER 引用到的产物）
     chat_checks.py     问答引用的零调用不变量（定位 / 越权），随 smoke 跑
-  tests/         评测代码自身单测（205 项，零调用，cd evaluation && unittest discover）
+  tests/         评测代码自身单测（223 项，零调用，cd evaluation && unittest discover）
 ```
 
 **为什么是这五个抽象**（调研结论：这五个是必要的，registry/插件/沙箱/托管
@@ -101,7 +101,7 @@ delta。
 
 ## 四、删除决策表（严苛标准：说不清楚的一律清）
 
-**标准**：一个资产留存，当且仅当它直接服务于四轴、可靠性或金标锚点，且
+**标准**：一个资产留存，当且仅当它直接服务于五轴、可靠性或金标锚点，且
 （仪器）仍会被跑 或（证据）被 LEDGER 引用。全部删除记录在 git 历史
 （commit 639e8d2）与本表。
 
@@ -110,7 +110,7 @@ delta。
 | 大体量数据 | asr_first_test/audio（9GB）、tarball、派生 mp3、fastapi-app/files（130MB）、vue/.npm-cache（45MB） | OpenSLR 可重下 / 运行时产物 / 构建缓存；git 历史已 filter-repo 剥离（3.77GiB→12.6MiB） |
 | 无关内容 | 面试备考/知识图谱/项目经历三份个人文档、HANDOFF_PROMPT、output/ | 与项目无关或已被 README+LEDGER 取代 |
 | 废弃评测代 | 合成集整套（cases.json、run_eval.py…）、asr_smoke | 自认"仅工程回归、不能检验 UNSUPPORTED"；连通性冒烟由产品测试覆盖 |
-| 一次性实验 | oracle/passthrough 臂 runner 与分析、gate_replay、threshold_sensitivity、repeated_consensus、citation_prune_measurement | 结论已归档；问题已答；不属四轴主线 |
+| 一次性实验 | oracle/passthrough 臂 runner 与分析、gate_replay、threshold_sensitivity、repeated_consensus、citation_prune_measurement | 结论已归档；问题已答；不属五轴主线 |
 | 已否证/未完成 | verifier.py（MiniCheck/LettuceDetect 反事实诊断否证）、claim_metrics（未完成的重复件）、passk、modality、human_effort、aid_anchor、db_export | 死代码；服务对象已删 |
 | 同族闭环产物 | oracle_deletion_quality、deletion_packet | 审计判定：qwen 审查 + qwen 盲判构成裁判循环，不足以支撑"换审查者"的方向决策（见 LEDGER 存疑条目） |
 | 自证端点 | holdout_analysis.py | 覆盖端点与 gap-fill 共用同一机械（4-gram≥0.3），结构性自证；独立仪器 completeness.py 保留 |
@@ -156,7 +156,8 @@ run_eval 的共用工具拆入 `benchmarks/bench_common.py`；annotation 内联
 ASR 上游是全部下游指标的第一约束（轴1 首测：假设比金标短 20–40%——大量内容
 根本没进转写）。若先在当前基板上做下游机制门禁（②③④⑤ 的验证），ASR 一换、
 转写全变、所有下游数字作废——**在即将更换的地基上装修是纯浪费**。因此路线把
-工作流按依赖排序：锚定裁判 → 量准上游 → 换基板 → 四轴重基线 → 恢复机制门禁。
+工作流按依赖排序：锚定裁判 → 量准上游 → 换基板 → 五轴重基线 → 恢复机制门禁。
+（历史小节里的『四轴』是当时的说法：轴 5 在 2026-10-16 随知识问答一起加入。）
 
 ### 6.1 工作流与依赖
 
