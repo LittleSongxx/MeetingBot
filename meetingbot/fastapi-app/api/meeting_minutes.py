@@ -316,6 +316,11 @@ async def confirm(minutes_id: int, current_user: User = Depends(get_current_user
         status="CONFIRMED", confirmed_by=current_user.id, confirmed_time=now())
     if not claimed:
         raise CustomException("纪要状态已经变化，请刷新后查看")
+    # 人确认之后才把它作为权威条目（authority=CONFIRMED）入知识库——草稿永远不进。
+    # 索引失败不影响确认结果，所以走"尽力而为"的后台排程。
+    from services import kb_service
+    kb_service.schedule_kb_index_in_background(
+        kb_service.SOURCE_MINUTES, minutes.id, minutes.meeting_id, current_user.id)
     return Result.success()
 
 

@@ -15,13 +15,14 @@ from tortoise.contrib.fastapi import register_tortoise
 # 应用生命周期钩子，yield 之前的代码在服务启动时执行一次，yield 之后的代码在服务关闭时执行
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 三个恢复函数分别属于转写、纪要、纪要自检三个服务，在钩子函数内部导入
+    # 四个恢复函数分别属于转写、纪要、纪要自检、知识库四个服务，在钩子函数内部导入
     # 结构化输出能力断言：主 LLM 配置必须走 strict json_schema（约束解码）。
     # 只支持 json_object 的供应商（如 DeepSeek）靠 invoke_json 的 re-ask 兜底，
     # 但主力路径应为约束解码——启动即校验，配置漂移当场暴露而不是运行期偶发。
     from common import providers
     from models import AiModelConfig
     from services.agent_service import recover_agent_runs
+    from services.kb_service import recover_kb_index_tasks
     from services.minutes_service import recover_minutes_tasks
     from services.transcription_service import recover_transcription_tasks
     for config in await AiModelConfig.filter(model_type__in=("MINUTES", "AGENT", "SPEAKER"), enabled=True):
@@ -37,6 +38,7 @@ async def lifespan(app: FastAPI):
     await recover_transcription_tasks()
     await recover_minutes_tasks()
     await recover_agent_runs()
+    await recover_kb_index_tasks()
     # yield 之后服务才开始接收请求，本项目在关闭阶段没有要做的事，所以 yield 后面没有代码
     yield
 

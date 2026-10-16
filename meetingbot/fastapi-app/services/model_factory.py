@@ -238,3 +238,105 @@ async def invoke_json(
                     continue
             # 统一换成带模型名称的提示，例如“说话人匹配模型调用失败：……”，接口层把它转成页面提示
             raise RuntimeError(f"{label}调用失败：{detail[:1000]}") from error
+
+
+# --------------------------------------------------------------------------- #
+# 嵌入（知识库检索用）
+# --------------------------------------------------------------------------- #
+
+# 嵌入一律走 OpenAI 兼容的 /embeddings 端点：百炼的 compatible-mode 就提供它，
+# 与其他模型配置共用一份 base_url/api_key，不额外引 SDK。
+# 百炼 text-embedding-v4 单次最多 10 条，超了会报错，所以在这里分批。
+_EMBEDDING_BATCH_SIZE = 10
+_DEFAULT_EMBEDDING_DIM = 1024
+
+
+def embedding_dim() -> int:
+    return int(os.getenv("EMBEDDING_DIM", str(_DEFAULT_EMBEDDING_DIM)))
+
+
+async def embed_texts(
+    config: AiModelConfig,
+    texts: list[str],
+    *,
+    biz_id: int,
+    call_type: str = "KB_EMBEDDING",
+    label: str = "嵌入模型",
+    client: Any = None,
+) -> list[list[float]]:
+    """把一批文本转成向量，返回与输入等长（顺序一致）的向量列表。
+
+    记账口径与 invoke_json 一致：**每批各写一行 ai_call_log，成功失败都写**。
+    分批不是实现细节而是"一行=一次真实调用"的要求——一次分批请求就是一次真实调用。
+
+    `client` 可注入（测试用桩替换网络）；不是实例时按 OpenAI 兼容协议自行构造。
+    """
+    if not texts:
+        return []
+
+    owns_client = client is None
+    if owns_client:
+        client = openai.AsyncOpenAI(api_key=config.api_key, base_url=config.base_url,
+                                    timeout=config.timeout_seconds, max_retries=0)
+
+    dimension = embedding_dim()
+    vectors: list[list[float]] = []
+    attempts = _max_attempts()
+    try:
+        for start in range(0, len(texts), _EMBEDDING_BATCH_SIZE):
+            batch = texts[start:start + _EMBEDDING_BATCH_SIZE]
+            last_error: BaseException | None = None
+            for attempt in range(1, attempts + 1):
+                started = perf_counter()
+                request_size = sum(len(t.encode("utf-8")) for t in batch)
+                try:
+                    response = await client.embeddings.create(
+                        model=config.model_name, input=batch, dimensions=dimension,
+                    )
+                    data = sorted(response.data, key=lambda item: item.index)
+                    batch_vectors = [list(item.vector) for item in data]
+                    if len(batch_vectors) != len(batch):
+                        raise RuntimeError(f"嵌入返回条数不符：请求 {len(batch)} 条，返回 {len(batch_vectors)} 条")
+                    for vector in batch_vectors:
+                        if len(vector) != dimension:
+                            raise RuntimeError(f"嵌入维度不符：期望 {dimension}，实际 {len(vector)}")
+                    await AiCallLog.create(
+                        request_id="AIC" + uuid4().hex.upper(),
+                        call_type=call_type,
+                        biz_id=biz_id,
+                        model_config_id=config.id,
+                        model_name=config.model_name,
+                        request_size=request_size,
+                        response_size=sum(len(v) for v in batch_vectors) * 4,
+                        status="SUCCEEDED",
+                        elapsed_ms=int((perf_counter() - started) * 1000),
+                        usage_json=getattr(response, "usage", None),
+                    )
+                    vectors.extend(batch_vectors)
+                    break
+                except Exception as error:  # noqa: BLE001 - 逐类分流后再抛，与 invoke_json 同款处理
+                    last_error = error
+                    detail = (str(error) or type(error).__name__)[:2000]
+                    await AiCallLog.create(
+                        request_id="AIC" + uuid4().hex.upper(),
+                        call_type=call_type,
+                        biz_id=biz_id,
+                        model_config_id=config.id,
+                        model_name=config.model_name,
+                        request_size=request_size,
+                        response_size=0,
+                        status="FAILED",
+                        elapsed_ms=int((perf_counter() - started) * 1000),
+                        error_message=f"[尝试 {attempt}/{attempts}] {detail}",
+                    )
+                    # 瞬态错误退避重试（与对话调用同一套判定与退避公式）
+                    if attempt < attempts and is_transient(error):
+                        await asyncio.sleep(0.5 * (2 ** (attempt - 1)) + random.uniform(0, 0.3))
+                        continue
+                    break
+            if last_error is not None and len(vectors) < start + len(batch):
+                raise RuntimeError(f"{label}调用失败：{(str(last_error) or type(last_error).__name__)[:1000]}") from last_error
+    finally:
+        if owns_client:
+            await client.close()
+    return vectors
