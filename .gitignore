@@ -10,6 +10,9 @@
 **/node_modules/
 meetingbot/vue/.npm-cache/
 meetingbot/vue/dist/
+# 锁文件由**消费它的 npm 版本**生成（镜像与 CI 用的 node:22 自带 npm 10）：
+# npm 11 写出来的锁，npm 10 的 `npm ci` 会以 "Missing: esbuild@..." 拒绝。
+# 换依赖后请在 node:22 容器里跑 `npm install` 重新生成锁，不要在本地 npm 11 下生成。
 
 # --- 密钥与环境（样例 .env.example 保留）---
 .env
