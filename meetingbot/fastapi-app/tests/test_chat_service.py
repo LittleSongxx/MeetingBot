@@ -25,7 +25,7 @@ from models import (
     User,
 )
 from pydantic import Field
-from services import chat_graph, chat_service, kb_service
+from services import chat_graph, chat_service, entity_check, kb_service
 from services.kb_service import Hit
 from tortoise import Tortoise
 
@@ -576,3 +576,130 @@ class SummaryGuardTest(unittest.IsolatedAsyncioTestCase):
         transcript = chat_service._summary_transcript(list(rows))
         self.assertIn("助手（引用 [1] [3]）：十月上线[1]。", transcript)
         self.assertIn("助手（无引用）：没有依据的一句。", transcript)
+
+
+class EntityCheckTest(unittest.TestCase):
+    """实体核查：答案里的"新东西"要能被标出来（只标注、不拦截）。
+
+    回放素材是**真实的 q14 答案**（2026-10-16 首测产物，`results/rag_packet_first_test.json`
+    的 q14 答案节选）：种子里零出现的"李婷"与通知渠道被写进了答案，而产品侧当时
+    没有任何环节会报警——判定侧 faithsfulness 逮到的那条不支撑断言就是它。
+    """
+
+    # 真实 q14 答案里的那句（含编造的人名与渠道）
+    Q14_SENTENCE = (
+        "此前对话摘要中提到李婷、8月31日17:00、产品内弹窗/官网公告/邮件通知等信息。"
+    )
+    # 同一轮检索到的内容（首测 q14 的引用原文节选：里面没有"李婷"，也没有那些渠道）
+    RETRIEVED = [
+        {"ref": 1, "quote": "[51s][张晨] 本次灰度从8月20日开始覆盖10%的活跃用户，"
+                            "到8月26日扩大到30%",
+         "source_text": "[51s][张晨] 本次灰度从8月20日开始覆盖10%的活跃用户"},
+        {"ref": 2, "quote": "[205s][系统管理员] 可以通稿，定稿时间就定在发布前一日下午六点前",
+         "source_text": "[205s][系统管理员] 可以通稿，定稿时间就定在发布前一日下午六点前"},
+    ]
+
+    def test_the_real_q14_fabrication_is_flagged(self):
+        flags = entity_check.check_entities(self.Q14_SENTENCE, self.RETRIEVED)
+        texts = [flag["text"] for flag in flags]
+        self.assertIn("李婷", texts, "种子里零出现的人名必须被标出")
+        self.assertIn("8月31日", texts, "检索结果里没有的日期必须被标出")
+
+    def test_a_faithful_answer_is_not_flagged(self):
+        answer = "张晨说：本次灰度从8月20日开始覆盖10%的活跃用户[1]。"
+        self.assertEqual(entity_check.check_entities(answer, self.RETRIEVED), [])
+
+    def test_citation_numbers_are_not_entities(self):
+        answer = "结论来自人工确认纪要[1][2]。"
+        self.assertEqual(entity_check.check_entities(answer, self.RETRIEVED), [])
+
+    def test_number_format_differences_are_not_fabrications(self):
+        # 原话写"8 月 20 日"（带空格）、答案写"8月20日"：是同一件事
+        retrieved = [{"quote": "本次灰度从 8 月 20 日开始"}]
+        self.assertEqual(entity_check.check_entities("灰度从8月20日开始", retrieved), [])
+
+    def test_nothing_retrieved_means_no_verdict(self):
+        """没有检索结果时**不判**：那会变成"凡事都标"，标注失去意义。"""
+        self.assertEqual(entity_check.check_entities("李婷负责这件事", []), [])
+
+    def test_flags_are_capped(self):
+        answer = "提到甲甲、乙乙、丙丙、丁丁、戊戊、己己。"
+        self.assertLessEqual(len(entity_check.check_entities(answer, self.RETRIEVED, limit=3)), 3)
+
+    def test_description_names_the_kinds(self):
+        text = entity_check.describe([{"kind": "person", "text": "李婷", "reason": ""},
+                                      {"kind": "number", "text": "8月31日", "reason": ""}])
+        self.assertIn("人名 李婷", text)
+        self.assertIn("数字/日期 8月31日", text)
+        self.assertIn("没有拦截", text)
+        self.assertEqual(entity_check.describe([]), "")
+
+
+class EntityFlagPipelineTest(unittest.IsolatedAsyncioTestCase):
+    """链路上：带编造人名的回答要被标注进 error_message，且 stop_reason 不变。"""
+
+    async def asyncSetUp(self):
+        await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["models"]},
+                            use_tz=True, timezone="Asia/Shanghai")
+        await Tortoise.generate_schemas()
+        self.user = await User.create(username="ent-t", password="x", name="张晨")
+        self.meeting = await Meeting.create(
+            meeting_no="MTG-E1", title="产品发布评审会议",
+            start_time="2026-09-10 10:40:00", end_time="2026-09-10 13:00:00",
+            creator_id=self.user.id, host_id=self.user.id, status="FINISHED")
+        await AiModelConfig.create(
+            name="本地对话", model_type="AGENT", provider="OPENAI_COMPATIBLE",
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            api_key="unit-test-key", model_name="qwen-test", enabled=True)
+
+    async def asyncTearDown(self):
+        await Tortoise.close_connections()
+
+    async def test_fabricated_name_is_annotated_but_not_blocked(self):
+        from services.kb_service import Hit
+        hit = Hit(chunk_id=601, score=0.9, text="[51s][张晨] 本次灰度从8月20日开始覆盖10%的活跃用户",
+                  meeting_id=self.meeting.id, authority="RAW", chunk_type="TRANSCRIPT_WINDOW",
+                  field=None, item_index=None, speaker="张晨", start_ms=51_000,
+                  end_ms=60_000, document_id=1, origin=None)
+        script = [
+            AIMessage(content="", tool_calls=[_tool_call("search_knowledge", {"query": "灰度"})]),
+            # 用"由李婷负责"这种**可检测**的写法：光写"李婷负责"是文档里
+            # 明写的漏检形态（没有角色词、也没有前置动词时不捞候选）
+            AIMessage(content="由李婷负责这次灰度，来源见[1]。"),
+        ]
+        session = await chat_service.create_session(self.user)
+        model = ScriptedChatModel(rounds=script)
+        with patch.object(kb_service, "search_knowledge", AsyncMock(return_value=[hit])):
+            events = []
+            async for kind, payload in chat_service.stream_answer(
+                    session, "谁负责灰度", user=self.user, model=model):
+                events.append((kind, payload))
+        # 处置与 no_retrieval 一致：走**错误通道**（页面红色告警），答案本身照常落库
+        kinds = [kind for kind, _ in events]
+        self.assertNotIn("done", kinds)
+        self.assertEqual(kinds[-1], "error")
+        message = events[-1][1]["message"]
+        self.assertIn("李婷", message)
+        self.assertIn("没有拦截", message)
+        assistant = await ChatMessage.filter(session_id=session.id, role="ASSISTANT").first()
+        self.assertEqual(assistant.error_message, message, "页面与库里是同一句话")
+        self.assertEqual(assistant.stop_reason, chat_graph.STOP_FINISHED, "标注不改停止原因")
+        self.assertEqual(assistant.content, "由李婷负责这次灰度，来源见[1]。", "正文原样保留")
+
+
+class EntityCheckFalsePositiveTest(unittest.TestCase):
+    """假阳性回归：只标注不拦截**不代表可以乱标注**——噪声进到红色告警里这个功能就废了。"""
+
+    def test_role_nouns_are_not_names(self):
+        # 实测踩过的假阳性："来自人工确认纪要"被切成"来自人工"+"确认"
+        retrieved = [{"quote": "可以通稿，定稿时间就定在发布前一日下午六点前"}]
+        self.assertEqual(
+            entity_check.check_entities("结论来自人工确认纪要[1]。", retrieved), [])
+
+    def test_a_faithful_attribution_is_not_flagged(self):
+        retrieved = [{"quote": "张晨汇报：本次灰度从8月20日开始，到8月26日扩大到30%"}]
+        self.assertEqual(
+            entity_check.check_entities("产品负责人陈琳说月度数据已核对[1]。", retrieved),
+            [{"kind": "person", "text": "陈琳",
+              "reason": "本轮检索结果里没有出现过这个名字"}],
+            "只标出检索结果里没有的陈琳；张晨在检索结果里出现过，不标")

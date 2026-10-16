@@ -41,7 +41,7 @@ from langgraph.prebuilt import ToolNode
 from models import AiCallLog, AiModelConfig, ChatMessage, ChatSession, Meeting, PromptTemplate, User
 from tortoise.expressions import F
 
-from services import chat_graph, citations, kb_tools, model_factory, moderation
+from services import chat_graph, citations, entity_check, kb_tools, model_factory, moderation
 
 logger = logging.getLogger("meetingbot.chat")
 
@@ -548,6 +548,15 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         if blocked_by_moderation:
             # 拦下整段回答：正文不返回，改由下面的 error 事件给提示
             failure = moderation.BLOCKED_MESSAGE
+    # 实体核查（生成后、落库前）：答案里的人名/数字如果在本轮检索结果里找不到，
+    # **如实标注、不拦截**（与 no_retrieval 同款处置）。实测背景 q14：答案里出现了
+    # 种子里不存在的人名"李婷"与通知渠道，判定侧逮到了、产品侧没有任何环节会报警。
+    entity_flags = entity_check.check_entities(answer, registry.as_dicts()) if answer else []
+    entity_note = entity_check.describe(entity_flags)
+    if entity_note and failure is None:      # 已经失败的那一轮不叠加标注（原因只说一次）
+        failure = entity_note
+        logger.warning("会话 %s 的这一轮出现检索结果外的实体：%s",
+                       session.id, [flag["text"] for flag in entity_flags])
     tokens = await turn_tokens(assistant_row.id)
     stored = await _persist_turn(assistant_row, answer=answer, stop_reason=stop_reason,
                                  registry=registry, state=final_state, failure=failure,
@@ -560,6 +569,9 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     yield ("done", {
         "message_id": assistant_row.id, "stop_reason": stop_reason,
         "notice": chat_graph.STOP_NOTICE.get(stop_reason, ""),
+        # 实体核查的标注（检索结果里找不到的人名/数字）。它同时进了 error_message，
+        # 页面与库里是同一句话
+        "entity_flags": entity_flags,
         # 非正常结束时说明"卡在哪"（正常结束是空串）。它同时进 error_message 与
         # done 事件：页面看得到，库里也查得到，两处是同一句话。
         "detail": detail,
