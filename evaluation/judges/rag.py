@@ -83,20 +83,24 @@ ANSWER_SYSTEM = """你在判定**回答质量**。
 
 我会给你一个问题、检索到的上下文、以及产品的回答。你要做三件事：
 
-1. 把回答拆成**独立的断言**（每句或每个事实一条，不要合并）。
+1. 把回答拆成**独立的断言**（每句或每个事实一条，不要合并；text 抄答案里的原句）。
 2. 逐条判断该断言能否由给定的上下文支撑（允许改写与正确归纳；上下文没有的
    具体数字、日期、人名一律算不支撑）。
 3. 判断这条回答是否**正面回答了问题**（绕开问题、答非所问、只说"没有找到"
    而上下文里明明有 → 判 false）。
 
-**出处说明类元陈述**必须单独标出来（`meta: true`）：这类句子讲的是答案自己的
-引用装置，不是关于会议内容的断言，判定"上下文有没有这句话"对它没有意义。
-例如："以上信息均来自产品发布评审会议。"、"该会议的 meeting_id=2。"、
-"回答引用了来源 [7] 作为依据。"、"该条目为人工确认条目（CONFIRMED）。"
-**关于会议内容的断言一律 `meta: false`**——带引用编号的结论句属于这一档
-（编号只是引用装置，句子本身仍是对会议的陈述，例如"上线时间定在十月[1]"）。
+第 2 步里有一类句子要单独标出来（`meta: true`）：**出处说明**——它们讲的是答案
+自己的引用装置，不是关于会议内容的断言，判定"上下文有没有这句话"对它没有意义。
+下面每一条都是这一类的例子（只是例子，不要照抄进结果）：
+- 以上信息均来自某场会议。 / 以上数据来源于人工确认纪要。
+- 该会议的 meeting_id=2。 / 来源编号为 [3]。
+- 该条目为人工确认条目。 / 回答引用了来源 [7] 作为依据。
+**关于会议内容的断言一律 meta: false**——带引用编号的结论句属于这一档
+（编号只是引用装置，句子本身仍是对会议的陈述），例如：上线时间定在十月[1]。
 
-只输出 JSON：
+**输出必须是一个完整的 JSON 对象，claims、answered、why 三个字段一个都不能省**；
+不要输出 JSON 以外的任何文字。text 字段保持句子原样，不要额外加引号。
+格式：
 {"claims": [{"index": 1, "text": "…", "supported": true, "meta": false}],
  "answered": true, "why": "一句话"}"""
 
@@ -303,6 +307,49 @@ def _needs_judging(case: Mapping[str, Any], label: str) -> bool:
     return any(f"{part}_error" in judgement for part in ("context", "answer"))
 
 
+def _context_shape_problem(parsed: Mapping[str, Any]) -> str:
+    """上下文判定响应的形状问题。空串表示合格。
+
+    为什么要查：**"合法的 JSON"不等于"完整的判定"**。实测（2026-10-16）：判定模型
+    中途停住并补上闭合括号，返回的对象 JSON 可解析、但内容被截断——最后一条断言少了
+    `supported`，后面的断言整段消失。不查的话它会以"判成功"入库，分母静默变小
+    （那一轮断言总数从 495 掉到 125，报告上完全看不出异常）。
+    """
+    for entry in parsed.get("contexts") or []:
+        if not isinstance(entry, Mapping) or "useful" not in entry:
+            return "有一条上下文缺少 useful（响应被截断？）"
+    for entry in parsed.get("facts") or []:
+        if not isinstance(entry, Mapping) or "found" not in entry:
+            return "有一条标准事实缺少 found（响应被截断？）"
+    return ""
+
+
+def _answer_shape_problem(parsed: Mapping[str, Any]) -> str:
+    """答案判定响应的形状问题。空串表示合格。"""
+    if "answered" not in parsed:
+        return "缺少 answered 字段（响应被截断？）"
+    claims = parsed.get("claims")
+    if not isinstance(claims, list):
+        return "claims 不是数组"
+    for index, entry in enumerate(claims, start=1):
+        if not isinstance(entry, Mapping) or "supported" not in entry:
+            return f"第 {index} 条断言缺少 supported（响应被截断？）"
+    return ""
+
+
+# 每一半判定最多尝试几次真实调用。存在理由：实测（2026-10-16）判定模型偶尔会在
+# JSON 模式下**中途停住并补上闭合括号**（返回的 JSON 可解析但内容被截断），
+# 换一次调用通常就好了。重试的那次会附上"上一次被截断"的说明（instructor 式 re-ask，
+# 与产品 `invoke_json` 同一套做法）。上限 2：不设上限就会在模型稳定失败时烧预算。
+JUDGE_ATTEMPTS = 2
+
+_REASK_NOTE = (
+    "\n\n【上一次输出不合格】你上一次的输出被截断了（JSON 能解析但内容不完整："
+    "有断言缺少 supported / 缺少 answered 字段）。请重新完整输出一次，"
+    "确保 claims、answered、why 都在，且每一条断言都带 supported 与 meta。"
+)
+
+
 def judge_packet(packet: dict[str, Any], *, output_path: Path, authorized_calls: int,
                  provider: str = "qwen", label: str = "a", thinking: bool = False,
                  progress=print) -> dict[str, Any]:
@@ -365,13 +412,37 @@ def judge_packet(packet: dict[str, Any], *, output_path: Path, authorized_calls:
                                    ("answer", ANSWER_SYSTEM, answer_user)):
             if name in judgement:
                 continue   # 这一半上轮已判成功
-            try:
-                reply = model_client.call_json(url, model, key, system, user,
-                                              total_deadline=240, thinking=thinking)
-                judgement[name] = reply["parsed"]
-            except model_client.ModelClientError as error:
-                judgement[f"{name}_error"] = f"{type(error).__name__}: {str(error)[:200]}"
-            calls += 1
+            attempt = 0
+            while True:
+                # **硬预算闸**：重试也要走闸门，否则"授权 N 次"会被重试撑破
+                if calls >= authorized_calls:
+                    judgement[f"{name}_error"] = "授权的判定调用已用完，这一半没判"
+                    break
+                attempt += 1
+                parsed: Mapping[str, Any] = {}
+                truncated = False
+                try:
+                    reply = model_client.call_json(url, model, key, system, user,
+                                                  total_deadline=240, thinking=thinking)
+                    parsed = reply["parsed"]
+                    # 形状不合格按**判定失败**记：截断的响应混进"判成功"会让分母静默变小
+                    problem = (_context_shape_problem(parsed) if name == "context"
+                               else _answer_shape_problem(parsed))
+                    if problem:
+                        truncated = True
+                        problem = f"响应形状不合格：{problem}"
+                except model_client.ModelClientError as error:
+                    problem = f"{type(error).__name__}: {str(error)[:200]}"
+                calls += 1
+                if not problem:
+                    judgement[name] = parsed
+                    break
+                if attempt < JUDGE_ATTEMPTS:
+                    if truncated:
+                        user = user + _REASK_NOTE   # 只作用于这一次重试
+                    continue
+                judgement[f"{name}_error"] = problem
+                break
             _write(output_path, packet)
         if label == "a":
             case["judgement"] = judgement
