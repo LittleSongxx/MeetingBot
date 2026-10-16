@@ -233,7 +233,13 @@ def validate_minutes(
     *,
     reference_date: str = "",
 ) -> list[Violation]:
-    """校验整份纪要。表驱动：遍历 SLOT_KINDS + 逐条目的 origin/evidence 闭合。"""
+    """校验整份纪要。表驱动：遍历 SLOT_KINDS + 逐条目的 origin/evidence 闭合。
+
+    **在产品路径里这是报告口径，不是拦截**：生成/重写时调它，结果写进步骤 payload
+    的 `evidence_check` 供人查看，违规不会中断流程。真正会拦住流程的是别处两道——
+    生成侧的空内容护栏（`is_unprovided_content_generation`）与重写侧的证据门控
+    （`gate_issues_by_evidence`）。
+    """
     problems: list[Violation] = []
     if not isinstance(output, Mapping):
         return [Violation(kind="not_an_object", path="root", detail="输出不是对象")]
@@ -667,6 +673,11 @@ def validate_dispositions(
 
     该机制与具体字段无关：PRIMARY_TEXT_KEY 决定"同一条目"的判据，
     新增字段只加一行。
+
+    **调用方边界**：产品运行时**不调用**本函数——它只回答"删了多少、有没有声明"，
+    是测量口径，由 `evaluation/regression/contract_checks.py` 与单测消费。
+    产品侧真正生效的机制是 `enforce_preservation`（无声明但有据就恢复）。
+    两者关系见后者 docstring：先有测量、发现只测不管用，才补了机制。
     """
     problems: list[Violation] = []
     declared_deletes: list[str] = []
@@ -838,8 +849,10 @@ def coerce_item(item: Any) -> Any:
     """把一条条目收敛到当前契约的槽位名与类型。**幂等**。
 
     存在的理由不是兼容测试，而是防数据丢失：模型或被管理员改过的提示词模板可能仍
-    返回 `owner_suggestion` / `deadline_suggestion` 这类旧键名。若不识别，类型化槽位
-    会**静默变成空值**——正是本层要消除的那类失败。因此契约显式接受自己的前身形态。
+    返回 `owner_suggestion` / `deadline_suggestion` / `raised_by_suggestion` 这类旧键名
+    （`present_output` 发给前端的就是后一形态，页面原样提交回来也要能接住）。若不
+    识别，类型化槽位会**静默变成空值**——正是本层要消除的那类失败。因此契约显式
+    接受自己的前身形态。
     """
     if not isinstance(item, Mapping):
         return item
@@ -849,6 +862,8 @@ def coerce_item(item: Any) -> Any:
             coerced.setdefault("owner", value)
         elif key == "deadline_suggestion":
             coerced.setdefault("deadline", value)
+        elif key == "raised_by_suggestion":
+            coerced.setdefault("raised_by", value)
         else:
             coerced[key] = value
     for slot in ("owner", "deadline", "raised_by"):
@@ -875,8 +890,8 @@ def coerce_item(item: Any) -> Any:
             coerced[slot] = SourcedValue(text=text, basis="stated")
     coerced.setdefault("origin", "stated")
     # 列表字段的形态收敛：模型常把空数组写成空字符串或 null。
-    # 实测一次 `MINUTES_MERGE` 就因为 `evidence: ""` 被 Pydantic 拒绝，
-    # 整个 11k 字的纪要生成随之失败——一个空字符串毁掉整块成果。
+    # 分块合并时代（MINUTES_MERGE，现为单遍生成）实测一次就因为 `evidence: ""`
+    # 被 Pydantic 拒绝，整个 11k 字的纪要生成随之失败——一个空字符串毁掉整块成果。
     # 这与槽位的形态收敛是同一类问题：契约要能接住模型对自己声明结构的近义写法。
     evidence = coerced.get("evidence")
     if evidence is None or isinstance(evidence, str):

@@ -8,7 +8,7 @@ TORTOISE_ORM = {
                 "host": os.getenv("MYSQL_HOST", "127.0.0.1"),
                 "port": int(os.getenv("MYSQL_PORT", "3306")),
                 # 数据库名称
-                "database": os.getenv("MYSQL_DATABASE", "ai_meeting"),
+                "database": os.getenv("MYSQL_DATABASE", "meetingbot"),
                 "user": os.getenv("MYSQL_USER", "root"),
                 # 数据库密码
                 "password": os.getenv("MYSQL_PASSWORD", ""),

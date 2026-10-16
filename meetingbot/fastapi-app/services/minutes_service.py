@@ -43,15 +43,32 @@ def _load_call_cache(model_name: str, system_prompt: str, user_prompt: str) -> d
         return None
 
 
-def _store_call_cache(model_name: str, system_prompt: str, user_prompt: str, dump: dict) -> None:
+def _store_call_cache(model_name: str, system_prompt: str, user_prompt: str,
+                      result: MinutesResult) -> None:
     if not _CACHE_ENABLED:
         return
+    # provided 记录模型原始输出里真正出现过的字段（model_fields_set）。
+    # is_unprovided_content_generation 读的正是这份信息，而 model_dump() 会把
+    # 默认值补成全字段——不存下来，读缓存时就没法重放同一条护栏
+    payload = {"provided": sorted(result.model_fields_set), "result": result.model_dump()}
     try:
         MINUTES_CACHE_DIR.mkdir(parents=True, exist_ok=True)
         path = MINUTES_CACHE_DIR / f"{_call_cache_key(model_name, system_prompt, user_prompt)}.json"
-        path.write_text(json.dumps(dump, ensure_ascii=False), encoding="utf-8")
+        path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     except OSError:
         pass
+
+
+def _cache_unprovided_content(payload: dict) -> bool:
+    """缓存载荷是否复现"五个列表字段当时就没给"的事故形态。
+
+    旧格式（无 provided 键）与来历不明的写入一律按不可信处理，由调用方当作
+    未命中重新调用——护栏的重放只认缓存自己带的凭据，不信任写入方约定。
+    """
+    provided = payload.get("provided")
+    if not isinstance(provided, list):
+        return True
+    return all(name not in provided for name in contracts.LIST_FIELDS)
 
 
 async def call_minutes_model(minutes: MeetingMinutes, config: AiModelConfig, system_prompt: str, user_prompt: str) -> MinutesResult:
@@ -103,13 +120,16 @@ async def execute_minutes(minutes_id: int):
         user_prompt = render_prompt(prompt.user_prompt, meeting_title=meeting.title, transcript=transcript)
         # 重试去重：同一模型 + 同一提示词（含整场转写）命缓存则不再调用
         cached = _load_call_cache(config.model_name, prompt.system_prompt, user_prompt)
+        if cached is not None and _cache_unprovided_content(cached):
+            # 缓存记录显示当时的原始输出就没给出内容字段：不信任，当作未命中
+            cached = None
         if cached is not None:
-            result = MinutesResult.model_validate(cached)
+            result = MinutesResult.model_validate(cached["result"])
         else:
             result = await call_minutes_model(minutes, config, prompt.system_prompt, user_prompt)
             # 先过根因护栏再落缓存：is_unprovided_content_generation 依赖
             # model_fields_set 判"模型原始输出里是否真的给了五个列表字段"，
-            # 缓存存 model_dump() 会把默认值补成全字段，让护栏在重试时静默失效
+            # 缓存把这份凭据一并记下，读侧才能重放同一条护栏
             if contracts.is_unprovided_content_generation(result):
                 missing = "、".join(contracts.unprovided_content_fields(result))
                 raise ValueError(
@@ -117,7 +137,7 @@ async def execute_minutes(minutes_id: int):
                     "被默认值补成了空。按失败处理，不写入纪要（可点重试）。"
                 )
             _store_call_cache(config.model_name, prompt.system_prompt,
-                              user_prompt, result.model_dump())
+                              user_prompt, result)
         data = result.model_dump()
         # 六块内容一次性写回，状态转成 DRAFT，第 12 章从这里接手修订和确认
         await MeetingMinutes.filter(id=minutes.id).update(
@@ -135,6 +155,13 @@ def schedule_minutes(minutes_id: int):
     from services import task_queue
     asyncio.get_running_loop().create_task(
         task_queue.enqueue(task_queue.KIND_MINUTES, minutes_id, (minutes_id,)))
+
+
+def cancel_minutes(minutes_id: int):
+    """请求取消纪要生成 workflow；失败状态由调用方（forceFail）先写好。"""
+    from services import task_queue
+    asyncio.get_running_loop().create_task(
+        task_queue.cancel(task_queue.KIND_MINUTES, minutes_id))
 
 
 async def recover_minutes_tasks():

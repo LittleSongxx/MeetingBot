@@ -6,7 +6,7 @@ from starlette.responses import JSONResponse
 
 # 应用侧统一日志：uvicorn 自带 access/error log，这里给业务代码一个带上下文的 logger。
 # 之前全局异常只 print(repr(exc))——无堆栈、无路径，排查全靠猜。
-logger = logging.getLogger("aimeeting")
+logger = logging.getLogger("meetingbot")
 if not logger.handlers:
     _handler = logging.StreamHandler()
     _handler.setFormatter(logging.Formatter(

@@ -213,7 +213,7 @@ class TranscriptionTest(unittest.IsolatedAsyncioTestCase):
     async def test_ffmpeg_extracts_single_audio_file(self):
         if shutil.which("ffmpeg") is None:
             self.skipTest("FFmpeg is not installed")
-        with tempfile.TemporaryDirectory(prefix="ai_meeting_ffmpeg_test_") as temp_dir:
+        with tempfile.TemporaryDirectory(prefix="meetingbot_ffmpeg_test_") as temp_dir:
             temp_path = Path(temp_dir)
             source = temp_path / "source.wav"
             output_dir = temp_path / "out"

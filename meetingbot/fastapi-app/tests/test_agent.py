@@ -385,10 +385,24 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
             await interrupt(run.id, self.owner)
             cancel.assert_called_once_with(run.id)
         self.assertEqual((await AgentRun.get(id=run.id)).status, "INTERRUPTED")
-        with patch("api.agent.schedule_agent_run") as schedule:
+        with patch("api.agent.schedule_agent_run_awaited", new=AsyncMock(return_value=True)) as schedule:
             await resume(run.id, self.owner)
-            schedule.assert_called_once_with(run.id)
+            schedule.assert_awaited_once_with(run.id)
         self.assertEqual((await AgentRun.get(id=run.id)).status, "RUNNING")
+
+    async def test_resume_rolls_back_when_old_workflow_is_still_winding_down(self):
+        """上次中断的取消还没在 Temporal 侧传播完时恢复：同 id 入队会被拒，
+        必须回滚成已中断并明确报错——静默跳过会让运行永远停在 RUNNING，
+        直到服务重启的兜底扫尾才被捡起。"""
+        run = await self.create_run(status="INTERRUPTED")
+        with patch("api.agent.schedule_agent_run_awaited", new=AsyncMock(return_value=False)), \
+             patch("api.agent.asyncio.sleep", new=AsyncMock()):
+            with self.assertRaises(CustomException) as context:
+                await resume(run.id, self.owner)
+        self.assertIn("尚未完全停止", context.exception.message)
+        refreshed = await AgentRun.get(id=run.id)
+        self.assertEqual(refreshed.status, "INTERRUPTED")
+        self.assertIn("收尾", refreshed.error_message)
 
     async def test_interrupted_run_does_not_call_model(self):
         run = await self.create_run(status="INTERRUPTED")

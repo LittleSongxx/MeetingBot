@@ -53,9 +53,15 @@ class AgentRunWorkflow:
 
 
 def _retry_policy():
-    # 崩溃续跑场景下的有界重试；业务失败在 activity 内部消化，不会走到这里
+    # 崩溃续跑场景下的有界重试；业务失败在 activity 内部消化，不会走到这里。
+    # 间隔显式写出（数值即 Temporal SDK 默认值），免得"到底退避多久"要去翻 SDK 源码。
     from temporalio.common import RetryPolicy
-    return RetryPolicy(maximum_attempts=5)
+    return RetryPolicy(
+        initial_interval=timedelta(seconds=1),
+        backoff_coefficient=2.0,
+        maximum_interval=timedelta(seconds=100),
+        maximum_attempts=5,
+    )
 
 
 # ---------------------------------------------------------------------------

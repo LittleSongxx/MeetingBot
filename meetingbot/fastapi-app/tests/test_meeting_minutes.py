@@ -1,6 +1,10 @@
+import tempfile
 import unittest
 import unittest.mock
+from pathlib import Path
+
 from services import contracts
+from services import minutes_service
 from unittest.mock import AsyncMock, patch
 
 from pydantic import ValidationError
@@ -11,6 +15,7 @@ from api.meeting_minutes import (
     build_docx,
     build_pdf,
     confirm,
+    force_fail,
     generate,
     get_accessible_minutes,
     minutes_dict,
@@ -170,11 +175,62 @@ class MeetingMinutesTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("[创建人]", prompt_text)
         self.assertIn("补充执行风险。", prompt_text)
 
+    async def test_force_fail_requests_workflow_cancellation(self):
+        """强制结束不仅要置 FAILED，还要请求取消 workflow：活着的协程会把状态
+        写回 GENERATING，且重试的同 id 入队会被拒——对齐转写 forceFail 的语义。"""
+        with patch("api.meeting_minutes.schedule_minutes"):
+            result = await generate(self.task.id, self.participant)
+        minutes_id = result.data["id"]
+        with self.assertRaises(CustomException) as context:
+            await force_fail(minutes_id, self.outsider)
+        self.assertEqual(context.exception.code, "403")
+        with patch("api.meeting_minutes.cancel_minutes") as cancel:
+            await force_fail(minutes_id, self.participant)
+            cancel.assert_called_once_with(minutes_id)
+        minutes = await MeetingMinutes.get(id=minutes_id)
+        self.assertEqual(minutes.status, "FAILED")
+        self.assertEqual(minutes.stage, "已被强制结束")
+
     def test_risk_level_is_structurally_validated(self):
         invalid = self.ai_result.model_dump()
         invalid["risks"][0]["level"] = "UNKNOWN"
         with self.assertRaises(ValidationError):
             MinutesResult.model_validate(invalid)
+
+
+class MinutesCallCacheTest(unittest.TestCase):
+    """缓存载荷必须自带"模型当时给过哪些字段"的凭据（model_fields_set）。
+
+    model_dump() 会把默认值补成全字段，is_unprovided_content_generation 读的
+    区别恰恰在这份信息里——不随缓存存下来，读侧就无法重放"五个列表字段
+    当时就没给"的护栏，只能信任写入方的约定。
+    """
+
+    def test_roundtrip_preserves_the_provided_fields_evidence(self):
+        complete = MinutesResult.model_validate({
+            "summary": "s",
+            "decisions": [{"content": "d", "basis": "b"}],
+        })
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(minutes_service, "MINUTES_CACHE_DIR", Path(tmp)), \
+                 patch.object(minutes_service, "_CACHE_ENABLED", True):
+                minutes_service._store_call_cache("model", "sys", "user", complete)
+                payload = minutes_service._load_call_cache("model", "sys", "user")
+                self.assertIsNotNone(payload)
+                self.assertFalse(minutes_service._cache_unprovided_content(payload))
+                self.assertEqual(
+                    MinutesResult.model_validate(payload["result"]).decisions[0].content, "d")
+                # 键不同（模型或提示词变了）读不到旧结果
+                self.assertIsNone(minutes_service._load_call_cache("other", "sys", "user"))
+
+    def test_payload_without_evidence_is_not_trusted(self):
+        # 旧格式（裸 model_dump，无 provided 键）与全缺席载荷一律不可信
+        self.assertTrue(minutes_service._cache_unprovided_content({"summary": "s"}))
+        self.assertTrue(minutes_service._cache_unprovided_content(
+            {"provided": ["summary"], "result": {"summary": "s"}}))
+        # 只要不是"五个列表字段全部缺席"就可信（个别缺席是合法形态）
+        self.assertFalse(minutes_service._cache_unprovided_content(
+            {"provided": ["summary", "topics"], "result": {}}))
 
 
 if __name__ == "__main__":

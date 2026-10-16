@@ -474,6 +474,19 @@ class LegacyCompatibilityTest(unittest.TestCase):
         kinds = {v.kind for v in contracts.validate_minutes(upgraded, "无关转写")}
         self.assertIn("slot_type_mismatch", kinds)
 
+    def test_raised_by_suggestion_round_trips_through_the_page_contract(self):
+        """present_output 把 risks 的 raised_by 渲染成 raised_by_suggestion 发给前端；
+        页面原样提交回来（EditPayload 走同一套校验）时必须被收敛回类型化槽位，
+        而不是静默落成空值——owner/deadline 之外的第三个旧键名同样要接住。"""
+        presented = {
+            "summary": "s",
+            "topics": [], "viewpoints": [], "decisions": [], "pending_items": [],
+            "risks": [{"content": "r", "level": "MEDIUM", "suggestion": "跟进",
+                       "raised_by_suggestion": "运维部"}],
+        }
+        instance = contracts.minutes_pydantic_models()[1].model_validate(presented)
+        self.assertEqual(instance.risks[0].raised_by.text, "运维部")
+
     def test_presentation_renders_each_basis_readably(self):
         self.assertEqual(timex.render_time_value({"basis": "not_mentioned"}), "未提及")
         self.assertEqual(timex.render_time_value({"basis": "open_ended", "text": "年内"}), "年内")
