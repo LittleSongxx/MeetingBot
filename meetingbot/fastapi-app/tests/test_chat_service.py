@@ -153,21 +153,36 @@ class ChatServiceTest(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(assistant.tools_json[0]["ok"])
 
     async def test_turn_is_persisted_with_usage_from_call_log(self):
-        script = [AIMessage(content="没有查到相关会议。")]
+        # 脚本：先直接作答（没检索）→ 被提醒 → 仍然直接作答 → 这一轮判为"没有依据"。
+        # 这一条同时钉住了"提醒"与"no_retrieval 标记"两件事。
+        script = [AIMessage(content="没有查到相关会议。"), AIMessage(content="确实没有相关资料。")]
         events, session, _ = await self._run(script)
         rows = await ChatMessage.filter(session_id=session.id).order_by("id")
         self.assertEqual([row.role for row in rows], ["USER", "ASSISTANT"])
         self.assertEqual(rows[0].content, "上线时间定了吗")
-        self.assertEqual(rows[1].content, "没有查到相关会议。")
-        self.assertEqual(rows[1].stop_reason, chat_graph.STOP_FINISHED)
-        self.assertEqual(rows[1].token_count, 30)
-        # 记账口径：ai_call_log 的 biz_id 就是这一轮助手消息的 id
+        self.assertEqual(rows[1].content, "确实没有相关资料。")
+        self.assertEqual(rows[1].stop_reason, chat_graph.STOP_NO_RETRIEVAL)
+        self.assertIn("没有检索", rows[1].error_message)
+        self.assertEqual(rows[1].token_count, 60)  # 两轮调用，每轮 30
+        # 记账口径：ai_call_log 的 biz_id 就是这一轮助手消息的 id；
+        # 这一轮跑了两次模型调用（首轮 + 提醒后重跑），所以是两行——"一行=一次真实调用"
         logs = await AiCallLog.filter(biz_id=rows[1].id)
-        self.assertEqual(len(logs), 1)
-        self.assertEqual(logs[0].call_type, chat_service.CHAT_CALL_TYPE)
+        self.assertEqual(len(logs), 2)
+        self.assertTrue(all(row.call_type == chat_service.CHAT_CALL_TYPE for row in logs))
         session_row = await ChatSession.get(id=session.id)
         self.assertEqual(session_row.message_count, 2)
         self.assertEqual(session_row.title, "上线时间定了吗")
+
+    async def test_answer_with_citations_is_not_flagged(self):
+        """有检索、有引用的正常轮次不该被标异常（否则标记就失去意义）。"""
+        script = [
+            AIMessage(content="", tool_calls=[_tool_call("search_knowledge", {"query": "上线"})]),
+            AIMessage(content="上线时间定在十月[1]。"),
+        ]
+        events, session, _ = await self._run(script)
+        assistant = await ChatMessage.filter(session_id=session.id, role="ASSISTANT").first()
+        self.assertEqual(assistant.stop_reason, chat_graph.STOP_FINISHED)
+        self.assertIsNone(assistant.error_message)
 
     async def test_max_rounds_gate_is_reported_and_persisted(self):
         script = [AIMessage(content="", tool_calls=[_tool_call("search_knowledge", {"query": "同一个词"})])

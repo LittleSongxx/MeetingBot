@@ -436,6 +436,23 @@ async def stream_chat(
             raise
 
 
+def _vector_of(item: Any) -> list[float]:
+    """从一条嵌入结果里取向量。
+
+    实测踩过：写成 `item.vector` 时本地测试（打桩了 client）全绿，真调用才报
+    `'Embedding' object has no attribute 'vector'`——**打桩的返回值形状是测试自己
+    编的**，所以这类错误只能靠"跑一次真的"发现。这里以协议字段 `embedding` 为准，
+    并对旧式 `vector` 兜一层，取不到就报能看懂的错误。
+    """
+    for attribute in ("embedding", "vector"):
+        value = getattr(item, attribute, None)
+        if value is None and isinstance(item, dict):
+            value = item.get(attribute)
+        if value is not None:
+            return list(value)
+    raise RuntimeError(f"嵌入结果里没有向量字段（可用字段：{sorted(vars(item)) if hasattr(item, '__dict__') else type(item).__name__}）")
+
+
 def _embedding_usage(response: Any) -> dict | None:
     """嵌入响应的用量转成 dict（不同网关给的对象/字典两种形态都接）。"""
     usage = getattr(response, "usage", None)
@@ -536,7 +553,10 @@ async def embed_texts(
                         model=config.model_name, input=batch, dimensions=dimension,
                     )
                     data = sorted(response.data, key=lambda item: item.index)
-                    batch_vectors = [list(item.vector) for item in data]
+                    # OpenAI 兼容协议里向量在 `embedding` 字段上（openai SDK 的
+                    # Embedding 模型、百炼 compatible-mode 的返回都是这个形状）。
+                    # 只有 DashScope 自有 SDK 才叫 vector——那套接口这里不用。
+                    batch_vectors = [_vector_of(item) for item in data]
                     usage = _embedding_usage(response)
                     if len(batch_vectors) != len(batch):
                         raise RuntimeError(f"嵌入返回条数不符：请求 {len(batch)} 条，返回 {len(batch_vectors)} 条")

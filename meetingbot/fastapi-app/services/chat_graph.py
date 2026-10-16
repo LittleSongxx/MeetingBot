@@ -39,11 +39,17 @@ import json
 import os
 from typing import Annotated, Any, TypedDict
 
+from langchain_core.messages import HumanMessage
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 
 # 停止原因：值是**给页面看的**，不是内部的枚举缩写
 STOP_FINISHED = "finished"
+# 首轮（含一次提醒后）仍没有调用任何工具：这一轮的回答没有任何知识库依据。
+# 实测背景：同一条问题连问四次，两次模型直接作答且**编造**了会议里不存在的内容
+# （例如"新版搜索响应慢"），并声称来自该会议。提示词里已经写明"只根据工具返回的
+# 资料回答"，但那是概率性的；因此这里把它变成结构性的：不检索 → 这一轮标为异常。
+STOP_NO_RETRIEVAL = "no_retrieval"
 STOP_MAX_ROUNDS = "max_rounds"
 STOP_BUDGET_TOKENS = "budget_tokens"
 STOP_BUDGET_COST = "budget_cost"
@@ -51,6 +57,7 @@ STOP_BUDGET_TOOLS = "budget_tools"
 STOP_STALLED = "stalled"
 
 STOP_NOTICE = {
+    STOP_NO_RETRIEVAL: "本轮没有检索知识库，回答内容未经会议资料验证，不能作为依据。",
     STOP_MAX_ROUNDS: "已达到本次问答的最大推理轮数，回答可能不完整。",
     STOP_BUDGET_TOKENS: "本次问答已达到 token 预算上限，回答可能不完整。",
     STOP_BUDGET_COST: "本次问答已达到成本预算上限，回答可能不完整。",
@@ -74,6 +81,8 @@ class ChatState(TypedDict, total=False):
     stall_streak: int
     # 结束原因，由路由或 finalize 写入
     stop_reason: str
+    # 是否已经为"没调工具"提醒过一次（只提醒一次，避免与模型的拉锯）
+    nudged: bool
 
     # 下面两个由 chat_service 注入，图只管调用时机
     # async (messages) -> AIMessage（内部已完成记账）
@@ -164,6 +173,21 @@ async def tools_node(state: ChatState) -> ChatState:
     return await state["tools"](state)
 
 
+# 提醒模型去检索：写在**用户位置**而不是系统位置——实测同一条问题，
+# 系统提示词里写"只根据工具返回的资料回答"时模型仍会直接作答，而在最后一轮
+# 用户消息里点名要求"先调用工具"，它就会调用。
+NUDGE_MESSAGE = (
+    "你上一条回复没有调用任何工具，而会议资料只能通过工具读到。"
+    "请先调用 search_knowledge（或 list_facts / get_minutes / get_transcript_excerpt）"
+    "检索，再依据检索结果回答；不要凭记忆描述会议内容。"
+)
+
+
+async def nudge_node(state: ChatState) -> ChatState:
+    """首轮没检索时补一条提醒，让模型带着明确的动作要求再跑一轮。"""
+    return {"messages": [HumanMessage(content=NUDGE_MESSAGE)], "nudged": True}
+
+
 async def finalize_node(state: ChatState) -> ChatState:
     """结束节点：只补一个停止原因，不再发起任何调用。"""
     if state.get("stop_reason"):
@@ -207,11 +231,19 @@ def wants_tools(state: ChatState) -> bool:
 
 
 def route_after_agent(state: ChatState) -> str:
-    """模型回复之后：硬闸 → 工具（模型要求且还有额度）→ 结束。"""
+    """模型回复之后：硬闸 → 工具（模型要求且还有额度）→ 没检索就提醒 → 结束。
+
+    "提醒"这一步是**结构性要求**而不是提示词：这一轮回答若没有任何工具调用，
+    就没有任何知识库依据，允许它直接结束等于让模型用记忆编造会议内容。
+    """
     reason = gate_reason(state)
     if reason:
         return "stop"
-    return "tools" if wants_tools(state) else "finished"
+    if wants_tools(state):
+        return "tools"
+    if not state.get("nudged") and int(state.get("tool_calls", 0)) == 0:
+        return "nudge"
+    return "finished"
 
 
 def route_after_tools(state: ChatState) -> str:
@@ -239,15 +271,18 @@ def build_chat_graph():
     graph = StateGraph(ChatState)
     graph.add_node("agent", agent_node)
     graph.add_node("tools", tools_node)
+    graph.add_node("nudge", nudge_node)
     graph.add_node("stop", stop_node)
     graph.add_node("finalize", finalize_node)
 
     graph.add_edge(START, "agent")
     graph.add_conditional_edges("agent", route_after_agent,
                                {"tools": "tools", "stop": "stop",
-                                "finished": "finalize"})
+                                "nudge": "nudge", "finished": "finalize"})
     graph.add_conditional_edges("tools", route_after_tools,
                                 {"again": "agent", "stop": "stop"})
+    # 提醒之后回到模型：这一轮要么调工具，要么给出极短回复（寒暄）
+    graph.add_edge("nudge", "agent")
     graph.add_edge("stop", "finalize")
     graph.add_edge("finalize", END)
     return graph.compile()
@@ -341,6 +376,6 @@ def tool_trace(messages: list[Any]) -> list[dict[str, Any]]:
 __all__ = [
     "ChatState", "build_chat_graph", "budget_from_env", "recursion_limit",
     "final_answer", "tool_trace", "summarize_tool_result", "gate_reason",
-    "STOP_NOTICE", "STOP_FINISHED", "STOP_STALLED", "STOP_MAX_ROUNDS",
+    "STOP_NOTICE", "STOP_FINISHED", "STOP_STALLED", "STOP_MAX_ROUNDS", "STOP_NO_RETRIEVAL",
     "STOP_BUDGET_TOKENS", "STOP_BUDGET_COST", "STOP_BUDGET_TOOLS",
 ]

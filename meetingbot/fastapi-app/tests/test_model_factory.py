@@ -315,3 +315,57 @@ class ToolBindingTest(unittest.TestCase):
         from common import providers
         self.assertFalse(providers.wants_reasoning("chat"))
         self.assertFalse(providers.wants_reasoning("chat_summary"))
+
+
+class EmbeddingShapeTest(unittest.IsolatedAsyncioTestCase):
+    """嵌入结果取向量的字段名：这是只有真调用才会暴露的一类错误。
+
+    实测：`item.vector` 在打桩测试里全绿（桩的返回形状是测试自己编的），
+    真跑百炼 compatible-mode 报 `'Embedding' object has no attribute 'vector'`
+    ——OpenAI 兼容协议的字段叫 `embedding`。所以这里按**协议形状**构造桩。
+    """
+
+    async def asyncSetUp(self):
+        await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["models"]},
+                            use_tz=True, timezone="Asia/Shanghai")
+        await Tortoise.generate_schemas()
+        self.config = await AiModelConfig.create(
+            name="嵌入", model_type="EMBEDDING", base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            api_key="k", model_name="text-embedding-v4", enabled=True)
+
+    async def asyncTearDown(self):
+        await Tortoise.close_connections()
+
+    def _client(self, items):
+        class _Embeddings:
+            async def create(self, **_kwargs):
+                return SimpleNamespace(data=items, usage={"prompt_tokens": 3, "total_tokens": 3})
+        return SimpleNamespace(embeddings=_Embeddings())
+
+    async def test_openai_compatible_embedding_field_is_used(self):
+        from types import SimpleNamespace
+        items = [SimpleNamespace(index=0, embedding=[0.1] * 4),
+                 SimpleNamespace(index=1, embedding=[0.2] * 4)]
+        with mock.patch.object(model_factory, "embedding_dim", return_value=4):
+            vectors = await model_factory.embed_texts(
+                self.config, ["甲", "乙"], biz_id=0, client=self._client(items))
+        self.assertEqual(vectors, [[0.1] * 4, [0.2] * 4])
+        rows = await AiCallLog.all()
+        self.assertEqual(rows[0].status, "SUCCEEDED")
+
+    async def test_legacy_vector_field_still_accepted(self):
+        from types import SimpleNamespace
+        items = [SimpleNamespace(index=0, vector=[0.5] * 4)]
+        with mock.patch.object(model_factory, "embedding_dim", return_value=4):
+            vectors = await model_factory.embed_texts(
+                self.config, ["甲"], biz_id=0, client=self._client(items))
+        self.assertEqual(vectors, [[0.5] * 4])
+
+    async def test_missing_vector_field_reports_readably(self):
+        from types import SimpleNamespace
+        items = [SimpleNamespace(index=0)]
+        with mock.patch.object(model_factory, "embedding_dim", return_value=4), \
+                self.assertRaises(RuntimeError) as ctx:
+            await model_factory.embed_texts(
+                self.config, ["甲"], biz_id=0, client=self._client(items))
+        self.assertIn("没有向量字段", str(ctx.exception))

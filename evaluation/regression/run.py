@@ -304,7 +304,8 @@ def build_report(
     # 问答引用（阶段 2 新增子系统的两条零调用不变量）：引用能否在被引内容里定位、
     # 引用有没有越权。没有抓取样本时如实报"无样本"，不报 0% 也不报 100%。
     artifact = chat_checks.load_artifact()
-    report["chat_citations"] = chat_checks.summarize((artifact or {}).get("turns") or [])
+    report["chat_citations"] = chat_checks.summarize(
+        (artifact or {}).get("turns") or [], sources=(artifact or {}).get("source_texts"))
     for name, cases in sets.items():
         if not cases:
             continue
@@ -502,8 +503,11 @@ def _render_chat_citations(block: Mapping[str, Any]) -> list[str]:
         f"| 引用未越权（会议在提问者可见范围内） | {_pct((block.get('authorized') or {}).get('rate'), 1)} "
         f"| {_interval(block.get('authorized') or {})} |",
         "",
-        f"- 判不了定位的引用（缺 `source_text`）：{block['unchecked_citation_count']} 条"
+        f"- 判不了定位的引用（缺对照物/空引文）：{block['unchecked_citation_count']} 条"
         "（单独计数，**不算通过**）",
+        f"- 口径不适用（纪要条目不是逐字引用）：{block.get('not_applicable_count', 0)} 条"
+        "（其证据定位由轴 2 的引用级判定负责）",
+        f"- 引用权威级分布：`{json.dumps(block.get('authority_breakdown') or {}, ensure_ascii=False)}`",
         f"- 答案引用了检索未返回过的编号：{block['unknown_ref_count']} 条"
         "（非零说明模型在编编号）",
         f"- 引用类型分布：`{json.dumps(block.get('citation_kinds') or {}, ensure_ascii=False)}`",

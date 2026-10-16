@@ -384,14 +384,34 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     final_state: dict[str, Any] = {}
     failure: str | None = None
     interrupted: BaseException | None = None
+    # **首轮的文本先不发**：首轮要么应该先检索（模型通常会直接给工具调用、没有正文），
+    # 要么没检索、会被图里的"提醒"重问一次。若把首轮正文直接推给用户，那段没依据的
+    # 内容就已经出现在屏幕上了（实测它还可能是编造的），事后再补一句"未检索"也来不及。
+    # 所以首轮正文先缓着：这一轮确实去调工具了才当作开场白补发，否则丢弃。
+    # 第二轮起照常逐 token 实时推——那时"有没有依据"这件事已经确定了。
+    model_round = 0
+    first_round_buffer = ""
     try:
         async for event in graph.astream_events(
                 state_in, config={"recursion_limit": recursion_limit}, version="v2"):
             name = event.get("event")
             node = (event.get("metadata") or {}).get("langgraph_node")
+            if name == "on_chat_model_end" and node == "agent":
+                model_round += 1
+                message = event.get("data", {}).get("output")
+                if model_round == 1 and getattr(message, "tool_calls", None) and first_round_buffer:
+                    # 首轮确实发起了检索：把它前面的开场白补发给用户
+                    chunks.append(first_round_buffer)
+                    yield ("token", {"text": first_round_buffer})
+                first_round_buffer = ""
+                continue
             if name == "on_chat_model_stream" and node == "agent":
                 piece = _stream_text(event.get("data", {}).get("chunk"))
-                if piece:
+                if not piece:
+                    continue
+                if model_round == 0:
+                    first_round_buffer += piece
+                else:
                     chunks.append(piece)
                     yield ("token", {"text": piece})
             elif name == "on_tool_start" and node == "tools":
@@ -423,17 +443,29 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         failure = (str(error) or type(error).__name__)[:1000]
         logger.exception("会话 %s 的问答失败", session.id)
 
+    # 首轮缓冲若还留着（模型既没检索、也没被提醒后重问就直接结束），它已经被
+    # 上面的规则丢弃：它没有依据，不该出现在答案里
+    first_round_buffer = ""
     answer = "".join(chunks)
+    stop_reason = str(final_state.get("stop_reason") or "")
+    # **有没有依据**：这一轮一次工具都没调用（提醒之后仍未调用），说明答案没有任何
+    # 知识库依据。实测过模型在这种情况下的行为：它会直接编造会议里不存在的内容并
+    # 声称来自某场会（同一条问题连问四次，两次如此）。处置是"如实标注"而不是静默
+    # 放行——页面以错误级提示告知这一轮的回答不作为依据（"无证据不判定"在问答侧
+    # 的落点），原文仍留库供审计与复盘。
+    if int(final_state.get("tool_calls", 0) or 0) == 0 and answer:
+        stop_reason = chat_graph.STOP_NO_RETRIEVAL
+        failure = chat_graph.STOP_NOTICE[chat_graph.STOP_NO_RETRIEVAL]
+        logger.warning("会话 %s 的这一轮没有调用任何工具（跑了 %d 轮）",
+                       session.id, int(final_state.get("round_no", 0) or 0))
     # 内容审核第三层（输出复检）：输入干净不代表输出干净——检索到的会议原文本身
     # 就可能含违规表述。这一层才是门，处置动作（flag/redact/block）由配置决定
     output_verdict = moderation.check_output(answer)
-    blocked_by_moderation = False
     if output_verdict.matched:
         answer, blocked_by_moderation = moderation.apply_output(answer, output_verdict)
         if blocked_by_moderation:
             # 拦下整段回答：正文不返回，改由下面的 error 事件给提示
             failure = moderation.BLOCKED_MESSAGE
-    stop_reason = str(final_state.get("stop_reason") or "")
     tokens = await turn_tokens(assistant_row.id)
     stored = await _persist_turn(assistant_row, answer=answer, stop_reason=stop_reason,
                                  registry=registry, state=final_state, failure=failure,
