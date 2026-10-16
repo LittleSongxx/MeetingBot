@@ -227,7 +227,8 @@ def plan_hint(plan: Mapping[str, Any]) -> str:
     if tools:
         parts.append(f"；建议先用 {'、'.join(tools)}")
     if plan.get("low_confidence"):
-        parts.append("；规划置信度低，**按检索处理**（不要跳过检索，也不要少查）")
+        parts.append("；规划置信度低，**按检索处理**（不要跳过检索、不要少查，"
+                     "**也不要用日期或来源把范围缩小**——限定猜错会把正确内容挡在外面）")
     elif plan.get("needs_retrieval") is False:
         parts.append("；这轮不需要检索会议资料")
     parts.append("。这只是建议：以事实为准，落不下来就照原问题回答。")

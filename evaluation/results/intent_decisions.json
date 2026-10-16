@@ -2,7 +2,7 @@
   "artifact_version": 1,
   "captured_from": {
     "base_url": "http://127.0.0.1:19091",
-    "captured_at": "2026-10-16T18:59:22Z",
+    "captured_at": "2026-10-16T20:03:37Z",
     "product_switches": {
       "model": "qwen3.8-max-0902",
       "kb_rerank_enabled": false,
@@ -18,7 +18,7 @@
       "intent": "single_fact",
       "confidence": 0.85,
       "low_confidence": false,
-      "rewritten": "产品发布评审会议中灰度发布从什么时候开始、覆盖了多少用户？",
+      "rewritten": "产品发布评审会议中讨论的灰度发布从什么时候开始、覆盖了多少用户？",
       "sub_questions": [],
       "suggested_tools": [
         "search_knowledge"
@@ -82,7 +82,7 @@
       ],
       "suggested_tools": [
         "search_knowledge",
-        "get_transcript_excerpt"
+        "list_facts"
       ],
       "needs_retrieval": true,
       "triggers": [],
@@ -112,11 +112,14 @@
       "question": "最近七天纪要和 agent 的调用成功率、平均耗时是多少？",
       "enabled": true,
       "used": true,
-      "intent": "single_fact",
+      "intent": "aggregation",
       "confidence": 0.4,
       "low_confidence": true,
       "rewritten": "最近七天纪要和 agent 的调用成功率、平均耗时是多少？",
-      "sub_questions": [],
+      "sub_questions": [
+        "最近七天纪要的调用成功率和平均耗时是多少？",
+        "最近七天 agent 的调用成功率和平均耗时是多少？"
+      ],
       "suggested_tools": [],
       "needs_retrieval": true,
       "triggers": [
@@ -154,7 +157,7 @@
       "enabled": true,
       "used": true,
       "intent": "single_fact",
-      "confidence": 0.85,
+      "confidence": 0.9,
       "low_confidence": false,
       "rewritten": "资料更新时知识索引会怎么处理？",
       "sub_questions": [],
@@ -196,7 +199,7 @@
       "sub_questions": [],
       "suggested_tools": [
         "search_knowledge",
-        "get_transcript_excerpt"
+        "list_facts"
       ],
       "needs_retrieval": true,
       "triggers": [],
@@ -226,13 +229,18 @@
       "question": "移动端附件下载任务的负责人、协作人和截止时间是什么？",
       "enabled": true,
       "used": true,
-      "intent": "single_fact",
+      "intent": "aggregation",
       "confidence": 0.85,
       "low_confidence": false,
       "rewritten": "移动端附件下载任务的负责人、协作人和截止时间是什么？",
-      "sub_questions": [],
+      "sub_questions": [
+        "移动端附件下载任务的负责人是谁？",
+        "移动端附件下载任务的协作人是谁？",
+        "移动端附件下载任务的截止时间是什么？"
+      ],
       "suggested_tools": [
-        "search_knowledge"
+        "search_knowledge",
+        "list_facts"
       ],
       "needs_retrieval": true,
       "triggers": [],
@@ -245,7 +253,7 @@
       "enabled": true,
       "used": true,
       "intent": "single_fact",
-      "confidence": 0.85,
+      "confidence": 0.9,
       "low_confidence": false,
       "rewritten": "发布回归测试的完成时间是什么？由谁负责？",
       "sub_questions": [
@@ -288,7 +296,7 @@
       "question": "正式发布的时间是什么？前提条件是什么？",
       "enabled": true,
       "used": true,
-      "intent": "single_fact",
+      "intent": "aggregation",
       "confidence": 0.85,
       "low_confidence": false,
       "rewritten": "正式发布的时间是什么？前提条件是什么？",
@@ -365,16 +373,16 @@
       "enabled": true,
       "used": true,
       "intent": "single_fact",
-      "confidence": 0.85,
-      "low_confidence": false,
+      "confidence": 0.3,
+      "low_confidence": true,
       "rewritten": "跨会议问答希望用户看到哪些引用信息？",
       "sub_questions": [],
-      "suggested_tools": [
-        "search_knowledge"
-      ],
+      "suggested_tools": [],
       "needs_retrieval": true,
       "triggers": [],
-      "issues": [],
+      "issues": [
+        "置信度 0.30 低于 0.6：按检索处理，不用工具建议"
+      ],
       "reason": null
     },
     {
@@ -455,19 +463,20 @@
       "enabled": true,
       "used": true,
       "intent": "aggregation",
-      "confidence": 0.55,
-      "low_confidence": true,
+      "confidence": 0.72,
+      "low_confidence": false,
       "rewritten": "灰度分几步走？回滚能力如何？",
       "sub_questions": [
         "灰度分几步走？",
         "回滚能力如何？"
       ],
-      "suggested_tools": [],
+      "suggested_tools": [
+        "search_knowledge",
+        "get_minutes"
+      ],
       "needs_retrieval": true,
       "triggers": [],
-      "issues": [
-        "置信度 0.55 低于 0.6：按检索处理，不用工具建议"
-      ],
+      "issues": [],
       "reason": null
     },
     {
@@ -528,7 +537,7 @@
       ],
       "suggested_tools": [
         "search_knowledge",
-        "get_transcript_excerpt"
+        "get_minutes"
       ],
       "needs_retrieval": true,
       "triggers": [],
@@ -540,7 +549,7 @@
       "question": "这场会议预计持续多久、大概讨论几个议题？",
       "enabled": true,
       "used": true,
-      "intent": "single_fact",
+      "intent": "aggregation",
       "confidence": 0.85,
       "low_confidence": false,
       "rewritten": "产品发布评审会议预计持续多久、大概讨论几个议题？",
@@ -601,7 +610,7 @@
       "enabled": true,
       "used": true,
       "intent": "aggregation",
-      "confidence": 0.75,
+      "confidence": 0.72,
       "low_confidence": false,
       "rewritten": "灰度期间有没有发现数据丢失、权限越界或订单重复提交的问题？",
       "sub_questions": [
@@ -611,7 +620,7 @@
       ],
       "suggested_tools": [
         "search_knowledge",
-        "get_transcript_excerpt"
+        "list_facts"
       ],
       "needs_retrieval": true,
       "triggers": [],
@@ -756,7 +765,7 @@
       "enabled": true,
       "used": true,
       "intent": "single_fact",
-      "confidence": 0.85,
+      "confidence": 0.9,
       "low_confidence": false,
       "rewritten": "客服遇到无法复现的问题时会记录哪些编号？",
       "sub_questions": [],
@@ -809,7 +818,7 @@
       "question": "张晨负责的任务是什么、截止时间是什么？",
       "enabled": true,
       "used": true,
-      "intent": "single_fact",
+      "intent": "aggregation",
       "confidence": 0.85,
       "low_confidence": false,
       "rewritten": "张晨负责的任务是什么、截止时间是什么？",
@@ -818,7 +827,8 @@
         "张晨负责的任务的截止时间是什么？"
       ],
       "suggested_tools": [
-        "search_knowledge"
+        "search_knowledge",
+        "list_facts"
       ],
       "needs_retrieval": true,
       "triggers": [],
@@ -902,13 +912,18 @@
       "question": "容量评估结论是什么？现有机器能扛多少日活、预计发布后多少？",
       "enabled": true,
       "used": true,
-      "intent": "single_fact",
-      "confidence": 0.85,
+      "intent": "aggregation",
+      "confidence": 0.75,
       "low_confidence": false,
       "rewritten": "容量评估结论是什么？现有机器能扛多少日活、预计发布后多少？",
-      "sub_questions": [],
+      "sub_questions": [
+        "容量评估结论是什么？",
+        "现有机器能扛多少日活？",
+        "预计发布后日活是多少？"
+      ],
       "suggested_tools": [
-        "search_knowledge"
+        "search_knowledge",
+        "list_facts"
       ],
       "needs_retrieval": true,
       "triggers": [],
@@ -938,7 +953,7 @@
       "question": "灰度值班排班由谁负责、什么时候提交？",
       "enabled": true,
       "used": true,
-      "intent": "single_fact",
+      "intent": "aggregation",
       "confidence": 0.85,
       "low_confidence": false,
       "rewritten": "灰度值班排班由谁负责、什么时候提交？",
@@ -947,7 +962,8 @@
         "灰度值班排班什么时候提交？"
       ],
       "suggested_tools": [
-        "search_knowledge"
+        "search_knowledge",
+        "list_facts"
       ],
       "needs_retrieval": true,
       "triggers": [],
@@ -996,7 +1012,7 @@
       "enabled": true,
       "used": true,
       "intent": "single_fact",
-      "confidence": 0.9,
+      "confidence": 0.95,
       "low_confidence": false,
       "rewritten": "张涛什么时候要给中期进度？",
       "sub_questions": [],
@@ -1094,8 +1110,7 @@
       "rewritten": "运营建议增加哪两个发布后观察指标？",
       "sub_questions": [],
       "suggested_tools": [
-        "search_knowledge",
-        "get_transcript_excerpt"
+        "search_knowledge"
       ],
       "needs_retrieval": true,
       "triggers": [],
@@ -1210,7 +1225,7 @@
       "sub_questions": [],
       "suggested_tools": [
         "list_facts",
-        "get_minutes"
+        "search_knowledge"
       ],
       "needs_retrieval": true,
       "triggers": [],
@@ -1247,8 +1262,8 @@
       "rewritten": "质量评价页面会收集哪些维度的评分？",
       "sub_questions": [],
       "suggested_tools": [
-        "search_knowledge",
-        "list_facts"
+        "list_facts",
+        "search_knowledge"
       ],
       "needs_retrieval": true,
       "triggers": [],
@@ -1266,8 +1281,8 @@
       "rewritten": "弱网络条件下附件下载要验证哪几类文件？",
       "sub_questions": [],
       "suggested_tools": [
-        "search_knowledge",
-        "list_facts"
+        "list_facts",
+        "search_knowledge"
       ],
       "needs_retrieval": true,
       "triggers": [],
@@ -1321,8 +1336,7 @@
       "rewritten": "报表导出问题的两个备选方案分别是什么？",
       "sub_questions": [],
       "suggested_tools": [
-        "search_knowledge",
-        "list_facts"
+        "search_knowledge"
       ],
       "needs_retrieval": true,
       "triggers": [],
@@ -1338,7 +1352,10 @@
       "confidence": 0.85,
       "low_confidence": false,
       "rewritten": "报表导出异步改造涉及哪些服务、工期怎么分？",
-      "sub_questions": [],
+      "sub_questions": [
+        "报表导出异步改造涉及哪些服务？",
+        "报表导出异步改造的工期怎么分？"
+      ],
       "suggested_tools": [
         "search_knowledge",
         "list_facts"
@@ -1354,18 +1371,19 @@
       "enabled": true,
       "used": true,
       "intent": "aggregation",
-      "confidence": 0.4,
-      "low_confidence": true,
-      "rewritten": "下午的会最后复述了哪三条结论？",
+      "confidence": 0.85,
+      "low_confidence": false,
+      "rewritten": "产品发布评审会议最后复述了哪三条结论？",
       "sub_questions": [],
-      "suggested_tools": [],
+      "suggested_tools": [
+        "search_knowledge",
+        "get_transcript_excerpt"
+      ],
       "needs_retrieval": true,
       "triggers": [
         "下午"
       ],
-      "issues": [
-        "置信度 0.40 低于 0.6：按检索处理，不用工具建议"
-      ],
+      "issues": [],
       "reason": null
     },
     {
@@ -1376,7 +1394,7 @@
       "intent": "aggregation",
       "confidence": 0.85,
       "low_confidence": false,
-      "rewritten": "2026-09-10的产品发布评审会议定了哪些行动项、分别由谁负责？",
+      "rewritten": "产品发布评审会议定了哪些行动项、分别由谁负责？",
       "sub_questions": [],
       "suggested_tools": [
         "list_facts",
@@ -1420,7 +1438,7 @@
       "sub_questions": [],
       "suggested_tools": [
         "search_knowledge",
-        "get_transcript_excerpt"
+        "list_facts"
       ],
       "needs_retrieval": true,
       "triggers": [],
@@ -1476,8 +1494,8 @@
       "rewritten": "质量验证的主流程都验了哪些环节？",
       "sub_questions": [],
       "suggested_tools": [
-        "search_knowledge",
-        "get_minutes"
+        "list_facts",
+        "search_knowledge"
       ],
       "needs_retrieval": true,
       "triggers": [],
@@ -1490,7 +1508,7 @@
       "enabled": true,
       "used": true,
       "intent": "single_fact",
-      "confidence": 0.85,
+      "confidence": 0.9,
       "low_confidence": false,
       "rewritten": "知识索引构建期间资料又更新了，系统会怎么处理？",
       "sub_questions": [],
@@ -1653,7 +1671,7 @@
       "enabled": true,
       "used": true,
       "intent": "single_fact",
-      "confidence": 0.85,
+      "confidence": 0.9,
       "low_confidence": false,
       "rewritten": "对外通稿需要怎么调整、为什么？",
       "sub_questions": [],
@@ -1671,7 +1689,7 @@
       "enabled": true,
       "used": true,
       "intent": "aggregation",
-      "confidence": 0.85,
+      "confidence": 0.9,
       "low_confidence": false,
       "rewritten": "发布公告与对外通稿分别由谁负责、什么时候完成？",
       "sub_questions": [
@@ -1697,8 +1715,8 @@
       "low_confidence": false,
       "rewritten": "两段录音里分别提到了哪些风险？",
       "sub_questions": [
-        "产品发布评审会议的第一段录音里提到了哪些风险？",
-        "产品发布评审会议的第二段录音里提到了哪些风险？"
+        "第一段录音（2026-09-16 10:29:00开始）里提到了哪些风险？",
+        "第二段录音（2026-09-16 10:30:01结束）里提到了哪些风险？"
       ],
       "suggested_tools": [
         "get_transcript_excerpt",
@@ -1715,12 +1733,12 @@
       "enabled": true,
       "used": true,
       "intent": "cross_meeting",
-      "confidence": 0.9,
+      "confidence": 0.95,
       "low_confidence": false,
       "rewritten": "发布时间的结论在两段录音里一致吗？分别怎么说？",
       "sub_questions": [
-        "第一段录音中关于发布时间的结论是什么？",
-        "第二段录音中关于发布时间的结论是什么？"
+        "产品发布评审会议第一段录音中关于发布时间的结论是什么？",
+        "产品发布评审会议第二段录音中关于发布时间的结论是什么？"
       ],
       "suggested_tools": [
         "get_transcript_excerpt",
@@ -1739,10 +1757,10 @@
       "intent": "cross_meeting",
       "confidence": 0.9,
       "low_confidence": false,
-      "rewritten": "产品发布评审会议的两段录音分别是上午还是下午的会、主题是什么？",
+      "rewritten": "产品发布评审会议的两段录音（2026-09-16 10:29:00～10:30:01）分别是上午还是下午的会、主题是什么？",
       "sub_questions": [
-        "产品发布评审会议的第一段录音是上午还是下午的会，主题是什么？",
-        "产品发布评审会议的第二段录音是上午还是下午的会，主题是什么？"
+        "产品发布评审会议的第一段录音（2026-09-16 10:29:00开始）是上午还是下午的会，主题是什么？",
+        "产品发布评审会议的第二段录音（至2026-09-16 10:30:01结束）是上午还是下午的会，主题是什么？"
       ],
       "suggested_tools": [
         "get_transcript_excerpt",
@@ -1762,7 +1780,7 @@
       "enabled": true,
       "used": true,
       "intent": "cross_meeting",
-      "confidence": 0.9,
+      "confidence": 0.95,
       "low_confidence": false,
       "rewritten": "灰度这件事在两段录音里分别讨论到什么？",
       "sub_questions": [
@@ -1793,7 +1811,7 @@
       ],
       "suggested_tools": [
         "search_knowledge",
-        "get_minutes"
+        "list_facts"
       ],
       "needs_retrieval": true,
       "triggers": [],
@@ -1806,19 +1824,17 @@
       "enabled": true,
       "used": true,
       "intent": "aggregation",
-      "confidence": 0.4,
-      "low_confidence": true,
+      "confidence": 0.85,
+      "low_confidence": false,
       "rewritten": "两个功能问题分别怎么解决？",
-      "sub_questions": [
-        "第一个功能问题怎么解决？",
-        "第二个功能问题怎么解决？"
+      "sub_questions": [],
+      "suggested_tools": [
+        "list_facts",
+        "search_knowledge"
       ],
-      "suggested_tools": [],
       "needs_retrieval": true,
       "triggers": [],
-      "issues": [
-        "置信度 0.40 低于 0.6：按检索处理，不用工具建议"
-      ],
+      "issues": [],
       "reason": null
     },
     {
@@ -1827,12 +1843,12 @@
       "enabled": true,
       "used": true,
       "intent": "cross_meeting",
-      "confidence": 0.9,
+      "confidence": 0.95,
       "low_confidence": false,
       "rewritten": "两段录音里的验收/回归要求分别是什么？",
       "sub_questions": [
-        "第一段录音（2026-09-16 10:29:00开始）里的验收/回归要求是什么？",
-        "第二段录音（2026-09-16 10:30:01结束）里的验收/回归要求是什么？"
+        "第一段录音里的验收/回归要求是什么？",
+        "第二段录音里的验收/回归要求是什么？"
       ],
       "suggested_tools": [
         "get_transcript_excerpt",
@@ -1913,7 +1929,7 @@
       "enabled": true,
       "used": true,
       "intent": "smalltalk",
-      "confidence": 0.95,
+      "confidence": 0.99,
       "low_confidence": false,
       "rewritten": "帮我看看今天天气怎么样？",
       "sub_questions": [],
