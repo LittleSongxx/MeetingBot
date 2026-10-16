@@ -1,0 +1,104 @@
+{
+  "artifact_version": 1,
+  "note": "演示样本：引用与切片正文取自 db/02-seed.sql 里的种子会议（真实内容），但**不是产品运行产出的问答记录**。它的用途是验证零调用检查器本身能跑，以及在真实运行缺位时给出一条可复现的示例格式；真实记录由 judges/rag.py --ask 抓取到 results/chat_answers.json。",
+  "captured_from": {
+    "base_url": null,
+    "model": null,
+    "captured_at": "2026-10-16"
+  },
+  "turns": [
+    {
+      "session_id": 1,
+      "message_id": 901,
+      "question": "知识索引在资料更新时会怎么处理？",
+      "answer": "资料更新会先把索引标记为需要重建，旧版本仍可检索，等新版本完成后切换[1]。",
+      "stop_reason": "finished",
+      "allowed_meeting_ids": [
+        2
+      ],
+      "used_refs": [
+        1
+      ],
+      "unknown_refs": [],
+      "citations": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "meeting_id": 2,
+          "meeting_title": "产品发布评审会议",
+          "speaker": "01-3",
+          "start_second": 116,
+          "authority": "RAW",
+          "quote": "[116s][01-3] 容量这块没问题。",
+          "source_text": "[116s][01-3] 容量这块没问题。"
+        }
+      ]
+    },
+    {
+      "session_id": 1,
+      "message_id": 902,
+      "question": "跨会议问答的答案会给出哪些引用信息？",
+      "answer": "答案下面会给带出处的引用卡片，能看到是哪场会、谁说的、第几秒[1][2]。",
+      "stop_reason": "finished",
+      "allowed_meeting_ids": [
+        2
+      ],
+      "used_refs": [
+        1,
+        2
+      ],
+      "unknown_refs": [],
+      "citations": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "meeting_id": 2,
+          "meeting_title": "产品发布评审会议",
+          "speaker": "01-0",
+          "start_second": 177,
+          "authority": "RAW",
+          "quote": "[177s][01-0] 刘颖市场这边呢。",
+          "source_text": "[177s][01-0] 刘颖市场这边呢。"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "meeting_id": 2,
+          "meeting_title": "产品发布评审会议",
+          "speaker": "01-4",
+          "start_second": 180,
+          "authority": "RAW",
+          "quote": "[180s][01-4] 对外通稿的初稿已经写完了，还需要根据最终的功能清单调整报表导出。\n[186s][01-4] 既然要隐藏，那通稿里这一段要删掉。",
+          "source_text": "[180s][01-4] 对外通稿的初稿已经写完了，还需要根据最终的功能清单调整报表导出。\n[186s][01-4] 既然要隐藏，那通稿里这一段要删掉。"
+        }
+      ]
+    },
+    {
+      "session_id": 1,
+      "message_id": 903,
+      "question": "删除用户时系统会怎么处理已关联的会议与问答记录？",
+      "answer": "如果账号已经关联会议、任务、转写、纪要、知识问答或 agent 运行记录，系统不会执行删除[1]。",
+      "stop_reason": "finished",
+      "allowed_meeting_ids": [
+        2
+      ],
+      "used_refs": [
+        1
+      ],
+      "unknown_refs": [],
+      "citations": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "meeting_id": 2,
+          "meeting_title": "产品发布评审会议",
+          "speaker": "01-2",
+          "start_second": 230,
+          "authority": "RAW",
+          "quote": "[230s][01-2] 行，周三给进度。",
+          "source_text": "[230s][01-2] 行，周三给进度。"
+        }
+      ]
+    }
+  ]
+}

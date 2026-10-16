@@ -1,16 +1,21 @@
 # MeetingBot 评测主线（评测宪法）
 
-一条主线，四条指标轴，三层入口，一个金标锚。目录结构与设计依据见
+一条主线，五条指标轴，三层入口，一个金标锚。目录结构与设计依据见
 `DESIGN.md`；可引用的数字与运行账本见 `LEDGER.md`。
 
-## 四条指标轴
+## 五条指标轴
 
 | 轴 | 问题 | 仪器 |
 |---|---|---|
-| 1 转写对 | 转写错多少、说话人归属错多少 | `asr/cer_tool.py`（CER 三口径）；cpCER 待接 MeetEval |
+| 1 转写对 | 转写错多少、说话人归属错多少 | `asr/cer_tool.py`（CER 三口径）+ `asr/cpcor.py`（cpCER 三件套） |
 | 2 纪要实 | 条目/整篇有没有转写依据 | `judges/meeting_level.py`、`judges/item_judge.py`、`judges/citations.py` |
 | 3 纪要全 | 该记的漏了多少 | `judges/completeness.py`（清单式，清单只看转写） |
 | 4 结构准 | 行动项 owner/deadline 对不对 | `judges/actions.py`（AMC-AID 锚点）+ `gold/` 标注流水线 |
+| 5 检索与回答 | 检索到的上下文对不对、答案有没有依据、答不答在点上 | `judges/rag.py`（context precision/recall、faithfulness、answer relevancy，**逐指标报**）+ `regression/chat_checks.py`（两条零调用不变量） |
+
+轴 5 的两层分工：**零调用**部分是引用可定位与引用不越权（每次 `make smoke` 跑，
+无样本时如实报"无样本"）；**需授权**部分是四个质量指标（`judges/rag.py --ask/--judge`）。
+两个部分都各自独立报，不合成总分。
 
 可靠性（崩溃/截断/超时率）单列为体验层：`regression/reliability.py`。
 
@@ -22,7 +27,8 @@ make smoke   # L0 零调用回归：契约不变量、可定位率、可靠性�
 make deep    # L1 深度评测：抽样 + 裁判判读（judges/，里程碑时跑，需授权调用）
 make gate    # L2 变更门禁：留出集双臂 A/B + 内容盲判（产品改动合并前置）
 make gold    # 金标与裁判校准：标注包构建 / 裁判跨族校准（防"无锚点裁判"）
-make test    # 评测代码自身单测（205 项，零调用；数字由 CI 实跑）
+make rag     # 轴5 检索与回答：组包（零调用）与判定（需授权，见脚本顶部）
+make test    # 评测代码自身单测（数字由 CI 实跑，当前 223 项）
 ```
 
 判定标准（什么算"有依据"）：`meetingbot/fastapi-app/JUDGMENT_STANDARD.md`
@@ -42,7 +48,9 @@ make test    # 评测代码自身单测（205 项，零调用；数字由 CI 实
    "产品定义 → 评测委托"，超出这个清单的新增 import 算越界：
    - 归一化委托：`regression/grounding.py` → 产品 `common/textsim`、`common/timex`
      （产品目录不可用时退回本地实现并标 `shared_contract=False`）
-   - 契约不变量：`regression/contract_checks.py` → 产品 `services/contracts`
+   - 契约不变量：`regression/contract_checks.py`、`regression/chat_checks.py`
+     → 产品 `services/contracts`（后者的"引用能否在被引内容中定位"用的就是产品那一份
+     `evidence_locatable`；轴 5 的抓取走产品 HTTP 接口，不 import 产品代码）
    - 供应商能力表：`lib/model_client.py` → 产品 `common/providers`
      （读产品的能力声明来选结构化策略，不复制一份）
    - 容器内夹具：`benchmarks/manage_fixture.py` 按设计在容器内跑真实产品服务

@@ -1,7 +1,7 @@
 # MeetingBot 评测入口（四层，见 README.md 的评测宪法）
 PY ?= ../meetingbot/fastapi-app/.venv/bin/python
 
-.PHONY: smoke deep gate gold test
+.PHONY: smoke deep gate gold rag test
 
 # L0 零调用回归：契约不变量、证据可定位率、可靠性复算。每次改动必跑。
 smoke:
@@ -26,6 +26,13 @@ gate:
 	@echo "先在 LEDGER.md 写预注册（假设/主指标/阈值/样本量/何为失败），然后："
 	@echo "  （机制臂 holdout_batch/holdout_arm 已随默认关机制删除——2026-10-06；L2 门禁重启时按新机制重写）"
 	@echo "  $(PY) gate/content_judgment.py --authorized-llm-calls N"
+
+# 轴5 检索与回答（四个指标逐项报；--ask/--judge 需授权，--build 零调用）
+rag:
+	$(PY) judges/rag.py --build
+	@echo "判定（需授权）: $(PY) judges/rag.py --judge --authorized-llm-calls N"
+	@echo "抓取真实问答（需授权 + JWT）: $(PY) judges/rag.py --ask --token $$TOKEN --authorized-llm-calls N"
+	@echo "零调用不变量（引用可定位 / 不越权）随 make smoke 一起跑"
 
 # 金标与裁判校准（防"无锚点裁判"的唯一手段）
 gold:
