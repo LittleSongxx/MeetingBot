@@ -1,4 +1,4 @@
-# AIMeeting 评测主线（评测宪法）
+# MeetingBot 评测主线（评测宪法）
 
 一条主线，四条指标轴，三层入口，一个金标锚。目录结构与设计依据见
 `DESIGN.md`；可引用的数字与运行账本见 `LEDGER.md`。
@@ -25,7 +25,7 @@ make gold    # 金标与裁判校准：标注包构建 / 裁判跨族校准（�
 make test    # 评测代码自身单测（190 项，零调用）
 ```
 
-判定标准（什么算"有依据"）：`ai_meeting/fastapi-app/JUDGMENT_STANDARD.md`
+判定标准（什么算"有依据"）：`meetingbot/fastapi-app/JUDGMENT_STANDARD.md`
 （已冻结，S/D/X/C + D1–D5）。**改它 = 换尺子，所有绝对数重述。**
 
 ## 评测宪法（六条硬规则）
@@ -38,8 +38,15 @@ make test    # 评测代码自身单测（190 项，零调用）
    配对设计是唯一救命稻草（同批会议跑两臂，逐场算 delta）。
 4. **holdout 有账。** dev（test26/dev22）可日常消费；holdout6/extra8 只在
    门禁裁决时打开并在 LEDGER 登记；消费 5–10 次后从 191 场未消费池换血。
-5. **评测不 import 产品内部实现**；共享归一化只允许"产品定义、评测委托"
-   的单一方向。任何"产品机制与评测端点共用同一机械"的结构在评审时打回。
+5. **评测不 import 产品内部实现。** 只允许下面四条登记在案的例外，方向一律是
+   "产品定义 → 评测委托"，超出这个清单的新增 import 算越界：
+   - 归一化委托：`regression/grounding.py` → 产品 `common/textsim`、`common/timex`
+     （产品目录不可用时退回本地实现并标 `shared_contract=False`）
+   - 契约不变量：`regression/contract_checks.py` → 产品 `services/contracts`
+   - 供应商能力表：`lib/model_client.py` → 产品 `common/providers`
+     （读产品的能力声明来选结构化策略，不复制一份）
+   - 容器内夹具：`benchmarks/manage_fixture.py` 按设计在容器内跑真实产品服务
+   任何"产品机制与评测端点共用同一机械"的结构在评审时打回。
 6. **不报加权总分。** 只报按轴 pass 率、配对 delta 与 CI。一个数字如果
    由同一份数据既校准又报收益，作废。
 
@@ -50,10 +57,10 @@ make test    # 评测代码自身单测（190 项，零调用）
 PYTHONPATH=evaluation python -c "from lib import model_client; print(model_client.probe_transport('dashscope'))"
 
 # L0（当前基线数字的复现路径）
-ai_meeting/fastapi-app/.venv/bin/python evaluation/regression/run.py --set all
+meetingbot/fastapi-app/.venv/bin/python evaluation/regression/run.py --set all
 
 # 单测
-cd evaluation && ../ai_meeting/fastapi-app/.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+cd evaluation && ../meetingbot/fastapi-app/.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
 ```
 
 付费/判定类运行（deep/gate）凭据只从环境读，先读各脚本顶部 docstring 的

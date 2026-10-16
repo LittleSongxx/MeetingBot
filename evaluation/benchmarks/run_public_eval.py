@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Public meeting corpora -> AIMeeting baseline/reflection benchmark; dry-run by default.
+"""Public meeting corpora -> MeetingBot baseline/reflection benchmark; dry-run by default.
 
 No previous evaluation allowance authorizes a new live run. Live requires both
 --mode live and a separately authorized --authorized-llm-calls argument.
@@ -209,7 +209,7 @@ def management_request(args: argparse.Namespace, payload: dict) -> dict:
         command += ["-e", pair]
     command += [args.container, "python", "-c", source]
     completed = subprocess.run(command, input=json.dumps(payload), text=True, capture_output=True)
-    marker = "AIMEETING_PUBLIC_EVAL_RESULT="
+    marker = "MEETINGBOT_PUBLIC_EVAL_RESULT="
     lines = [line[len(marker):] for line in completed.stdout.splitlines() if line.startswith(marker)]
     if not lines:
         raise RuntimeError(f"Management process returned no result (exit {completed.returncode}); no retry performed. Inspect durable public benchmark artifacts.")
@@ -490,11 +490,11 @@ def main(argv: list[str] | None = None) -> int:
                         help=f"separate explicit allowance, 1..{MAX_CALLS}; no live default")
     parser.add_argument("--case-timeout", type=int, default=3600)
     parser.add_argument("--base-url", default="http://127.0.0.1:19091")
-    parser.add_argument("--container", default="aimeeting-local-backend-1")
+    parser.add_argument("--container", default="meetingbot-local-backend-1")
     parser.add_argument("--container-app-dir", default="/app")
     parser.add_argument("--env-file", type=Path)
     parser.add_argument("--username")
-    parser.add_argument("--password-env", default="AIMEETING_EVAL_PASSWORD")
+    parser.add_argument("--password-env", default="MEETINGBOT_EVAL_PASSWORD")
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--arm-env", action="append", default=[], metavar="KEY=VAL",
                         help="注入管理进程的环境变量（KEY=VAL），"

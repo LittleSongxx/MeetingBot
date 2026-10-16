@@ -252,7 +252,7 @@ def build_report(
     results_root: Path | None = None,
 ) -> dict[str, Any]:
     report: dict[str, Any] = {
-        "suite": "aimeeting-offline-metrics-v1",
+        "suite": "meetingbot-offline-metrics-v1",
         "model_calls_made_by_this_suite": 0,
         "proxy_status": grounding.PROXY_STATUS,
         "sets": {},
@@ -543,7 +543,7 @@ def _render_reliability(block: Mapping[str, Any]) -> list[str]:
 
 def format_markdown(report: Mapping[str, Any]) -> str:
     lines: list[str] = [
-        "# AIMeeting 离线指标复算报告",
+        "# MeetingBot 离线指标复算报告",
         "",
         "本报告由 `evaluation/metrics/run_metrics.py` 生成，**未调用任何模型**，"
         "只对既有评测产物做离线复算。所有比例同时给出点估计与 95% 精确区间"

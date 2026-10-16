@@ -1325,7 +1325,7 @@ def invented_spans(text: str, index: Mapping[str, str], *, n: int = 3, min_span:
 def _load_shared_contract():
     import sys
     from pathlib import Path as _Path
-    product_root = _Path(__file__).resolve().parents[2] / "ai_meeting" / "fastapi-app"
+    product_root = _Path(__file__).resolve().parents[2] / "meetingbot" / "fastapi-app"
     if not (product_root / "common" / "timex.py").exists():
         return None
     if str(product_root) not in sys.path:

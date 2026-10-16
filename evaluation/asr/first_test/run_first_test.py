@@ -8,10 +8,10 @@
   cpCER/cpDER（需说话人对齐与 MeetEval，如实声明）。
 
 用法（宿主执行；需产品 .env 的管理员凭据与运行中的容器）：
-    set -a; . ai_meeting/fastapi-app/.env; set +a
+    set -a; . meetingbot/fastapi-app/.env; set +a
     PYTHONPATH=evaluation python evaluation/asr/first_test/run_first_test.py \
         --meeting R8001_M8004 --base-url http://127.0.0.1:19091 \
-        --container aimeeting-local-backend-1
+        --container meetingbot-local-backend-1
 """
 
 from __future__ import annotations
@@ -167,7 +167,7 @@ def main() -> int:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--meeting", required=True)
     parser.add_argument("--base-url", default="http://127.0.0.1:19091")
-    parser.add_argument("--container", default="aimeeting-local-backend-1")
+    parser.add_argument("--container", default="meetingbot-local-backend-1")
     parser.add_argument("--skip-transcribe", action="store_true",
                         help="复用已有 task 快照（调试用）")
     parser.add_argument("--mixdown", choices=("avg", "best"), default="avg",

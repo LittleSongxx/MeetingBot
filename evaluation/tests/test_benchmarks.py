@@ -380,7 +380,7 @@ class ArmEnvTest(unittest.TestCase):
 
         class Completed:
             returncode = 0
-            stdout = 'AIMEETING_PUBLIC_EVAL_RESULT={"ok": true}\n'
+            stdout = 'MEETINGBOT_PUBLIC_EVAL_RESULT={"ok": true}\n'
             stderr = ""
 
         def fake_run(command, **_kwargs):
@@ -388,7 +388,7 @@ class ArmEnvTest(unittest.TestCase):
             return Completed()
 
         args = argparse.Namespace(
-            container_app_dir="/app", container="aimeeting-local-backend-1",
+            container_app_dir="/app", container="meetingbot-local-backend-1",
             arm_env=["SOME_FLAG=1", "OTHER=2"])
         with patch.object(runner.subprocess, "run", side_effect=fake_run):
             result = runner.management_request(args, {"action": "preflight"})
@@ -398,7 +398,7 @@ class ArmEnvTest(unittest.TestCase):
         self.assertIn("SOME_FLAG=1", command)
         self.assertIn("OTHER=2", command)
         # -e 必须在容器名之前，否则 docker 会把它当成命令的一部分
-        self.assertLess(command.index("-e"), command.index("aimeeting-local-backend-1"))
+        self.assertLess(command.index("-e"), command.index("meetingbot-local-backend-1"))
 
     def test_main_rejects_malformed_arm_env_before_any_network(self):
         manifest = str(HERE / "manifest_test_chunk6000.json")

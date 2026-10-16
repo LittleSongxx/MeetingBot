@@ -408,4 +408,4 @@ if __name__ == "__main__":
     except Exception as error:
         # Explicit validation messages contain no credentials; never print raw upstream errors.
         result = {"error": str(error) if isinstance(error, (ValueError, FileExistsError)) else type(error).__name__}
-    print("AIMEETING_PUBLIC_EVAL_RESULT=" + json.dumps(result, ensure_ascii=False))
+    print("MEETINGBOT_PUBLIC_EVAL_RESULT=" + json.dumps(result, ensure_ascii=False))

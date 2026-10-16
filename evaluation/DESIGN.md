@@ -65,10 +65,11 @@ evaluation/
     contract_checks.py 契约不变量
     reliability.py     可靠性与开销（纯计数）
   gate/          L2 变更门禁（A/B 对照，产品改动的合并前置）
-    holdout_arm.py     留出集双臂 runner（经产品 API，不 monkeypatch 产品）
-    holdout_batch.py   批驱动
-    content_judgment.py 双臂内容级盲判（预注册端点）
-    arms.py            臂间对照分析（配对统计）
+    arms.py            三臂对照分析（baseline / passthrough / reflected，配对统计）
+    content_judgment.py 双臂内容级盲判（预注册抽样与主读数）
+    __init__.py
+    # 机制臂 runner（holdout_arm.py / holdout_batch.py）已于 2026-10-06 随
+    # "默认关机制"一并删除，见 Makefile 中 make gate 的注释。
   gold/          金标与裁判校准（防"AI 裁判无锚点"的唯一手段）
     annotation.py      人工标注包构建（120 条 CSV，可直接发众包）
     judge_calibration.py 裁判跨族校准（读数带 ±26% 抖动警示的来源）
@@ -129,9 +130,12 @@ run_eval 的共用工具拆入 `benchmarks/bench_common.py`；annotation 内联
    （191 场未消费）换血。
 4. **预注册**：L2 门禁先写假设/主指标（只选一个）/阈值/样本量/何为失败，
    存入 LEDGER 后才跑；功效算不出的差异明说"检不出"，禁止说"无效果"。
-5. **隔离边界**：评测不得 import 产品内部实现；共享归一化只允许"产品定义、
-   评测委托并标注"的单一方向（现状：`regression/grounding.py` 委托
-   `common/textsim`）——放宽归一化让读数上涨的通道（旧 R2）仍属登记在案的
+5. **隔离边界**：评测不得 import 产品内部实现；只允许四条登记在案的例外，
+   方向一律是"产品定义、评测委托并标注"——`regression/grounding.py` 委托
+   `common/textsim`／`common/timex`、`regression/contract_checks.py` 委托
+   `services/contracts`、`lib/model_client.py` 读 `common/providers` 的能力声明、
+   `benchmarks/manage_fixture.py` 在容器内跑真实产品服务（清单同步维护在
+   `README.md` 宪法第 5 条）。放宽归一化让读数上涨的通道（旧 R2）仍属登记在案的
    风险，触碰须先在 LEDGER 登记预期影响。
 6. **机制与端点不得共用机械**：任何"产品机制由 X 驱动、端点又用 X 计算"的
    组合（本次删除 holdout_analysis 的原因）在评审时直接打回。
