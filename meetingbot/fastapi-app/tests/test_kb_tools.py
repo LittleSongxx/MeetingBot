@@ -22,6 +22,7 @@ from models import (
     TranscriptSegment,
     User,
 )
+from pydantic import ValidationError
 from services import kb_service, kb_tools
 from services.kb_service import Hit
 from tortoise import Tortoise
@@ -81,6 +82,61 @@ class ToolRegistryTest(unittest.TestCase):
             actor, "search_knowledge", {"limit": 999, "query": "x"}))
         self.assertFalse(result["ok"])
         self.assertIn("参数校验失败", result["error"])
+
+
+class LooseArgumentTest(unittest.TestCase):
+    """参数被写成 JSON 字符串时要能接住：这是 q26/q27 两轮空答案的直接原因。
+
+    实测链路：模型发 `meeting_ids="[2]"` → `StructuredTool` 的 args_schema 校验拒 →
+    回给模型的错误文本不是 JSON → 模型原样重试三次 → 停滞闸掐断 → 答案为空。
+    边界同样要钉住：宽松解析**不是**"参数怎么错都能过"。
+    """
+
+    def test_stringified_array_is_parsed(self):
+        args = kb_tools.ListFactsArgs.model_validate(
+            {"kind": "pending_item", "meeting_ids": "[2]"})
+        self.assertEqual(args.meeting_ids, [2])
+
+    def test_stringified_array_with_several_ids_is_parsed(self):
+        args = kb_tools.ListFactsArgs.model_validate(
+            {"kind": "decision", "meeting_ids": "[2, 7]"})
+        self.assertEqual(args.meeting_ids, [2, 7])
+
+    def test_stringified_authority_is_parsed(self):
+        args = kb_tools.SearchKnowledgeArgs.model_validate(
+            {"query": "上线时间", "authority": '["RAW"]'})
+        self.assertEqual(args.authority, ["RAW"])
+
+    def test_stringified_null_is_parsed_as_absent(self):
+        args = kb_tools.TranscriptExcerptArgs.model_validate({"task_id": 1, "end_ms": "null"})
+        self.assertIsNone(args.end_ms)
+
+    def test_plain_string_is_still_a_reportable_error(self):
+        with self.assertRaises(ValidationError):
+            kb_tools.ListFactsArgs.model_validate(
+                {"kind": "decision", "meeting_ids": "不是 JSON"})
+
+    def test_json_of_the_wrong_type_is_still_a_reportable_error(self):
+        # 解析成功但类型对不上：原样交回 pydantic，报常规的参数错误
+        with self.assertRaises(ValidationError):
+            kb_tools.ListFactsArgs.model_validate(
+                {"kind": "decision", "meeting_ids": '{"a": 1}'})
+
+    def test_boolean_is_not_a_number(self):
+        # bool 是 int 的子类，`"true"` 一旦被当成 1，end_ms 会静默变成 1 毫秒
+        with self.assertRaises(ValidationError):
+            kb_tools.TranscriptExcerptArgs.model_validate({"task_id": "true"})
+
+    def test_unknown_authority_value_is_still_rejected(self):
+        with self.assertRaises(ValidationError):
+            kb_tools.SearchKnowledgeArgs.model_validate(
+                {"query": "x", "authority": '["GOLD"]'})
+
+    def test_json_schema_still_describes_the_container_type(self):
+        # 宽松解析不能把给模型看的 schema 改掉：模型看到的仍是数组（可空，故为 anyOf）
+        parameters = kb_tools.TOOLS_BY_NAME["list_facts"].json_schema()
+        variants = parameters["properties"]["meeting_ids"]["anyOf"]
+        self.assertIn("array", [variant.get("type") for variant in variants])
 
 
 class KbToolsDbTest(unittest.IsolatedAsyncioTestCase):
@@ -198,6 +254,17 @@ class KbToolsDbTest(unittest.IsolatedAsyncioTestCase):
             actor, "list_facts", {"kind": "pending_item", "owner": "张晨"})
         self.assertEqual(len(result["facts"]), 1)
         self.assertIn("张晨", result["facts"][0]["item"]["owner_suggestion"])
+
+    async def test_list_facts_accepts_a_stringified_meeting_ids(self):
+        """q26/q27 的现场：参数里的数组被写成 JSON 字符串，整轮不能因此报错。"""
+        meeting = await self._meeting("MTG-5B", self.owner)
+        await self._minutes(meeting, self.owner, pending=[self._decision("下午的待办")])
+        actor = await kb_tools.Actor.resolve(self.owner)
+        result = await kb_tools.execute_tool(
+            actor, "list_facts", {"kind": "pending_item",
+                                  "meeting_ids": f"[{meeting.id}]"})
+        self.assertTrue(result["ok"])
+        self.assertEqual(len(result["facts"]), 1)
 
     async def test_list_facts_meeting_kind_lists_visible_meetings(self):
         await self._meeting("MTG-6", self.owner)
