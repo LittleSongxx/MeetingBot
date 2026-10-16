@@ -743,11 +743,23 @@ class QueryPlanTest(unittest.TestCase):
     def test_hint_says_it_is_only_a_suggestion(self):
         from services import query_plan
         hint = query_plan.plan_hint({"intent": "aggregation", "rewritten": "9 月 1 日发布了哪些功能",
-                                     "suggested_tools": ["list_facts"], "needs_retrieval": True})
+                                     "suggested_tools": ["list_facts"], "needs_retrieval": True,
+                                     "rewrite_in_scope": True})
         self.assertIn("枚举聚合", hint)
         self.assertIn("9 月 1 日发布了哪些功能", hint)
         self.assertIn("list_facts", hint)
         self.assertIn("只是建议", hint)
+
+    def test_hint_drops_the_rewrite_when_it_was_out_of_scope(self):
+        """触发门只管改写：没有相对时间/指代时，改写那一句不进提示（本来就没改写空间）。"""
+        from services import query_plan
+        plan = {"intent": "aggregation", "question": "首周复盘要看哪五项数据",
+                "rewritten": "首周复盘要看哪五项数据", "rewrite_in_scope": False,
+                "suggested_tools": ["list_facts"]}
+        hint = query_plan.plan_hint(plan)
+        self.assertIn("枚举聚合", hint)
+        self.assertIn("list_facts", hint)
+        self.assertNotIn("落到事实后是", hint)
 
 
 class QueryPlanPipelineTest(unittest.IsolatedAsyncioTestCase):

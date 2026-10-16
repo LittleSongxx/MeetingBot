@@ -46,7 +46,8 @@
 |---|---|
 | `a` / `b` | 旧提示词（无 meta 概念） |
 | `c` | 内容级口径首测：加 meta 标记、剔纯出处说明 |
-| `d` | 归属句判据写死：**归属 + 引述按引号里的内容判支撑**，定位装置（说话人/秒数/编号）不参与判定；同时判定上下文改取引用快照的 `source_text`（纪要条目整条，含类型化槽位） |
+| `d` | 新仪器 × qwen：归属句判据写死（**归属 + 引述按引号里的内容判支撑**，说话人/秒数/编号等定位装置不参与判定），且判定上下文改取引用快照的 `source_text`（纪要条目整条，含类型化槽位） |
+| `e` | 新仪器 × deepseek（`d` 的跨族对照；**一个标签只装一份判定**，族也是仪器的一部分） |
 """
 
 from __future__ import annotations
@@ -597,9 +598,10 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser.add_argument("--meeting-id", type=int, default=None,
                         help="把会话范围限定在这一场会（便于复核引用来源）")
     parser.add_argument("--provider", default="qwen", choices=sorted(model_client.PROVIDERS))
-    parser.add_argument("--label", default="a", choices=("a", "b", "c"),
-                        help="判定族的标签：a 是主判，其它标签另存一份（跨族复判用）。"
-                             "判定提示词变更也要换新标签——换了提示词就是换了仪器")
+    parser.add_argument("--label", default="a", choices=("a", "b", "c", "d", "e", "f"),
+                        help="判定标签：a 是主判，其它标签另存一份。**一个标签只装一份判定**"
+                             "（族与仪器都在里面）——换提示词/换上下文来源就是换仪器，"
+                             "要把它与旧的**分开**存；同一仪器换族也要换标签")
     parser.add_argument("--thinking", default="off", choices=("off", "on"),
                         help="判定调用是否开思考：机械判定默认关（又慢又贵，实测 30–120s/次）")
     parser.add_argument("--authorized-llm-calls", type=int, default=None)
