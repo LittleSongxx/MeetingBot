@@ -1,6 +1,6 @@
 {
   "artifact_version": 1,
-  "note": "演示样本：引用与切片正文取自 db/02-seed.sql 里的种子会议（真实内容），但**不是产品运行产出的问答记录**。它的用途是验证零调用检查器本身能跑，以及在真实运行缺位时给出一条可复现的示例格式；真实记录由 judges/rag.py --ask 抓取到 results/chat_answers.json。 样本已按 2026-10-16 的新口径补充 source_texts（会议转写全文）：定位判据从\"引文在切片里\"改成\"引文在这场会的转写里\"——后者才是独立对照物。",
+  "note": "演示样本：引用与切片正文取自 db/02-seed.sql 里的种子会议（真实内容），但**不是产品运行产出的问答记录**。它的用途是验证零调用检查器本身能跑，以及在真实运行缺位时给出一条可复现的示例格式；真实记录由 judges/rag.py --ask 抓取到 results/chat_answers.json。 样本已按 2026-10-16 的新口径补充 source_texts（会议转写全文）：定位判据从\"引文在切片里\"改成\"引文在这场会的转写里\"——后者才是独立对照物。 2026-10-16 再次补充：加了第 4 轮（事实条目引用），用来覆盖引用快照里的 `source_text`（条目正文 + 类型化槽位）——判定侧的上下文取自它，零调用检查也要能在这条路径上跑。",
   "captured_from": {
     "base_url": null,
     "model": null,
@@ -93,6 +93,35 @@
           "start_second": 230,
           "authority": "RAW",
           "quote": "[230s][01-2] 行，周三给进度。"
+        }
+      ]
+    },
+    {
+      "session_id": 1,
+      "message_id": 904,
+      "question": "移动端附件下载进度问题谁负责、什么时候要完成？",
+      "answer": "由王工负责修复移动端附件下载进度问题，须在发布前完成并在发布说明中写明处理结果[1]。",
+      "stop_reason": "finished",
+      "allowed_meeting_ids": [
+        2
+      ],
+      "used_refs": [
+        1
+      ],
+      "unknown_refs": [],
+      "citations": [
+        {
+          "ref": 1,
+          "kind": "fact",
+          "meeting_id": 2,
+          "meeting_title": "产品发布评审会议",
+          "minutes_id": 3,
+          "field": "pending_items",
+          "item_index": 0,
+          "authority": "CONFIRMED",
+          "speaker": "张晨",
+          "quote": "移动端附件下载进度问题须在发布前修复，并在发布说明中写明处理结果。",
+          "source_text": "移动端附件下载进度问题须在发布前修复，并在发布说明中写明处理结果。；负责人：王工；截止时间：2023-08-30 18:00"
         }
       ]
     }

@@ -54,6 +54,11 @@ class Citation:
     # 只有起点算不出覆盖范围。
     end_second: int | None = None
     authority: str | None = None
+    # 条目/切片的**完整正文**。与 `quote` 的区别是刻意的：quote 要能落回原文
+    # （所以事实条目优先取证据原句），而这一份是"判定者拿来核对的上下文"——
+    # 事实条目的类型化槽位（负责人/截止时间/风险等级）只在这里，缺了它判定者
+    # 只能对"表格里的截止时间"这类断言判"不支撑"（P1 复测里 6 条不支撑就是这么来的）。
+    source_text: str | None = None
     task_id: int | None = None
     segment_no: int | None = None
 
@@ -73,6 +78,8 @@ class Citation:
             "speaker": self.speaker, "start_second": self.start_second,
             "end_second": self.end_second, "authority": self.authority,
         }
+        if self.source_text:
+            data["source_text"] = self.source_text
         for name in ("chunk_id", "minutes_id", "field", "item_index", "task_id", "segment_no"):
             value = getattr(self, name)
             if value is not None:
@@ -214,6 +221,7 @@ def _from_facts(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation]]
             quote=_fact_quote(item), meeting_title=str(fact.get("meeting_title") or ""),
             minutes_id=fact.get("minutes_id"), field=fact.get("field"),
             item_index=fact.get("item_index"), authority=fact.get("authority"),
+            source_text=_item_text(item),
         )))
     return pairs
 
@@ -262,6 +270,7 @@ def _from_minutes(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation
                 minutes_id=minutes_id, field=field_name, item_index=index,
                 authority=authority,
                 speaker=_evidence_speaker(item),
+                source_text=_item_text(item),
             )))
     return pairs
 
@@ -283,6 +292,16 @@ _EXTRACTORS: dict[str, Callable[[dict[str, Any]], list[tuple[dict[str, Any], Cit
 }
 
 
+def _primary_text_of(item: dict[str, Any]) -> str:
+    """条目自己的正文（不取证据）。字段名按槽位种类不同：content / title / viewpoint。"""
+    for key in ("content", "title", "viewpoint"):
+        value = item.get(key)
+        text = str(value.get("text") or "").strip() if isinstance(value, dict) else str(value or "").strip()
+        if text:
+            return text
+    return ""
+
+
 def _fact_quote(item: dict[str, Any]) -> str:
     """事实条目的引用文本：优先取证据原句，没有证据才退回条目正文。
 
@@ -294,12 +313,30 @@ def _fact_quote(item: dict[str, Any]) -> str:
         for entry in evidence:
             if isinstance(entry, dict) and str(entry.get("quote") or "").strip():
                 return str(entry["quote"])
-    for key in ("content", "title", "viewpoint"):
+    return _primary_text_of(item)
+
+
+# 条目里除正文之外的槽位：它们在 presented 形态下是 `*_suggestion` 字符串
+_ITEM_SLOT_LABELS = (("owner_suggestion", "负责人"), ("deadline_suggestion", "截止时间"),
+                     ("raised_by_suggestion", "提出人"), ("level", "等级"))
+
+
+def _item_text(item: dict[str, Any]) -> str:
+    """条目的**完整可读文本**：正文 + 类型化槽位。
+
+    与 `_fact_quote` 分工不同：quote 要能逐字落回原文（所以取证据原句），
+    这一份是给判定者核对的上下文——"负责人王工、截止时间 8 月 30 日 18:00"
+    这类断言只写在槽位里，不给判定者就只能被判"上下文没写"。
+    """
+    parts = [_primary_text_of(item)]
+    for key, label in _ITEM_SLOT_LABELS:
         value = item.get(key)
-        text = str(value.get("text") or "").strip() if isinstance(value, dict) else str(value or "").strip()
+        if isinstance(value, dict):
+            value = value.get("text")
+        text = str(value or "").strip()
         if text:
-            return text
-    return ""
+            parts.append(f"{label}：{text}")
+    return "；".join(part for part in parts if part)
 
 
 __all__ = [
