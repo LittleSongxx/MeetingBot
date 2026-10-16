@@ -393,6 +393,10 @@ faithfulness、answer relevancy）——它们衡量四件不同的事，合成�
 
 ### 轴5 检索与回答（2026-10-16 P0 复测）
 
+**产物**：`results/rag_packet_p0.json`（P0 答案 + a/b 标签）、`results/chat_answers_first_test.json` 对应的
+首测产物在 `results/rag_packet_first_test.json`（首测答案 + a/b/c 标签，冻结不再改）；
+当前一轮的产物固定写在 `results/rag_packet.json` 与 `results/chat_answers.json`。
+
 同 27 组问题、同一场会、同一批索引（61 切片，未重建）。产品侧读数按 `biz_id` 聚合
 （`ai_call_log` 是唯一真源），判定侧读数与首测答案在**同一台仪器**上比
 （qwen 0902 + 关思考 + 当前提示词；首测答案那一侧就是 label c）。
