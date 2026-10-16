@@ -1,0 +1,94 @@
+# 每次推送与 PR 都跑：lint、产品单测、评测零调用回归、前端构建。
+#
+# 三条纪律：
+#   1. 只跑零调用的检查——CI 不花模型调用预算（评测的 L1/L2 需人工授权，见 evaluation/README.md）
+#   2. 同一分支的新推送取消上一次未跑完的作业，不排队烧时间
+#   3. runner 钉版本（不用 ubuntu-latest），避免镜像静默升级导致"昨天还绿今天红"
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 先判断改了哪一侧，避免"只改了 README 也全量跑"。paths 用反向匹配，
+  # 这样新增顶层目录时默认会被判为"后端相关"，宁可多跑也不漏跑。
+  changes:
+    runs-on: ubuntu-22.04
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'meetingbot/vue/**'
+            backend:
+              - '**'
+              - '!meetingbot/vue/**'
+              - '!docs/**'
+              - '!**/*.md'
+
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            meetingbot/fastapi-app/requirements.txt
+            meetingbot/fastapi-app/requirements-dev.txt
+
+      - name: 安装依赖
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements-dev.txt
+        working-directory: meetingbot/fastapi-app
+
+      - name: Lint（ruff，规则集见根目录 ruff.toml）
+        run: ruff check .
+
+      - name: 产品单测（零模型调用；sqlite 内存库）
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+        working-directory: meetingbot/fastapi-app
+
+      # 评测侧的两条命令都零调用：test 是评测代码自测，smoke 是 L0 离线复算。
+      # PY=python 覆盖 Makefile 里默认指向 .venv 的解释器（CI 里没有 venv）。
+      - name: 评测代码自测（零调用）
+        run: make test PY=python
+        working-directory: evaluation
+
+      - name: L0 零调用回归（契约不变量/可定位率/可靠性复算）
+        run: make smoke PY=python
+        working-directory: evaluation
+
+  frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: meetingbot/vue/package-lock.json
+
+      - name: 安装依赖（npm ci 按 lock 文件精确安装）
+        run: npm ci
+        working-directory: meetingbot/vue
+
+      - name: 构建（vite build）
+        run: npm run build
+        working-directory: meetingbot/vue
