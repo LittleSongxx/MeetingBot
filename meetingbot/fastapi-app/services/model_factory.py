@@ -115,6 +115,24 @@ def build_chat_model(config: AiModelConfig, schema: dict, call_type: str,
     return model.bind(response_format={"type": "json_object"})
 
 
+def reasoning_enabled(config: AiModelConfig, call_type: str, prompt_chars: int = 0) -> bool:
+    """这次调用**实际**会不会开思考。抽出来共用，因为供应商能力的判定依赖它。
+
+    两条来源合并成一处（`chat_model` 与 `required_tool_choice_supported` 都用它）：
+    任务性质的默认策略（`REASONING_BY_CALL_TYPE`，可被 LLM_ENABLE_THINKING 覆盖）
+    与"为拿输出预算而开"（大输出调用，见 `needs_extended_output_budget`）。
+    分开写就会漂移——那种漂移的表现是"某个开关下请求被 400 打回"。
+    """
+    override = os.getenv("LLM_ENABLE_THINKING", "").strip()
+    if override and override.lower() not in {"true", "false"}:
+        raise ValueError("LLM_ENABLE_THINKING must be true or false")
+    enabled = providers.wants_reasoning(call_type, override=override)
+    # 另有一条与"任务是否需要推理"无关的理由要开思考：**输出预算**。
+    # 实测该供应商非思考模式硬顶 8192 输出 token（发 max_tokens=16384 也停在 8192），
+    # 而合并多段结果会超过这个量——此时开思考是为了拿到 64K 预算，不是因为任务难。
+    return enabled or providers.needs_extended_output_budget(call_type, prompt_chars)
+
+
 def chat_model(config: AiModelConfig, call_type: str, prompt_chars: int = 0) -> ChatOpenAI:
     """构造一个**不带任何输出约束**的对话模型（工具绑定前的底座）。
 
@@ -123,18 +141,9 @@ def chat_model(config: AiModelConfig, call_type: str, prompt_chars: int = 0) -> 
     一个要模型写 JSON 正文），所以聊天走这条，纪要类调用走上面那条。
     """
     options: dict[str, Any] = {}
-    override = os.getenv("LLM_ENABLE_THINKING", "").strip()
-    if override and override.lower() not in {"true", "false"}:
-        raise ValueError("LLM_ENABLE_THINKING must be true or false")
     # 推理开关：环境变量非空时它是权威（保持既有部署行为不变）；为空才按调用类型
     # 的策略走。参数形态由供应商决定，所以"要不要推理"与"怎么传参"分开声明。
-    enabled = providers.wants_reasoning(call_type, override=override)
-    # 另有一条与"任务是否需要推理"无关的理由要开思考：**输出预算**。
-    # 实测该供应商非思考模式硬顶 8192 输出 token（发 max_tokens=16384 也停在 8192），
-    # 而合并多段结果会超过这个量——此时开思考是为了拿到 64K 预算，不是因为任务难。
-    extended = providers.needs_extended_output_budget(call_type, prompt_chars)
-    if extended:
-        enabled = True
+    enabled = reasoning_enabled(config, call_type, prompt_chars)
     options["extra_body"] = providers.thinking_extra_body(
         providers.thinking_shape(config.base_url), enabled
     )
@@ -162,18 +171,47 @@ def chat_model(config: AiModelConfig, call_type: str, prompt_chars: int = 0) -> 
     )
 
 
+# 工具选择策略的两个取值。`required` 强制模型**必须**发起一次工具调用（首轮用它堵住
+# "不检索就作答"），`auto` 是供应商默认（模型自己决定）。
+TOOL_CHOICE_AUTO = "auto"
+TOOL_CHOICE_REQUIRED = "required"
+
+
 def build_tool_model(config: AiModelConfig, tools: list[dict[str, Any]], call_type: str,
-                     prompt_chars: int = 0) -> Runnable:
+                     prompt_chars: int = 0, *, tool_choice: str = TOOL_CHOICE_AUTO) -> Runnable:
     """构造**绑定工具**的对话模型。`tools` 是 OpenAI function calling 形状的声明。
 
     供应商能力先查声明表（`providers.supports_tool_calling`）：未声明的供应商
     在这里就报出可读错误，而不是等着请求被 400 打回来——后者看起来像"模型不听话"。
+
+    `tool_choice` 只在**非默认值**时才发进请求：默认的 `auto` 不发，既有调用路径的
+    请求体因此一个字节都没变（减少"改动波及无关路径"的面）。
     """
     if not providers.supports_tool_calling(config.base_url):
         raise RuntimeError(
             f"模型配置 {config.name}（{providers.host_of(config.base_url)}）未声明支持工具调用；"
             "确认可用后在 common/providers.KNOWN_TOOL_CALLING 登记，聊天功能才会启用")
-    return chat_model(config, call_type, prompt_chars).bind_tools(list(tools))
+    bound = chat_model(config, call_type, prompt_chars)
+    if tool_choice and tool_choice != TOOL_CHOICE_AUTO:
+        return bound.bind_tools(list(tools), tool_choice=tool_choice)
+    return bound.bind_tools(list(tools))
+
+
+def first_round_tool_choice(config: AiModelConfig, call_type: str, prompt_chars: int = 0) -> str:
+    """首轮的工具选择策略：能力允许就 `required`，否则 `auto`（退回"提醒"路径）。
+
+    为什么值得强制：实测 27 轮里 **24 轮**首轮完全不检索、靠一句提醒才补救，
+    为此多花了约 26% 的 token（≈102k/390k）与一次往返。提示词要求是概率性的，
+    `tool_choice` 是协议层的约束——把"要不要先查"从模型的自由裁量变成不可绕过的动作。
+
+    为什么必须按供应商判定后又退回：`required` **不是所有供应商在所有配置下都支持**
+    （DeepSeek 开着思考会 400，见 `KNOWN_REQUIRED_TOOL_CHOICE`）。判不了就走原路径，
+    图里的提醒与 `no_retrieval` 标注仍然在——它们是兜底，不是被替换掉的旧实现。
+    """
+    if providers.supports_required_tool_choice(
+            config.base_url, thinking=reasoning_enabled(config, call_type, prompt_chars)):
+        return TOOL_CHOICE_REQUIRED
+    return TOOL_CHOICE_AUTO
 
 
 
@@ -354,6 +392,7 @@ async def stream_chat(
     biz_id: int = 0,
     label: str = "问答模型",
     model: Any = None,
+    tool_choice: str = TOOL_CHOICE_AUTO,
 ) -> AsyncIterator[tuple[str, Any]]:
     """流式调一次对话模型，逐个 token 产出，最后产出完整消息。
 
@@ -372,7 +411,8 @@ async def stream_chat(
     prompt_chars = _message_chars(messages)
     attempts = _max_attempts()
     emitted = False
-    active = model or build_tool_model(config, tools or [], call_type, prompt_chars=prompt_chars)
+    active = model or build_tool_model(config, tools or [], call_type, prompt_chars=prompt_chars,
+                                       tool_choice=tool_choice)
 
     for attempt in range(1, attempts + 1):
         started = perf_counter()
@@ -473,6 +513,17 @@ def _chunk_text(chunk: Any) -> str:
     return str(content or "")
 
 
+def has_tool_result(messages: list[Any]) -> bool:
+    """消息流里有没有工具结果——**"这一轮是不是首轮"的判据**。
+
+    为什么不数轮次：轮次是图的内部状态，而"已经检索过了吗"正是我们真正要问的问题。
+    两者在本图里等价（每轮至多一次模型调用，工具结果只由 ToolNode 追加），
+    但前者要在图与调用方之间多传一个参数，后者连"提醒之后重问"这种路径都自然覆盖
+    ——提醒之后仍然没有工具结果，那么强制检索依然成立。
+    """
+    return any(getattr(message, "type", "") == "tool" for message in messages or [])
+
+
 def make_model_caller(
     config: AiModelConfig,
     *,
@@ -481,17 +532,25 @@ def make_model_caller(
     biz_id: int = 0,
     label: str = "问答模型",
     model: Any = None,
+    first_round_tool_choice: str = TOOL_CHOICE_AUTO,
 ) -> Callable[[list[Any]], Awaitable[Any]]:
     """把一次流式调用包成状态图要的"调模型"动作：进去是消息列表，出来是 AIMessage。
 
     图不关心流式——token 是通过 LangChain 的回调体系冒上去的，SSE 那一层用
     `astream_events` 接（见 api/chat.py）。这里只保证记账与失败分类都走过
     `stream_chat` 这一个出入口。
+
+    `first_round_tool_choice` 决定**还没有任何工具结果时**这一次要不要强制检索，
+    之后自动回到 `auto`（模型已经查到东西了，再强制它继续调工具是错的）。
     """
     async def call_model(messages: list[Any]) -> Any:
+        choice = TOOL_CHOICE_AUTO
+        if first_round_tool_choice != TOOL_CHOICE_AUTO and not has_tool_result(messages):
+            choice = first_round_tool_choice
         message: Any = None
         async for kind, payload in stream_chat(config, messages, tools=tools, call_type=call_type,
-                                               biz_id=biz_id, label=label, model=model):
+                                               biz_id=biz_id, label=label, model=model,
+                                               tool_choice=choice):
             if kind == "message":
                 message = payload
         return message
