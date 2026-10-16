@@ -353,8 +353,31 @@ class KbToolsDbTest(unittest.IsolatedAsyncioTestCase):
             actor, "list_facts", {"kind": "pending_item", "meeting_ids": [meeting.id]})
         self.assertTrue(result["ok"])
         self.assertEqual(result["facts"], [])
-        self.assertEqual(result["draft_minutes_count"], 1)
-        self.assertIn("草稿", result["notice"])
+        self.assertEqual(result["source_coverage"]["draft_minutes"], 1)
+        self.assertIn("未确认", result["notice"])
+        self.assertIn("search_knowledge", result["notice"])
+
+    async def test_list_facts_reports_coverage_even_when_it_found_something(self):
+        """查到东西时也要报"资料覆盖"：q26 的坑正是"查到 1 条就以为是全部"。
+
+        已确认纪要在时 `facts` 非空，旧实现于是什么都不提示——模型把"确认纪要里只有
+        1 条待办"讲成了"这场会只有 1 条待办"，而下午那段录音的待办还没确认。
+        """
+        meeting = await self._meeting("MTG-8D", self.owner)
+        await self._minutes(meeting, self.owner, status="CONFIRMED",
+                            pending=[self._decision("已确认的待办")])
+        await self._minutes(meeting, self.owner, status="DRAFT",
+                            pending=[self._decision("草稿里的待办")])
+        await TranscriptionTask.create(
+            meeting_id=meeting.id, material_id=88_002, model_config_id=self.config.id,
+            initiator_id=self.owner.id, status="SUCCEEDED")
+        actor = await kb_tools.Actor.resolve(self.owner)
+        result = await kb_tools.execute_tool(actor, "list_facts",
+                                             {"kind": "pending_item", "meeting_ids": [meeting.id]})
+        self.assertEqual(len(result["facts"]), 1)
+        # `_minutes` 每建一份纪要都会带一个转写任务，所以这里是 2 + 1 = 3 段录音
+        self.assertEqual(result["source_coverage"],
+                         {"confirmed_minutes": 1, "draft_minutes": 1, "recordings": 3})
         self.assertIn("search_knowledge", result["notice"])
 
     async def test_list_facts_recording_lists_succeeded_transcriptions(self):
