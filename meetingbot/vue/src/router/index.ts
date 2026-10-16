@@ -13,6 +13,7 @@ import MeetingMaterial from '@/views/manager/MeetingMaterial.vue'
 import Transcription from '@/views/manager/Transcription.vue'
 import MeetingMinutes from '@/views/manager/MeetingMinutes.vue'
 import Agent from '@/views/manager/Agent.vue'
+import Chat from '@/views/manager/Chat.vue'
 import Observability from '@/views/manager/Observability.vue'
 import AiModel from '@/views/manager/AiModel.vue'
 import PromptTemplate from '@/views/manager/PromptTemplate.vue'
@@ -29,28 +30,42 @@ const router = createRouter({
       children: [
         // /manager 根路径默认进首页（此前无默认子路由，直接访问内容区空白）
         { path: '', redirect: 'home' },
-        { path: 'home', meta: { name: '系统首页' }, component: Home,  },
-        { path: 'user', meta: { name: '用户管理', requiresAdmin: true }, component: User, },
-        { path: 'department', meta: { name: '部门管理', requiresAdmin: true }, component: Department, },
-        { path: 'departmentMembers', meta: { name: '部门成员', requiresAdmin: true }, component: DepartmentMember, },
-        { path: 'meeting', meta: { name: '会议管理' }, component: Meeting, },
-        { path: 'meetingMaterial', meta: { name: '会议资料' }, component: MeetingMaterial, },
-        { path: 'transcription', meta: { name: '转写任务' }, component: Transcription, },
-        { path: 'meetingMinutes', meta: { name: '会议纪要' }, component: MeetingMinutes, },
-        { path: 'agent', meta: { name: '纪要自检' }, component: Agent, },
-        { path: 'observability', meta: { name: '运行观测' }, component: Observability, },
-        { path: 'aiModel', meta: { name: 'AI模型配置', requiresAdmin: true }, component: AiModel, },
-        { path: 'promptTemplate', meta: { name: 'Prompt模板配置', requiresAdmin: true }, component: PromptTemplate, },
-        { path: 'person', meta: { name: '个人资料' }, component: Person, },
-        { path: 'password', meta: { name: '修改密码' }, component: Password, },
+        { path: 'home', meta: { name: '系统首页' }, component: Home },
+        { path: 'user', meta: { name: '用户管理', requiresAdmin: true }, component: User },
+        {
+          path: 'department',
+          meta: { name: '部门管理', requiresAdmin: true },
+          component: Department,
+        },
+        {
+          path: 'departmentMembers',
+          meta: { name: '部门成员', requiresAdmin: true },
+          component: DepartmentMember,
+        },
+        { path: 'meeting', meta: { name: '会议管理' }, component: Meeting },
+        { path: 'meetingMaterial', meta: { name: '会议资料' }, component: MeetingMaterial },
+        { path: 'transcription', meta: { name: '转写任务' }, component: Transcription },
+        { path: 'meetingMinutes', meta: { name: '会议纪要' }, component: MeetingMinutes },
+        { path: 'agent', meta: { name: '纪要自检' }, component: Agent },
+        // 知识问答：检索 + 带引用回答
+        { path: 'chat', meta: { name: '知识问答' }, component: Chat },
+        { path: 'observability', meta: { name: '运行观测' }, component: Observability },
+        { path: 'aiModel', meta: { name: 'AI模型配置', requiresAdmin: true }, component: AiModel },
+        {
+          path: 'promptTemplate',
+          meta: { name: 'Prompt模板配置', requiresAdmin: true },
+          component: PromptTemplate,
+        },
+        { path: 'person', meta: { name: '个人资料' }, component: Person },
+        { path: 'password', meta: { name: '修改密码' }, component: Password },
         // 新路由
-      ]
+      ],
     },
     { path: '/login', component: Login },
     { path: '/register', component: Register },
     { path: '/404', component: FourOFour },
-    { path: '/:pathMatch(.*)', redirect: '/404' }
-  ]
+    { path: '/:pathMatch(.*)', redirect: '/404' },
+  ],
 })
 
 // 切换页面跳转到顶部

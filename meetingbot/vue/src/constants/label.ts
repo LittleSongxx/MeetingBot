@@ -5,4 +5,4 @@ export const meetingLabel = (item) => `${item.meeting_no} / ${item.title}`
 
 // Agent 步骤类型中文名（Agent / Observability 共用）
 export const stepTypeText = (type) =>
-  ({ REVIEW: '审查', REFINE: '重写', FINAL: '汇总' }[type] || type)
+  ({ REVIEW: '审查', REFINE: '重写', FINAL: '汇总' })[type] || type

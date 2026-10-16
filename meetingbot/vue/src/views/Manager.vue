@@ -2,7 +2,7 @@
   <div class="manager-container">
     <div class="manager-header">
       <div class="manager-header-left">
-        <img src="@/assets/imgs/logo.png" alt="">
+        <img src="@/assets/imgs/logo.png" alt="" />
         <div class="title">MeetingBot</div>
       </div>
       <div class="manager-header-center">
@@ -15,16 +15,25 @@
         <el-dropdown style="cursor: pointer">
           <div style="padding-right: 20px; display: flex; align-items: center">
             <!-- 头像地址取自 data.user.avatar，也就是 user 表的 avatar 字段 -->
-            <img style="width: 32px; height: 32px; border-radius: 50%;" :src="fileUrl(data.user.avatar)" alt="">
+            <img
+              style="width: 32px; height: 32px; border-radius: 50%"
+              :src="fileUrl(data.user.avatar)"
+              alt=""
+            />
             <!-- 姓名取自 data.user.name -->
-            <span style="margin-left: 8px; color: rgba(17, 24, 39, .95)">{{ data.user.name }}</span><el-icon color="rgba(17, 24, 39, .55)" style="margin-left: 4px"><arrow-down /></el-icon>
+            <span style="margin-left: 8px; color: rgba(17, 24, 39, 0.95)">{{ data.user.name }}</span
+            ><el-icon color="rgba(17, 24, 39, .55)" style="margin-left: 4px"
+              ><arrow-down
+            /></el-icon>
           </div>
           <template #dropdown>
             <el-dropdown-menu>
               <!-- 跳转到本章的个人资料页 -->
               <el-dropdown-item @click="router.push('/manager/person')">个人资料</el-dropdown-item>
               <!-- 跳转到本章的修改密码页 -->
-              <el-dropdown-item @click="router.push('/manager/password')">修改密码</el-dropdown-item>
+              <el-dropdown-item @click="router.push('/manager/password')"
+                >修改密码</el-dropdown-item
+              >
               <!-- 退出登录，清掉本地缓存 -->
               <el-dropdown-item @click="logout">退出登录</el-dropdown-item>
             </el-dropdown-menu>
@@ -35,9 +44,10 @@
     <!-- 下面部分开始 -->
     <div style="display: flex">
       <div class="manager-main-left">
-        <el-menu :default-active="router.currentRoute.value.path"
-                 :default-openeds="['1', '2', '3', '4', '5', '6']"
-                 router
+        <el-menu
+          :default-active="router.currentRoute.value.path"
+          :default-openeds="['1', '2', '3', '4', '5', '6']"
+          router
         >
           <el-menu-item index="/manager/home">
             <el-icon><HomeFilled /></el-icon>
@@ -58,6 +68,8 @@
               <el-icon><Cpu /></el-icon>
               <span>智能助手</span>
             </template>
+            <!-- 知识问答：检索 + 带引用回答，入口放在智能助手组里 -->
+            <el-menu-item index="/manager/chat">知识问答</el-menu-item>
             <el-menu-item index="/manager/agent">纪要自检</el-menu-item>
             <el-menu-item index="/manager/observability">运行观测</el-menu-item>
           </el-sub-menu>
@@ -77,34 +89,38 @@
               <span>组织与员工</span>
             </template>
             <!-- 第 2 章的部门管理，只有管理员能看到 -->
-            <el-menu-item v-if="data.user.role === 'ADMIN'" index="/manager/department">部门管理</el-menu-item>
+            <el-menu-item v-if="data.user.role === 'ADMIN'" index="/manager/department"
+              >部门管理</el-menu-item
+            >
             <!-- 第 2 章的员工账号管理，只有管理员能看到 -->
-            <el-menu-item v-if="data.user.role === 'ADMIN'" index="/manager/user">员工账号管理</el-menu-item>
+            <el-menu-item v-if="data.user.role === 'ADMIN'" index="/manager/user"
+              >员工账号管理</el-menu-item
+            >
             <!-- 第 2 章的部门成员页，只有员工能看到 -->
-            <el-menu-item v-if="data.user.role === 'EMPLOYEE'" index="/manager/departmentMembers">所在部门成员</el-menu-item>
+            <el-menu-item v-if="data.user.role === 'EMPLOYEE'" index="/manager/departmentMembers"
+              >所在部门成员</el-menu-item
+            >
           </el-sub-menu>
         </el-menu>
       </div>
       <div class="manager-main-right">
         <!-- 子页面通过 emit('updateUser') 通知框架页重新读缓存 -->
-        <RouterView @updateUser="updateUser" />
+        <RouterView @update-user="updateUser" />
       </div>
     </div>
     <!-- 下面部分结束 -->
-
-
   </div>
 </template>
 
-<script setup>
-import { reactive } from "vue";
-import router from "@/router/index.js";
-import { fileUrl } from "@/utils/fileUrl.js";
-import {ElMessage} from "element-plus";
+<script setup lang="ts">
+import { reactive } from 'vue'
+import router from '@/router/index'
+import { fileUrl } from '@/utils/fileUrl'
+import { ElMessage } from 'element-plus'
 
 const data = reactive({
   // 第 1 章登录时写入的 xm-user 缓存，顶部头像、姓名和左侧菜单的角色判断都读它
-  user: JSON.parse(localStorage.getItem('xm-user') || '{}')
+  user: JSON.parse(localStorage.getItem('xm-user') || '{}'),
 })
 
 const logout = () => {
@@ -115,7 +131,7 @@ const logout = () => {
 
 const updateUser = () => {
   // 重新从 localStorage 读一次，顶部头像和姓名随之重新渲染
-  data.user =  JSON.parse(localStorage.getItem('xm-user') || '{}')
+  data.user = JSON.parse(localStorage.getItem('xm-user') || '{}')
 }
 
 if (!data.user.id) {
@@ -125,5 +141,5 @@ if (!data.user.id) {
 </script>
 
 <style scoped>
-@import "@/assets/css/manager.css";
+@import '@/assets/css/manager.css';
 </style>

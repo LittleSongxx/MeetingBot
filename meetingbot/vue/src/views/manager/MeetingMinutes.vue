@@ -17,8 +17,18 @@
         ></el-option>
       </el-select>
       <!-- 纪要状态下拉框，写入 data.status，选项来自 statusOptions -->
-      <el-select v-model="data.status" clearable style="width: 150px; margin-right: 10px" placeholder="纪要状态">
-        <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value"></el-option>
+      <el-select
+        v-model="data.status"
+        clearable
+        style="width: 150px; margin-right: 10px"
+        placeholder="纪要状态"
+      >
+        <el-option
+          v-for="item in statusOptions"
+          :key="item.value"
+          :label="item.label"
+          :value="item.value"
+        ></el-option>
       </el-select>
       <!-- “查询”回到第一页再请求；“重置”清空会议和状态两个条件 -->
       <el-button type="info" plain @click="search">查询</el-button>
@@ -26,12 +36,24 @@
     </div>
     <div class="card" style="margin-bottom: 5px">
       <el-table stripe :data="data.tableData">
-        <el-table-column prop="meeting_title" label="会议主题" min-width="180" show-overflow-tooltip />
+        <el-table-column
+          prop="meeting_title"
+          label="会议主题"
+          min-width="180"
+          show-overflow-tooltip
+        />
         <!-- material_name 是 minutes_dict 顺着来源转写任务查出来的音视频文件名 -->
-        <el-table-column prop="material_name" label="音视频资料" min-width="200" show-overflow-tooltip />
+        <el-table-column
+          prop="material_name"
+          label="音视频资料"
+          min-width="200"
+          show-overflow-tooltip
+        />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope"
-            ><el-tag :type="statusTag(scope.row.status)">{{ statusText(scope.row.status) }}</el-tag></template
+            ><el-tag :type="statusTag(scope.row.status)">{{
+              statusText(scope.row.status)
+            }}</el-tag></template
           >
         </el-table-column>
         <!-- 进度条读 progress：失败时红色，DRAFT 和 CONFIRMED 绿色，生成中是默认蓝色 -->
@@ -57,10 +79,18 @@
           <template #default="scope">
             <el-button link type="primary" @click="showDetail(scope.row.id)">详情</el-button>
             <!-- 只有草稿能改，已确认的纪要要保持内容稳定 -->
-            <el-button v-if="scope.row.status === 'DRAFT'" link type="primary" @click="openEdit(scope.row.id)"
+            <el-button
+              v-if="scope.row.status === 'DRAFT'"
+              link
+              type="primary"
+              @click="openEdit(scope.row.id)"
               >修订</el-button
             >
-            <el-button v-if="scope.row.status === 'DRAFT'" link type="success" @click="confirmMinutes(scope.row)"
+            <el-button
+              v-if="scope.row.status === 'DRAFT'"
+              link
+              type="success"
+              @click="confirmMinutes(scope.row)"
               >确认</el-button
             >
             <!-- 自检只对已生成的纪要有意义，生成中和失败的没有内容可查 -->
@@ -71,15 +101,27 @@
               @click="startReview(scope.row)"
               >Agent自检</el-button
             >
-            <el-button v-if="scope.row.status === 'FAILED'" link type="warning" @click="retry(scope.row)"
+            <el-button
+              v-if="scope.row.status === 'FAILED'"
+              link
+              type="warning"
+              @click="retry(scope.row)"
               >重试</el-button
             >
             <!-- 卡死纪要（GENERATING 但后台协程已丢失）的出路 -->
-            <el-button v-if="scope.row.status === 'GENERATING' && stuckOverThreshold(scope.row)" link type="danger" @click="forceFail(scope.row)"
+            <el-button
+              v-if="scope.row.status === 'GENERATING' && stuckOverThreshold(scope.row)"
+              link
+              type="danger"
+              @click="forceFail(scope.row)"
               >强制结束</el-button
             >
             <!-- 已确认的纪要要改内容，先退回草稿 -->
-            <el-button v-if="scope.row.status === 'CONFIRMED'" link type="warning" @click="unconfirmMinutes(scope.row)"
+            <el-button
+              v-if="scope.row.status === 'CONFIRMED'"
+              link
+              type="warning"
+              @click="unconfirmMinutes(scope.row)"
               >取消确认</el-button
             >
             <!-- 草稿和已确认都有内容可导，生成中和失败的没有 -->
@@ -88,7 +130,11 @@
               <el-button link type="primary" @click="download(scope.row, 'pdf')">PDF</el-button>
             </template>
             <!-- 生成中的纪要不能删，删完要重新从转写任务生成 -->
-            <el-button v-if="scope.row.status !== 'GENERATING'" link type="danger" @click="del(scope.row)"
+            <el-button
+              v-if="scope.row.status !== 'GENERATING'"
+              link
+              type="danger"
+              @click="del(scope.row)"
               >删除</el-button
             >
           </template>
@@ -121,10 +167,16 @@
         >
         <el-descriptions-item label="创建人">{{ data.detail.creator_name }}</el-descriptions-item>
         <!-- 还没确认时 confirmer_name 是 null，显示成短横线 -->
-        <el-descriptions-item label="确认人">{{ data.detail.confirmer_name || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="确认人">{{
+          data.detail.confirmer_name || '-'
+        }}</el-descriptions-item>
         <!-- 顺着 source_task_id 反查出来的音视频文件名，说明这份纪要是从哪个文件来的 -->
-        <el-descriptions-item label="音视频资料" :span="2">{{ data.detail.material_name || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="生成模型">{{ data.detail.model_name || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="音视频资料" :span="2">{{
+          data.detail.material_name || '-'
+        }}</el-descriptions-item>
+        <el-descriptions-item label="生成模型">{{
+          data.detail.model_name || '-'
+        }}</el-descriptions-item>
         <!-- 只有生成失败的纪要才有这一项 -->
         <el-descriptions-item v-if="data.detail.error_message" label="失败原因" :span="3">{{
           data.detail.error_message
@@ -140,7 +192,7 @@
           :items="data.detail.topics"
           :fields="[
             ['title', '议题'],
-            ['summary', '总结']
+            ['summary', '总结'],
           ]"
         />
         <minutes-section
@@ -148,7 +200,7 @@
           :items="data.detail.viewpoints"
           :fields="[
             ['speaker', '发言人'],
-            ['viewpoint', '观点']
+            ['viewpoint', '观点'],
           ]"
         />
         <minutes-section
@@ -158,7 +210,7 @@
             ['content', '决策'],
             ['basis', '依据'],
             ['owner_suggestion', '建议负责人'],
-            ['deadline_suggestion', '建议期限']
+            ['deadline_suggestion', '建议期限'],
           ]"
         />
         <minutes-section
@@ -167,7 +219,7 @@
           :fields="[
             ['content', '事项'],
             ['owner_suggestion', '建议负责人'],
-            ['deadline_suggestion', '建议期限']
+            ['deadline_suggestion', '建议期限'],
           ]"
         />
         <minutes-section
@@ -176,13 +228,19 @@
           :fields="[
             ['content', '内容'],
             ['level', '级别'],
-            ['suggestion', '建议']
+            ['suggestion', '建议'],
           ]"
         />
       </div>
     </el-dialog>
 
-    <el-dialog title="修订会议纪要" v-model="data.editVisible" width="62%" top="4vh" destroy-on-close>
+    <el-dialog
+      title="修订会议纪要"
+      v-model="data.editVisible"
+      width="62%"
+      top="4vh"
+      destroy-on-close
+    >
       <el-form label-position="top" class="edit-form">
         <!-- 会议摘要是纯文本，直接绑定 data.form.summary -->
         <el-form-item label="会议摘要"
@@ -194,7 +252,7 @@
           v-model="data.form.topics"
           :fields="[
             ['title', '议题'],
-            ['summary', '总结']
+            ['summary', '总结'],
           ]"
         />
         <edit-section
@@ -202,7 +260,7 @@
           v-model="data.form.viewpoints"
           :fields="[
             ['speaker', '发言人'],
-            ['viewpoint', '观点']
+            ['viewpoint', '观点'],
           ]"
         />
         <edit-section
@@ -212,7 +270,7 @@
             ['content', '决策'],
             ['basis', '依据'],
             ['owner_suggestion', '建议负责人'],
-            ['deadline_suggestion', '建议期限']
+            ['deadline_suggestion', '建议期限'],
           ]"
         />
         <edit-section
@@ -221,7 +279,7 @@
           :fields="[
             ['content', '事项'],
             ['owner_suggestion', '建议负责人'],
-            ['deadline_suggestion', '建议期限']
+            ['deadline_suggestion', '建议期限'],
           ]"
         />
         <edit-section
@@ -230,26 +288,30 @@
           :fields="[
             ['content', '内容'],
             ['level', '级别'],
-            ['suggestion', '建议']
+            ['suggestion', '建议'],
           ]"
         />
       </el-form>
       <template #footer
         ><el-button @click="data.editVisible = false">取消</el-button
-        ><el-button type="primary" :loading="data.saving" @click="save">保存修订</el-button></template
+        ><el-button type="primary" :loading="data.saving" @click="save"
+          >保存修订</el-button
+        ></template
       >
     </el-dialog>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { defineComponent, h, onUnmounted, reactive } from 'vue'
 import { useRoute } from 'vue-router'
-import router from '@/router/index.js'
+import router from '@/router/index'
 import { ElButton, ElInput, ElMessage, ElMessageBox } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
-import request from '@/utils/request.js'
-import { MINUTES_STATUS } from '@/constants/status.js'
+import request from '@/utils/request'
+// 分页信封的形状定义在 request 里（code/msg/data + PageInfo 的 total/list）
+import type { PageData } from '@/utils/request'
+import { MINUTES_STATUS } from '@/constants/status'
 
 const MinutesSection = defineComponent({
   // title 是这一块的标题，items 是数组内容，fields 决定取哪些字段、显示成什么中文
@@ -259,17 +321,22 @@ const MinutesSection = defineComponent({
       h('section', [
         h('h3', props.title),
         ...(props.items?.length
-          ? props.items.map((item, index) =>
+          ? // props 声明成 Array 时元素类型是 unknown，这里按接口真实形态收窄：
+            // items 是「字段名 -> 文本」的条目对象，fields 是 [字段名, 中文标题] 的二元组，
+            // 收窄后才能按 fields 里的字段名下标取值。只影响类型，运行时还是同一个数组。
+            (props.items as Record<string, string | undefined>[]).map((item, index) =>
               h('div', { class: 'minutes-item', key: index }, [
                 // 条目前面标上序号，和修订弹窗里的序号对得上
                 h('strong', `${index + 1}. `),
                 // 每个字段一行「中文标题：值」，值为空时显示短横线
-                ...props.fields.map(field => h('p', { key: field[0] }, `${field[1]}：${item[field[0]] || '-'}`))
-              ])
+                ...(props.fields as [string, string][]).map((field) =>
+                  h('p', { key: field[0] }, `${field[1]}：${item[field[0]] || '-'}`),
+                ),
+              ]),
             )
-          : [h('p', '无')])
+          : [h('p', '无')]),
       ])
-  }
+  },
 })
 
 const EditSection = defineComponent({
@@ -282,23 +349,28 @@ const EditSection = defineComponent({
     const add = () =>
       emit('update:modelValue', [
         ...(props.modelValue || []),
-        Object.fromEntries(props.fields.map(field => [field[0], '']))
+        // 与上面同一处收窄：fields 是 [字段名, 中文标题] 的二元组，条目是「字段名 -> 文本」的对象
+        Object.fromEntries((props.fields as [string, string][]).map((field) => [field[0], ''])),
       ])
     // 删除图标：过滤掉下标为 index 的条目，把剩下的数组交还给父组件
-    const remove = index =>
+    const remove = (index: number) =>
       emit(
         'update:modelValue',
-        props.modelValue.filter((_, itemIndex) => itemIndex !== index)
+        // modelValue 里的条目形态同 MinutesSection 的 items：字段名 -> 文本
+        (props.modelValue as Record<string, string | undefined>[]).filter(
+          (_, itemIndex) => itemIndex !== index,
+        ),
       )
     return () =>
       h('div', { class: 'edit-section' }, [
         // 每块顶部：左边是标题，右边是“新增”按钮
         h('div', { class: 'edit-title' }, [
           h('strong', props.title),
-          h(ElButton, { type: 'primary', link: true, onClick: add }, () => '新增')
+          h(ElButton, { type: 'primary', link: true, onClick: add }, () => '新增'),
         ]),
         // 数组里每个条目渲染成一块 edit-row
-        ...(props.modelValue || []).map((item, index) =>
+        // 与 MinutesSection 同一处收窄：条目是「字段名 -> 文本」的对象
+        ...((props.modelValue || []) as Record<string, string | undefined>[]).map((item, index) =>
           h('div', { class: 'edit-row', key: index }, [
             // 条目顶部一行：左边序号，右边删除图标，删除按钮不再跟着字段一起换行
             h('div', { class: 'edit-row-head' }, [
@@ -309,40 +381,148 @@ const EditSection = defineComponent({
                 link: true,
                 icon: Delete,
                 title: '删除这一条',
-                onClick: () => remove(index)
-              })
+                onClick: () => remove(index),
+              }),
             ]),
             h(
               'div',
               { class: 'edit-fields' },
-              props.fields.map(field => {
+              (props.fields as [string, string][]).map((field) => {
                 // 摘要、正文这类长文本单独占一整行，短字段才并排
                 const isLongText = ['summary', 'content', 'viewpoint'].includes(field[0])
                 // 每个输入框上面挂一行字段名。只靠 placeholder 的话，一旦填了内容
                 // 就看不出这个框是负责人还是期限了
-                return h('div', { key: field[0], class: isLongText ? 'edit-field edit-field-full' : 'edit-field' }, [
-                  h('label', { class: 'edit-field-label' }, field[1]),
-                  h(ElInput, {
-                    // 输入框的值直接读写条目对象上的字段，item 是 data.form 数组里的同一个对象
-                    modelValue: item[field[0]],
-                    'onUpdate:modelValue': value => {
-                      item[field[0]] = value
-                    },
-                    placeholder: field[1],
-                    type: isLongText ? 'textarea' : 'text',
-                    autosize: { minRows: 2, maxRows: 5 }
-                  })
-                ])
-              })
-            )
-          ])
-        )
+                return h(
+                  'div',
+                  {
+                    key: field[0],
+                    class: isLongText ? 'edit-field edit-field-full' : 'edit-field',
+                  },
+                  [
+                    h('label', { class: 'edit-field-label' }, field[1]),
+                    h(ElInput, {
+                      // 输入框的值直接读写条目对象上的字段，item 是 data.form 数组里的同一个对象
+                      modelValue: item[field[0]],
+                      'onUpdate:modelValue': (value) => {
+                        item[field[0]] = value
+                      },
+                      placeholder: field[1],
+                      type: isLongText ? 'textarea' : 'text',
+                      autosize: { minRows: 2, maxRows: 5 },
+                    }),
+                  ],
+                )
+              }),
+            ),
+          ]),
+        ),
       ])
-  }
+  },
 })
 
 const route = useRoute()
-const data = reactive({
+
+// 会议下拉框的选项，来自 GET /meeting/selectOptions 返回的数组（选项文字是“编号 / 主题”）
+interface MeetingOption {
+  id: number
+  meeting_no: string
+  title: string
+}
+
+// 纪要列表的一行，来自 GET /meetingMinutes/selectPage 返回的 data.list（后端的 minutes_dict）
+interface MinutesRow {
+  id: number
+  meeting_title: string | null
+  // 顺着 source_task_id 反查出来的音视频文件名
+  material_name: string | null
+  status: string
+  progress: number
+  // 生成这份纪要用的模型名，来自 ai_model_config.model_name
+  model_name: string | null
+  creator_name: string | null
+  create_time: string
+  // 卡死判定用：GENERATING 且 update_time 超过 20 分钟没刷新；接口可能给 null
+  update_time?: string | null
+}
+
+// 议题条目（topics）：present 之后是字符串形态，字段名与后端契约一致
+interface MinutesTopicItem {
+  title?: string
+  summary?: string
+}
+
+// 发言观点条目（viewpoints）
+interface MinutesViewpointItem {
+  speaker?: string
+  viewpoint?: string
+}
+
+// 决策 / 待确认事项条目（decisions、pending_items）：内容 + 依据（仅决策有）+ 建议负责人与建议期限
+interface MinutesActionItem {
+  content?: string
+  basis?: string
+  owner_suggestion?: string | null
+  deadline_suggestion?: string | null
+}
+
+// 风险与争议点条目（risks）
+interface MinutesRiskItem {
+  content?: string
+  level?: string
+  suggestion?: string
+}
+
+// 纪要详情，来自 GET /meetingMinutes/selectById 返回的完整 minutes_dict；
+// 六个内容字段（summary 与五个数组）由后端的 present 适配出口转成字符串形态
+interface MinutesDetail {
+  id: number
+  meeting_title: string | null
+  status: string
+  creator_name: string | null
+  // 还没确认时是 null，页面显示成短横线
+  confirmer_name: string | null
+  material_name: string | null
+  model_name: string | null
+  // 只有生成失败的纪要有值，详情弹窗显示“失败原因”
+  error_message: string | null
+  summary?: string
+  topics?: MinutesTopicItem[]
+  viewpoints?: MinutesViewpointItem[]
+  decisions?: MinutesActionItem[]
+  pending_items?: MinutesActionItem[]
+  risks?: MinutesRiskItem[]
+}
+
+// 修订弹窗的表单：openEdit 拿详情接口的返回深拷贝填充，save 整体提交 PUT /meetingMinutes/update
+interface MinutesForm {
+  id?: number
+  summary?: string
+  topics?: MinutesTopicItem[]
+  viewpoints?: MinutesViewpointItem[]
+  decisions?: MinutesActionItem[]
+  pending_items?: MinutesActionItem[]
+  risks?: MinutesRiskItem[]
+}
+
+// 本页全部响应式状态；字段名与模板、脚本里的既有用法一一对应
+interface MinutesPageState {
+  // 顶部会议下拉框的值；从转写任务页“生成纪要”跳过来时，初值取路由 query.meetingId
+  meetingId: number | null
+  // 纪要状态下拉框，作为 selectPage 的 status 参数
+  status: string
+  meetings: MeetingOption[]
+  pageNum: number
+  saving: boolean
+  pageSize: number
+  total: number
+  tableData: MinutesRow[]
+  detailVisible: boolean
+  editVisible: boolean
+  detail: MinutesDetail
+  form: MinutesForm
+}
+
+const data = reactive<MinutesPageState>({
   // 顶部会议下拉框的值；从转写任务页“生成纪要”跳过来时，初值取路由 query.meetingId
   meetingId: Number(route.query.meetingId) || null,
   // 纪要状态下拉框，作为 selectPage 的 status 参数
@@ -351,7 +531,7 @@ const data = reactive({
   meetings: [],
   // 当前页码，查询和重置时回到 1
   pageNum: 1,
-    saving: false,
+  saving: false,
   // 每页条数，随 selectPage 请求提交
   pageSize: 10,
   // selectPage 返回的总条数，为 0 时分页条不渲染
@@ -363,13 +543,20 @@ const data = reactive({
   // 控制修订弹窗显示，第 12 章的 openEdit 置为 true
   editVisible: false,
   // 详情弹窗展示的纪要，第 12 章的 showDetail 写入
-  detail: {},
+  // 空对象只是接口回来之前的占位（模板用 data.detail.id 判断有没有内容），
+  // 收窄成详情类型，模板里的 data.detail.xxx 才有类型
+  detail: {} as MinutesDetail,
   // 修订弹窗的表单，第 12 章的 openEdit 写入
-  form: {}
+  // 同样是接口回来之前的占位，收窄成表单类型
+  form: {} as MinutesForm,
 })
 // 状态字典唯一真源在 @/constants
-const { options: statusOptions, text: statusText, tag: statusTag } = MINUTES_STATUS
-
+// el-tag 的 :type 只接受这五个字面量，而 @/constants 里 tag 函数声明的返回值是 string
+//（未知状态时实际返回空串，在 el-tag 上等于不指定颜色）；所以这里只收窄返回类型，
+// 断言不改变运行时，模板调用的仍是 constants 里的同一个函数（与 Transcription.vue 同一处理）
+type TagType = 'primary' | 'success' | 'warning' | 'info' | 'danger'
+const { options: statusOptions, text: statusText } = MINUTES_STATUS
+const statusTag = MINUTES_STATUS.tag as (status?: string) => TagType
 
 // 删除最后一条后当前页变空：回退一页再查，避免停在空表
 const reloadAfterDelete = () => {
@@ -379,17 +566,18 @@ const reloadAfterDelete = () => {
 
 const load = () =>
   request
-    .get('/meetingMinutes/selectPage', {
+    // 分页信封：data 里是 { total, list }，list 的每行就是 minutes_dict 转出来的纪要
+    .get<PageData<MinutesRow>>('/meetingMinutes/selectPage', {
       params: {
         // 会议下拉框的值；为 null 时转成 undefined，Axios 不拼这个参数，后端查全部有权限的会议
         meetingId: data.meetingId || undefined,
         // 纪要状态下拉框的值
         status: data.status,
         pageNum: data.pageNum,
-        pageSize: data.pageSize
-      }
+        pageSize: data.pageSize,
+      },
     })
-    .then(res => {
+    .then((res) => {
       if (res.code === '200') {
         // 当前页纪要写入表格数据源
         data.tableData = res.data?.list || []
@@ -399,7 +587,7 @@ const load = () =>
     })
 const loadMeetings = () =>
   // GET /meeting/selectOptions 返回当前用户可访问的会议，接口本身在第 6 章第 6 节讲过
-  request.get('/meeting/selectOptions').then(res => {
+  request.get<MeetingOption[]>('/meeting/selectOptions').then((res) => {
     if (res.code === '200') {
       // 填充会议下拉框的选项
       data.meetings = res.data || []
@@ -407,16 +595,17 @@ const loadMeetings = () =>
       load()
     } else ElMessage.error(res.msg)
   })
-const showDetail = id =>
-  request.get('/meetingMinutes/selectById/' + id).then(res => {
+// 详情接口返回单条完整 minutes_dict，正好是详情弹窗的 MinutesDetail
+const showDetail = (id: number) =>
+  request.get<MinutesDetail>('/meetingMinutes/selectById/' + id).then((res) => {
     if (res.code === '200') {
       // 详情接口返回的字段和列表接口完全一样，六块内容都在里面
       data.detail = res.data
       data.detailVisible = true
     } else ElMessage.error(res.msg)
   })
-const openEdit = id =>
-  request.get('/meetingMinutes/selectById/' + id).then(res => {
+const openEdit = (id: number) =>
+  request.get<MinutesDetail>('/meetingMinutes/selectById/' + id).then((res) => {
     if (res.code === '200') {
       // 深拷贝一份进 data.form，弹窗里改到一半点取消不会污染表格数据
       data.form = JSON.parse(JSON.stringify(res.data))
@@ -430,58 +619,65 @@ const save = () => {
   if (!data.form.summary?.trim()) return ElMessage.warning('会议摘要不能为空')
   data.saving = true
   // 整个 data.form 提交上去，后端只取 id 和六块内容，其余字段忽略
-  request.put('/meetingMinutes/update', data.form).then(res => {
-    if (res.code === '200') {
-      ElMessage.success('纪要修订已保存')
-      // 关闭修订弹窗
-      data.editVisible = false
-      // 重新拉列表，更新时间跟着刷新
-      load()
-    } else ElMessage.error(res.msg)
-  }).finally(() => {
-    data.saving = false
-  })
+  request
+    .put('/meetingMinutes/update', data.form)
+    .then((res) => {
+      if (res.code === '200') {
+        ElMessage.success('纪要修订已保存')
+        // 关闭修订弹窗
+        data.editVisible = false
+        // 重新拉列表，更新时间跟着刷新
+        load()
+      } else ElMessage.error(res.msg)
+    })
+    .finally(() => {
+      data.saving = false
+    })
 }
-const confirmMinutes = row =>
+const confirmMinutes = (row) =>
   // 确认之后修订入口就消失了，所以先弹一次确认框说明这一点
-  ElMessageBox.confirm(`确认将${row.meeting_title}的会议纪要设为已确认吗？确认后不能继续修订。`, '确认纪要', {
-    type: 'warning'
-  }).then(() =>
-    request.put('/meetingMinutes/confirm/' + row.id).then(res => {
+  ElMessageBox.confirm(
+    `确认将${row.meeting_title}的会议纪要设为已确认吗？确认后不能继续修订。`,
+    '确认纪要',
+    {
+      type: 'warning',
+    },
+  ).then(() =>
+    request.put('/meetingMinutes/confirm/' + row.id).then((res) => {
       if (res.code === '200') {
         ElMessage.success('会议纪要已确认')
         // 重新拉列表，状态变成“已确认”，修订和确认按钮消失，取消确认按钮出现
         load()
       } else ElMessage.error(res.msg)
-    })
+    }),
   )
 // 取消确认把纪要退回草稿，内容才能继续修订或者被自检的修订稿覆盖
-const unconfirmMinutes = row =>
+const unconfirmMinutes = (row) =>
   ElMessageBox.confirm(
     `确定把${row.meeting_title}的会议纪要退回草稿吗？退回后可以继续修订，也可以让 AI 自检的修订稿覆盖它。`,
     '取消确认',
-    { type: 'warning', confirmButtonText: '确定退回', cancelButtonText: '取消' }
+    { type: 'warning', confirmButtonText: '确定退回', cancelButtonText: '取消' },
   ).then(() =>
     // 点“确定退回”后才发 PUT /meetingMinutes/unconfirm/{minutes_id}，纪要ID取自表格行
-    request.put('/meetingMinutes/unconfirm/' + row.id).then(res => {
+    request.put('/meetingMinutes/unconfirm/' + row.id).then((res) => {
       if (res.code === '200') {
         ElMessage.success('纪要已退回草稿')
         // 重新拉列表，这一行状态变回“待确认”，修订和确认按钮重新出现
         load()
-      // 例如“只有管理员或纪要创建人可以取消确认”
+        // 例如“只有管理员或纪要创建人可以取消确认”
       } else ElMessage.error(res.msg)
-    })
+    }),
   )
 
-const del = row => {
+const del = (row) => {
   // 确认框提示删除后要回到转写任务页重新生成
   ElMessageBox.confirm(
-      `确定删除“${row.meeting_title}”的会议纪要吗？删除后需要重新从转写任务生成。`,
-      '删除会议纪要',
-      { type: 'warning', confirmButtonText: '确定删除', cancelButtonText: '取消' }
+    `确定删除“${row.meeting_title}”的会议纪要吗？删除后需要重新从转写任务生成。`,
+    '删除会议纪要',
+    { type: 'warning', confirmButtonText: '确定删除', cancelButtonText: '取消' },
   ).then(() => {
     // 点“确定删除”后才发 DELETE /meetingMinutes/delete/{minutes_id}
-    request.delete('/meetingMinutes/delete/' + row.id).then(res => {
+    request.delete('/meetingMinutes/delete/' + row.id).then((res) => {
       if (res.code === '200') {
         ElMessage.success('删除成功')
         // 重新拉列表，被删的纪要从表格消失
@@ -494,37 +690,40 @@ const del = row => {
   })
 }
 
-const startReview = row =>
+const startReview = (row) =>
   ElMessageBox.confirm(
     'Agent 将对照转写原文审查这份纪要，发现问题后生成修订稿，修订稿由人工确认后应用。确定开始吗？',
     '发起纪要自检',
-    { type: 'warning' }
+    { type: 'warning' },
   ).then(() =>
     // 纪要主键来自所点击的表格行，每次运行最多执行两轮审查与重写。
-    request.post('/agent/start', { minutes_id: row.id, max_rounds: 2 }).then(res => {
+    request.post('/agent/start', { minutes_id: row.id, max_rounds: 2 }).then((res) => {
       if (res.code === '200') {
         ElMessage.success('自检已发起，请在运行列表查看详情')
         // 进入运行台后由列表查询和详情事件流展示本次自检。
         router.push('/manager/agent')
       } else ElMessage.error(res.msg)
-    })
+    }),
   )
 
-const retry = row =>
+const retry = (row) =>
   // 失败纪要行的重试按钮先显示确认框，取消时不提交。
   ElMessageBox.confirm('确定重新生成这份纪要吗？', '重试确认', { type: 'warning' }).then(() =>
     // 当前行纪要 ID 拼入 PUT 地址，后端重新调度该纪要的生成。
-    request.put('/meetingMinutes/retry/' + row.id).then(res => {
+    request.put('/meetingMinutes/retry/' + row.id).then((res) => {
       if (res.code === '200') {
         ElMessage.success('纪要已重新提交生成')
         // 业务成功后刷新列表，显示 GENERATING 状态和生成进度。
         load()
       } else ElMessage.error(res.msg)
-    })
+    }),
   )
-const download = (row, type) =>
+// 导出接口的响应不是信封而是文件，走 request.blob（内部就是 responseType: 'blob'，
+// 只是类型上直接给 Blob，普通 get 的 ApiResult<unknown> 对文件响应是错的）。
+// row 来自表格插槽（element-plus 的 scope.row），按页面既有写法不加参数类型
+const download = (row, type: string) =>
   // responseType 设成 blob，否则二进制文件会被当成文本处理坏掉
-  request.get(`/meetingMinutes/export/${row.id}/${type}`, { responseType: 'blob' }).then(async blob => {
+  request.blob(`/meetingMinutes/export/${row.id}/${type}`).then(async (blob) => {
     // 后端抛业务异常时返回的是 JSON 而不是文件，这里识别出来转成错误提示
     if (blob.type?.includes('application/json')) {
       const result = JSON.parse(await blob.text())
@@ -553,27 +752,35 @@ const reset = () => {
 }
 // 卡死判定：GENERATING 且 20 分钟无进度变化（update_time 随每次进度写库刷新）
 const STUCK_MINUTES = 20
-const stuckOverThreshold = row => {
+const stuckOverThreshold = (row) => {
   if (row.status !== 'GENERATING') return false
   if (!row.update_time) return true
-  return Date.now() - new Date(row.update_time.replace(' ', 'T')).getTime() > STUCK_MINUTES * 60 * 1000
+  return (
+    Date.now() - new Date(row.update_time.replace(' ', 'T')).getTime() > STUCK_MINUTES * 60 * 1000
+  )
 }
 
-const forceFail = row => {
+const forceFail = (row) => {
   ElMessageBox.confirm(
-      `纪要已 ${STUCK_MINUTES} 分钟无进展，确定强制结束吗？结束后可点击重试重新生成。`,
-      '强制结束', { type: 'warning' }
-  ).then(() => {
-    request.put('/meetingMinutes/forceFail/' + row.id).then(res => {
-      if (res.code === '200') { ElMessage.success('已强制结束'); load() }
+    `纪要已 ${STUCK_MINUTES} 分钟无进展，确定强制结束吗？结束后可点击重试重新生成。`,
+    '强制结束',
+    { type: 'warning' },
+  )
+    .then(() => {
+      request.put('/meetingMinutes/forceFail/' + row.id).then((res) => {
+        if (res.code === '200') {
+          ElMessage.success('已强制结束')
+          load()
+        }
+      })
     })
-  }).catch(() => {})
+    .catch(() => {})
 }
 
 // 每三秒检查一次，列表里还有生成中的纪要才重新拉，全部跑完就不再发请求；
 // 详情弹窗开着且正是生成中的那份时同步刷新（此前弹窗停在 GENERATING，需关重开）
 const timer = window.setInterval(() => {
-  if (data.tableData.some(item => item.status === 'GENERATING')) {
+  if (data.tableData.some((item) => item.status === 'GENERATING')) {
     load()
     if (data.detailVisible && data.detail && data.detail.status === 'GENERATING') {
       showDetail(data.detail.id)
@@ -622,15 +829,15 @@ loadMeetings()
   justify-content: space-between;
   padding-bottom: 8px;
   margin-bottom: 10px;
-  border-bottom: 1px solid rgba(17, 24, 39, .10);
-  color: rgba(17, 24, 39, .95);
+  border-bottom: 1px solid rgba(17, 24, 39, 0.1);
+  color: rgba(17, 24, 39, 0.95);
 }
 
 :deep(.edit-row) {
   padding: 10px 12px 12px;
   margin-bottom: 10px;
   background: #f8fafc;
-  border: 1px solid rgba(17, 24, 39, .10);
+  border: 1px solid rgba(17, 24, 39, 0.1);
   border-radius: 6px;
 }
 
@@ -643,7 +850,7 @@ loadMeetings()
 
 :deep(.edit-index) {
   font-size: 13px;
-  color: rgba(17, 24, 39, .55);
+  color: rgba(17, 24, 39, 0.55);
 }
 
 :deep(.edit-remove) {
@@ -667,7 +874,6 @@ loadMeetings()
   display: block;
   margin-bottom: 4px;
   font-size: 12px;
-  color: rgba(17, 24, 39, .55);
+  color: rgba(17, 24, 39, 0.55);
 }
-
 </style>

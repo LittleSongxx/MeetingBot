@@ -2,9 +2,18 @@
   <div>
     <div class="card" style="margin-bottom: 5px">
       <!-- 部门名称输入框，输入值写入 data.name，作为模糊查询条件 -->
-      <el-input v-model="data.name" style="width: 240px; margin-right: 10px" placeholder="请输入部门名称查询"></el-input>
+      <el-input
+        v-model="data.name"
+        style="width: 240px; margin-right: 10px"
+        placeholder="请输入部门名称查询"
+      ></el-input>
       <!-- 状态下拉框，输入值写入 data.status；clearable 让用户能清空回到不限状态 -->
-      <el-select v-model="data.status" clearable style="width: 180px; margin-right: 10px" placeholder="请选择状态">
+      <el-select
+        v-model="data.status"
+        clearable
+        style="width: 180px; margin-right: 10px"
+        placeholder="请选择状态"
+      >
         <el-option label="正常" value="NORMAL"></el-option>
         <el-option label="停用" value="DISABLED"></el-option>
       </el-select>
@@ -40,7 +49,12 @@
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="scope">
             <!-- 编辑图标，把当前行整行数据带进弹窗 -->
-            <el-button type="primary" circle :icon="Edit" @click="handleEdit(scope.row)"></el-button>
+            <el-button
+              type="primary"
+              circle
+              :icon="Edit"
+              @click="handleEdit(scope.row)"
+            ></el-button>
             <!-- 删除图标，只需要当前行的ID -->
             <el-button type="danger" circle :icon="Delete" @click="del(scope.row.id)"></el-button>
           </template>
@@ -50,18 +64,24 @@
     <!-- data.total 为 0 时整个分页条不渲染 -->
     <div class="card" v-if="data.total">
       <el-pagination
-          v-model:current-page="data.pageNum"
-          background
-          layout="prev, pager, next"
-          :page-size="data.pageSize"
-          :total="data.total"
-          @current-change="load"
+        v-model:current-page="data.pageNum"
+        background
+        layout="prev, pager, next"
+        :page-size="data.pageSize"
+        :total="data.total"
+        @current-change="load"
       />
     </div>
 
     <!-- destroy-on-close 让弹窗关闭时销毁内部组件，下次打开是干净的表单 -->
     <el-dialog title="部门信息" v-model="data.formVisible" width="42%" destroy-on-close>
-      <el-form ref="formRef" :model="data.form" :rules="data.rules" label-width="90px" style="padding: 20px">
+      <el-form
+        ref="formRef"
+        :model="data.form"
+        :rules="data.rules"
+        label-width="90px"
+        style="padding: 20px"
+      >
         <!-- 部门名称，必填，写入 data.form.name -->
         <el-form-item label="部门名称" prop="name">
           <el-input v-model="data.form.name" placeholder="请输入部门名称"></el-input>
@@ -75,7 +95,12 @@
         </el-form-item>
         <!-- 部门说明文本域，值写入 data.form.description -->
         <el-form-item label="部门说明">
-          <el-input v-model="data.form.description" type="textarea" :rows="4" placeholder="请输入部门说明"></el-input>
+          <el-input
+            v-model="data.form.description"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入部门说明"
+          ></el-input>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -88,15 +113,46 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { Delete, Edit } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import request from '@/utils/request.js'
+import { ElMessage, ElMessageBox, type FormRules } from 'element-plus'
+import request, { type PageData } from '@/utils/request'
+
+// 表格行来自 /department/selectPage 返回的 department_dict，employee_count 由后端统计 user 表得到
+interface DepartmentRow {
+  id: number
+  name: string
+  description?: string | null
+  status: string
+  employee_count: number
+}
+
+// 弹窗表单：新增时只预置 status，id/name/description 在填写或编辑回填前都可能缺，因此标为可选
+interface DepartmentForm {
+  id?: number
+  name?: string
+  description?: string | null
+  status?: string
+}
+
+// 部门管理页的状态对象：查询条件 + 分页 + 表格勾选 + 弹窗表单
+interface DepartmentState {
+  name: string
+  status: string
+  pageNum: number
+  pageSize: number
+  total: number
+  tableData: DepartmentRow[]
+  ids: number[]
+  formVisible: boolean
+  form: DepartmentForm
+  rules: FormRules
+}
 
 const formRef = ref()
 
-const data = reactive({
+const data = reactive<DepartmentState>({
   // 顶部“请输入部门名称查询”输入框，作为 selectPage 的 name 参数
   name: '',
   // 顶部状态下拉框，作为 selectPage 的 status 参数
@@ -117,10 +173,9 @@ const data = reactive({
   form: {},
   // 弹窗的必填校验规则，点击确定时执行
   rules: {
-    name: [{ required: true, message: '请输入部门名称', trigger: 'blur' }]
-  }
+    name: [{ required: true, message: '请输入部门名称', trigger: 'blur' }],
+  },
 })
-
 
 // 删除最后一条后当前页变空：回退一页再查，避免停在空表
 const reloadAfterDelete = () => {
@@ -130,27 +185,29 @@ const reloadAfterDelete = () => {
 
 const load = () => {
   // 四个查询参数拼在 params 里，Axios 会拼成 URL 查询串
-  request.get('/department/selectPage', {
-    params: {
-      // 部门名称输入框的值，后端做模糊匹配
-      name: data.name,
-      // 状态下拉框的值，为空字符串时后端不加状态条件
-      status: data.status,
-      // 当前页码，后端据此计算跳过多少条
-      page_num: data.pageNum,
-      // 每页条数
-      page_size: data.pageSize
-    }
-  }).then(res => {
-    if (res.code === '200') {
-      // list 是当前页数据，赋给表格数据源后表格立即重绘
-      data.tableData = res.data?.list || []
-      // total 是符合条件的总条数，赋值后分页条的页码数量随之变化
-      data.total = res.data?.total || 0
-    } else {
-      ElMessage.error(res.msg)
-    }
-  })
+  request
+    .get<PageData<DepartmentRow>>('/department/selectPage', {
+      params: {
+        // 部门名称输入框的值，后端做模糊匹配
+        name: data.name,
+        // 状态下拉框的值，为空字符串时后端不加状态条件
+        status: data.status,
+        // 当前页码，后端据此计算跳过多少条
+        page_num: data.pageNum,
+        // 每页条数
+        page_size: data.pageSize,
+      },
+    })
+    .then((res) => {
+      if (res.code === '200') {
+        // list 是当前页数据，赋给表格数据源后表格立即重绘
+        data.tableData = res.data?.list || []
+        // total 是符合条件的总条数，赋值后分页条的页码数量随之变化
+        data.total = res.data?.total || 0
+      } else {
+        ElMessage.error(res.msg)
+      }
+    })
 }
 
 const handleAdd = () => {
@@ -168,16 +225,16 @@ const handleEdit = (row) => {
 
 const save = () => {
   // 先跑 data.rules 里的必填校验，不通过就停在弹窗上
-  formRef.value.validate(valid => {
+  formRef.value.validate((valid) => {
     if (!valid) {
       return
     }
     // data.form.id 存在说明弹窗是编辑模式，后端按 id 更新原记录
     // data.form.id 不存在说明是新增模式，后端会插入一条新部门
     const action = data.form.id
-        ? request.put('/department/update', data.form)
-        : request.post('/department/add', data.form)
-    action.then(res => {
+      ? request.put('/department/update', data.form)
+      : request.post('/department/add', data.form)
+    action.then((res) => {
       if (res.code === '200') {
         ElMessage.success('保存成功')
         // 关闭弹窗
@@ -194,9 +251,11 @@ const save = () => {
 
 const del = (id) => {
   // 删除前先弹确认框，用户点取消时 Promise 不会进入 then，不发请求
-  ElMessageBox.confirm('删除部门前需要确保没有所属员工，是否继续？', '删除确认', { type: 'warning' }).then(() => {
+  ElMessageBox.confirm('删除部门前需要确保没有所属员工，是否继续？', '删除确认', {
+    type: 'warning',
+  }).then(() => {
     // 部门ID拼在地址里，对应后端的路径参数 department_id
-    request.delete('/department/delete/' + id).then(res => {
+    request.delete('/department/delete/' + id).then((res) => {
       if (res.code === '200') {
         ElMessage.success('删除成功')
         // 重新拉列表，被删的行从表格消失
@@ -215,9 +274,11 @@ const delBatch = () => {
     ElMessage.warning('请选择数据')
     return
   }
-  ElMessageBox.confirm('删除部门前需要确保没有所属员工，是否继续？', '删除确认', { type: 'warning' }).then(() => {
+  ElMessageBox.confirm('删除部门前需要确保没有所属员工，是否继续？', '删除确认', {
+    type: 'warning',
+  }).then(() => {
     // DELETE 请求要通过配置项的 data 字段才能带请求体，这里把勾选出的ID数组发过去
-    request.delete('/department/deleteBatch', { data: data.ids }).then(res => {
+    request.delete('/department/deleteBatch', { data: data.ids }).then((res) => {
       if (res.code === '200') {
         ElMessage.success('删除成功')
         reloadAfterDelete()
@@ -230,7 +291,7 @@ const delBatch = () => {
 
 const handleSelectionChange = (rows) => {
   // el-table 把当前选中的整行对象数组传进来，这里只留下ID，供批量删除提交
-  data.ids = rows.map(item => item.id)
+  data.ids = rows.map((item) => item.id)
 }
 
 const reset = () => {

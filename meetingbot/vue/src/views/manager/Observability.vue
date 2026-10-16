@@ -12,7 +12,13 @@
         :clearable="false"
       />
       <!-- 模型下拉框选项来自 data.modelOptions，选中的配置主键写入 data.modelConfigId -->
-      <el-select v-model="data.modelConfigId" clearable filterable style="width: 260px" placeholder="全部模型">
+      <el-select
+        v-model="data.modelConfigId"
+        clearable
+        filterable
+        style="width: 260px"
+        placeholder="全部模型"
+      >
         <el-option
           v-for="item in data.modelOptions"
           :key="item.model_config_id"
@@ -83,31 +89,46 @@
       <!-- 最近失败记录绑定 recent_failures，source 区分 AI 调用失败和自检运行失败 -->
       <el-table stripe :data="data.result.recent_failures || []">
         <el-table-column prop="source" label="来源" width="110">
-          <template #default="scope">{{ scope.row.source === 'AI_CALL' ? 'AI调用' : 'Agent运行' }}</template>
+          <template #default="scope">{{
+            scope.row.source === 'AI_CALL' ? 'AI调用' : 'Agent运行'
+          }}</template>
         </el-table-column>
         <!-- AI 调用显示调用类型，自检运行显示运行编号 -->
         <el-table-column prop="type" label="类型/编号" min-width="180" />
         <el-table-column prop="model_name" label="模型" min-width="150" />
-        <el-table-column prop="error_message" label="失败原因" min-width="300" show-overflow-tooltip />
+        <el-table-column
+          prop="error_message"
+          label="失败原因"
+          min-width="300"
+          show-overflow-tooltip
+        />
         <el-table-column prop="create_time" label="发生时间" width="175" />
       </el-table>
     </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import * as echarts from 'echarts/core'
 import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { ElMessage } from 'element-plus'
-import request from '@/utils/request.js'
-import { AGENT_RUN_STATUS } from '@/constants/status.js'
-import { stepTypeText as STEP_TYPE_TEXT_FN } from '@/constants/label.js'
+import request from '@/utils/request'
+import { AGENT_RUN_STATUS } from '@/constants/status'
+import { stepTypeText as STEP_TYPE_TEXT_FN } from '@/constants/label'
 
 // 按需注册用到的三种图表、三个组件和 Canvas 渲染器
-echarts.use([BarChart, LineChart, PieChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer])
+echarts.use([
+  BarChart,
+  LineChart,
+  PieChart,
+  GridComponent,
+  LegendComponent,
+  TooltipComponent,
+  CanvasRenderer,
+])
 
 // 四个图表容器的模板引用
 const trendRef = ref()
@@ -115,19 +136,117 @@ const callTypeRef = ref()
 const agentStatusRef = ref()
 const stepRef = ref()
 // 已创建的图表实例，窗口缩放时逐个 resize，离开页面时逐个 dispose
-const charts = []
+// 用 ReturnType<typeof echarts.init> 表达实例类型：echarts/core 的 init 返回 EChartsType，
+// 这样 charts 不再是 never[]，push/includes/resize/dispose 都能按实例类型检查
+const charts: ReturnType<typeof echarts.init>[] = []
 
 // 默认日期范围：今天和往前 29 天，格式化成 YYYY-MM-DD，页面打开和点重置时使用
 const defaultRange = () => {
   const end = new Date()
   const start = new Date()
   start.setDate(end.getDate() - 29)
-  const format = value =>
+  const format = (value) =>
     `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`
   return [format(start), format(end)]
 }
 
-const data = reactive({
+// ---- /observability/overview 的返回结构（字段名与后端 observability_service.build_observability 的返回字典一致）----
+
+// 八张卡片读取的汇总指标。两者都声明为可选：初次查询前 result 是空对象，
+// 且页面本来就用 `|| 0` 兜底，可选让"还没有数据"这件事在类型上看得见。
+interface ObservabilitySummary {
+  call_count?: number
+  failed_call_count?: number
+  call_success_rate?: number
+  total_tokens?: number
+  input_tokens?: number
+  output_tokens?: number
+  average_elapsed_ms?: number
+  agent_run_count?: number
+  average_agent_elapsed_ms?: number
+  agent_success_rate?: number
+  step_count?: number
+  step_failure_rate?: number
+  revision_count?: number
+  rejection_count?: number
+  average_rounds?: number
+}
+
+// 趋势图的横轴日期和三条系列（调用量、失败量、Token）
+interface DailyTrendItem {
+  date: string
+  call_count: number
+  failed_count: number
+  total_tokens: number
+}
+
+// 调用类型分布（环形图）的扇区
+interface CallTypeItem {
+  call_type: string
+  call_count: number
+}
+
+// 模型调用排行表格的一行；同一次响应里 model_ranking 也是模型下拉框的选项来源
+interface ModelRankingItem {
+  model_config_id: number
+  model_name: string
+  call_count: number
+  success_rate: number
+  average_elapsed_ms: number
+  total_tokens: number
+}
+
+// 自检运行状态分布（环形图）的扇区，后端固定返回六种状态
+interface AgentStatusItem {
+  status: string
+  count: number
+}
+
+// 自检步骤执行结果（横向堆叠柱形）的两个系列
+interface StepRankingItem {
+  step_type: string
+  succeeded_count: number
+  failed_count: number
+}
+
+// 最近失败记录表格的一行，source 区分 AI 调用失败和自检运行失败
+interface RecentFailureItem {
+  source: string
+  type: string
+  // 自检运行失败时后端给 null
+  model_name: string | null
+  error_message: string | null
+  create_time: string
+}
+
+// 接口返回的整块统计结果，即 data.result 的类型
+interface ObservabilityResult {
+  // 顶部观测范围标签；初始空结果里还没有这个字段，故可选
+  scope?: string
+  summary: ObservabilitySummary
+  daily_trend: DailyTrendItem[]
+  call_types: CallTypeItem[]
+  model_ranking: ModelRankingItem[]
+  agent_status: AgentStatusItem[]
+  step_ranking: StepRankingItem[]
+  recent_failures: RecentFailureItem[]
+}
+
+// 页面状态：筛选条件 + 接口返回的统计结果
+interface ObservabilityPageState {
+  // 日期范围控件绑定的两个日期字符串
+  dateRange: string[]
+  // 模型下拉框选中的配置主键，null 表示全部模型
+  modelConfigId: number | null
+  // 模型下拉框的选项，内容就是有调用记录的模型排行（只用到主键和名称两列）
+  modelOptions: ModelRankingItem[]
+  // 查询按钮的加载状态
+  loading: boolean
+  // 接口返回的全部统计数据，模板和图表都从这里读
+  result: ObservabilityResult
+}
+
+const data = reactive<ObservabilityPageState>({
   // 日期范围控件绑定的两个日期字符串
   dateRange: defaultRange(),
   // 模型下拉框选中的配置主键，null 表示全部模型
@@ -144,12 +263,12 @@ const data = reactive({
     model_ranking: [],
     agent_status: [],
     step_ranking: [],
-    recent_failures: []
-  }
+    recent_failures: [],
+  },
 })
 
 // Token 数加千分位
-const formatNumber = value => Number(value || 0).toLocaleString('zh-CN')
+const formatNumber = (value) => Number(value || 0).toLocaleString('zh-CN')
 // 把 summary 里的字段组装成八张卡片的标题、数值、单位和说明
 const summaryCards = computed(() => {
   const summary = data.result.summary || {}
@@ -160,7 +279,7 @@ const summaryCards = computed(() => {
       label: 'AI调用量',
       value: summary.call_count || 0,
       unit: '次',
-      note: `失败 ${summary.failed_call_count || 0} 次`
+      note: `失败 ${summary.failed_call_count || 0} 次`,
     },
     // 成功调用占全部调用的百分比
     { key: 'success', label: 'AI调用成功率', value: summary.call_success_rate || 0, unit: '%' },
@@ -170,7 +289,7 @@ const summaryCards = computed(() => {
       label: 'Token总量',
       value: formatNumber(summary.total_tokens),
       unit: '',
-      note: `输入 ${formatNumber(summary.input_tokens)} / 输出 ${formatNumber(summary.output_tokens)}`
+      note: `输入 ${formatNumber(summary.input_tokens)} / 输出 ${formatNumber(summary.output_tokens)}`,
     },
     // 全部调用的平均耗时
     { key: 'elapsed', label: 'AI平均耗时', value: summary.average_elapsed_ms || 0, unit: 'ms' },
@@ -180,17 +299,22 @@ const summaryCards = computed(() => {
       label: 'Agent运行',
       value: summary.agent_run_count || 0,
       unit: '次',
-      note: `平均耗时 ${summary.average_agent_elapsed_ms || 0}ms`
+      note: `平均耗时 ${summary.average_agent_elapsed_ms || 0}ms`,
     },
     // 状态为 SUCCEEDED 的运行占全部运行的百分比
-    { key: 'agentSuccess', label: 'Agent成功率', value: summary.agent_success_rate || 0, unit: '%' },
+    {
+      key: 'agentSuccess',
+      label: 'Agent成功率',
+      value: summary.agent_success_rate || 0,
+      unit: '%',
+    },
     // 自检步骤条数，说明文字是失败步骤的占比
     {
       key: 'steps',
       label: '自检步骤',
       value: summary.step_count || 0,
       unit: '步',
-      note: `失败率 ${summary.step_failure_rate || 0}%`
+      note: `失败率 ${summary.step_failure_rate || 0}%`,
     },
     // 产生修订稿的运行数，说明文字是人工放弃次数和平均轮次
     {
@@ -198,13 +322,13 @@ const summaryCards = computed(() => {
       label: '产生修订稿',
       value: summary.revision_count || 0,
       unit: '次',
-      note: `人工放弃 ${summary.rejection_count || 0} 次，平均 ${summary.average_rounds || 0} 轮`
-    }
+      note: `人工放弃 ${summary.rejection_count || 0} 次，平均 ${summary.average_rounds || 0} 轮`,
+    },
   ]
 })
 
 // 同一个容器已经有实例就复用，没有才初始化，新实例记进 charts
-const chart = element => {
+const chart = (element) => {
   const instance = echarts.getInstanceByDom(element) || echarts.init(element)
   if (!charts.includes(instance)) charts.push(instance)
   return instance
@@ -220,28 +344,42 @@ const renderCharts = () => {
       legend: { data: ['调用量', '失败量', 'Token'] },
       grid: { left: 50, right: 65, bottom: 35, top: 45 },
       // 横轴是日期，日期太密时隐藏重叠的标签
-      xAxis: { type: 'category', data: trend.map(item => item.date), axisLabel: { hideOverlap: true } },
+      xAxis: {
+        type: 'category',
+        data: trend.map((item) => item.date),
+        axisLabel: { hideOverlap: true },
+      },
       // 两条纵轴：左边是次数，右边是 Token
       yAxis: [
         { type: 'value', name: '次' },
-        { type: 'value', name: 'Token' }
+        { type: 'value', name: 'Token' },
       ],
       series: [
         // 调用量和失败量画柱形，默认使用左轴
-        { name: '调用量', type: 'bar', data: trend.map(item => item.call_count), itemStyle: { color: '#2563eb' } },
-        { name: '失败量', type: 'bar', data: trend.map(item => item.failed_count), itemStyle: { color: '#ef4444' } },
+        {
+          name: '调用量',
+          type: 'bar',
+          data: trend.map((item) => item.call_count),
+          itemStyle: { color: '#2563eb' },
+        },
+        {
+          name: '失败量',
+          type: 'bar',
+          data: trend.map((item) => item.failed_count),
+          itemStyle: { color: '#ef4444' },
+        },
         // Token 画平滑折线，yAxisIndex: 1 使用右轴
         {
           name: 'Token',
           type: 'line',
           yAxisIndex: 1,
           smooth: true,
-          data: trend.map(item => item.total_tokens),
-          itemStyle: { color: '#f59e0b' }
-        }
-      ]
+          data: trend.map((item) => item.total_tokens),
+          itemStyle: { color: '#f59e0b' },
+        },
+      ],
     },
-    true
+    true,
   )
 
   // 调用类型分布：环形图，调用类型编码翻成中文
@@ -265,12 +403,15 @@ const renderCharts = () => {
           radius: ['36%', '68%'],
           center: ['50%', '43%'],
           // 扇区名称是中文调用类型，数值是调用次数
-          data: callTypes.map(item => ({ name: typeText[item.call_type] || item.call_type, value: item.call_count })),
-          label: { formatter: '{b}: {c}' }
-        }
-      ]
+          data: callTypes.map((item) => ({
+            name: typeText[item.call_type] || item.call_type,
+            value: item.call_count,
+          })),
+          label: { formatter: '{b}: {c}' },
+        },
+      ],
     },
-    true
+    true,
   )
 
   // 自检运行状态：环形图，六种状态翻成中文（短文案，共享 @/constants）
@@ -288,17 +429,18 @@ const renderCharts = () => {
           radius: ['36%', '68%'],
           center: ['50%', '43%'],
           // 后端固定返回六种状态，数量为 0 的状态也在图例里
-          data: statuses.map(item => ({ name: agentText(item.status), value: item.count })),
-          label: { formatter: '{b}: {c}' }
-        }
-      ]
+          data: statuses.map((item) => ({ name: agentText(item.status), value: item.count })),
+          label: { formatter: '{b}: {c}' },
+        },
+      ],
     },
-    true
+    true,
   )
 
   // 自检步骤执行结果：横向堆叠柱形，成功和失败叠在一起
   const stepTypeText = Object.fromEntries(
-    ['REVIEW', 'REFINE', 'FINAL'].map(k => [k, STEP_TYPE_TEXT_FN(k)]))
+    ['REVIEW', 'REFINE', 'FINAL'].map((k) => [k, STEP_TYPE_TEXT_FN(k)]),
+  )
   const steps = data.result.step_ranking || []
   chart(stepRef.value).setOption(
     {
@@ -309,26 +451,29 @@ const renderCharts = () => {
       // 横轴是步骤条数，刻度只显示整数
       xAxis: { type: 'value', minInterval: 1 },
       // 纵轴是中文步骤类型
-      yAxis: { type: 'category', data: steps.map(item => stepTypeText[item.step_type] || item.step_type) },
+      yAxis: {
+        type: 'category',
+        data: steps.map((item) => stepTypeText[item.step_type] || item.step_type),
+      },
       series: [
         // 成功和失败两组柱形的 stack 相同，叠成一根
         {
           name: '成功',
           type: 'bar',
           stack: 'step',
-          data: steps.map(item => item.succeeded_count),
-          itemStyle: { color: '#10b981' }
+          data: steps.map((item) => item.succeeded_count),
+          itemStyle: { color: '#10b981' },
         },
         {
           name: '失败',
           type: 'bar',
           stack: 'step',
-          data: steps.map(item => item.failed_count),
-          itemStyle: { color: '#ef4444' }
-        }
-      ]
+          data: steps.map((item) => item.failed_count),
+          itemStyle: { color: '#ef4444' },
+        },
+      ],
     },
-    true
+    true,
   )
 }
 
@@ -336,15 +481,15 @@ const load = () => {
   if (!data.dateRange?.length) return ElMessage.warning('请选择观测日期范围')
   data.loading = true
   request
-    .get('/observability/overview', {
+    .get<ObservabilityResult>('/observability/overview', {
       params: {
         date_from: data.dateRange[0],
         date_to: data.dateRange[1],
         // 没选模型时传 undefined，Axios 不拼这个参数，后端统计全部模型
-        model_config_id: data.modelConfigId || undefined
-      }
+        model_config_id: data.modelConfigId || undefined,
+      },
     })
-    .then(res => {
+    .then((res) => {
       if (res.code === '200') {
         // 整体替换统计结果，卡片和两张表格随之重新渲染
         data.result = res.data
@@ -367,7 +512,7 @@ const reset = () => {
   load()
 }
 
-const resize = () => charts.forEach(item => item.resize())
+const resize = () => charts.forEach((item) => item.resize())
 onMounted(() => {
   // 容器挂载后才能初始化图表，所以在 onMounted 里查询
   window.addEventListener('resize', resize)
@@ -376,7 +521,7 @@ onMounted(() => {
 onUnmounted(() => {
   // 离开页面时移除监听并释放图表实例
   window.removeEventListener('resize', resize)
-  charts.forEach(item => item.dispose())
+  charts.forEach((item) => item.dispose())
 })
 </script>
 
@@ -397,7 +542,7 @@ onUnmounted(() => {
   padding: 17px;
 }
 .summary-label {
-  color: rgba(17, 24, 39, .55);
+  color: rgba(17, 24, 39, 0.55);
 }
 .summary-value {
   font-size: 26px;
@@ -407,11 +552,11 @@ onUnmounted(() => {
 .summary-value span {
   font-size: 13px;
   font-weight: normal;
-  color: rgba(17, 24, 39, .55);
+  color: rgba(17, 24, 39, 0.55);
   margin-left: 4px;
 }
 .summary-note {
-  color: rgba(17, 24, 39, .55);
+  color: rgba(17, 24, 39, 0.55);
   font-size: 12px;
   margin-top: 5px;
 }
@@ -430,7 +575,7 @@ onUnmounted(() => {
   font-weight: bold;
   font-size: 16px;
   padding-bottom: 10px;
-  border-bottom: 1px solid rgba(17, 24, 39, .10);
+  border-bottom: 1px solid rgba(17, 24, 39, 0.1);
 }
 .chart {
   height: 315px;
