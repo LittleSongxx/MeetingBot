@@ -49,6 +49,10 @@ class Citation:
     item_index: int | None = None
     speaker: str | None = None
     start_second: int | None = None
+    # 切片的时间窗终点。检索结果里本来就带它（Hit.as_citation），这里原样留下：
+    # 评测侧要用"这条切片覆盖哪几段转写"算检索指标（recall@k/MRR/nDCG），
+    # 只有起点算不出覆盖范围。
+    end_second: int | None = None
     authority: str | None = None
     task_id: int | None = None
     segment_no: int | None = None
@@ -67,7 +71,7 @@ class Citation:
             "ref": self.ref, "kind": self.kind, "meeting_id": self.meeting_id,
             "quote": self.quote, "meeting_title": self.meeting_title,
             "speaker": self.speaker, "start_second": self.start_second,
-            "authority": self.authority,
+            "end_second": self.end_second, "authority": self.authority,
         }
         for name in ("chunk_id", "minutes_id", "field", "item_index", "task_id", "segment_no"):
             value = getattr(self, name)
@@ -189,7 +193,8 @@ def _from_search(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation]
             ref=0, kind=KIND_CHUNK, meeting_id=int(hit.get("meeting_id") or 0),
             quote=str(hit.get("quote") or ""), meeting_title=str(hit.get("meeting_title") or ""),
             chunk_id=hit.get("chunk_id"), speaker=hit.get("speaker"),
-            start_second=hit.get("start_second"), authority=hit.get("authority"),
+            start_second=hit.get("start_second"), end_second=hit.get("end_second"),
+            authority=hit.get("authority"),
         )))
     return pairs
 
@@ -223,6 +228,7 @@ def _from_segments(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citatio
             ref=0, kind=KIND_SEGMENT, meeting_id=meeting_id,
             quote=str(segment.get("text") or ""), meeting_title=title,
             speaker=segment.get("speaker"), start_second=segment.get("start_second"),
+            end_second=segment.get("end_second"),
             task_id=result.get("task_id"), segment_no=segment.get("segment_no"),
         )))
     return pairs
