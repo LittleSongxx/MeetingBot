@@ -20,8 +20,13 @@ def create_token(user: User) -> str:
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
-async def get_current_user(token: str | None = Header(default=None)) -> User:
-    # 参数名 token 对应请求头 token，Header 让 FastAPI 从请求头而不是查询串取值
+async def user_from_token(token: str | None) -> User:
+    """从 Token 反查当前用户。**唯一**的令牌校验实现。
+
+    单独开出来是因为它有两个调用方：HTTP 依赖（`get_current_user`）与 MCP 工具
+    （那里的请求头不在 FastAPI 的 `Header` 参数里，而在 MCP 请求上下文中）。
+    两份实现意味着两处漂移风险，而"鉴权漂移"的后果是越权。
+    """
     # 没登录时前端补的是空串，这里直接判定登录失效
     if not token:
         raise CustomException("登录状态已失效，请重新登录", "401")
@@ -44,6 +49,11 @@ async def get_current_user(token: str | None = Header(default=None)) -> User:
     if payload.get("pv") != expected_pv:
         raise CustomException("登录状态已失效，请重新登录", "401")
     return user
+
+
+async def get_current_user(token: str | None = Header(default=None)) -> User:
+    # 参数名 token 对应请求头 token，Header 让 FastAPI 从请求头而不是查询串取值
+    return await user_from_token(token)
 
 
 async def require_admin(token: str | None = Header(default=None)) -> User:

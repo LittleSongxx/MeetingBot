@@ -4,9 +4,43 @@ from unittest import mock
 
 import httpx
 import openai
+from langchain_core.messages import AIMessageChunk, HumanMessage
 from models import AiCallLog, AiModelConfig
 from services import model_factory
 from tortoise import Tortoise
+
+
+class FakeStreamModel:
+    """替代 build_tool_model 的返回值：按脚本依次吐 token 或抛异常。
+
+    字符串包成真实的 AIMessageChunk，并给最后一段带上 usage——
+    形状与真实网关一致（用量在最后一个 chunk 上）。
+    """
+
+    DEFAULT_USAGE = {"input_tokens": 20, "output_tokens": 10, "total_tokens": 30}
+
+    def __init__(self, chunks, usage=None):
+        self.usage = self.DEFAULT_USAGE if usage is None else usage
+        self.chunks = []
+        for item in chunks:
+            if isinstance(item, (AIMessageChunk, Exception)):
+                self.chunks.append(item)
+            else:
+                self.chunks.append(AIMessageChunk(content=item))
+        if self.usage and self.chunks and isinstance(self.chunks[-1], AIMessageChunk):
+            self.chunks[-1] = self.chunks[-1].model_copy(update={"usage_metadata": self.usage})
+        self.attempts = 0
+
+    async def astream(self, messages):
+        """按脚本吐内容；异常抛出即停止，重试从剩下的脚本接着走。"""
+        self.attempts += 1
+        while self.chunks:
+            item = self.chunks.pop(0)
+            if isinstance(item, Exception):
+                raise item
+            if self.usage and isinstance(item, AIMessageChunk) and item.usage_metadata is None:
+                item = item.model_copy(update={"usage_metadata": self.usage})
+            yield item
 
 
 class FakeChatModel:
@@ -160,3 +194,124 @@ class StructuredOutputBindTest(unittest.TestCase):
             "https://dashscope.aliyuncs.com/compatible-mode/v1"), providers.JSON_SCHEMA)
         self.assertEqual(providers.structured_output_strategy(
             "https://api.deepseek.com"), providers.JSON_OBJECT)
+
+
+class ChatStreamTest(unittest.IsolatedAsyncioTestCase):
+    """流式问答调用：token 逐段产出、记账一行一次调用、失败分类与中断留痕。"""
+
+    async def asyncSetUp(self):
+        await Tortoise.init(
+            db_url="sqlite://:memory:", modules={"models": ["models"]},
+            use_tz=True, timezone="Asia/Shanghai")
+        await Tortoise.generate_schemas()
+        self.config = await AiModelConfig.create(
+            name="chat", model_type="AGENT", base_url="https://api.test/v1",
+            api_key="key", model_name="test-chat")
+
+    async def asyncTearDown(self):
+        await Tortoise.close_connections()
+
+    async def _stream(self, chunks, usage=None, **kwargs):
+        fake = FakeStreamModel(chunks, usage=usage)
+        events = []
+        with mock.patch.object(model_factory.asyncio, "sleep", new=self._no_sleep):
+            async for kind, payload in model_factory.stream_chat(
+                    self.config, [HumanMessage("问题")], model=fake, biz_id=7, **kwargs):
+                events.append((kind, payload))
+        return events, fake
+
+    async def _no_sleep(self, _seconds):
+        return None
+
+    async def test_tokens_are_streamed_and_message_is_returned(self):
+        events, fake = await self._stream(["上线", "时间", "定在十月"])
+        self.assertEqual([payload for kind, payload in events if kind == "token"],
+                         ["上线", "时间", "定在十月"])
+        message = events[-1][1]
+        self.assertEqual(message.content, "上线时间定在十月")
+        self.assertEqual(events[-1][0], "message")
+
+    async def test_each_call_writes_exactly_one_log_row_with_usage(self):
+        await self._stream(["答案"])
+        logs = await AiCallLog.all()
+        self.assertEqual(len(logs), 1)
+        self.assertEqual(logs[0].status, "SUCCEEDED")
+        self.assertEqual(logs[0].call_type, model_factory.CHAT_CALL_TYPE)
+        self.assertEqual(logs[0].biz_id, 7)
+        self.assertEqual(logs[0].usage_json.get("total_tokens"), 30)
+
+    async def test_transient_failure_before_first_token_is_retried(self):
+        chunks = [timeout_error(), "重试成功"]
+        events, fake = await self._stream(chunks)
+        self.assertEqual(fake.attempts, 2)
+        self.assertEqual(events[-1][1].content, "重试成功")
+        statuses = [row.status for row in await AiCallLog.all().order_by("id")]
+        self.assertEqual(statuses, ["FAILED", "SUCCEEDED"])
+
+    async def test_failure_after_first_token_is_not_retried(self):
+        chunks = ["半截回答", timeout_error()]
+        with self.assertRaises(RuntimeError):
+            await self._stream(chunks)
+        rows = await AiCallLog.all().order_by("id")
+        self.assertEqual([row.status for row in rows], ["FAILED"])
+        # 已吐字的失败不重试：日志里只有第一次尝试
+        self.assertIn("尝试 1/", rows[0].error_message)
+
+    async def test_client_interrupt_still_leaves_a_failed_row(self):
+        fake = FakeStreamModel(["很长的回答", "还有更多", "仍有更多"])
+        stream = model_factory.stream_chat(self.config, [HumanMessage("问")], model=fake)
+        first = await stream.__anext__()
+        self.assertEqual(first[0], "token")
+        await stream.aclose()
+        rows = await AiCallLog.all()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].status, "FAILED")
+        self.assertIn("客户端中断", rows[0].error_message)
+
+    async def test_missing_usage_is_marked_as_estimated(self):
+        from langchain_core.messages import AIMessageChunk
+        events, _ = await self._stream([AIMessageChunk(content="没有用量")], usage=False)
+        usage = (await AiCallLog.all())[0].usage_json
+        self.assertTrue(usage["estimated"])
+        self.assertGreater(usage["total_tokens"], 0)
+        self.assertEqual(events[-1][1].content, "没有用量")
+
+
+class UsageEstimateTest(unittest.TestCase):
+    def test_real_usage_is_used_when_present(self):
+        from langchain_core.messages import AIMessage
+        usage = model_factory.usage_or_estimate(
+            AIMessage(content="x", usage_metadata={"input_tokens": 30, "output_tokens": 12,
+                                                   "total_tokens": 42}), 100)
+        self.assertEqual(usage["total_tokens"], 42)
+        self.assertNotIn("estimated", usage)
+
+    def test_absent_usage_falls_back_to_characters_and_says_so(self):
+        from langchain_core.messages import AIMessage
+        usage = model_factory.usage_or_estimate(AIMessage(content="四个字"), 10)
+        self.assertEqual(usage["total_tokens"], 13)
+        self.assertTrue(usage["estimated"])
+
+
+class ToolBindingTest(unittest.TestCase):
+    def _config(self, base_url):
+        return AiModelConfig(name="t", model_type="AGENT", base_url=base_url,
+                             api_key="k", model_name="m")
+
+    def test_declared_provider_binds_tools(self):
+        tools = [{"type": "function", "function": {"name": "search_knowledge",
+                                                   "description": "d", "parameters": {}}}]
+        model = model_factory.build_tool_model(
+            self._config("https://api.deepseek.com"), tools, "chat")
+        self.assertEqual(model.kwargs["tools"][0]["function"]["name"], "search_knowledge")
+
+    def test_undeclared_provider_fails_before_the_request(self):
+        with self.assertRaises(RuntimeError) as ctx:
+            model_factory.build_tool_model(
+                self._config("https://nobody-heard-of.example/v1"), [], "chat")
+        self.assertIn("KNOWN_TOOL_CALLING", str(ctx.exception))
+
+    def test_chat_does_not_request_reasoning_by_default(self):
+        from common import providers
+        self.assertFalse(providers.wants_reasoning("chat"))
+        self.assertFalse(providers.wants_reasoning("chat_summary"))

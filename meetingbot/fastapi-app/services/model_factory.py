@@ -14,13 +14,13 @@ import asyncio
 import os
 import random
 from time import perf_counter
-from typing import Any, Callable
+from typing import Any, AsyncIterator, Awaitable, Callable
 from uuid import uuid4
 
 import openai
 from common import providers
 from common.model_json import build_schema_instruction, parse_model_json
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.runnables import Runnable
 from langchain_openai import ChatOpenAI
 from models import AiCallLog, AiModelConfig
@@ -65,7 +65,33 @@ def build_chat_model(config: AiModelConfig, schema: dict, call_type: str,
     `call_type` 同时用于两件事：结构化输出的 schema 名，以及**推理策略的选择**
     （`providers.REASONING_BY_CALL_TYPE`）。它不是可有可无的标签。
     """
-    options = {}
+    model = chat_model(config, call_type, prompt_chars)
+    # 结构化输出的方式由供应商能力决定，不再硬编码为严格 schema：
+    # 支持 json_schema 的供应商用最强约束；只支持 json_object 的（例如 DeepSeek）
+    # 退到"声明返回 JSON + 提示词里的 schema 说明 + 落库前校验器"三层兜底。
+    # 猜错这里会直接导致请求失败，所以能力写在一张声明表里（common/providers.py）。
+    strategy = providers.structured_output_strategy(config.base_url)
+    if strategy == providers.JSON_SCHEMA:
+        # 严格结构化输出：模型返回的 JSON 必须符合 schema，必填字段一个都不能少
+        return model.bind(
+            response_format={
+                "type": "json_schema",
+                "json_schema": {"name": call_type, "strict": True, "schema": schema},
+            }
+        )
+    # json_object：结构约束来自 build_schema_instruction 附在提示词后的 schema 原文，
+    # 以及 invoke_json 传入的 validator。这里只声明"要返回一个 JSON 对象"。
+    return model.bind(response_format={"type": "json_object"})
+
+
+def chat_model(config: AiModelConfig, call_type: str, prompt_chars: int = 0) -> ChatOpenAI:
+    """构造一个**不带任何输出约束**的对话模型（工具绑定前的底座）。
+
+    与 `build_chat_model` 的差别只有一处：这里不 bind `response_format`。
+    工具调用与结构化输出是两种互斥的输出方式（一个要模型写 function call，
+    一个要模型写 JSON 正文），所以聊天走这条，纪要类调用走上面那条。
+    """
+    options: dict[str, Any] = {}
     override = os.getenv("LLM_ENABLE_THINKING", "").strip()
     if override and override.lower() not in {"true", "false"}:
         raise ValueError("LLM_ENABLE_THINKING must be true or false")
@@ -86,7 +112,12 @@ def build_chat_model(config: AiModelConfig, schema: dict, call_type: str,
     max_tokens = providers.max_tokens_env(call_type)
     if max_tokens:
         options["max_tokens"] = int(max_tokens)
-    model = ChatOpenAI(
+    # 流式调用要拿到 token 用量（预算闸与成本核算都靠它）。langchain-openai 只在
+    # 默认 base_url（api.openai.com）下自动开它，自定义网关（本项目的部署形态）
+    # 一律要显式声明；拿到的是 `stream_options: {"include_usage": true}`，
+    # 属 OpenAI 兼容协议的一部分。
+    options["stream_usage"] = True
+    return ChatOpenAI(
         # 模型名称、API Key、接口地址都来自第 7 章 AI 模型配置页面保存的这条记录
         model=config.model_name,
         api_key=config.api_key,
@@ -98,22 +129,21 @@ def build_chat_model(config: AiModelConfig, schema: dict, call_type: str,
         max_retries=0,
         **options,
     )
-    # 结构化输出的方式由供应商能力决定，不再硬编码为严格 schema：
-    # 支持 json_schema 的供应商用最强约束；只支持 json_object 的（例如 DeepSeek）
-    # 退到"声明返回 JSON + 提示词里的 schema 说明 + 落库前校验器"三层兜底。
-    # 猜错这里会直接导致请求失败，所以能力写在一张声明表里（common/providers.py）。
-    strategy = providers.structured_output_strategy(config.base_url)
-    if strategy == providers.JSON_SCHEMA:
-        # 严格结构化输出：模型返回的 JSON 必须符合 schema，必填字段一个都不能少
-        return model.bind(
-            response_format={
-                "type": "json_schema",
-                "json_schema": {"name": call_type, "strict": True, "schema": schema},
-            }
-        )
-    # json_object：结构约束来自 build_schema_instruction 附在提示词后的 schema 原文，
-    # 以及 invoke_json 传入的 validator。这里只声明"要返回一个 JSON 对象"。
-    return model.bind(response_format={"type": "json_object"})
+
+
+def build_tool_model(config: AiModelConfig, tools: list[dict[str, Any]], call_type: str,
+                     prompt_chars: int = 0) -> Runnable:
+    """构造**绑定工具**的对话模型。`tools` 是 OpenAI function calling 形状的声明。
+
+    供应商能力先查声明表（`providers.supports_tool_calling`）：未声明的供应商
+    在这里就报出可读错误，而不是等着请求被 400 打回来——后者看起来像"模型不听话"。
+    """
+    if not providers.supports_tool_calling(config.base_url):
+        raise RuntimeError(
+            f"模型配置 {config.name}（{providers.host_of(config.base_url)}）未声明支持工具调用；"
+            "确认可用后在 common/providers.KNOWN_TOOL_CALLING 登记，聊天功能才会启用")
+    return chat_model(config, call_type, prompt_chars).bind_tools(list(tools))
+
 
 
 async def invoke_json(
@@ -238,6 +268,160 @@ async def invoke_json(
                     continue
             # 统一换成带模型名称的提示，例如“说话人匹配模型调用失败：……”，接口层把它转成页面提示
             raise RuntimeError(f"{label}调用失败：{detail[:1000]}") from error
+
+
+# --------------------------------------------------------------------------- #
+# 问答：工具绑定 + 流式
+# --------------------------------------------------------------------------- #
+
+CHAT_CALL_TYPE = "CHAT"
+
+
+def _message_chars(messages: Any) -> int:
+    """消息的字符数，用于估算用量与记录请求大小。"""
+    total = 0
+    for message in messages or []:
+        content = getattr(message, "content", message)
+        total += len(str(content))
+    return total
+
+
+def usage_or_estimate(message: Any, prompt_chars: int) -> dict:
+    """这次调用的用量。拿不到真实用量就按字符数粗估，并**标明这是估算**。
+
+    为什么要有估算分支：用量来自流式响应的最后一个 chunk（`include_usage`）。
+    个别网关不返回它——此时若按 0 记账，预算闸会静默失效（看起来一切正常，
+    实际没有上限），比"数字不准"危险得多。所以宁可给一个标了 `estimated` 的
+    粗估：它让闸门继续有效，也让观测页能一眼分出"量出来的"和"估出来的"。
+    """
+    usage = dict(getattr(message, "usage_metadata", None) or {})
+    if usage.get("total_tokens"):
+        return usage
+    answer_chars = len(str(getattr(message, "content", "") or ""))
+    return {
+        "prompt_tokens": int(prompt_chars), "completion_tokens": answer_chars,
+        "total_tokens": int(prompt_chars) + answer_chars,
+        "estimated": True,
+        "estimate_basis": "按输入与输出字符数粗估，网关未返回 usage 明细",
+    }
+
+
+async def stream_chat(
+    config: AiModelConfig,
+    messages: list[Any],
+    *,
+    tools: list[dict[str, Any]] | None = None,
+    call_type: str = CHAT_CALL_TYPE,
+    biz_id: int = 0,
+    label: str = "问答模型",
+    model: Any = None,
+) -> AsyncIterator[tuple[str, Any]]:
+    """流式调一次对话模型，逐个 token 产出，最后产出完整消息。
+
+    产出的事件：`("token", 文本片段)` 与 `("message", AIMessage)`（最后一个）。
+
+    三条与仓库口径一致的约定：
+
+    1. **一行 = 一次真实调用**：无论成功失败都写一条 `ai_call_log`，用量取自
+       最后一个 chunk 的 `usage_metadata`（拿不到就粗估并标 `estimated`）。
+    2. **重试只在"还没吐字"之前**：已经推给客户端的 token 收不回来，半截回答
+       后面再补一遍是错的。首个 token 之前的瞬态失败照常退避重试。
+    3. **客户端中断也要留痕**：调用真的发生过（网关那边已经计费），只是没有
+       完整答案——落一条 FAILED 日志并写明"客户端中断"，而不是当它没发生。
+    """
+    request_size = len("".join(str(getattr(m, "content", "")) for m in messages or []).encode("utf-8"))
+    prompt_chars = _message_chars(messages)
+    attempts = _max_attempts()
+    emitted = False
+    active = model or build_tool_model(config, tools or [], call_type, prompt_chars=prompt_chars)
+
+    for attempt in range(1, attempts + 1):
+        started = perf_counter()
+        accumulated: Any = None
+        answer_chars = 0
+        try:
+            async for chunk in active.astream(messages):
+                text = _chunk_text(chunk)
+                if text:
+                    emitted = True
+                    answer_chars += len(text)
+                    yield ("token", text)
+                accumulated = chunk if accumulated is None else accumulated + chunk
+            message = accumulated if accumulated is not None else AIMessage(content="")
+            usage = usage_or_estimate(message, prompt_chars)
+            await AiCallLog.create(
+                request_id="AIC" + uuid4().hex.upper(),
+                call_type=call_type, biz_id=biz_id,
+                model_config_id=config.id, model_name=config.model_name,
+                request_size=request_size,
+                response_size=len(str(getattr(message, "content", "") or "").encode("utf-8")),
+                status="SUCCEEDED",
+                elapsed_ms=int((perf_counter() - started) * 1000),
+                usage_json=usage,
+            )
+            yield ("message", message)
+            return
+        except Exception as error:  # noqa: BLE001 - 逐类分流后再抛，与 invoke_json 同款
+            detail = (str(error) or type(error).__name__)[:2000]
+            await AiCallLog.create(
+                request_id="AIC" + uuid4().hex.upper(),
+                call_type=call_type, biz_id=biz_id,
+                model_config_id=config.id, model_name=config.model_name,
+                request_size=request_size, response_size=answer_chars,
+                status="FAILED",
+                elapsed_ms=int((perf_counter() - started) * 1000),
+                error_message=f"[尝试 {attempt}/{attempts}] {detail}",
+            )
+            if attempt < attempts and not emitted and is_transient(error):
+                await asyncio.sleep(0.5 * (2 ** (attempt - 1)) + random.uniform(0, 0.3))
+                continue
+            raise RuntimeError(f"{label}调用失败：{detail[:1000]}") from error
+        except BaseException as error:  # noqa: BLE001 - 客户端中断（GeneratorExit 等）
+            await AiCallLog.create(
+                request_id="AIC" + uuid4().hex.upper(),
+                call_type=call_type, biz_id=biz_id,
+                model_config_id=config.id, model_name=config.model_name,
+                request_size=request_size, response_size=answer_chars,
+                status="FAILED",
+                elapsed_ms=int((perf_counter() - started) * 1000),
+                error_message=f"客户端中断，本次调用未产出完整回答（{type(error).__name__}）",
+            )
+            raise
+
+
+def _chunk_text(chunk: Any) -> str:
+    """从流式 chunk 里取正文。多模态形态下 content 是列表，只取文本部分。"""
+    content = getattr(chunk, "content", "")
+    if isinstance(content, list):
+        return "".join(str(part.get("text") or "") for part in content
+                       if isinstance(part, dict))
+    return str(content or "")
+
+
+def make_model_caller(
+    config: AiModelConfig,
+    *,
+    tools: list[dict[str, Any]] | None = None,
+    call_type: str = CHAT_CALL_TYPE,
+    biz_id: int = 0,
+    label: str = "问答模型",
+    model: Any = None,
+) -> Callable[[list[Any]], Awaitable[Any]]:
+    """把一次流式调用包成状态图要的"调模型"动作：进去是消息列表，出来是 AIMessage。
+
+    图不关心流式——token 是通过 LangChain 的回调体系冒上去的，SSE 那一层用
+    `astream_events` 接（见 api/chat.py）。这里只保证记账与失败分类都走过
+    `stream_chat` 这一个出入口。
+    """
+    async def call_model(messages: list[Any]) -> Any:
+        message: Any = None
+        async for kind, payload in stream_chat(config, messages, tools=tools, call_type=call_type,
+                                               biz_id=biz_id, label=label, model=model):
+            if kind == "message":
+                message = payload
+        return message
+
+    return call_model
 
 
 # --------------------------------------------------------------------------- #

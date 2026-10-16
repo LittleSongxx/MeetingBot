@@ -18,3 +18,7 @@ langchain-openai==1.6.0
 langgraph==1.2.11
 bcrypt~=5.0.0
 temporalio==1.34.0
+# MCP: 把知识库工具以 Model Context Protocol 暴露给外部客户端（挂载在 /mcp）。
+# 2.x 里 FastMCP 已更名为 MCPServer（同样的东西，只是名字），
+# streamable_http_app(stateless_http=True) 与 session_manager 都还在。
+mcp~=2.3

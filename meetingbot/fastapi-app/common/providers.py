@@ -51,6 +51,37 @@ KNOWN_STRUCTURED_OUTPUT: dict[str, str] = {
 DEFAULT_STRATEGY = JSON_OBJECT
 
 
+# --------------------------------------------------------------------------- #
+# 工具调用能力（问答 Agent 用）
+# --------------------------------------------------------------------------- #
+
+# 与结构化输出同构的第二张能力表：**这里声明的是已验证过的供应商**。
+# 猜错的代价是请求被 400 打回来（看起来像"模型不听话"），所以未列出的主机
+# 一律按"不支持"处理，聊天接口据此给出可读错误并指路到这张表——
+# 这与 KNOWN_STRUCTURED_OUTPUT 的保守默认是同一条理由：不确定就不假装确定。
+KNOWN_TOOL_CALLING: dict[str, bool] = {
+    "api.deepseek.com": True,
+    "dashscope.aliyuncs.com": True,
+    "api.openai.com": True,
+    "open.bigmodel.cn": True,
+    "api.moonshot.cn": True,
+    "ark.cn-beijing.volces.com": True,
+}
+
+DEFAULT_TOOL_CALLING = False
+
+
+def supports_tool_calling(base_url: str) -> bool:
+    """这家供应商能不能做 function calling。未声明的一律返回 False。"""
+    host = host_of(base_url)
+    if not host:
+        return False
+    for known_host, supported in KNOWN_TOOL_CALLING.items():
+        if host == known_host or host.endswith("." + known_host):
+            return bool(supported)
+    return DEFAULT_TOOL_CALLING
+
+
 def host_of(base_url: str) -> str:
     """从 base_url 取出主机名；非法输入返回空串而不是抛异常。"""
     if not isinstance(base_url, str) or not base_url.strip():
@@ -104,6 +135,13 @@ REASONING_BY_CALL_TYPE: dict[str, bool] = {
     "agent_refine": True,
     # 支撑复核是判定类任务：判"依据是否支撑这条意见"，开推理
     "agent_review_support": True,
+    # 问答：这里是**交互式**调用，用户盯着屏幕等首字；而"选哪个工具、怎么措辞"
+    # 不需要长链推理。实测同供应商关思考后延迟从 10.29s 降到 0.57s
+    #（见 reasoning_is_billed_as_output），所以聊天一律关；若某部署的问答质量
+    # 确实依赖推理，用 LLM_ENABLE_THINKING=true 或 LLM_MAX_TOKENS_CHAT 单独调。
+    "chat": False,
+    # 滚动摘要（会话记忆压缩）：机械摘要任务，同 minutes
+    "chat_summary": False,
 }
 DEFAULT_REASONING = False
 
