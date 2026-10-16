@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import json
 import unittest
 from typing import Any
 
@@ -236,6 +237,90 @@ class GraphRunTest(unittest.IsolatedAsyncioTestCase):
         state = await self._run(graph, injected, [HumanMessage("查一下")])
         # 最后一条消息是工具结果：绝不能把它的 JSON 当答案
         self.assertEqual(chat_graph.final_answer(state), "")
+
+    async def test_stalled_turn_reports_where_it_got_stuck(self):
+        """q26/q27 的形态：工具一直失败、模型原样重试，最后停在停滞闸上。
+
+        停在闸门上是**正确**行为；这一条钉的是"停得说不清原因"这个缺陷：
+        结局里必须带上是哪个工具、失败原因是什么。
+        """
+
+        async def failing_search(query: str) -> str:
+            self.calls.append(query)
+            return json.dumps({"ok": False, "error": "参数校验失败：meeting_ids 需要数组"},
+                              ensure_ascii=False)
+
+        graph, injected = self._graph(
+            [_ai("", calls=[_call("search_knowledge", {"query": "同一个词"})], tokens=1)
+             for _ in range(6)], _plain_tool(failing_search),
+            budget={"max_rounds": 9, "max_tool_calls": 9, "max_tokens": 10_000,
+                    "max_cost_micro": 0, "max_stall": 3})
+        state = await self._run(graph, injected, [HumanMessage("下午这场会定了哪些行动项")])
+        self.assertEqual(state["stop_reason"], chat_graph.STOP_STALLED)
+        self.assertIn("search_knowledge", state["stop_detail"])
+        self.assertIn("meeting_ids 需要数组", state["stop_detail"])
+        text = chat_graph.stop_reason_text(state["stop_reason"], state["stop_detail"])
+        self.assertIn("已停止继续检索", text)
+
+
+class StopDetailTest(unittest.TestCase):
+    """结局可读：停在硬闸上时要能说清"卡在哪"。
+
+    实测背景（q26/q27）：停滞闸掐断后答案为空，页面上只有一句"已停止继续检索"，
+    用户看不到工具其实一直卡在参数上。
+    """
+
+    def _tool_failure(self, name: str = "list_facts",
+                      error: str = "参数校验失败：meeting_ids Input should be a valid list"):
+        return ToolMessage(content=json.dumps({"ok": False, "error": error}),
+                           name=name, tool_call_id="c1")
+
+    def test_stall_detail_names_the_failing_tool_and_its_error(self):
+        state = {"stop_reason": chat_graph.STOP_STALLED, "stall_streak": 3,
+                 "messages": [HumanMessage("问"), self._tool_failure()]}
+        detail = chat_graph.stop_detail(state)
+        self.assertIn("list_facts", detail)
+        self.assertIn("meeting_ids", detail)
+        self.assertIn("3 次", detail)
+
+    def test_stall_without_a_failing_tool_says_which_signature_repeated(self):
+        state = {"stop_reason": chat_graph.STOP_STALLED, "stall_streak": 3,
+                 "messages": [ToolMessage(content='{"ok": true, "hits": []}',
+                                          name="search_knowledge", tool_call_id="c1")]}
+        detail = chat_graph.stop_detail(state)
+        self.assertIn("3 次", detail)
+        self.assertNotIn("list_facts", detail)
+
+    def test_last_tool_failure_reads_the_latest_failure_only(self):
+        messages = [
+            ToolMessage(content='{"ok": false, "error": "第一次失败"}',
+                        name="search_knowledge", tool_call_id="c1"),
+            ToolMessage(content='{"ok": true, "hits": []}', name="search_knowledge",
+                        tool_call_id="c2"),
+            ToolMessage(content='{"ok": false, "error": "最后一次失败"}',
+                        name="search_knowledge", tool_call_id="c3"),
+        ]
+        self.assertEqual(chat_graph.last_tool_failure(messages)["error"], "最后一次失败")
+
+    def test_last_tool_failure_is_none_when_nothing_failed(self):
+        self.assertIsNone(chat_graph.last_tool_failure([HumanMessage("问")]))
+        self.assertIsNone(chat_graph.last_tool_failure(
+            [ToolMessage(content="不是 JSON", name="x", tool_call_id="c1")]))
+
+    def test_gate_details_say_what_was_exhausted(self):
+        self.assertIn("6 轮", chat_graph.stop_detail(
+            {"stop_reason": chat_graph.STOP_MAX_ROUNDS, "round_no": 6}))
+        self.assertIn("token", chat_graph.stop_detail(
+            {"stop_reason": chat_graph.STOP_BUDGET_TOKENS, "tokens_used": 120_000}))
+        self.assertEqual(chat_graph.stop_detail({"stop_reason": chat_graph.STOP_FINISHED}), "")
+
+    def test_stop_reason_text_puts_the_cause_next_to_the_notice(self):
+        text = chat_graph.stop_reason_text(chat_graph.STOP_STALLED, "工具「x」连续 3 次失败")
+        self.assertIn(chat_graph.STOP_NOTICE[chat_graph.STOP_STALLED], text)
+        self.assertIn("工具「x」连续 3 次失败", text)
+        # 没有具体原因时就是原来那一句，不多一个空壳
+        self.assertEqual(chat_graph.stop_reason_text(chat_graph.STOP_STALLED),
+                         chat_graph.STOP_NOTICE[chat_graph.STOP_STALLED])
 
 
 class ToolTraceTest(unittest.TestCase):

@@ -81,6 +81,8 @@ class ChatState(TypedDict, total=False):
     stall_streak: int
     # 结束原因，由路由或 finalize 写入
     stop_reason: str
+    # 这次为什么停得"什么都没有"的一句话（可读，给用户看；见 stop_detail）
+    stop_detail: str
     # 是否已经为"没调工具"提醒过一次（只提醒一次，避免与模型的拉锯）
     nudged: bool
 
@@ -189,9 +191,9 @@ async def nudge_node(state: ChatState) -> ChatState:
 
 
 async def finalize_node(state: ChatState) -> ChatState:
-    """结束节点：只补一个停止原因，不再发起任何调用。"""
+    """结束节点：补上停止原因与它的可读说明，不再发起任何调用。"""
     if state.get("stop_reason"):
-        return {}
+        return {"stop_detail": stop_detail(state)}
     return {"stop_reason": STOP_FINISHED}
 
 
@@ -314,6 +316,71 @@ def _text_of(message: Any) -> str:
     return str(content or "").strip()
 
 
+# --------------------------------------------------------------------------- #
+# 结局可读：停了以后要说清"卡在哪"
+# --------------------------------------------------------------------------- #
+
+
+def last_tool_failure(messages: list[Any]) -> dict[str, str] | None:
+    """最后一次失败的工具调用（名字 + 错误原文）。没失败过就返回 None。
+
+    工具结果本来就是 JSON（`{"ok": false, "error": ...}`），所以"卡在哪"不用另记一份——
+    从消息流里读回来即可。另记一份的代价是两处真相会漂移。
+    """
+    for message in reversed(messages or []):
+        if getattr(message, "type", "") != "tool":
+            continue
+        try:
+            result = json.loads(_text_of(message))
+        except (TypeError, ValueError):
+            continue
+        if isinstance(result, dict) and result.get("ok") is False:
+            name = str(getattr(message, "name", "") or "").strip() or "未知工具"
+            reason = str(result.get("error") or "").strip()[:200]
+            return {"name": name, "error": reason or "没有给出原因"}
+    return None
+
+
+def stop_detail(state: ChatState) -> str:
+    """这次为什么停在这儿：一句话说清，能落在哪条证据上就落在哪条上。
+
+    实测背景（q26/q27 两轮）：停滞闸掐断后答案为空，页面上只有一句
+    "检测到工具调用在原地重复，已停止继续检索"，**用户看不到工具其实一直卡在参数上**
+    （模型把 meeting_ids 写成了字符串）。停是对的，说不清"卡在哪"才是缺陷。
+    """
+    reason = str(state.get("stop_reason") or "")
+    streak = int(state.get("stall_streak", 0) or 0)
+    if reason == STOP_STALLED:
+        failure = last_tool_failure(state.get("messages") or [])
+        if failure:
+            return (f"工具「{failure['name']}」连续 {streak} 次以同一组参数调用都失败，"
+                    f"最后一次返回：{failure['error']}")
+        return f"工具连续 {streak} 次以同一组参数调用，没有取到新的信息"
+    if reason == STOP_MAX_ROUNDS:
+        return f"已用满 {int(state.get('round_no', 0) or 0)} 轮推理"
+    if reason == STOP_BUDGET_TOKENS:
+        return f"本轮已用 {int(state.get('tokens_used', 0) or 0)} token"
+    if reason == STOP_BUDGET_COST:
+        return "本次问答达到成本上限"
+    if reason == STOP_BUDGET_TOOLS:
+        return f"本轮已调用 {int(state.get('tool_calls', 0) or 0)} 次工具"
+    if reason == STOP_NO_RETRIEVAL:
+        return "本轮没有调用任何工具"
+    return ""
+
+
+def stop_reason_text(stop_reason: str, detail: str = "") -> str:
+    """给用户看的一句话：停止原因 +（有的话）具体卡在哪。
+
+    两个读者共用一句：`error_message` 列（页面的红色告警）与 `done` 事件的 notice。
+    分成两句写就会出现"页面上说了原因、库里没说"的不一致。
+    """
+    notice = STOP_NOTICE.get(stop_reason, "")
+    if detail and notice:
+        return f"{notice}原因：{detail}。"
+    return notice or detail
+
+
 # 工具结果里能数出来的"这条结果给了多少东西"，用来说清一次工具调用干了什么
 _COUNT_KEYS = {
     "search_knowledge": ("hits", "条切片"),
@@ -376,6 +443,7 @@ def tool_trace(messages: list[Any]) -> list[dict[str, Any]]:
 __all__ = [
     "ChatState", "build_chat_graph", "budget_from_env", "recursion_limit",
     "final_answer", "tool_trace", "summarize_tool_result", "gate_reason",
+    "last_tool_failure", "stop_detail", "stop_reason_text",
     "STOP_NOTICE", "STOP_FINISHED", "STOP_STALLED", "STOP_MAX_ROUNDS", "STOP_NO_RETRIEVAL",
     "STOP_BUDGET_TOKENS", "STOP_BUDGET_COST", "STOP_BUDGET_TOOLS",
 ]

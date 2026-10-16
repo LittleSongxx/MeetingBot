@@ -452,6 +452,7 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     first_round_buffer = ""
     answer = "".join(chunks)
     stop_reason = str(final_state.get("stop_reason") or "")
+    detail = chat_graph.stop_detail(final_state)
     # **有没有依据**：这一轮一次工具都没调用（提醒之后仍未调用），说明答案没有任何
     # 知识库依据。实测过模型在这种情况下的行为：它会直接编造会议里不存在的内容并
     # 声称来自某场会（同一条问题连问四次，两次如此）。处置是"如实标注"而不是静默
@@ -462,6 +463,12 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         failure = chat_graph.STOP_NOTICE[chat_graph.STOP_NO_RETRIEVAL]
         logger.warning("会话 %s 的这一轮没有调用任何工具（跑了 %d 轮）",
                        session.id, int(final_state.get("round_no", 0) or 0))
+    elif failure is None and not answer and stop_reason == chat_graph.STOP_STALLED:
+        # 停滞闸掐断，而且这一轮什么都没给出来（q26/q27 就是这么结束的）：
+        # 把"卡在哪"提成**错误级**结局——页面用红色告警渲染 error_message，
+        # 而不是一句蓝色提示配一个空气泡。停在闸门上是正确行为，说不清原因才是缺陷。
+        failure = chat_graph.stop_reason_text(stop_reason, detail)
+        logger.warning("会话 %s 的这一轮停在 %s：%s", session.id, stop_reason, detail)
     # 内容审核第三层（输出复检）：输入干净不代表输出干净——检索到的会议原文本身
     # 就可能含违规表述。这一层才是门，处置动作（flag/redact/block）由配置决定
     output_verdict = moderation.check_output(answer)
@@ -482,6 +489,9 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     yield ("done", {
         "message_id": assistant_row.id, "stop_reason": stop_reason,
         "notice": chat_graph.STOP_NOTICE.get(stop_reason, ""),
+        # 非正常结束时说明"卡在哪"（正常结束是空串）。它同时进 error_message 与
+        # done 事件：页面看得到，库里也查得到，两处是同一句话。
+        "detail": detail,
         "tokens": tokens, "citations": stored["citations"]["used"],
         "tool_calls": len(stored["tools"]),
         "unknown_refs": stored["citations"]["unknown_refs"],

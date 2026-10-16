@@ -380,7 +380,7 @@ class ToolSpec:
         try:
             return self.arguments.model_validate(arguments)
         except ValidationError as error:
-            raise ToolError(f"参数校验失败：{error.errors()[:3]}") from error
+            raise ToolError(f"参数校验失败：{_readable_errors(error)}") from error
 
     def openai_tool(self) -> dict[str, Any]:
         """OpenAI 兼容的 function calling 声明（ChatOpenAI.bind_tools 直接吃这个形状）。"""
@@ -457,6 +457,20 @@ def tool_result_text(result: dict[str, Any]) -> str:
 # --------------------------------------------------------------------------- #
 # 共用零件
 # --------------------------------------------------------------------------- #
+
+
+def _readable_errors(error: ValidationError) -> str:
+    """把 pydantic 的错误列表压成"字段 需要什么"这样一句话。
+
+    这段文本有**两个读者**：模型（据此改参数重试）与用户（停滞时它就是"卡在哪"的
+    说明，见 `chat_graph.stop_detail`）。原始的 `error.errors()` 是一串字典，两者都
+    读不动——实测 q26/q27 的模型正是对这种文本无从下手，只好原样重试。
+    """
+    parts = []
+    for item in error.errors()[:3]:
+        field = ".".join(str(part) for part in (item.get("loc") or ())) or "参数"
+        parts.append(f"{field} {item.get('msg') or '不合法'}")
+    return "；".join(parts)
 
 
 async def _require_access(actor: Actor, meeting: Meeting) -> None:
