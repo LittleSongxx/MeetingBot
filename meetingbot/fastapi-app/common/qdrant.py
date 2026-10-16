@@ -15,10 +15,13 @@ Qdrant 的原生 payload 过滤 + 服务端 RRF 融合正好覆盖，且是 100K
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any, Iterable, Sequence
 
 import httpx
+
+logger = logging.getLogger("meetingbot.qdrant")
 
 # 向量字段名：dense 与 sparse 各一路，混合检索时按名字指认
 DENSE_VECTOR = "dense"
@@ -33,6 +36,21 @@ DEFAULT_TIMEOUT = 20.0
 # 注意它与切片里的 `start_ms` **不是同一条时间轴**：`start_ms` 是录音内部的偏移量
 # （"第 51 秒说了什么"），而这个键回答"这场会是什么时候开的"。
 MEETING_START_KEY = "meeting_start_epoch"
+
+# 会被过滤的字段 + 索引类型。**官方文档明确要求"给每一个会被过滤的字段建 payload 索引"**
+# （Qdrant《Indexing》）：没有索引时查询规划器只能把 payload 读出来逐条比对，
+# "会不必要地消耗集群资源、拖慢其他查询"；而且要**在建库时就建**——过滤感知的 HNSW 边
+# 只在建索引之后写入，后补索引拿不到那部分图结构（后补只省了扫描，没省图）。
+#
+# 这里的取值全部是"硬条件"（权限、权威级、切片类型、时间范围、来源录音），
+# 与官方文档的判断口径一致：**硬条件进过滤，偏好（如"优先最近的"）该进打分而不是过滤**。
+INDEXED_FIELDS: tuple[tuple[str, str], ...] = (
+    ("meeting_id", "integer"),
+    ("authority", "keyword"),
+    ("chunk_type", "keyword"),
+    (MEETING_START_KEY, "integer"),
+    ("source_id", "integer"),
+)
 
 
 class QdrantError(RuntimeError):
@@ -102,18 +120,43 @@ async def ensure_collection(dim: int, *, name: str | None = None) -> None:
                 "vectors": {DENSE_VECTOR: {"size": int(dim), "distance": "Cosine"}},
                 "sparse_vectors": {SPARSE_VECTOR: {}},
             })
+            await ensure_payload_indexes(name)
             return
         except QdrantError:
             # 并发创建：重新读一次，读到了就说明另一个请求建好了
             if not await _exists(name):
                 raise
             existing = _result(await _call("GET", f"/collections/{name}"))
+    # 已存在的库（老部署、或并发创建的另一方）：把索引补齐。后补索引拿不到
+    # 过滤感知的 HNSW 边，但过滤本身仍然从索引受益——这条限制写在 ensure_payload_indexes 里
+    await ensure_payload_indexes(name)
     vectors = (existing.get("config") or {}).get("params", {}).get("vectors") or {}
     current = (vectors.get(DENSE_VECTOR) or {}).get("size")
     if current and int(current) != int(dim):
         raise QdrantError(
             f"collection {name} 的向量维度是 {current}，当前嵌入模型是 {dim} 维。"
             "换嵌入模型需要重建知识库（不要自动重建：旧向量可能还在用）")
+
+
+async def ensure_payload_indexes(name: str | None = None) -> list[str]:
+    """确保过滤字段都有 payload 索引，返回**这次真正新建的**字段名。
+
+    幂等：已经存在的索引重复 PUT 不会报错（Qdrant 只在类型冲突时报）。
+    索引是过滤器性能的前提，而漏建的表现是"查询变慢"而不是报错——这种漂移最难发现，
+    所以把它做成启动/建库路径上的固定一步，而不是靠文档提醒。
+    """
+    name = name or collection_name()
+    created: list[str] = []
+    for field, schema in INDEXED_FIELDS:
+        try:
+            await _call("PUT", f"/collections/{name}/index",
+                        json={"field_name": field, "field_schema": schema})
+            created.append(field)
+        except QdrantError as error:
+            # 权限受限的部署可能不允许建索引：**只记日志不打断**——过滤仍然可用（更慢）
+            logger.warning("建 payload 索引 %s.%s 失败（过滤仍可用，只是更慢）：%s",
+                           name, field, error)
+    return created
 
 
 async def _exists(name: str) -> bool:
@@ -165,6 +208,17 @@ def _acl_filter(allowed_meeting_ids: Sequence[int] | None) -> dict[str, Any] | N
     return {"must": [{"key": "meeting_id", "match": {"any": ids}}]}
 
 
+def _match_any(key: str, values: Iterable[Any]) -> dict[str, Any] | None:
+    """一组候选值里任一个命中（Qdrant 的 `match.any`）。空集合返回 None（不加条件）。
+
+    用 `match.any` 而不是多个 `should`：官方文档明确说前者更快，值多时差别明显。
+    """
+    items = [int(v) if isinstance(v, (int, float)) else str(v) for v in values]
+    if not items:
+        return None
+    return {"key": key, "match": {"any": items}}
+
+
 def _time_range(meeting_time_from: int | None, meeting_time_to: int | None) -> dict[str, Any] | None:
     """按会议开始时间过滤（epoch 秒，闭区间）。两个端点都不给则不加条件。"""
     bounds: dict[str, int] = {}
@@ -185,6 +239,7 @@ async def hybrid_search(
     allowed_meeting_ids: Sequence[int] | None = None,
     authority: Iterable[str] | None = None,
     chunk_type: Iterable[str] | None = None,
+    source_ids: Iterable[int] | None = None,
     meeting_time_from: int | None = None,
     meeting_time_to: int | None = None,
     name: str | None = None,
@@ -215,6 +270,11 @@ async def hybrid_search(
         must.append({"key": "authority", "match": {"any": [str(a) for a in authority]}})
     if chunk_type:
         must.append({"key": "chunk_type", "match": {"any": [str(t) for t in chunk_type]}})
+    if source_ids:
+        # 来源录音（转写任务 id）：一场会可能有多段录音，"下午这场会"要靠它定位
+        source_filter = _match_any("source_id", source_ids)
+        if source_filter:
+            must.append(source_filter)
     time_range = _time_range(meeting_time_from, meeting_time_to)
     if time_range:
         must.append(time_range)

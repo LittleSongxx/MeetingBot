@@ -50,25 +50,53 @@ TRIGGER_PATTERN = re.compile(
 )
 # 意图枚举：与 `evaluation/gold/qa_seed.json` 的 `intent_taxonomy` 一一对应。
 # 两边必须同形，否则逐类 F1 会静默错位——有测试钉住这个集合。
-INTENTS = ("single_fact", "aggregation", "cross_meeting", "procedure", "smalltalk")
+#
+# **四类，不是五类**：曾经的 `procedure`（流程/机制解释）与 `single_fact` **路由动作完全相同**
+# （都走检索），而两版提示词下它的 F1 从 53% 摆到 12%——说明这条边界不可稳定测量，
+# 只产出标签噪声。行业口径一致：分类只在"动作不同"的地方才有价值
+# （Anthropic《Building Effective Agents》的 routing 一节、Amazon REIC 的分层路由）。
+# 合并后每一类都对应一个不同动作：smalltalk→不检索；cross_meeting→必须分别检索多来源；
+# aggregation→先列清单再检索；single_fact→检索。
+INTENTS = ("single_fact", "aggregation", "cross_meeting", "smalltalk")
 # 可建议的工具名（与 kb_tools.TOOL_SPECS 一致；多了就是幻觉）
 TOOL_NAMES = ("search_knowledge", "list_facts", "get_minutes", "get_transcript_excerpt")
 
 PLAN_SYSTEM = (
-    "你在做**查询规划**：读一个用户问题，输出三样东西——意图、改写后的问题、建议的工具。\n"
-    "1. 意图（intent）从这五类里选一个：\n"
-    "   - single_fact：问一个具体事实（时间、数值、负责人、某一条决定）\n"
-    "   - aggregation：枚举/聚合（有哪些、哪几项、分别是什么）\n"
-    "   - cross_meeting：答案必须来自多场会议或多段录音的比较/汇总\n"
-    "   - procedure：流程与机制解释（怎么处理、流程是什么、为什么这样做）\n"
-    "   - smalltalk：寒暄或与会议内容无关的请求\n"
-    "2. 改写（rewritten）：只把**相对时间与指代**落到已知事实上：\n"
-    "   - 只有用户问题里出现相对时间/指代（最近、上周、下午这场会…）时才改；\n"
-    "   - 落不下来就**原样返回问题**，不要编造日期或会议名；\n"
-    "   - 已知信息只有下面给的会议清单（含日期）与今天的日期，别的都不要猜。\n"
-    "3. 建议工具（suggested_tools）：从 search_knowledge / list_facts / get_minutes / "
-    "get_transcript_excerpt 里选 0–2 个（枚举类先 list_facts 看日期或清单，单点事实走检索）。\n"
-    "4. needs_retrieval：这个问题要不要查会议资料（寒暄类为 false）。\n"
+    "你在做**查询规划**：读一个用户问题，输出意图、改写后的问题、建议的工具，"
+    "必要时把并列的多问句拆成子问题。\n"
+    "\n"
+    "## 意图：按顺序判，第一个「是」就停\n"
+    "1. 这是寒暄、道谢，或与会议内容无关的请求（打招呼、问你能做什么、问天气）？→ smalltalk\n"
+    "2. 答案必须**同时**来自多段录音或多场会议的比较/汇总（「分别」「各自」「两段」「两场」这类\n"
+    "   比对语义）？→ cross_meeting\n"
+    "3. 答案天然是一张**列表**（≥2 项：「有哪些」「哪几项」「分别是什么」）？→ aggregation\n"
+    "4. 以上都不是（答案是一个具体的时间、数值、负责人、某一条决定，或一套怎么处理的说明）\n"
+    "   → single_fact\n"
+    "\n"
+    "**按「答案形态」判，不按疑问词判**：问原因、后果、触发条件、状态、处理方式的，答案仍然\n"
+    "是可以说清的一件事 → single_fact（「怎么处理」「为什么」不是另一个类别）。\n"
+    "一条问题里既有枚举又有单点（「谁负责、什么时候完成」）→ 看主要答案形态：要说出多个\n"
+    "并列项就是 aggregation，只需要一个日期或一个人名就是 single_fact。\n"
+    "\n"
+    "## 置信度与弃权\n"
+    "confidence（0–1，**必填**）：边界清楚（上面的判据一句话能对上）给 0.8 以上；\n"
+    "两类之间摇摆、或问题本身含糊给 0.5 以下。**宁可给低分也不要硬猜**——\n"
+    "低分时下游会退回「按检索处理」，那比送错工具安全。\n"
+    "\n"
+    "## 改写（rewritten）\n"
+    "- 只有问题里出现相对时间或指代（最近、上周、下午这场会…）时才改；\n"
+    "- 只把它们落到下面给定的已知事实上，**落不下来就原样返回问题**，不要编造日期或会议名；\n"
+    "- 已知信息只有下面给的会议清单与今天的日期，别的都不要猜。\n"
+    "\n"
+    "## 分解（sub_questions）\n"
+    "问题里包含**并列的多个问题**（一次问了两件以上、每件各自需要检索）时，拆成自包含的\n"
+    "子问题：每条脱离上下文也能读懂（代词换成人名/会议名，补上必要限定），不要照抄长句。\n"
+    "没有并列就填 `[]`（**这个字段必须出现**）——不要为了凑数把单问句拆开。\n"
+    "\n"
+    "## 建议工具（suggested_tools）与 needs_retrieval\n"
+    "- 从 search_knowledge / list_facts / get_minutes / get_transcript_excerpt 里选 0–2 个：\n"
+    "  枚举类先 list_facts 看清单或日期，单点事实走 search_knowledge。\n"
+    "- needs_retrieval：这个问题要不要查会议资料（只有寒暄类才是 false）。\n"
     "只输出 JSON，不要解释。"
 )
 PLAN_SCHEMA = {
@@ -76,12 +104,20 @@ PLAN_SCHEMA = {
     "additionalProperties": False,
     "properties": {
         "intent": {"type": "string"},
+        "confidence": {"type": "number"},
         "rewritten": {"type": "string"},
+        "sub_questions": {"type": "array", "items": {"type": "string"}},
         "suggested_tools": {"type": "array", "items": {"type": "string"}},
         "needs_retrieval": {"type": "boolean"},
     },
-    "required": ["intent", "rewritten"],
+    "required": ["intent", "confidence", "rewritten", "sub_questions"],
 }
+
+# 低于这个置信度就按"弃权"处理：提示里明说按检索走、并且**不给工具建议**
+# （行业共识：**宁可多检索，也不要送错工具**；低置信度下的建议本身就是噪声）
+LOW_CONFIDENCE = 0.6
+# 子问句上限：超过这个数说明它不是在拆并列，而是在替用户重写整段需求
+MAX_SUB_QUESTIONS = 4
 
 
 def plan_enabled() -> bool:
@@ -123,12 +159,44 @@ def normalize(parsed: Mapping[str, Any] | None, question: str) -> dict[str, Any]
             tools.append(name)
         elif name:
             issues.append(f"工具名幻觉：{name}")
+    # 置信度：范围外的值不丢也不照收，夹到 [0,1] 并记一笔（观测页能看到模型给了什么）
+    confidence: float | None = None
+    raw_confidence = data.get("confidence")
+    if raw_confidence is None:
+        issues.append("模型没给置信度（按「未知」处理，不当作低置信）")
+    if raw_confidence is not None:
+        try:
+            confidence = min(1.0, max(0.0, float(raw_confidence)))
+        except (TypeError, ValueError):
+            issues.append(f"置信度不是数字：{raw_confidence!r}")
+    # 子问句：自包含的并列子问题（去掉空串、去重、与整句重复的丢掉、限个上限）
+    sub_questions: list[str] = []
+    for raw in data.get("sub_questions") or []:
+        text = str(raw).strip()
+        if text and text != question and text not in sub_questions:
+            sub_questions.append(text)
+    if len(sub_questions) > MAX_SUB_QUESTIONS:
+        issues.append(f"子问句过多（{len(sub_questions)} 条），只取前 {MAX_SUB_QUESTIONS} 条")
+        sub_questions = sub_questions[:MAX_SUB_QUESTIONS]
+    if len(sub_questions) == 1:
+        # 只有一条子问题不算分解（那只是把问题换了个说法）
+        sub_questions = []
     needs_retrieval = data.get("needs_retrieval")
+    low_confidence = confidence is not None and confidence < LOW_CONFIDENCE
+    if low_confidence and tools:
+        # 弃权：低置信度下的工具建议本身就是噪声，丢掉它、按检索走
+        issues.append(f"置信度 {confidence:.2f} 低于 {LOW_CONFIDENCE}：按检索处理，不用工具建议")
+        tools = []
     return {
         "intent": intent,
+        "confidence": confidence,
+        "low_confidence": low_confidence,
         "rewritten": rewritten,
+        "sub_questions": sub_questions,
         "suggested_tools": tools,
-        "needs_retrieval": True if needs_retrieval is None else bool(needs_retrieval),
+        # 低置信度时**一律要求检索**：宁可多检索，也不要因为一次猜错而跳过检索
+        "needs_retrieval": True if (needs_retrieval is None or low_confidence)
+        else bool(needs_retrieval),
         "issues": issues,
     }
 
@@ -136,17 +204,27 @@ def normalize(parsed: Mapping[str, Any] | None, question: str) -> dict[str, Any]
 def plan_hint(plan: Mapping[str, Any]) -> str:
     """把规划渲染成一条给模型的提示。**不替换问题**，只是放在问题前面的一句话。
 
-    改写那一句只在触发门命中时才带上（`rewrite_in_scope`）——没有相对时间/指代的问题
-    本来就没有改写空间，带上它只是噪声。
+    三处按行业共识做的取舍：
+    - 改写那一句只在触发门命中时才带上（`rewrite_in_scope`）——没有相对时间/指代的问题
+      本来就没有改写空间，带上它只是噪声；
+    - **低置信度时明说"按检索处理"**（弃权）。路由判错比不路由更糟，弃权就是那条回退路径；
+    - **并列子问题逐条列出并要求分别检索**（Azure RAG 的分解口径：子问题自包含、
+      各检索一次、再合并上下文），而不是让模型自己在长问题里找边界。
     """
     parts = [f"查询规划：这个问题属于「{_intent_label(str(plan.get('intent')))}」"]
     rewritten = str(plan.get("rewritten") or "").strip()
     if rewritten and (plan.get("rewrite_in_scope") or rewritten != str(plan.get("question") or "").strip()):
         parts.append(f"（把相对时间与指代落到事实后是：{rewritten}）")
+    sub_questions = plan.get("sub_questions") or []
+    if sub_questions:
+        listing = "；".join(f"{index}. {text}" for index, text in enumerate(sub_questions, start=1))
+        parts.append(f"。这是并列的 {len(sub_questions)} 件事，请**分别检索**后再合并回答：{listing}")
     tools = plan.get("suggested_tools") or []
     if tools:
         parts.append(f"；建议先用 {'、'.join(tools)}")
-    if plan.get("needs_retrieval") is False:
+    if plan.get("low_confidence"):
+        parts.append("；规划置信度低，**按检索处理**（不要跳过检索，也不要少查）")
+    elif plan.get("needs_retrieval") is False:
         parts.append("；这轮不需要检索会议资料")
     parts.append("。这只是建议：以事实为准，落不下来就照原问题回答。")
     return "".join(parts)
@@ -154,7 +232,7 @@ def plan_hint(plan: Mapping[str, Any]) -> str:
 
 _INTENT_LABELS = {
     "single_fact": "单点事实", "aggregation": "枚举聚合", "cross_meeting": "跨会议汇总",
-    "procedure": "流程解释", "smalltalk": "寒暄",
+    "smalltalk": "寒暄",
 }
 
 

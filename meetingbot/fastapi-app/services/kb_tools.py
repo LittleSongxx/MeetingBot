@@ -180,6 +180,11 @@ class SearchKnowledgeArgs(BaseModel):
         description="限定切片类型：TRANSCRIPT_WINDOW 是转写窗口（原话），"
                     "MINUTES_ITEM 是纪要条目（人工确认的归纳）；留空表示都搜",
     )
+    source_ids: list[int] | None = Field(
+        default=None,
+        description="限定来源：转写任务 id（list_facts(kind=recording) 会给到）。"
+                    "一场会可能有多段录音，用它可以只搜指定的那一段（例如「下午那场」）",
+    )
 
     @field_validator("limit", mode="before")
     @classmethod
@@ -191,7 +196,7 @@ class SearchKnowledgeArgs(BaseModel):
     def _loose_authority(cls, value: Any) -> Any:
         return _loose(value, (list, type(None)))
 
-    @field_validator("meeting_ids", "chunk_type", mode="before")
+    @field_validator("meeting_ids", "chunk_type", "source_ids", mode="before")
     @classmethod
     def _loose_containers(cls, value: Any) -> Any:
         return _loose(value, (list, type(None)))
@@ -281,6 +286,8 @@ def _applied_filters(args: SearchKnowledgeArgs, meeting_scope: list[int] | None)
         applied.append(f"会议日期 ≤ {args.date_to}")
     if args.chunk_type:
         applied.append(f"切片类型 {args.chunk_type}")
+    if args.source_ids:
+        applied.append(f"来源（录音/文档）{args.source_ids}")
     if args.authority:
         applied.append(f"权威级 {args.authority}")
     return applied
@@ -297,6 +304,7 @@ async def _search_knowledge(actor: Actor, args: SearchKnowledgeArgs) -> dict[str
         hits = await kb_service.search_knowledge(
             args.query, allowed_meeting_ids=allowed, limit=args.limit,
             authority=args.authority, chunk_type=args.chunk_type,
+            source_ids=args.source_ids,
             meeting_time_from=time_from, meeting_time_to=time_to, biz_id=actor.biz_id)
     except kb_service.KbError as error:
         raise ToolError(str(error)) from error
@@ -325,7 +333,8 @@ async def _search_knowledge(actor: Actor, args: SearchKnowledgeArgs) -> dict[str
         # 并把"放宽后有什么"如实交出去：**结论仍由模型下**，它只是不再因为一次猜错而盲。
         relaxed = await kb_service.search_knowledge(
             args.query, allowed_meeting_ids=allowed, limit=args.limit,
-            authority=args.authority, chunk_type=args.chunk_type, biz_id=actor.biz_id)
+            authority=args.authority, chunk_type=args.chunk_type,
+            source_ids=args.source_ids, biz_id=actor.biz_id)
         titles.update(await _meeting_titles([hit.meeting_id for hit in relaxed]))
         result["hits"] = [
             {**hit.as_citation(), "meeting_title": titles.get(hit.meeting_id, ""),
@@ -635,7 +644,8 @@ async def _list_recordings(allowed: list[int] | None, limit: int) -> dict[str, A
             "transcribed_at": _fmt(row.finished_at) or _fmt(row.started_at),
             "duration_minutes": round((row.total_duration_ms or 0) / 60_000, 1) or None,
         } for row in rows],
-        "notice": "task_id 用于 get_transcript_excerpt（取这段录音的原话）。"
+        "notice": "task_id 可用于 search_knowledge 的 source_ids（只搜这一段录音）、"
+                  "也用于 get_transcript_excerpt（取这段录音的原话）。"
                   "引用时用 meeting_id + start_second，并说清是哪段录音。",
     }
 
