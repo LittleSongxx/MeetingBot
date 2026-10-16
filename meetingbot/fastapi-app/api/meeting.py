@@ -3,15 +3,11 @@ from pathlib import Path
 from typing import List
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel, ConfigDict, Field
-from tortoise.expressions import Q
-
 from common.auth import get_current_user, require_admin
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime, now, to_local
-from tortoise.transactions import in_transaction
+from fastapi import APIRouter, Depends
 from models import (
     AgentRun,
     AgentStep,
@@ -20,10 +16,13 @@ from models import (
     MeetingMaterial,
     MeetingMinutes,
     MeetingParticipant,
-    TranscriptSegment,
     TranscriptionTask,
+    TranscriptSegment,
     User,
 )
+from pydantic import BaseModel, ConfigDict, Field
+from tortoise.expressions import Q
+from tortoise.transactions import in_transaction
 
 # 会议资料的存放目录，删除会议时要把这些文件一并从磁盘上清掉
 MATERIAL_DIR = Path(__file__).resolve().parent.parent / "files" / "meeting_material"

@@ -1,21 +1,20 @@
 """No network, DB, model, or paid judge calls in these integration checks."""
 import argparse
-from contextlib import redirect_stderr, redirect_stdout
 import importlib.util
 import io
 import json
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import types
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
 from unittest.mock import patch
-
 
 HERE = Path(__file__).resolve().parents[1] / "benchmarks"
 sys.path.insert(0, str(HERE.parents[1]))
-from benchmarks import run_public_eval as runner
+from benchmarks import run_public_eval as runner  # noqa: E402 - 需先注入 sys.path
 
 spec = importlib.util.spec_from_file_location("public_manager", HERE / "manage_fixture.py")
 manager = importlib.util.module_from_spec(spec)
@@ -151,7 +150,7 @@ class PublicRunnerTest(unittest.TestCase):
         # `estimated_total_model_calls_max_2_agent_rounds` 字段已随分块调整而过期。
         # 老清单是旧运行的证据，保留不动；这里改为断言计划自身的自洽性，
         # 并把"清单早于 6000 分块"这一事实显式固定下来。
-        for case, row in zip(self.full_cases, plan["cases"]):
+        for _case, row in zip(self.full_cases, plan["cases"], strict=False):
             self.assertEqual(row["reserved_calls"], row["generation_max_calls"] + row["agent_max_calls"] + 2)  # +2 重试余量
 
     def test_after_fix_test_manifest_single_pass_budget(self):
@@ -192,9 +191,8 @@ class PublicRunnerTest(unittest.TestCase):
         args = argparse.Namespace(base_url="http://offline.invalid")
         with patch.object(runner, "credentials", return_value=("user", "password")), \
              patch.object(runner, "api_request", return_value={"token": "offline-test"}), \
-             patch.object(runner, "management_request", return_value={"agent_context_limit_chars": 20000}) as management:
-            with self.assertRaisesRegex(ValueError, "differs from the locked manifest"):
-                runner.authenticate_and_preflight(args, 100000)
+             patch.object(runner, "management_request", return_value={"agent_context_limit_chars": 20000}) as management, self.assertRaisesRegex(ValueError, "differs from the locked manifest"):
+            runner.authenticate_and_preflight(args, 100000)
         self.assertEqual(management.call_args.args[1]["expected_agent_context_limit_chars"], 100000)
         with self.assertRaisesRegex(ValueError, "differs from the locked manifest"):
             manager.verify_agent_context_limit(100000, 20000)
@@ -213,9 +211,8 @@ class PublicRunnerTest(unittest.TestCase):
     def test_full_dev_146_is_rejected_before_authentication(self):
         args = argparse.Namespace(authorized_llm_calls=146)
         plan = runner.make_plan(self.full_cases, 2, 146)
-        with patch.object(runner, "authenticate_and_preflight", side_effect=AssertionError("must not authenticate")):
-            with self.assertRaisesRegex(ValueError, "exceeds the new allowance"):
-                runner.run_live(args, self.full_manifest, self.full_cases, self.full_manifest_hash, plan)
+        with patch.object(runner, "authenticate_and_preflight", side_effect=AssertionError("must not authenticate")), self.assertRaisesRegex(ValueError, "exceeds the new allowance"):
+            runner.run_live(args, self.full_manifest, self.full_cases, self.full_manifest_hash, plan)
 
     def test_management_constructor_accepts_147_but_keeps_case_limit(self):
         with tempfile.TemporaryDirectory(dir=HERE) as temp:
@@ -234,16 +231,16 @@ class PublicRunnerTest(unittest.TestCase):
 
     def test_live_without_new_allowance_is_rejected_before_authentication(self):
         args = argparse.Namespace(authorized_llm_calls=None)
-        with patch.object(runner, "authenticate_and_preflight", side_effect=AssertionError("must not authenticate")):
-            with self.assertRaisesRegex(ValueError, "previous 30-call allowance is not reused"):
-                runner.run_live(args, self.manifest, self.cases, self.manifest_hash, {})
+        with (patch.object(runner, "authenticate_and_preflight",
+                           side_effect=AssertionError("must not authenticate")),
+              self.assertRaisesRegex(ValueError, "previous 30-call allowance is not reused")):
+            runner.run_live(args, self.manifest, self.cases, self.manifest_hash, {})
 
     def test_insufficient_allowance_is_rejected_before_authentication(self):
         args = argparse.Namespace(authorized_llm_calls=19)
         plan = runner.make_plan(self.cases, 2, 19)
-        with patch.object(runner, "authenticate_and_preflight", side_effect=AssertionError("must not authenticate")):
-            with self.assertRaisesRegex(ValueError, "exceeds the new allowance"):
-                runner.run_live(args, self.manifest, self.cases, self.manifest_hash, plan)
+        with patch.object(runner, "authenticate_and_preflight", side_effect=AssertionError("must not authenticate")), self.assertRaisesRegex(ValueError, "exceeds the new allowance"):
+            runner.run_live(args, self.manifest, self.cases, self.manifest_hash, plan)
 
     def test_public_hard_budget_is_persistent_and_does_not_refund_failure(self):
         with tempfile.TemporaryDirectory(dir=HERE) as temp:
@@ -294,7 +291,8 @@ class PublicRunnerTest(unittest.TestCase):
             ledger = {"run_id": "offline-test", "max_llm_calls": 147,
                       "dispatches": [{"dispatch_id": "one", "case_id": case["id"], "status": "RESPONSE_RECEIVED"}]}
             report_path, ledger_path = directory / "report.json", directory / "dispatch-ledger.json"
-            report_path.write_text(json.dumps(report)); ledger_path.write_text(json.dumps(ledger))
+            report_path.write_text(json.dumps(report))
+            ledger_path.write_text(json.dumps(ledger))
             (directory / f"{case['id']}.raw-result.json").write_text(json.dumps(record))
             original_report, original_ledger = report_path.read_bytes(), ledger_path.read_bytes()
             with patch.object(runner, "management_request", side_effect=AssertionError("no model/DB invocation")):
@@ -310,7 +308,8 @@ class PublicRunnerTest(unittest.TestCase):
     def test_recovery_does_not_retry_claimed_case_with_no_final_result(self):
         (HERE / "results").mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(dir=HERE / "results") as temp:
-            directory = Path(temp); case = self.cases[0]
+            directory = Path(temp)
+            case = self.cases[0]
             report = {"run_id": "offline-test", "manifest_sha256": self.manifest_hash,
                       "plan": {"max_llm_calls": 147, "cases": [{"case_id": case["id"]}]}, "records": []}
             report_path = directory / "report.json"
@@ -403,9 +402,8 @@ class ArmEnvTest(unittest.TestCase):
     def test_main_rejects_malformed_arm_env_before_any_network(self):
         manifest = str(HERE / "manifest_test_chunk6000.json")
         with patch.object(runner, "authenticate_and_preflight",
-                          side_effect=AssertionError("must not authenticate")):
-            with redirect_stderr(io.StringIO()):
-                rc = runner.main(["--manifest", manifest, "--arm-env", "BROKEN"])
+                          side_effect=AssertionError("must not authenticate")), redirect_stderr(io.StringIO()):
+            rc = runner.main(["--manifest", manifest, "--arm-env", "BROKEN"])
         self.assertEqual(rc, 1)
 
 class SchemaContractDriftTest(unittest.TestCase):
@@ -533,9 +531,8 @@ class ChunkBudgetConsistencyTest(unittest.TestCase):
             manifest, cases, manifest_hash = runner.load_inputs(HERE / "manifest.json", [])
             plan = runner.make_plan(cases, 2, 60)
             with patch.object(runner, "authenticate_and_preflight",
-                              side_effect=RuntimeError("vcsum_23 did not complete; stopped without retry")):
-                with self.assertRaises(RuntimeError):
-                    runner.run_live(args, manifest, cases, manifest_hash, plan)
+                              side_effect=RuntimeError("vcsum_23 did not complete; stopped without retry")), self.assertRaises(RuntimeError):
+                runner.run_live(args, manifest, cases, manifest_hash, plan)
             report = json.loads((output_dir / "report.json").read_text(encoding="utf-8"))
             self.assertEqual(report["status"], "failed_or_interrupted")
             self.assertEqual(report["failure_type"], "RuntimeError")

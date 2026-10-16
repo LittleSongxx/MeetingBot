@@ -2,11 +2,11 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from tortoise import Tortoise
-
 from api.agent import ApplyPayload, RunPayload, apply, interrupt, resume
 from api.prompt_template import PromptPayload, validate_prompt
 from common.exception_handler import CustomException
+from common.model_json import parse_model_json
+from langchain_core.exceptions import OutputParserException
 from models import (
     AgentRun,
     AgentStep,
@@ -18,7 +18,6 @@ from models import (
     TranscriptionTask,
     User,
 )
-from common.model_json import parse_model_json
 from services import contracts
 from services.agent_service import (
     MAX_TRANSCRIPT_CHARS,
@@ -27,6 +26,7 @@ from services.agent_service import (
     issue_line,
     transcript_excerpt,
 )
+from tortoise import Tortoise
 
 
 class AgentTest(unittest.IsolatedAsyncioTestCase):
@@ -128,9 +128,8 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
         for invalid in ("0", "-1", "not-a-number", ""):
             with self.subTest(value=invalid), patch.dict(
                 "os.environ", {"AGENT_REVIEW_MAX_TRANSCRIPT_CHARS": invalid}
-            ):
-                with self.assertRaisesRegex(ValueError, "AGENT_REVIEW_MAX_TRANSCRIPT_CHARS"):
-                    get_transcript_char_limit()
+            ), self.assertRaisesRegex(ValueError, "AGENT_REVIEW_MAX_TRANSCRIPT_CHARS"):
+                get_transcript_char_limit()
 
     async def test_review_prompt_preserves_evidence_after_twenty_thousand_chars(self):
         """32728字符会议的尾部事实实际进入审查调用，避免只测截取函数。"""
@@ -212,9 +211,11 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
     def test_model_json_and_issue_line(self):
         # 模型把 JSON 包在代码块里时，解析器剥掉围栏；返回数组或非 JSON 文本时抛异常
         self.assertEqual(parse_model_json('```json\n{"passed": true}\n```'), {"passed": True})
-        with self.assertRaises(Exception):
+        # 断言具体类型而不是 Exception：数组不是对象 → RuntimeError；
+        # 文本不是 JSON → 解析器异常（两者的区分是契约的一部分）
+        with self.assertRaises(RuntimeError):
             parse_model_json("[1, 2]")
-        with self.assertRaises(Exception):
+        with self.assertRaises(OutputParserException):
             parse_model_json("这不是 JSON")
         line = issue_line({"field": "decisions", "index": 0, "issue_type": "MISSING_OWNER", "detail": "没写负责人", "suggestion": "补上张涛"})
         self.assertIn("决策第1条", line)
@@ -396,9 +397,8 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
         直到服务重启的兜底扫尾才被捡起。"""
         run = await self.create_run(status="INTERRUPTED")
         with patch("api.agent.schedule_agent_run_awaited", new=AsyncMock(return_value=False)), \
-             patch("api.agent.asyncio.sleep", new=AsyncMock()):
-            with self.assertRaises(CustomException) as context:
-                await resume(run.id, self.owner)
+             patch("api.agent.asyncio.sleep", new=AsyncMock()), self.assertRaises(CustomException) as context:
+            await resume(run.id, self.owner)
         self.assertIn("尚未完全停止", context.exception.message)
         refreshed = await AgentRun.get(id=run.id)
         self.assertEqual(refreshed.status, "INTERRUPTED")
@@ -540,8 +540,9 @@ class FinalResultRoundTripTest(unittest.TestCase):
         self.assertEqual(load_final_result(""), {})
 
     def test_acceptance_keeps_legacy_summary_under_text_key(self):
-        from api.agent import _acceptance_record, ApplyPayload
         from types import SimpleNamespace
+
+        from api.agent import ApplyPayload, _acceptance_record
         run = SimpleNamespace(
             final_result="经过 2 轮自检，等待人工确认。",
             revised_json={"summary": "s", "topics": [], "viewpoints": [],

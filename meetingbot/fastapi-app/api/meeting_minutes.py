@@ -3,26 +3,12 @@ from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote
 
-from docx import Document
-from fastapi import APIRouter, Depends
-from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import mm
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-from starlette.responses import StreamingResponse
-from tortoise.exceptions import IntegrityError
-from tortoise.expressions import Q
-
-from api.meeting import get_accessible_meeting
 from common.auth import get_current_user
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
-from services import contracts
 from common.times import format_datetime, now
+from docx import Document
+from fastapi import APIRouter, Depends
 from models import (
     AiModelConfig,
     Meeting,
@@ -33,8 +19,21 @@ from models import (
     TranscriptionTask,
     User,
 )
-from services.minutes_service import (MinutesResult, cancel_minutes,
-                                      material_name_of_minutes, schedule_minutes)
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from services import contracts
+from services.minutes_service import MinutesResult, cancel_minutes, material_name_of_minutes, schedule_minutes
+from starlette.responses import StreamingResponse
+from tortoise.exceptions import IntegrityError
+from tortoise.expressions import Q
+
+from api.meeting import get_accessible_meeting
 
 router = APIRouter(prefix="/meetingMinutes")
 
@@ -157,21 +156,20 @@ async def generate(task_id: int, current_user: User = Depends(get_current_user))
         raise CustomException("该会议已有正在生成的纪要")
     # 同一个转写任务已经生成过纪要时直接覆盖那一条，不再累积版本
     minutes = await MeetingMinutes.get_or_none(source_task_id=task.id)
-    if minutes is not None:
-        # 重新生成会整体清空并重置确认状态：这是破坏性覆盖，口径与删除/取消确认
-        # 对齐——只有管理员或纪要创建人可以做，任何参会人不行（防越权摧毁他人纪要）
-        if current_user.role != "ADMIN" and minutes.created_by != current_user.id:
-            raise CustomException("只有管理员或纪要创建人可以重新生成", "403")
+    # 重新生成会整体清空并重置确认状态：这是破坏性覆盖，口径与删除/取消确认
+    # 对齐——只有管理员或纪要创建人可以做，任何参会人不行（防越权摧毁他人纪要）
+    if minutes is not None and current_user.role != "ADMIN" and minutes.created_by != current_user.id:
+        raise CustomException("只有管理员或纪要创建人可以重新生成", "403")
     if minutes is None:
         try:
             minutes = await MeetingMinutes.create(
                 meeting_id=task.meeting_id, source_task_id=task.id, model_config_id=config.id,
                 status="GENERATING", stage="等待生成", progress=0, created_by=current_user.id,
             )
-        except IntegrityError:
+        except IntegrityError as error:
             # 并发兜底：两个请求同时穿过上面的 exists 检查时，uk_minutes_source_task
             # 唯一索引拦下第二条——按"已在生成"提示，不当系统错误（对齐转写 start）
-            raise CustomException("该转写任务的纪要已在生成，请刷新查看")
+            raise CustomException("该转写任务的纪要已在生成，请刷新查看") from error
     else:
         # 旧内容连同确认状态一起清空，重新生成后又是一份待修订的草稿
         await MeetingMinutes.filter(id=minutes.id).update(

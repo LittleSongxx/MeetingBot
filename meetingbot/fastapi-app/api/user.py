@@ -1,13 +1,11 @@
 from typing import List
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel, ConfigDict
-
-from common.auth import get_current_user, require_admin
 from common import security
+from common.auth import get_current_user, require_admin
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime
+from fastapi import APIRouter, Depends
 from models import (
     AgentRun,
     Department,
@@ -15,10 +13,11 @@ from models import (
     MeetingMaterial,
     MeetingMinutes,
     MeetingParticipant,
-    TranscriptSegment,
     TranscriptionTask,
+    TranscriptSegment,
     User,
 )
+from pydantic import BaseModel, ConfigDict
 
 router = APIRouter(prefix="/user")
 

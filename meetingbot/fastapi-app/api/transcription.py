@@ -1,15 +1,9 @@
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
-from tortoise.exceptions import IntegrityError
-from tortoise.expressions import Q
-
-from api.meeting import get_accessible_meeting
-from api.meeting_material import get_accessible_material, MATERIAL_DIR
 from common.auth import get_current_user
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime, now
+from fastapi import APIRouter, Depends
 from models import (
     AiModelConfig,
     Department,
@@ -17,12 +11,18 @@ from models import (
     MeetingMaterial,
     MeetingMinutes,
     MeetingParticipant,
-    TranscriptSegment,
     TranscriptionTask,
+    TranscriptSegment,
     User,
 )
+from pydantic import BaseModel
 from services.speaker_service import suggest_speakers
-from services.transcription_service import cancel_transcription, schedule_transcription, reject_overlong_audio
+from services.transcription_service import cancel_transcription, reject_overlong_audio, schedule_transcription
+from tortoise.exceptions import IntegrityError
+from tortoise.expressions import Q
+
+from api.meeting import get_accessible_meeting
+from api.meeting_material import MATERIAL_DIR, get_accessible_material
 
 router = APIRouter(prefix="/transcription")
 
@@ -207,7 +207,7 @@ async def start(
     try:
         reject_overlong_audio(MATERIAL_DIR / material.storage_name)
     except RuntimeError as error:
-        raise CustomException(str(error))
+        raise CustomException(str(error)) from error
     # 一份资料只能有一个任务，先看有没有建过
     existed = await TranscriptionTask.get_or_none(material_id=material.id)
     if existed:
@@ -456,11 +456,10 @@ async def match_speaker(
     if not await label_query.exists():
         raise CustomException("说话人标签不存在")
     # 传了用户时校验他确实是这场会议的参会人员，不能匹配到无关员工
-    if payload.user_id is not None:
-        if not await MeetingParticipant.filter(
-            meeting_id=task.meeting_id, user_id=payload.user_id
-        ).exists():
-            raise CustomException("只能匹配该会议的参会人员")
+    if payload.user_id is not None and not await MeetingParticipant.filter(
+        meeting_id=task.meeting_id, user_id=payload.user_id
+    ).exists():
+        raise CustomException("只能匹配该会议的参会人员")
     # 整批更新：同一标签下的所有片段一次性写入同一个 speaker_user_id
     # user_id 为 None 时相当于把这批片段的匹配清空
     await label_query.update(speaker_user_id=payload.user_id)
@@ -481,5 +480,5 @@ async def suggest_speaker_match(task_id: int, current_user: User = Depends(get_c
         suggestions = await suggest_speakers(task.id, task.meeting_id, current_user.id)
     except Exception as error:
         # 服务层抛的是普通异常，转成 CustomException 让前端拿到中文提示而不是 500
-        raise CustomException(str(error) or type(error).__name__)
+        raise CustomException(str(error) or type(error).__name__) from error
     return Result.success(suggestions)

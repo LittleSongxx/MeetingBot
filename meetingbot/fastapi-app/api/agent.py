@@ -2,18 +2,11 @@ import asyncio
 import json
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
-from starlette.responses import StreamingResponse
-
-from api.meeting_minutes import get_accessible_minutes
 from common.auth import get_current_user
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
-from services import contracts
 from common.times import format_datetime, now
-from tortoise.exceptions import DoesNotExist
-from tortoise.transactions import in_transaction
+from fastapi import APIRouter, Depends
 from models import (
     AgentRun,
     AgentStep,
@@ -25,6 +18,8 @@ from models import (
     TranscriptionTask,
     User,
 )
+from pydantic import BaseModel
+from services import contracts
 from services.agent_service import (
     cancel_agent_run,
     dump_final_result,
@@ -32,6 +27,11 @@ from services.agent_service import (
     schedule_agent_run,
     schedule_agent_run_awaited,
 )
+from starlette.responses import StreamingResponse
+from tortoise.exceptions import DoesNotExist
+from tortoise.transactions import in_transaction
+
+from api.meeting_minutes import get_accessible_minutes
 
 router = APIRouter(prefix="/agent")
 

@@ -1,12 +1,11 @@
 import unittest
 from io import BytesIO
 
-from starlette.datastructures import Headers, UploadFile
-from tortoise import Tortoise
-
 from api.meeting_material import MATERIAL_DIR, delete, select_page, upload
 from common.exception_handler import CustomException
 from models import Meeting, MeetingMaterial, MeetingParticipant, User
+from starlette.datastructures import Headers, UploadFile
+from tortoise import Tortoise
 
 
 class MeetingMaterialTest(unittest.IsolatedAsyncioTestCase):

@@ -2,14 +2,13 @@ import importlib
 import os
 import pkgutil
 
-from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel
-
+from common import ratelimit, security
 from common.auth import create_token, get_current_user
 from common.exception_handler import CustomException
-from common import ratelimit, security
 from common.result import Result
+from fastapi import APIRouter, Depends, Request
 from models import Department, User
+from pydantic import BaseModel
 
 
 class Account(BaseModel):

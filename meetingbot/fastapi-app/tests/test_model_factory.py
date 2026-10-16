@@ -4,10 +4,9 @@ from unittest import mock
 
 import httpx
 import openai
-from tortoise import Tortoise
-
 from models import AiCallLog, AiModelConfig
 from services import model_factory
+from tortoise import Tortoise
 
 
 class FakeChatModel:
@@ -105,9 +104,8 @@ class InvokeJsonRetryTest(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(all(log.status == "FAILED" for log in logs))
 
     async def test_retry_disabled_with_single_attempt(self):
-        with mock.patch.dict("os.environ", {"LLM_MAX_ATTEMPTS": "1"}):
-            with self.assertRaises(RuntimeError):
-                await self._invoke([timeout_error(), ok_message()])
+        with mock.patch.dict("os.environ", {"LLM_MAX_ATTEMPTS": "1"}), self.assertRaises(RuntimeError):
+            await self._invoke([timeout_error(), ok_message()])
         logs = await AiCallLog.all()
         self.assertEqual(len(logs), 1)
         # 只有一次尝试时不加尝试序号前缀，失败信息与旧行为一致

@@ -5,19 +5,20 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
-from pathlib import Path
 import sys
 import tempfile
 import unittest
-
+from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[1] / "benchmarks"
 sys.path.insert(0, str(HERE.parents[1]))
 from benchmarks import alimeeting_annotation_score as scorer  # noqa: E402
 from benchmarks import alimeeting_review as review  # noqa: E402
 from benchmarks.alimeeting_adapter import load_cases  # noqa: E402
+
 from tests.test_alimeeting_adapter import (  # noqa: E402
-    example_record, write_sources,
+    example_record,
+    write_sources,
 )
 
 

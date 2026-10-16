@@ -6,10 +6,10 @@ import copy
 import csv
 import hashlib
 import json
-from pathlib import Path
 import tempfile
 import unittest
 import zipfile
+from pathlib import Path
 
 from benchmarks import alimeeting_adapter as adapter
 

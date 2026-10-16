@@ -509,8 +509,8 @@ class JsonSyntaxRepairTest(unittest.TestCase):
         from common import model_json
 
         broken = '{"passed": true, "score": 95, "issues": [], "conclusion": "无遗漏。", }'
-        with self.assertRaises(Exception):
-            import json as _json
+        import json as _json
+        with self.assertRaises(_json.JSONDecodeError):
             _json.loads(broken)
         parsed = model_json.parse_model_json(broken)
         self.assertEqual(parsed["passed"], True)

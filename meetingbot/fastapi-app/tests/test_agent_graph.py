@@ -54,16 +54,17 @@ class AgentGraphTest(unittest.IsolatedAsyncioTestCase):
 
     def test_review_result_rejects_conflicting_verdicts(self):
         for passed, issues in ((True, [{"field": "decisions"}]), (False, [])):
-            with self.subTest(passed=passed, issues=issues):
-                with self.assertRaisesRegex(ValueError, "审查结果矛盾"):
-                    review_passed({"passed": passed, "issues": issues})
+            with (self.subTest(passed=passed, issues=issues),
+                  self.assertRaisesRegex(ValueError, "审查结果矛盾")):
+                review_passed({"passed": passed, "issues": issues})
 
     async def test_conflicting_review_cannot_route_to_refine_or_finalize(self):
         for passed, issues in ((True, [{"field": "decisions"}]), (False, [])):
             with self.subTest(passed=passed, issues=issues):
                 actions = FakeActions([])
 
-                async def conflicting_review(working, round_no):
+                # 用默认参数绑定本轮循环变量：闭包是晚绑定，不绑会把两轮都指向最后一次的值
+                async def conflicting_review(working, round_no, actions=actions, passed=passed, issues=issues):
                     actions.calls.append(("review", round_no, working["version"]))
                     return {"passed": passed, "score": 80, "issues": issues}
 

@@ -7,15 +7,15 @@ It requires the application at the working directory and /evaluation mounted.
 from __future__ import annotations
 
 import asyncio
-from contextlib import contextmanager
-from datetime import datetime, timezone
 import fcntl
 import hashlib
 import json
 import os
-from pathlib import Path
 import re
 import sys
+from contextlib import contextmanager
+from datetime import datetime, timezone
+from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
@@ -131,9 +131,9 @@ def verify_agent_context_limit(expected: int, actual: int) -> None:
 
 
 async def preflight(expected_agent_context_limit_chars: int) -> dict:
-    from models import AiModelConfig, AgentRun, MeetingMinutes, PromptTemplate, TranscriptionTask
-    from services.minutes_service import MINUTES_SCHEMA as _MINUTES_SCHEMA  # noqa: F401  单遍生成的结构约束
+    from models import AgentRun, AiModelConfig, MeetingMinutes, PromptTemplate, TranscriptionTask
     from services.agent_service import MAX_TRANSCRIPT_CHARS
+    from services.minutes_service import MINUTES_SCHEMA as _MINUTES_SCHEMA  # noqa: F401  单遍生成的结构约束
     verify_agent_context_limit(expected_agent_context_limit_chars, MAX_TRANSCRIPT_CHARS)
     configs, prompts = [], []
     for purpose in ("MINUTES", "AGENT"):
@@ -177,8 +177,16 @@ async def run_case(request: dict, user) -> dict:
     from api.meeting_material import MATERIAL_DIR
     from common.model_json import parse_model_json
     from common.times import now
-    from models import (AiCallLog, AiModelConfig, AgentRun, AgentStep, MeetingMaterial,
-                        MeetingMinutes, TranscriptSegment, TranscriptionTask)
+    from models import (
+        AgentRun,
+        AgentStep,
+        AiCallLog,
+        AiModelConfig,
+        MeetingMaterial,
+        MeetingMinutes,
+        TranscriptionTask,
+        TranscriptSegment,
+    )
     from services import model_factory
     from services.agent_service import MAX_TRANSCRIPT_CHARS, execute_agent_run, minutes_content
     from services.minutes_service import execute_minutes, transcript_text
@@ -387,9 +395,9 @@ async def run_case(request: dict, user) -> dict:
 
 
 async def main(request: dict) -> dict:
-    from tortoise import Tortoise
     from common.auth import get_current_user
     from settings import TORTOISE_ORM
+    from tortoise import Tortoise
     await Tortoise.init(config=TORTOISE_ORM)
     try:
         user = await get_current_user(token=request.get("token"))

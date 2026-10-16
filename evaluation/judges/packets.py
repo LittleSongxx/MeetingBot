@@ -35,11 +35,13 @@ from typing import Any, Iterable, Mapping, Sequence
 
 if __package__ in (None, ""):  # allow direct script execution
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from regression import analysis, grounding as g  # type: ignore
     from lib import stats  # type: ignore
+    from regression import analysis  # type: ignore
+    from regression import grounding as g
 else:
-    from regression import analysis, grounding as g
     from lib import stats
+    from regression import analysis
+    from regression import grounding as g
 
 # Four labels. ``derivable`` is the Benign class: true and useful but absent from
 # the transcript, which is precisely what the review step is meant to remove.
@@ -101,7 +103,7 @@ def build_packet(
                     proxy_flagged.add((field, index))
 
         for field, results in analysis_result["per_field"].items():
-            for index, result in enumerate(results):
+            for index, _result in enumerate(results):
                 prose = g.item_text_for_content(field, output.get(field, [None] * (index + 1))[index]
                                                 if field != "summary" else output.get(field))
                 if not prose or len(g.normalize(prose)) < 12:
@@ -363,7 +365,7 @@ def label_collapse(label: str) -> bool | None:
 
 def cohens_kappa(first: Sequence[str], second: Sequence[str]) -> dict[str, Any]:
     """Cohen's kappa with raw agreement and an exact interval on the raw rate."""
-    pairs = [(a, b) for a, b in zip(first, second) if a and b]
+    pairs = [(a, b) for a, b in zip(first, second, strict=False) if a and b]
     if not pairs:
         return {"n": 0, "raw_agreement": None, "kappa": None}
     n = len(pairs)
@@ -398,7 +400,7 @@ def binary_agreement_extras(
     * **偏差指数**（一方比另一方更爱判 flagged 的程度）；
     * **两个方向的错误率分开报**——单向偏差只能从这里看出来。
     """
-    pairs = [(a, b) for a, b in zip(first, second) if a and b]
+    pairs = [(a, b) for a, b in zip(first, second, strict=False) if a and b]
     n = len(pairs)
     if not n:
         return {"n": 0}
@@ -538,10 +540,7 @@ def main(argv: Iterable[str] | None = None) -> int:
             from lib import corpora  # type: ignore
         else:
             from lib import corpora  # type: ignore
-        if args.dataset == "test26-v2":
-            cases = corpora.load_new_contract_cases()
-        else:
-            cases = corpora.load_vcsum_cases("test26")
+        cases = corpora.load_new_contract_cases() if args.dataset == "test26-v2" else corpora.load_vcsum_cases("test26")
         packet = build_packet(cases, per_stratum=args.per_stratum,
                               owner_sample=args.owner_sample, seed=args.seed)
         packet["source_dataset"] = args.dataset

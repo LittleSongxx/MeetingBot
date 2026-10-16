@@ -39,13 +39,19 @@ from typing import Any, Mapping, Sequence
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from judges import packets as adjudication, item_judge as ai_adjudicate  # type: ignore
+    from judges import item_judge as ai_adjudicate
+    from judges import packets as adjudication  # type: ignore
+    from lib import corpora as run_metrics  # type: ignore
+    from lib import model_client
+
     from gold import annotation as anno  # type: ignore
-    from lib import corpora as run_metrics, model_client  # type: ignore
 else:
-    from judges import packets as adjudication, item_judge as ai_adjudicate
+    from judges import item_judge as ai_adjudicate
+    from judges import packets as adjudication
+    from lib import corpora as run_metrics  # type: ignore
+    from lib import model_client
+
     from gold import annotation as anno
-    from lib import corpora as run_metrics, model_client  # type: ignore
 
 RESULTS_DIR = Path(__file__).resolve().parents[1] / "results"
 VALIDITY_OUT = RESULTS_DIR / "ai_validity_labels.json"
@@ -243,7 +249,7 @@ def build_report() -> dict[str, Any]:
                 disagreements.append({
                     "anonymous_id": anon, "model_label": model_label,
                     "majority_label": maj,
-                    "per_provider": dict(zip(providers, row)),
+                    "per_provider": dict(zip(providers, row, strict=False)),
                 })
         for provider in providers:
             hit = total = 0

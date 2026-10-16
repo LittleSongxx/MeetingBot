@@ -10,16 +10,15 @@ from __future__ import annotations
 
 import argparse
 import csv
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import hashlib
 import io
 import json
-from pathlib import Path
 import re
 import sys
-from typing import Any, Iterator
 import zipfile
-
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from pathlib import Path
+from typing import Any, Iterator
 
 HERE = Path(__file__).resolve().parent
 SOURCE_DIR = HERE / "source" / "alimeeting4mug"
@@ -76,19 +75,19 @@ def _archive_records(
         previous_limit = csv.field_size_limit()
         csv.field_size_limit(sys.maxsize)
         try:
-            with archive.open(expected_member) as raw_stream:
-                with io.TextIOWrapper(raw_stream, encoding="utf-8-sig", newline="") as stream:
-                    reader = csv.DictReader(stream, delimiter="\t")
-                    if reader.fieldnames != ["idx", "content"]:
-                        raise ValueError(f"Unexpected CSV columns in {expected_member}")
-                    for row_number, row in enumerate(reader):
-                        if row.get("idx") != str(row_number) or not isinstance(row.get("content"), str):
-                            raise ValueError(f"Invalid row index/content in {expected_member}: {row_number}")
-                        raw_content = row["content"]
-                        record = json.loads(raw_content)
-                        if not isinstance(record, dict):
-                            raise ValueError(f"Invalid JSON object in {expected_member}: {row_number}")
-                        yield row_number, record, sha256_bytes(raw_content.encode("utf-8")), archive_sha
+            with (archive.open(expected_member) as raw_stream,
+                  io.TextIOWrapper(raw_stream, encoding="utf-8-sig", newline="") as stream):
+                reader = csv.DictReader(stream, delimiter="\t")
+                if reader.fieldnames != ["idx", "content"]:
+                    raise ValueError(f"Unexpected CSV columns in {expected_member}")
+                for row_number, row in enumerate(reader):
+                    if row.get("idx") != str(row_number) or not isinstance(row.get("content"), str):
+                        raise ValueError(f"Invalid row index/content in {expected_member}: {row_number}")
+                    raw_content = row["content"]
+                    record = json.loads(raw_content)
+                    if not isinstance(record, dict):
+                        raise ValueError(f"Invalid JSON object in {expected_member}: {row_number}")
+                    yield row_number, record, sha256_bytes(raw_content.encode("utf-8")), archive_sha
         finally:
             csv.field_size_limit(previous_limit)
 

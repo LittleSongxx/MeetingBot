@@ -160,10 +160,7 @@ def endpoint(provider: str = "default") -> tuple[str, str, str]:
     # chat/completions；否则补 /v1。原来只认 /v1，智谱的 /api/paas/v4 会被错拼成
     # /v4/v1/chat/completions——按"版本段"这个**类别**处理，而不是逐家写分支。
     import re as _re
-    if _re.search(r"/v\d+$", base):
-        url = f"{base}/chat/completions"
-    else:
-        url = f"{base}/v1/chat/completions"
+    url = f"{base}/chat/completions" if _re.search(r"/v\d+$", base) else f"{base}/v1/chat/completions"
     return url, model, key
 
 

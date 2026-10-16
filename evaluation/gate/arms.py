@@ -41,11 +41,13 @@ from typing import Any, Iterable, Mapping, Sequence
 
 if __package__ in (None, ""):  # allow direct script execution
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from lib import corpora as rm  # type: ignore
+    from lib import stats
     from regression import grounding as g  # type: ignore
-    from lib import corpora as rm, stats  # type: ignore
 else:
+    from lib import corpora as rm
+    from lib import stats
     from regression import grounding as g
-    from lib import corpora as rm, stats
 
 ARMS = ("baseline", "passthrough", "reflected")
 DEFAULT_ARM_DIR = Path(__file__).resolve().parents[1] / "benchmarks" / "results" / "passthrough-arm-20260925"
@@ -154,7 +156,7 @@ def _paired_deletions(arm_series: Sequence[float]) -> dict[str, Any]:
 
 def _paired(first: Sequence[float], second: Sequence[float]) -> dict[str, Any]:
     """逐会议配对比较：第二个减第一个（负数 = 更少 = 通常是改善方向）。"""
-    differences = [b - a for a, b in zip(first, second)]
+    differences = [b - a for a, b in zip(first, second, strict=False)]
     nonzero = [d for d in differences if d != 0]
     improved = sum(1 for d in differences if d < 0)
     worsened = sum(1 for d in differences if d > 0)
@@ -304,7 +306,7 @@ def build_report(cases: Sequence[Mapping[str, Any]], arm_outputs: Mapping[str, M
         ),
         "arm_totals": totals,
         "comparisons": comparisons,
-        "per_meeting": {arm: records for arm, records in per_arm.items()},
+        "per_meeting": dict(per_arm.items()),
         "notes": [
             "无依据原子率是**词法代理**：只覆盖日期、数量、具名实体，看不见改写与蕴含。",
             "内容支撑率只在 decisions/pending_items 上有区分力，因此只在这两个字段上聚合。",

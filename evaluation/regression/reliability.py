@@ -92,9 +92,9 @@ def _calls_of(ledger: Any) -> list[dict[str, Any]]:
     elif isinstance(ledger, list):
         candidates = [ledger]
     for value in candidates:
-        if isinstance(value, list) and value:
-            if all(isinstance(item, Mapping) and "status" in item for item in value):
-                return list(value)
+        if (isinstance(value, list) and value
+                and all(isinstance(item, Mapping) and "status" in item for item in value)):
+            return list(value)
     return []
 
 
@@ -147,7 +147,7 @@ def failure_mode_report(calls: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     return {
         "failed_call_count": total,
         "by_bucket": dict(buckets),
-        "examples": {k: v for k, v in examples.items()},
+        "examples": dict(examples.items()),
         "note": (
             "这是**可观测性的度量**，不是质量指标：桶名越粗越稳，新增失败类型自动落入"
             "other 而不需要改代码。bucket 分布是排查方向的第一手依据。"
@@ -207,7 +207,7 @@ def end_to_end_success_report(results_root: Path) -> dict[str, Any]:
     """
     attempts: Counter[str] = Counter()
     failures: list[dict[str, str]] = []
-    for name, ledger in iter_ledgers(results_root):
+    for _name, ledger in iter_ledgers(results_root):
         for record in _calls_of(ledger):
             case_id = str(record.get("case_id") or "")
             if not case_id:

@@ -1,20 +1,20 @@
+import contextlib
 import hashlib
 import zipfile
-
-from docx import Document
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, UploadFile
-from starlette.responses import FileResponse
-from tortoise.exceptions import IntegrityError
-
-from api.meeting import get_accessible_meeting
 from common.auth import get_current_user
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime
+from docx import Document
+from fastapi import APIRouter, Depends, File, UploadFile
 from models import MeetingMaterial, TranscriptionTask, User
+from starlette.responses import FileResponse
+from tortoise.exceptions import IntegrityError
+
+from api.meeting import get_accessible_meeting
 
 router = APIRouter(prefix="/meetingMaterial")
 
@@ -237,11 +237,9 @@ async def zip_entries(material_id: int, current_user: User = Depends(get_current
                 name = info.filename
                 # 标志位第 11 位表示文件名是 UTF-8；没置位的压缩包多半是 Windows 下打的，按 GBK 还原
                 if not info.flag_bits & 0x800:
-                    try:
+                    # 按 GBK 也还原不了时保留 zipfile 读出的原始名字
+                    with contextlib.suppress(UnicodeDecodeError, UnicodeEncodeError):
                         name = name.encode("cp437").decode("gbk")
-                    except (UnicodeDecodeError, UnicodeEncodeError):
-                        # 按 GBK 也还原不了时保留 zipfile 读出的原始名字
-                        pass
                 entries.append({
                     # 清单表格“文件名”列
                     "name": name,
@@ -250,8 +248,8 @@ async def zip_entries(material_id: int, current_user: User = Depends(get_current
                     # 文件解压后的原始字节数，前端 sizeText 换算后显示在“大小”列
                     "size": info.file_size,
                 })
-    except zipfile.BadZipFile:
-        raise CustomException("压缩包已损坏，无法读取文件清单")
+    except zipfile.BadZipFile as error:
+        raise CustomException("压缩包已损坏，无法读取文件清单") from error
     # 前端把 entries 写入 preview.entries 后打开弹窗
     return Result.success({"file_name": material.file_name, "entries": entries})
 
@@ -276,8 +274,8 @@ async def docx_preview(material_id: int, current_user: User = Depends(get_curren
     try:
         # python-docx 打开文档；文件内容不是合法的 docx 时会抛异常
         document = Document(str(file_path))
-    except Exception:
-        raise CustomException("文档已损坏，无法读取内容")
+    except Exception as error:
+        raise CustomException("文档已损坏，无法读取内容") from error
 
     blocks = []
     for paragraph in document.paragraphs:

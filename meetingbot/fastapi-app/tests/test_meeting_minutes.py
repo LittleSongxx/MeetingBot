@@ -2,13 +2,7 @@ import tempfile
 import unittest
 import unittest.mock
 from pathlib import Path
-
-from services import contracts
-from services import minutes_service
 from unittest.mock import AsyncMock, patch
-
-from pydantic import ValidationError
-from tortoise import Tortoise
 
 from api.meeting_minutes import (
     EditPayload,
@@ -30,11 +24,14 @@ from models import (
     MeetingMinutes,
     MeetingParticipant,
     PromptTemplate,
-    TranscriptSegment,
     TranscriptionTask,
+    TranscriptSegment,
     User,
 )
+from pydantic import ValidationError
+from services import contracts, minutes_service
 from services.minutes_service import MinutesResult, execute_minutes
+from tortoise import Tortoise
 
 
 class MeetingMinutesTest(unittest.IsolatedAsyncioTestCase):
@@ -211,17 +208,17 @@ class MinutesCallCacheTest(unittest.TestCase):
             "summary": "s",
             "decisions": [{"content": "d", "basis": "b"}],
         })
-        with tempfile.TemporaryDirectory() as tmp:
-            with patch.object(minutes_service, "MINUTES_CACHE_DIR", Path(tmp)), \
-                 patch.object(minutes_service, "_CACHE_ENABLED", True):
-                minutes_service._store_call_cache("model", "sys", "user", complete)
-                payload = minutes_service._load_call_cache("model", "sys", "user")
-                self.assertIsNotNone(payload)
-                self.assertFalse(minutes_service._cache_unprovided_content(payload))
-                self.assertEqual(
-                    MinutesResult.model_validate(payload["result"]).decisions[0].content, "d")
-                # 键不同（模型或提示词变了）读不到旧结果
-                self.assertIsNone(minutes_service._load_call_cache("other", "sys", "user"))
+        with (tempfile.TemporaryDirectory() as tmp,
+              patch.object(minutes_service, "MINUTES_CACHE_DIR", Path(tmp)),
+              patch.object(minutes_service, "_CACHE_ENABLED", True)):
+            minutes_service._store_call_cache("model", "sys", "user", complete)
+            payload = minutes_service._load_call_cache("model", "sys", "user")
+            self.assertIsNotNone(payload)
+            self.assertFalse(minutes_service._cache_unprovided_content(payload))
+            self.assertEqual(
+                MinutesResult.model_validate(payload["result"]).decisions[0].content, "d")
+            # 键不同（模型或提示词变了）读不到旧结果
+            self.assertIsNone(minutes_service._load_call_cache("other", "sys", "user"))
 
     def test_payload_without_evidence_is_not_trusted(self):
         # 旧格式（裸 model_dump，无 provided 键）与全缺席载荷一律不可信

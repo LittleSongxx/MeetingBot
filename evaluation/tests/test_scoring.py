@@ -1,13 +1,15 @@
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 from benchmarks.scoring import (
-    _load_manifest_references, _load_records, character_rouge,
-    format_summary_markdown, score_records,
+    _load_manifest_references,
+    _load_records,
+    character_rouge,
+    format_summary_markdown,
+    score_records,
 )
-
 
 HERE = Path(__file__).resolve().parents[1] / "benchmarks"
 

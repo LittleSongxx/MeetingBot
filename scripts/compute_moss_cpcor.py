@@ -1,10 +1,11 @@
 """MOSS 条件 8 场 cpCER 汇总（与既有报告同口径、同工具）。"""
-import json, sys
+import json
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "evaluation"))
-from asr.cpcor import compute
+from asr.cpcor import compute  # noqa: E402 - 需先注入 sys.path 才能导入 evaluation 下的包
 
 BASE = REPO_ROOT / "evaluation" / "asr" / "first_test"
 meetings = ["R8001_M8004", "R8003_M8001", "R8007_M8010", "R8007_M8011",
@@ -13,7 +14,8 @@ results = []
 for m in meetings:
     task = BASE / f"task_{m}.moss.json"
     if not task.exists():
-        print(f"skip {m}: snapshot missing"); continue
+        print(f"skip {m}: snapshot missing")
+        continue
     r = compute(task, REPO_ROOT / "evaluation" / ".venv" / "bin" / "python",
                 BASE / "cpcor")
     r["condition"] = m + ".moss"

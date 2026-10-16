@@ -34,6 +34,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 import time
@@ -42,11 +43,13 @@ from typing import Any, Iterable, Mapping, Sequence
 
 if __package__ in (None, ""):  # allow direct script execution
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from judges import completeness  # type: ignore
     from lib import corpora, model_client  # type: ignore
+
+    from judges import completeness  # type: ignore
 else:
-    from judges import completeness
     from lib import corpora, model_client
+
+    from judges import completeness
 
 RESULTS_DIR = Path(__file__).resolve().parents[1] / "results"
 LIST_FIELDS = ("topics", "viewpoints", "decisions", "pending_items", "risks")
@@ -134,10 +137,8 @@ def main(argv: Iterable[str] | None = None) -> int:
 
     state: dict[str, Any] = {"records": []}
     if args.output.exists():
-        try:
+        with contextlib.suppress(ValueError):
             state = json.loads(args.output.read_text(encoding="utf-8"))
-        except ValueError:
-            pass
     done = {r["case_id"] for r in state["records"] if r.get("union_judgment")}
     calls = 0
 

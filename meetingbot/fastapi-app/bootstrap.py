@@ -2,11 +2,10 @@
 import asyncio
 import os
 
-from tortoise import Tortoise
-
 from common import security
 from models import AiModelConfig, User
 from settings import TORTOISE_ORM
+from tortoise import Tortoise
 
 
 async def main():
@@ -45,7 +44,7 @@ async def main():
             if not key:
                 continue
             config = await AiModelConfig.filter(model_type=kind).order_by("-id").first()
-            values = dict(provider=provider, base_url=base_url, api_key=key, model_name=model, timeout_seconds=timeout, enabled=True)
+            values = {"provider": provider, "base_url": base_url, "api_key": key, "model_name": model, "timeout_seconds": timeout, "enabled": True}
             await AiModelConfig.filter(model_type=kind).update(enabled=False)
             if config:
                 await AiModelConfig.filter(id=config.id).update(**values)

@@ -8,18 +8,15 @@ from time import perf_counter
 from uuid import uuid4
 
 import httpx
-
-from common.times import now
 from api.meeting_material import MATERIAL_DIR
+from common.times import now
 from models import (
     AiCallLog,
     AiModelConfig,
     MeetingMaterial,
-    TranscriptSegment,
     TranscriptionTask,
+    TranscriptSegment,
 )
-
-
 
 # ---------------------------------------------------------------------------
 # 转写引擎选择（`TRANSCRIPTION_ENGINE`，默认 dashscope）：

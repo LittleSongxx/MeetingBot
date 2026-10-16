@@ -41,17 +41,21 @@ import random
 import sys
 import time
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Iterable, Mapping
 
 if __package__ in (None, ""):  # allow direct script execution
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from judges import packets as A  # type: ignore
+    from lib import corpora as rm  # type: ignore
+    from lib import model_client, stats
     from regression import grounding as g  # type: ignore
-    from lib import corpora as rm, model_client, stats  # type: ignore
+
+    from judges import packets as A  # type: ignore
 else:
-    from judges import packets as A
+    from lib import corpora as rm
+    from lib import model_client, stats
     from regression import grounding as g
-    from lib import corpora as rm, model_client, stats
+
+    from judges import packets as A
 
 RESULTS_DIR = Path(__file__).resolve().parents[1] / "results"
 DEFAULT_PACKET = RESULTS_DIR / "citation_packet.json"

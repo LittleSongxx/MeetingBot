@@ -5,12 +5,11 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
-from pathlib import Path
 import stat
 import sys
 import tempfile
 import unittest
-
+from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[1] / "benchmarks"
 sys.path.insert(0, str(HERE.parents[1]))
