@@ -32,12 +32,13 @@ if __package__ in (None, ""):  # allow direct script execution
         contract_checks,
         grounding,
         reliability,
+        retrieval_metrics,
     )
 else:
     from judges import actions as amc_aid
     from lib import corpora, stats
 
-    from regression import analysis, chat_checks, contract_checks, grounding, reliability
+    from regression import analysis, chat_checks, contract_checks, grounding, reliability, retrieval_metrics
 
 # 兼容再导出：历史代码与测试通过本模块访问装载器
 PUBLIC_RESULTS = corpora.PUBLIC_RESULTS
@@ -323,6 +324,11 @@ def build_report(
     artifact = chat_checks.load_artifact()
     report["chat_citations"] = chat_checks.summarize(
         (artifact or {}).get("turns") or [], sources=(artifact or {}).get("source_texts"))
+    # 检索侧指标（recall@k / MRR / nDCG）：同样零调用，但需要产物里带"检索到的全部切片"
+    # 与"片段→时间"映射。缺这两样时报无样本——**不拿被引用的切片冒充检索集**。
+    report["retrieval_metrics"] = retrieval_metrics.summarize(
+        artifact, json.loads((EVALUATION_DIR / "gold" / "qa_seed.json").read_text(encoding="utf-8"))
+        if (EVALUATION_DIR / "gold" / "qa_seed.json").exists() else None)
     for name, cases in sets.items():
         if not cases:
             continue
@@ -572,6 +578,34 @@ def _render_chat_citations(block: Mapping[str, Any]) -> list[str]:
         f"- 引用类型分布：`{json.dumps(block.get('citation_kinds') or {}, ensure_ascii=False)}`",
         "",
         block.get("reading") or "",
+        "",
+    ]
+    return lines
+
+
+def _render_retrieval_metrics(block: Mapping[str, Any]) -> list[str]:
+    """检索侧指标（recall@k / MRR / nDCG）：零调用，可在每次 smoke 里复查。"""
+    lines = ["## 检索侧指标（零调用：recall@k / MRR / nDCG）", ""]
+    if not block:
+        return lines + ["缺产物。", ""]
+    if not block.get("sample"):
+        lines += [block.get("reading") or "无样本", ""]
+        skipped = block.get("skipped") or []
+        if skipped:
+            lines += [f"- 判不了的 case：{len(skipped)} 个（首个原因：{skipped[0].get('reason')}）", ""]
+        return lines
+    lines += [
+        f"样本：{block['sample']} 轮问答（k 的取值分布：{block.get('k_distribution')}——"
+        "k 是模型自选的检索条数，**报数必须连 k 一起报**）。",
+        "",
+        "| 指标 | 值 |",
+        "|---|---:|",
+        f"| recall@k（金标片段被覆盖的比例） | {_pct(block.get('recall_at_k'), 3)} |",
+        f"| MRR（第一条相关切片的排名倒数） | {_pct(block.get('mrr'), 3)} |",
+        f"| nDCG@k（二值增益） | {_pct(block.get('ndcg_at_k'), 3)} |",
+        "",
+        block.get("reading") or "",
+        block.get("not_measured") or "",
         "",
     ]
     return lines
@@ -1026,6 +1060,7 @@ def format_markdown(report: Mapping[str, Any]) -> str:
     lines += _render_axis5(report.get("axis5") or {})
     lines += _render_citation_level(report.get("citation_level") or {})
     lines += _render_chat_citations(report.get("chat_citations") or {})
+    lines += _render_retrieval_metrics(report.get("retrieval_metrics") or {})
     lines += _render_reliability(report.get("reliability") or {})
 
     lines += [

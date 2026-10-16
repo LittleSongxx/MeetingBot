@@ -221,6 +221,9 @@ def _message_dict(row: ChatMessage) -> dict[str, Any]:
         "stop_reason": row.stop_reason, "error_message": row.error_message,
         "token_count": row.token_count, "create_time": _fmt(row.create_time),
         "citations": (row.citations_json or {}).get("used", []),
+        # 检索到但答案没引用的也一并给出：它既是页面"查到了什么"的数据源，
+        # 也是评测侧算检索指标（recall@k / MRR）的分母——只给被引用的会把召回算高
+        "retrieved": (row.citations_json or {}).get("all", []),
         "tools": row.tools_json or [],
     }
     if row.stop_reason and row.stop_reason != chat_graph.STOP_FINISHED:
