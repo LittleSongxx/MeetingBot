@@ -12,6 +12,9 @@
   工具内部**再判一次** `has_meeting_access`（拿具体会议行的场景），不依赖提示词。
 - **结果形状**：一律返回 JSON 可序列化的 dict；聊天侧序列化成 tool message 文本，
   MCP 侧序列化成 text content，两边看到的是同一份数据。
+  唯一的差别是**呈现层编号**：聊天侧会由宿主给条目编号（`ref`，见
+  `services/citations.py`）好让答案能写 `[n]`；MCP 侧不带 `ref`（那边没有"答案"，
+  客户端直接用 `chunk_id` 或 `minutes_id + field + item_index` 定位即可）。
 - **工具数量**：四个。业界（Google / Anthropic / Microsoft 的工具设计建议）收敛在
   3–5 个：每多一个工具，模型选错的概率就上升一档。事实类问题走 `list_facts`
   具名参数，**不做自由文本转 SQL**——那同时带来注入面与幻觉 SQL。

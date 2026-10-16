@@ -267,11 +267,24 @@ def build_packet(qa_set: Mapping[str, Any], answers: Mapping[str, Any] | None) -
     }
 
 
+def _needs_judging(case: Mapping[str, Any]) -> bool:
+    """这一轮还需要（重新）判定吗：没判过、或上一次有调用失败。"""
+    judgement = case.get("judgement")
+    if not isinstance(judgement, Mapping):
+        return True
+    return any(f"{part}_error" in judgement for part in ("context", "answer"))
+
+
 def judge_packet(packet: dict[str, Any], *, output_path: Path, authorized_calls: int,
                  provider: str = "qwen", progress=print) -> dict[str, Any]:
     """逐 case 判定：每 case 两次调用（上下文质量、答案质量）。"""
     url, model, key = model_client.endpoint(provider)
-    pending = [case for case in packet["cases"] if not case.get("judgement") and case["has_answer"]]
+    # 待判 = 还没判过的 + **上一次判定里有调用失败的**。后者要能重试：
+    # 实测判定模型偶尔会读超时（长上下文 + 思考），把它当成"永久失败"就白白丢样本。
+    pending = [
+        case for case in packet["cases"]
+        if case["has_answer"] and _needs_judging(case)
+    ]
     budget_cases = authorized_calls // 2
     if budget_cases < len(pending):
         progress(f"授权 {authorized_calls} 次调用 = {budget_cases} 个 case，"
@@ -298,8 +311,15 @@ def judge_packet(packet: dict[str, Any], *, output_path: Path, authorized_calls:
             f"【检索到的上下文】\n{context_listing or '（没有检索到上下文）'}\n\n"
             f"【产品回答】\n{case['answer'][:4000]}\n\n请按格式输出 JSON。")
         judgement: dict[str, Any] = {}
+        # 重试时只补失败的那一半：已经判成功的部分不重复花钱
+        previous = case.get("judgement") if isinstance(case.get("judgement"), Mapping) else {}
+        for part in ("context", "answer"):
+            if part in previous and f"{part}_error" not in previous:
+                judgement[part] = previous[part]
         for name, system, user in (("context", CONTEXT_SYSTEM, context_user),
                                    ("answer", ANSWER_SYSTEM, answer_user)):
+            if name in judgement:
+                continue   # 这一半上轮已判成功
             try:
                 reply = model_client.call_json(url, model, key, system, user, total_deadline=240)
                 judgement[name] = reply["parsed"]
