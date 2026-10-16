@@ -6,7 +6,7 @@
 |---|---|---|
 | `context_precision` | 检索到的上下文里有多少是回答该问题真正用得上的 | 对齐 RAGAS 的 context_precision（判定式，不用 LLM 排序加权） |
 | `context_recall` | 该问题应有的事实有多少能在检索到的上下文里找到 | 对齐 RAGAS 的 context_recall；**需要金标**（`gold/qa_seed.json`） |
-| `faithfulness` | 答案里的断言有多少能被上下文支撑 | 对齐 RAGAS 的 faithfulness（逐句判定） |
+| `faithfulness` | 答案里的断言有多少能被上下文支撑 | 对齐 RAGAS 的 faithfulness（逐句判定）。**两个口径**：`faithfulness`（全部断言，历史可比）与 `faithfulness_content`（内容级，剔掉出处说明类元陈述，**这是可引用的口径**） |
 | `answer_relevancy` | 答案是否正面回答了问题 | **与 RAGAS 有口径差异**：业界那版用嵌入算"反推问题与原问题的相似度"，本项目评测侧没有嵌入客户端，改用判定式并如实标注 |
 
 **逐指标报、不报加权总分**（宪法第 6 条）：四个指标衡量的是四件不同的事，
@@ -24,6 +24,21 @@
 `context_recall` 需要 `expected_facts`。语料里没有金标的 case（例如从真实会话里
 抓来但没有标注的问题）该指标**报"检不出"**，而不是拿 0 或 1 填空——
 这是宪法第 3 条的要求：算不出的差异写"检不出"。
+
+## 两个 faithfulness 口径（2026-10-16 起的仪器）
+
+首测的 81 条"不支撑"断言里 **67 条（83%）是出处说明类元陈述**（"以上信息均来自…"、
+"该会议的 meeting_id=2"）——它们是答案的引用装置，不是会议事实断言，而旧提示词把
+"上下文没写这句话"记成了不支撑。剔除后内容级支撑率 97.6%（A）/ 98.6%（B）。
+
+因此判定提示词要求判定者把这类句子标出来（`meta: true`），报告分列两个口径：
+
+* `faithfulness`：全部断言（**历史可比**，与 label a/b 同一口径）；
+* `faithfulness_content`：内容级（剔出元陈述），**这是可引用的口径**。
+
+**改了提示词就是换了仪器**：新口径用新 label（`--label c`）重判，旧标签不覆盖。
+旧标签的判定里没有 `meta` 字段，因此它们的内容级口径报 `null` 而**不是**等于全部——
+"没有元陈述"与"没标过"分不清，就不能冒充一个数（同"判不了不计为通过"）。
 """
 
 from __future__ import annotations
@@ -74,8 +89,15 @@ ANSWER_SYSTEM = """你在判定**回答质量**。
 3. 判断这条回答是否**正面回答了问题**（绕开问题、答非所问、只说"没有找到"
    而上下文里明明有 → 判 false）。
 
+**出处说明类元陈述**必须单独标出来（`meta: true`）：这类句子讲的是答案自己的
+引用装置，不是关于会议内容的断言，判定"上下文有没有这句话"对它没有意义。
+例如："以上信息均来自产品发布评审会议。"、"该会议的 meeting_id=2。"、
+"回答引用了来源 [7] 作为依据。"、"该条目为人工确认条目（CONFIRMED）。"
+**关于会议内容的断言一律 `meta: false`**——带引用编号的结论句属于这一档
+（编号只是引用装置，句子本身仍是对会议的陈述，例如"上线时间定在十月[1]"）。
+
 只输出 JSON：
-{"claims": [{"index": 1, "text": "…", "supported": true}],
+{"claims": [{"index": 1, "text": "…", "supported": true, "meta": false}],
  "answered": true, "why": "一句话"}"""
 
 
@@ -371,10 +393,17 @@ def summarize(packet: Mapping[str, Any], *, label: str = "a") -> dict[str, Any]:
 
     `label` 选哪一族的判定：`a` 是主判（`case["judgement"]`），其它族的另存
     `case["judgements"][label]`——换裁判等于换仪器，两族都要能各自成数。
+
+    faithfulness 报两个口径（见模块文档）：全部断言与内容级（剔出处说明）。
+    内容级要求判定标过 `meta`；旧提示词产的标签（a/b）没标过，因此那些标签的
+    内容级报 `null`——分不清"没有元陈述"与"没标过"就不能冒充一个数。
     """
     context_useful = context_total = 0
     facts_found = facts_total = 0
     claims_supported = claims_total = 0
+    content_supported = content_total = 0
+    meta_claims = 0
+    meta_marked = False
     answered_ok = answered_total = 0
     cases_with_judgement = 0
     cases_without_gold = 0
@@ -408,10 +437,20 @@ def summarize(packet: Mapping[str, Any], *, label: str = "a") -> dict[str, Any]:
 
         claims = [entry for entry in (answer.get("claims") or [])
                   if isinstance(entry, Mapping) and "supported" in entry]
+        marked = any("meta" in entry for entry in claims)
+        meta_marked = meta_marked or marked
+        content = [entry for entry in claims if not entry.get("meta")]
         claims_total += len(claims)
         claims_supported += sum(1 for entry in claims if entry["supported"])
+        content_total += len(content)
+        content_supported += sum(1 for entry in content if entry["supported"])
+        meta_claims += len(claims) - len(content)
         row["faithfulness"] = (sum(1 for entry in claims if entry["supported"]) / len(claims)
                                if claims else None)
+        row["faithfulness_content"] = (
+            sum(1 for entry in content if entry["supported"]) / len(content)
+            if content and marked else None)
+        row["meta_claims"] = len(claims) - len(content) if marked else None
 
         if "answered" in answer:
             answered_total += 1
@@ -429,12 +468,16 @@ def summarize(packet: Mapping[str, Any], *, label: str = "a") -> dict[str, Any]:
         "context_precision": _rate(context_useful, context_total),
         "context_recall": _rate(facts_found, facts_total),
         "faithfulness": _rate(claims_supported, claims_total),
+        "faithfulness_content": _rate(content_supported, content_total) if meta_marked else None,
+        "faithfulness_meta_claims": meta_claims if meta_marked else None,
         "answer_relevancy": _rate(answered_ok, answered_total),
         "per_case": per_case,
         "reading": (
             "context_precision = 检索到的上下文里被判『有用』的比例；"
             "context_recall = 标注事实里能在上下文中找到的比例（只有带金标的 case 计入）；"
-            "faithfulness = 答案断言里被上下文支撑的比例；"
+            "faithfulness = 答案断言里被上下文支撑的比例（全部断言口径）；"
+            "faithfulness_content = 同上但**剔掉出处说明类元陈述**（可引用口径，"
+            "判定标了 meta 才有；旧提示词的标签报 null）；"
             "answer_relevancy = 正面回答了问题的 case 比例（与 RAGAS 的嵌入口径不同）。"
             "四个指标各自独立报出，**没有加权总分**。"
         ),
@@ -462,7 +505,8 @@ def main(argv: Iterable[str] | None = None) -> int:
                         help="把会话范围限定在这一场会（便于复核引用来源）")
     parser.add_argument("--provider", default="qwen", choices=sorted(model_client.PROVIDERS))
     parser.add_argument("--label", default="a", choices=("a", "b", "c"),
-                        help="判定族的标签：a 是主判，其它标签另存一份（跨族复判用）")
+                        help="判定族的标签：a 是主判，其它标签另存一份（跨族复判用）。"
+                             "判定提示词变更也要换新标签——换了提示词就是换了仪器")
     parser.add_argument("--thinking", default="off", choices=("off", "on"),
                         help="判定调用是否开思考：机械判定默认关（又慢又贵，实测 30–120s/次）")
     parser.add_argument("--authorized-llm-calls", type=int, default=None)
