@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import unittest
+from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -22,6 +23,7 @@ from models import (
     ChatMessage,
     ChatSession,
     Meeting,
+    TranscriptionTask,
     User,
 )
 from pydantic import Field
@@ -953,6 +955,59 @@ class QueryPlanPipelineTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(planner.await_count, 0, "开关关着就不许发生规划调用")
         assistant = await ChatMessage.filter(session_id=session.id, role="ASSISTANT").first()
         self.assertIsNone(assistant.plan_json)
+
+    def test_cross_recording_markers(self):
+        for question in ("两段录音分别提到了哪些风险？",
+                         "发布公告与对外通稿分别由谁负责？",
+                         "两个功能问题分别怎么解决？",
+                         "发布时间的结论在两段录音里一致吗？"):
+            self.assertTrue(chat_service.wants_cross_recording(question), question)
+        self.assertFalse(chat_service.wants_cross_recording("这次灰度从什么时候开始？"))
+
+    async def test_cross_recording_prefetch_registers_both_sources(self):
+        first = await TranscriptionTask.create(
+            meeting_id=self.meeting.id, material_id=92_001, model_config_id=1,
+            initiator_id=self.user.id, status="SUCCEEDED",
+            recorded_at=datetime(2026, 9, 10, 9, 0))
+        second = await TranscriptionTask.create(
+            meeting_id=self.meeting.id, material_id=92_002, model_config_id=1,
+            initiator_id=self.user.id, status="SUCCEEDED",
+            recorded_at=datetime(2026, 9, 10, 14, 0))
+        actor = await chat_service.kb_tools.Actor.resolve(
+            self.user, requested=[self.meeting.id])
+        registry = chat_service.citations.CitationRegistry()
+
+        async def fake_search(query, **kwargs):
+            source_id = kwargs["source_ids"][0]
+            return [Hit(chunk_id=source_id, score=1.0, text=f"task {source_id} 的原文",
+                        meeting_id=self.meeting.id, authority="RAW",
+                        chunk_type="TRANSCRIPT_WINDOW", field=None, item_index=None,
+                        speaker="张晨", start_ms=0, end_ms=1000, document_id=1,
+                        origin=None, source_id=source_id)]
+
+        with patch.object(kb_service, "search_knowledge",
+                          AsyncMock(side_effect=fake_search)) as search:
+            message = await chat_service._cross_recording_message(
+                actor, registry, "两段录音分别说了什么",
+                scope=[self.meeting.id], biz_id=0)
+        self.assertIsNotNone(message)
+        self.assertIn(f"task {first.id}", message.content)
+        self.assertIn(f"task {second.id}", message.content)
+        self.assertIn("上午", message.content)
+        self.assertIn("下午", message.content)
+        self.assertEqual(search.await_count, 2)
+        self.assertEqual(len(registry), 2)
+
+    async def test_cross_recording_prefetch_skips_non_cross_questions(self):
+        actor = await chat_service.kb_tools.Actor.resolve(
+            self.user, requested=[self.meeting.id])
+        registry = chat_service.citations.CitationRegistry()
+        with patch.object(kb_service, "search_knowledge", AsyncMock()) as search:
+            message = await chat_service._cross_recording_message(
+                actor, registry, "灰度从什么时候开始",
+                scope=[self.meeting.id], biz_id=0)
+        self.assertIsNone(message)
+        self.assertEqual(search.await_count, 0)
 
 
 class FailureDiagnosisTest(unittest.IsolatedAsyncioTestCase):
