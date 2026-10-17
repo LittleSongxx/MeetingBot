@@ -160,6 +160,61 @@ class SummarizeTest(unittest.TestCase):
         self.assertEqual(summary["context_recall"]["rate"], 1.0)
         self.assertEqual(summary["answer_relevancy"]["rate"], 1.0)
 
+    def test_unanswerable_cases_are_reported_separately(self):
+        """负样不能并进四个指标：它们没有正确答案，混进去会把"拒答"读成"检索无用"。"""
+        packet = {"case_count": 2, "cases": [
+            {"case_id": "q1", "question": "问", "expected_facts": ["甲"],
+             "answer": "答", "contexts": [], "has_answer": True,
+             "judgement": {"context": {"contexts": [{"index": 1, "useful": True}],
+                                       "facts": [{"index": 1, "found": True}]},
+                           "answer": {"claims": [{"index": 1, "supported": True}],
+                                      "answered": True}}},
+            {"case_id": "n1", "question": "会上定了多少预算？", "expected_facts": [],
+             "unanswerable": True, "answer": "资料里没有提到预算。", "contexts": [],
+             "has_answer": True,
+             "judgement": {"context": {"contexts": [{"index": 1, "useful": False},
+                                                   {"index": 2, "useful": False}], "facts": []},
+                           "answer": {"claims": [{"index": 1, "supported": False}],
+                                      "refused": True, "fabricated": False}}},
+        ]}
+        summary = rag.summarize(packet)
+        self.assertEqual(summary["context_precision"]["total"], 1, "负样不进主分母")
+        self.assertEqual(summary["context_recall"]["total"], 1)
+        self.assertEqual(summary["answer_relevancy"]["total"], 1)
+        negative = summary["unanswerable"]
+        self.assertEqual(negative["cases"], 1)
+        self.assertEqual(negative["cases_judged"], 1)
+        self.assertEqual(negative["refusal_rate"]["rate"], 1.0)
+        self.assertEqual(negative["forced_answer_rate"]["rate"], 0.0)
+        self.assertEqual(negative["fabricated_rate"]["rate"], 0.0)
+        self.assertEqual(negative["context_useful_rate"]["rate"], 0.0)
+        self.assertEqual(negative["faithfulness"]["rate"], 0.0)
+
+    def test_generic_answered_is_not_a_refusal_detector(self):
+        """通用 answered 判的是"有没有回应"，不是"有没有拒答"：实测 12 条负样全中招。"""
+        packet = {"case_count": 1, "cases": [
+            {"case_id": "n1", "question": "问", "expected_facts": [],
+             "unanswerable": True, "answer": "资料不足，没有找到。", "contexts": [],
+             "has_answer": True,
+             "judgement": {"context": {"contexts": [], "facts": []},
+                           "answer": {"claims": [], "answered": False}}},
+        ]}
+        summary = rag.summarize(packet)
+        negative = summary["unanswerable"]
+        self.assertIsNone(negative["refusal_rate"], "没有 refused 字段时报判不了，不报 0%")
+        self.assertIsNone(negative["fabricated_rate"])
+        self.assertIn("缺 refused", negative["instrument"])
+
+    def test_unanswerable_without_judgement_is_counted_not_scored(self):
+        packet = {"case_count": 1, "cases": [
+            {"case_id": "n1", "question": "问", "expected_facts": [],
+             "unanswerable": True, "answer": "", "contexts": [], "has_answer": False},
+        ]}
+        summary = rag.summarize(packet)
+        self.assertEqual(summary["unanswerable"]["cases"], 1)
+        self.assertEqual(summary["unanswerable"]["cases_judged"], 0)
+        self.assertIsNone(summary["unanswerable"]["refusal_rate"])
+
     def test_unjudged_cases_are_not_in_the_denominator(self):
         packet = {"case_count": 2, "cases": [
             {"case_id": "q1", "question": "问", "expected_facts": [], "answer": "答",
@@ -192,6 +247,16 @@ class JudgeShapeTest(unittest.TestCase):
 
     def test_missing_answered_is_a_problem(self):
         self.assertIn("answered", rag._answer_shape_problem({"claims": []}))
+
+    def test_negative_shape_requires_refused_and_fabricated(self):
+        self.assertEqual(rag._negative_answer_shape_problem(
+            {"refused": True, "fabricated": False, "why": "没有找到"}), "")
+        self.assertIn("refused", rag._negative_answer_shape_problem(
+            {"fabricated": False}))
+        self.assertIn("fabricated", rag._negative_answer_shape_problem(
+            {"refused": True}))
+        self.assertIn("布尔", rag._negative_answer_shape_problem(
+            {"refused": "yes", "fabricated": False}))
 
     def test_truncated_claim_is_a_problem(self):
         problem = rag._answer_shape_problem(
@@ -404,6 +469,11 @@ class ChatChecksTest(unittest.TestCase):
         self.assertEqual(len(ids), len(set(ids)), "id 不能重复")
         for case in qa_set["cases"]:
             self.assertTrue(case["question"].strip())
+            if case.get("unanswerable"):
+                # 负样：没有正确答案，也没有意图标签；只要求金标为空且可追溯
+                self.assertEqual(case.get("expected_facts"), [], case["id"])
+                self.assertNotIn("source", case, case["id"])
+                continue
             self.assertIn(case["intent"], taxonomy, case["id"])
             # 标注来源要如实分层：代理起草的不许冒充人工标注
             self.assertIn(case["intent_source"], ("agent_draft", "human"), case["id"])

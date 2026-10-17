@@ -181,8 +181,12 @@ def summarize(artifact: Mapping[str, Any] | None,
             skipped.append({"case_id": case.get("id"), "reason": "没有这一轮的产物"})
             continue
         if not case_sources(case):
-            # 寒暄类没有金标片段：它们考的是"不该去检索"，不是检索覆盖
-            skipped.append({"case_id": case.get("id"), "reason": "这一题没有金标片段（寒暄类）"})
+            # 寒暄与不可答题都没有金标片段：它们考的是"不该去检索/不该硬凑"，
+            # 不是检索覆盖。如实标出原因，不混进 retrieval recall 的分母。
+            reason = ("不可答题没有金标片段（考的是拒答，不是检索覆盖）"
+                      if case.get("unanswerable")
+                      else "这一题没有金标片段（寒暄类）")
+            skipped.append({"case_id": case.get("id"), "reason": reason})
             continue
         if not any(segment_starts(sources, task_id)
                    for task_id, _ in case_sources(case)):
