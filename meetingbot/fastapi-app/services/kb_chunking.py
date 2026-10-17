@@ -20,6 +20,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping, Sequence
@@ -30,9 +31,25 @@ CHUNK_MINUTES_ITEM = "MINUTES_ITEM"
 AUTHORITY_RAW = "RAW"
 AUTHORITY_CONFIRMED = "CONFIRMED"
 
-# 窗口目标字数与重叠句数
-DEFAULT_TARGET_CHARS = 300
+# 窗口目标字数与重叠句数。默认 500 字 + 2 行重叠（约 15%），落在中文 RAG 的常用区间
+# （500–1000 字、10–20% 重叠）。**这是可配参数**：语料是会议转写（连续口语、没有文档
+# 章节边界），窗口该多大要用检索指标在本文料上定——用 `KB_CHUNK_TARGET_CHARS` 覆盖。
+DEFAULT_TARGET_CHARS = 500
 DEFAULT_OVERLAP_LINES = 2
+
+
+def target_chars() -> int:
+    """本部署生效的窗口字数（环境变量优先，非法值退回默认并抛错）。"""
+    raw = os.getenv("KB_CHUNK_TARGET_CHARS", "").strip()
+    if not raw:
+        return DEFAULT_TARGET_CHARS
+    try:
+        value = int(raw)
+    except ValueError as error:
+        raise ValueError("KB_CHUNK_TARGET_CHARS 必须为正整数") from error
+    if value < 100:
+        raise ValueError("KB_CHUNK_TARGET_CHARS 太小（<100 字），切块会碎到无法检索")
+    return value
 # 单句上限：超过就按句读切，再不行硬切。防止一句超长（ASR 偶尔不给标点）撑爆窗口
 MAX_SINGLE_LINE_CHARS = 800
 

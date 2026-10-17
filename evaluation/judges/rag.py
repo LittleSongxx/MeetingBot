@@ -307,19 +307,32 @@ def build_packet(qa_set: Mapping[str, Any], answers: Mapping[str, Any] | None) -
     for case in qa_set["cases"]:
         turn = by_question.get(case["question"],
                                by_question.get(case.get("question", "").strip()))
+        # **contexts 取"检索到的全部切片"，不是"答案引用的那些"**（RAGAS 口径）：
+        # context_precision 问的是"交给生成模型的上下文里有多少有用"，
+        # 不是"答案引用了多少条有用的"。新产物带 `retrieved`（含没被引用的），老产物退回引用集。
+        evidence = (turn or {}).get("retrieved") or (turn or {}).get("citations") or []
+        seen_refs: set[int] = set()
         contexts = []
-        for citation in ((turn or {}).get("citations") or []):
+        for citation in evidence:
+            ref = citation.get("ref")
+            if ref is not None and ref in seen_refs:
+                continue          # 同一条被重复登记（list_facts 与 search 命中同一切片）
+            if ref is not None:
+                seen_refs.add(ref)
             text = citation.get("source_text") or citation.get("quote") or ""
             contexts.append({
-                "ref": citation.get("ref"), "kind": citation.get("kind"),
+                "ref": ref, "kind": citation.get("kind"),
                 "meeting_id": citation.get("meeting_id"), "text": text,
             })
+        context_source = "retrieved" if (turn or {}).get("retrieved") else "citations"
         cases.append({
             "case_id": case["id"],
             "question": case["question"],
             "expected_facts": case.get("expected_facts") or [],
             "answer": (turn or {}).get("answer") or "",
             "contexts": contexts,
+            # 判定包自己记下上下文来自哪里：新产物是"检索集"，老产物只能退回引用集
+            "context_source": context_source if turn else None,
             "has_answer": bool(turn),
         })
     return {
@@ -584,7 +597,8 @@ def summarize(packet: Mapping[str, Any], *, label: str = "a") -> dict[str, Any]:
         "answer_relevancy": _rate(answered_ok, answered_total),
         "per_case": per_case,
         "reading": (
-            "context_precision = 检索到的上下文里被判『有用』的比例；"
+            "context_precision = **检索到的全部切片**里被判『有用』的比例"
+            "（RAGAS 口径；老产物缺检索集时退回引用集，逐 case 的 context_source 会标出来）；"
             "context_recall = 标注事实里能在上下文中找到的比例（只有带金标的 case 计入）；"
             "faithfulness = 答案断言里被上下文支撑的比例（全部断言口径）；"
             "faithfulness_content = 同上但**剔掉出处说明类元陈述**（可引用口径，"

@@ -153,7 +153,9 @@ def _loose(value: Any, expected: type | tuple[type, ...]) -> Any:
 
 class SearchKnowledgeArgs(BaseModel):
     query: str = Field(description="自然语言检索词。例如「上次会上定的上线时间是什么」")
-    limit: int = Field(default=8, ge=1, le=20, description="返回的切片条数上限")
+    limit: int = Field(default=5, ge=1, le=20,
+                       description="返回的切片条数上限（默认 5：一次问一两个事实够用，"
+                                   "取太多会混进同主题但答不了问题的窗口）")
     authority: list[Literal["RAW", "CONFIRMED"]] | None = Field(
         default=None,
         description="限定来源权威级：CONFIRMED 是人工确认过的纪要条目，"

@@ -128,3 +128,27 @@ class ChunkMinutesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ChunkSizeConfigTest(unittest.TestCase):
+    """窗口大小是**可配参数**：会议转写该用多大，要在本文料上用检索指标定。"""
+
+    def test_env_overrides_the_default(self):
+        from unittest import mock
+
+        from services import kb_chunking
+        with mock.patch.dict("os.environ", {"KB_CHUNK_TARGET_CHARS": "300"}):
+            self.assertEqual(kb_chunking.target_chars(), 300)
+        with mock.patch.dict("os.environ", {}, clear=False):
+            import os
+            os.environ.pop("KB_CHUNK_TARGET_CHARS", None)
+            self.assertEqual(kb_chunking.target_chars(), kb_chunking.DEFAULT_TARGET_CHARS)
+
+    def test_invalid_values_fail_loudly(self):
+        from unittest import mock
+
+        from services import kb_chunking
+        for value in ("abc", "50", "0"):
+            with mock.patch.dict("os.environ", {"KB_CHUNK_TARGET_CHARS": value}), \
+                    self.assertRaises(ValueError):
+                kb_chunking.target_chars()
