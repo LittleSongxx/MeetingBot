@@ -523,6 +523,62 @@ class KbToolsDbTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("decisions", result["fields"])
         self.assertIn("只应出现的待办", str(result["fields"]["pending_items"]))
 
+    async def test_get_minutes_keywords_limit_and_order_keep_original_index(self):
+        """q60/q62 的现场：整字段返回 8–16 条，模型只问其中一两条。
+
+        关键词/limit/order 是**工具侧**的收窄口；item_index 必须保留原始下标，
+        否则过滤后的引用会指到另一条纪要条目。
+        """
+        meeting = await self._meeting("MTG-9G", self.owner)
+        decisions = [self._decision(f"普通决策{i}") for i in range(8)]
+        decisions[6]["content"]["text"] = "发布范围包含会议创建与知识库"
+        decisions[7]["content"]["text"] = "发布范围包含任务跟踪"
+        await self._minutes(meeting, self.owner, status="CONFIRMED", decisions=decisions)
+        actor = await kb_tools.Actor.resolve(self.owner)
+
+        first = await kb_tools.execute_tool(actor, "get_minutes", {
+            "meeting_id": meeting.id, "fields": ["decisions"],
+            "keywords": ["发布范围"], "limit": 1, "order": "first"})
+        self.assertTrue(first["ok"])
+        self.assertEqual(first["field_meta"]["decisions"],
+                         {"total": 2, "returned": 1, "truncated": True})
+        self.assertEqual(first["fields"]["decisions"][0]["item_index"], 6)
+        self.assertIn("发布范围", str(first["fields"]["decisions"][0]))
+
+        last = await kb_tools.execute_tool(actor, "get_minutes", {
+            "meeting_id": meeting.id, "fields": ["decisions"],
+            "keywords": ["发布范围"], "limit": 1, "order": "last"})
+        self.assertEqual(last["fields"]["decisions"][0]["item_index"], 7)
+
+    async def test_get_minutes_default_limit_is_five_and_says_truncated(self):
+        meeting = await self._meeting("MTG-9H", self.owner)
+        await self._minutes(meeting, self.owner, status="CONFIRMED",
+                            decisions=[self._decision(f"决策{i}") for i in range(8)])
+        actor = await kb_tools.Actor.resolve(self.owner)
+        result = await kb_tools.execute_tool(actor, "get_minutes", {
+            "meeting_id": meeting.id, "fields": ["decisions"]})
+        self.assertEqual(len(result["fields"]["decisions"]), 5)
+        self.assertEqual(result["field_meta"]["decisions"],
+                         {"total": 8, "returned": 5, "truncated": True})
+        self.assertEqual([item["item_index"] for item in result["fields"]["decisions"]],
+                         [0, 1, 2, 3, 4])
+        self.assertIn("order=\"last\"", result["notice"])
+
+    async def test_list_facts_task_kind_merges_decisions_and_pending(self):
+        """q42：只查 pending_item 会漏掉写在 decisions 里的任务；task 两类一起查。"""
+        meeting = await self._meeting("MTG-9T", self.owner)
+        await self._minutes(
+            meeting, self.owner, status="CONFIRMED",
+            decisions=[self._decision("发布决策复盘", owner="张晨")],
+            pending=[self._decision("提交排班表", owner="张晨")])
+        actor = await kb_tools.Actor.resolve(self.owner)
+        result = await kb_tools.execute_tool(actor, "list_facts", {
+            "kind": "task", "owner": "张晨", "meeting_ids": [meeting.id]})
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["kind"], "task")
+        fields = {fact["field"] for fact in result["facts"]}
+        self.assertEqual(fields, {"decisions", "pending_items"})
+
     async def test_list_facts_keywords_narrow_the_facts(self):
         meeting = await self._meeting("MTG-9K", self.owner)
         await self._minutes(meeting, self.owner, status="CONFIRMED",

@@ -71,7 +71,14 @@ class Citation:
         if self.kind == KIND_CHUNK:
             return (self.kind, self.chunk_id)
         if self.kind == KIND_FACT:
-            return (self.kind, self.minutes_id, self.field, self.item_index)
+            # 纪要条目按 minutes_id + field + item_index；录音/会议清单没有 minutes_id，
+            # 过去三者全为 None，导致所有清单行被合并成同一个空引用（q91 的 [1]）。
+            # 这里用清单自己的身份做 key：录音按 task_id、会议按 meeting_id。
+            if self.minutes_id is not None:
+                return (self.kind, "minutes", self.minutes_id, self.field, self.item_index)
+            if self.task_id is not None:
+                return (self.kind, "recording", self.task_id)
+            return (self.kind, "meeting", self.meeting_id)
         return (self.kind, self.task_id, self.segment_no)
 
     def as_dict(self) -> dict[str, Any]:
@@ -214,9 +221,30 @@ def _from_facts(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation]]
     pairs: list[tuple[dict[str, Any], Citation]] = []
     for fact in result.get("facts") or []:
         if result.get("kind") == "meeting":
+            title = str(fact.get("title") or "")
+            start_time = fact.get("start_time")
+            parts = [f"会议 {fact.get('meeting_id')}"]
+            if title:
+                parts.append(title)
+            if start_time:
+                parts.append(str(start_time))
+            quote = " · ".join(parts)
             pairs.append((fact, Citation(
                 ref=0, kind=KIND_FACT, meeting_id=int(fact.get("meeting_id") or 0),
-                quote=str(fact.get("title") or ""), meeting_title=str(fact.get("title") or ""),
+                quote=quote, meeting_title=title,
+                # 空标题/空时间不写 source_text：与“没有正文也没有槽位就不写空字段”
+                # 的既有口径一致。
+                source_text=quote if (title or start_time) else None,
+            )))
+            continue
+        if result.get("kind") == "recording":
+            source_id = fact.get("task_id")
+            quote = (f"录音 task {source_id} · {fact.get('recorded_at') or '时间未标注'} · "
+                     f"{fact.get('period') or '未标注'}")
+            pairs.append((fact, Citation(
+                ref=0, kind=KIND_FACT, meeting_id=int(fact.get("meeting_id") or 0),
+                quote=quote, meeting_title=str(fact.get("meeting_title") or ""),
+                source_text=quote, task_id=source_id, source_id=source_id,
             )))
             continue
         item = fact.get("item") or {}
@@ -271,10 +299,12 @@ def _from_minutes(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation
         for index, item in enumerate(items):
             if not isinstance(item, dict):
                 continue
+            # get_minutes 过滤/截断后仍带原始 item_index；没有它时才退回列表位置。
+            item_index = item.get("item_index", index)
             pairs.append((item, Citation(
                 ref=0, kind=KIND_FACT, meeting_id=meeting_id,
                 quote=_fact_quote(item), meeting_title=title,
-                minutes_id=minutes_id, field=field_name, item_index=index,
+                minutes_id=minutes_id, field=field_name, item_index=item_index,
                 authority=authority,
                 speaker=_evidence_speaker(item),
                 source_text=_item_text(item),
