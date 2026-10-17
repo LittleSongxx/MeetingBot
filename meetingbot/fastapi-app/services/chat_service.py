@@ -425,12 +425,15 @@ def _transcript_sources(result: dict[str, Any], task_ids: list[int]) -> set[int]
 
 async def maybe_supplement_cross_recording(
         state: CrossRecordingState | None, actor: kb_tools.Actor,
-        registry: citations.CitationRegistry, result: dict[str, Any]) -> dict[str, Any]:
+        registry: citations.CitationRegistry, result: dict[str, Any],
+        tool_name: str = "search_knowledge") -> dict[str, Any]:
     """在工具边界做“覆盖不足才补”的跨录音补搜（每轮最多一次）。
 
-    为什么等两次工具结果：第一次常常是录音清单或 get_minutes（q91），此时还没有
-    任何转写覆盖；如果立刻补，就会抢在 Agent 正常的两段检索之前注入。等它做过
-    两次工具调用，q90/q92/q95 的第二段检索已经完成，不需要补；q91/q89 才真的缺段。
+    为什么检索工具要等两次结果：第一次 search 可能只是一段录音，Agent 紧接着会
+    对另一段再搜一次（q90/q92/q95）；立刻补会抢在正常检索之前注入。等它做过两次
+    工具调用，第二段检索已经完成，不需要补。**非检索工具**（录音/会议清单、
+    get_minutes、摘录）不会自动带出缺失录音：q91 在本轮只调一次 list_facts 就回答，
+    等两次永远等不到；这类结果第一次出现时就补，否则结构性覆盖失效。
 
     为什么用原问题而不是模型上次的 query：模型上一次 query 可能只针对已覆盖的
     那一段（q94 的“报表导出”就是），用它补另一段只会把同一边的证据再搜一遍。
@@ -440,7 +443,8 @@ async def maybe_supplement_cross_recording(
     state.tool_results += 1
     state.covered |= _transcript_sources(result, state.task_ids)
     required = min(2, len(state.task_ids))
-    if state.tool_results < 2 or state.attempted or len(state.covered) >= required:
+    if (state.tool_results < 2 and tool_name == "search_knowledge") \
+            or state.attempted or len(state.covered) >= required:
         return result
     missing = [task_id for task_id in state.task_ids if task_id not in state.covered][:2]
     if not missing:
@@ -696,7 +700,7 @@ def _tool_runner(spec: kb_tools.ToolSpec, actor: kb_tools.Actor,
         # 先登记主结果、再补搜：补搜条目的 ref 排在主结果之后，编号顺序稳定。
         result = registry.annotate(spec.name, result)
         result = await maybe_supplement_cross_recording(
-            cross_state, actor, registry, result)
+            cross_state, actor, registry, result, spec.name)
         return kb_tools.tool_result_text(result)
 
     return run

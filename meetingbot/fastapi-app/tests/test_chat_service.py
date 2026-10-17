@@ -1217,6 +1217,23 @@ class CrossRecordingSupplementTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("coverage_hits", updated)
         self.assertTrue(state.attempted)
 
+    async def test_inventory_first_tool_supplements_immediately(self):
+        """q91 在 68 里只调一次 list_facts 就回答：等两次结果会永远等不到补搜。"""
+        state = await self._state()
+
+        async def fake_search(query, **kwargs):
+            return [self._hit(kwargs["source_ids"][0])]
+
+        with patch.object(kb_service, "search_knowledge",
+                          AsyncMock(side_effect=fake_search)) as search:
+            updated = await chat_service.maybe_supplement_cross_recording(
+                state, self.actor, self.registry,
+                {"ok": True, "kind": "recording", "facts": []}, "list_facts")
+        self.assertEqual(search.await_count, 2)
+        self.assertEqual(updated["coverage_supplement"]["searched_task_ids"],
+                         [self.morning.id, self.afternoon.id])
+        self.assertEqual(len(updated["coverage_hits"]), 2)
+
     async def test_supplement_is_attempted_only_once_per_turn(self):
         state = await self._state()
         with patch.object(kb_service, "search_knowledge",
@@ -1248,10 +1265,10 @@ class CrossRecordingSupplementTest(unittest.IsolatedAsyncioTestCase):
                           side_effect=fake_execute), \
                 patch.object(kb_service, "search_knowledge",
                              AsyncMock(side_effect=fake_search)):
-            await tools["list_facts"].coroutine(kind="recording")
-            text = await tools["get_minutes"].coroutine(meeting_id=self.meeting.id)
-        payload = json.loads(text)
-        self.assertTrue(payload["coverage_hits"])
+            first = await tools["list_facts"].coroutine(kind="recording")
+            await tools["get_minutes"].coroutine(meeting_id=self.meeting.id)
+        payload = json.loads(first)
+        self.assertTrue(payload["coverage_hits"], "清单结果是首个非检索工具，应立刻补搜")
         self.assertIn("ref", payload["coverage_hits"][0])
         self.assertEqual(payload["coverage_supplement"]["searched_task_ids"],
                          [self.morning.id, self.afternoon.id])
