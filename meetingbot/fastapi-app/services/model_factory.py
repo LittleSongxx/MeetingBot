@@ -36,14 +36,17 @@ def _cost_micro(config: AiModelConfig, usage: dict | None) -> int:
 
 
 def _observe_call(config: AiModelConfig, *, call_type: str, status: str, elapsed_ms: int,
-                  usage: dict | None) -> None:
+                  usage: dict | None, cost: pricing.Cost | None = None) -> None:
     """一次调用收尾时统一上报指标与 span 属性。
 
     放在**唯一出口**上：日志（ai_call_log）与指标（/metrics）本来就是同一件事的
     两种读法，分开埋点必然漂移——那种漂移的表现是"日志里有、面板上没有"，
     而排查的人会先怀疑面板。
+
+    `cost` 允许调用方传入**专用计价**（rerank 用总 token 计输入价，与
+    对话/嵌入的 input/output 两列不是一回事）；不传则按模型配置计价。
     """
-    cost = pricing.cost_of_config(config, usage)
+    cost = cost or pricing.cost_of_config(config, usage)
     metrics.record_model_call(
         model=config.model_name, call_type=call_type, status=status, elapsed_ms=elapsed_ms,
         input_tokens=cost.input_tokens, output_tokens=cost.output_tokens,
@@ -574,6 +577,20 @@ def rerank_model() -> str:
     return os.getenv("RERANK_MODEL", "").strip() or "qwen3.7-text-rerank"
 
 
+def rerank_price_micro_per_1k() -> int:
+    """rerank 输入单价（微元/千 token）。0 = 未定价，照旧显示"未定价"。
+
+    默认 0 而不是内置一个价：不同账号/区域的账单可能不同，把某个公开价硬编码
+    会让观测页看起来"已定价"却与实际账单对不上。部署时用
+    `RERANK_INPUT_PRICE_MICRO_PER_1K` 显式配置。
+    """
+    raw = os.getenv("RERANK_INPUT_PRICE_MICRO_PER_1K", "0").strip()
+    try:
+        return max(0, int(raw))
+    except ValueError as error:
+        raise ValueError("RERANK_INPUT_PRICE_MICRO_PER_1K 必须为非负整数") from error
+
+
 def _rerank_base(config: AiModelConfig) -> str:
     """rerank 的 API 根地址。
 
@@ -635,6 +652,11 @@ async def rerank_documents(config: AiModelConfig, query: str, documents: list[st
             raise RuntimeError(f"rerank 返回里没有 results：{str(body)[:200]}")
         # 按分数降序；未返回的文档（top_n 截断）不参与
         ranked.sort(key=lambda pair: pair[1], reverse=True)
+        usage = body.get("usage") or {}
+        # rerank 只按输入计费，且用量只有 total_tokens：用专用计价，
+        # 不能拿嵌入配置的 input/output 两列算（那会把成本记成 0）
+        rerank_cost = pricing.cost_of_rerank(
+            usage, price_micro_per_1k=rerank_price_micro_per_1k())
         await AiCallLog.create(
             request_id="AIC" + uuid4().hex.upper(),
             call_type=call_type, biz_id=biz_id,
@@ -642,11 +664,11 @@ async def rerank_documents(config: AiModelConfig, query: str, documents: list[st
             request_size=sum(len(text.encode("utf-8")) for text in texts) + len(query),
             response_size=sum(len(str(pair[1])) for pair in ranked),
             status="SUCCEEDED", elapsed_ms=elapsed_ms,
-            usage_json=body.get("usage") or {},
-            cost_micro=_cost_micro(config, body.get("usage") or {}),
+            usage_json=usage,
+            cost_micro=rerank_cost.micro,
         )
         _observe_call(config, call_type=call_type, status="SUCCEEDED",
-                      elapsed_ms=elapsed_ms, usage=body.get("usage") or {})
+                      elapsed_ms=elapsed_ms, usage=usage, cost=rerank_cost)
         return ranked
     except Exception as error:  # noqa: BLE001 - 记账后原样抛出，由调用方决定降级
         elapsed_ms = int((perf_counter() - started) * 1000)
@@ -660,7 +682,9 @@ async def rerank_documents(config: AiModelConfig, query: str, documents: list[st
             error_message=detail,
         )
         _observe_call(config, call_type=call_type, status="FAILED",
-                      elapsed_ms=elapsed_ms, usage=None)
+                      elapsed_ms=elapsed_ms, usage=None,
+                      cost=pricing.cost_of_rerank(
+                          None, price_micro_per_1k=rerank_price_micro_per_1k()))
         raise
     finally:
         if owns_client:

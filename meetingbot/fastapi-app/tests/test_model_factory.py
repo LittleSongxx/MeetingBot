@@ -479,8 +479,10 @@ class RerankClientTest(unittest.IsolatedAsyncioTestCase):
         client, calls = self._client(200, {"output": {"results": [
             {"index": 0, "relevance_score": 0.2}, {"index": 1, "relevance_score": 0.9}]},
             "usage": {"total_tokens": 42}})
-        with mock.patch.dict("os.environ", {"RERANK_BASE_URL": "https://rerank.example/api/v1",
-                                            "RERANK_MODEL": "qwen3.7-text-rerank"}):
+        with mock.patch.dict("os.environ", {
+                "RERANK_BASE_URL": "https://rerank.example/api/v1",
+                "RERANK_MODEL": "qwen3.7-text-rerank",
+                "RERANK_INPUT_PRICE_MICRO_PER_1K": "500"}):
             ranked = await model_factory.rerank_documents(
                 self.config, "灰度什么时候开始", ["甲", "乙"], biz_id=7, top_n=2, client=client)
         self.assertEqual(ranked, [(1, 0.9), (0, 0.2)])
@@ -492,6 +494,8 @@ class RerankClientTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(log.call_type, "KB_RERANK")
         self.assertEqual(log.model_name, "qwen3.7-text-rerank")
         self.assertEqual((log.usage_json or {}).get("total_tokens"), 42)
+        # 42 token × 500 微元/千 = 21 微元；不能拿嵌入配置的单价算（那会是 0）
+        self.assertEqual(log.cost_micro, 21)
 
     async def test_http_error_is_logged_then_raised(self):
         client, _ = self._client(500, {"error": "boom"})

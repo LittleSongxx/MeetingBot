@@ -300,6 +300,7 @@ def _product_switches(base_url: str, token: str) -> dict[str, Any]:
         "kb_chunk_target_chars": data.get("kb_chunk_target_chars"),
         "rerank_top_k": data.get("rerank_top_k"),
         "rerank_candidates": data.get("rerank_candidates"),
+        "rerank_input_price_micro_per_1k": data.get("rerank_input_price_micro_per_1k"),
         "kb_dedupe_enabled": data.get("kb_dedupe_enabled"),
         "kb_dedupe_overlap_seconds": data.get("kb_dedupe_overlap_seconds"),
         "kb_contextual_enabled": data.get("kb_contextual_enabled"),

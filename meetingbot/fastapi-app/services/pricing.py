@@ -62,6 +62,21 @@ def cost_of(usage: dict[str, Any] | None, *, input_price_micro_per_1k: int,
                 priced=priced)
 
 
+def cost_of_rerank(usage: dict[str, Any] | None, *, price_micro_per_1k: int) -> Cost:
+    """rerank 的成本：只按输入 token 计费。
+
+    DashScope 的 rerank 用量只给 `total_tokens`（没有输出 token 的概念），而
+    `cost_of` 只认 input/prompt 字段——直接拿它算会把 rerank 成本记成 0，
+    看起来像"免费"。这里显式把 `total_tokens` 当输入。
+    """
+    usage = usage or {}
+    input_tokens = int(usage.get("input_tokens") or usage.get("prompt_tokens")
+                       or usage.get("total_tokens") or 0)
+    price = int(price_micro_per_1k or 0)
+    return Cost(micro=input_tokens * price // _TOKENS_PER_UNIT,
+                input_tokens=input_tokens, output_tokens=0, priced=bool(price))
+
+
 def cost_of_config(config: Any, usage: dict[str, Any] | None) -> Cost:
     """按一条 `AiModelConfig` 的单价算成本（配置缺列时按未定价处理）。"""
     return cost_of(
@@ -80,4 +95,5 @@ def format_micro(micro: int) -> str:
     return f"{sign}{text or '0'}"
 
 
-__all__ = ["Cost", "cost_of", "cost_of_config", "tokens_of", "format_micro"]
+__all__ = ["Cost", "cost_of", "cost_of_config", "cost_of_rerank", "tokens_of",
+           "format_micro"]

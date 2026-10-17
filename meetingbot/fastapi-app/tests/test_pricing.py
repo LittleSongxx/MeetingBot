@@ -56,6 +56,19 @@ class CostTest(unittest.TestCase):
         cost = pricing.cost_of_config(Config(), {"input_tokens": 1000, "output_tokens": 1000})
         self.assertEqual(cost.micro, 10_000_000)  # 10 元
 
+    def test_rerank_uses_total_tokens_as_input(self):
+        """rerank 的用量只有 total_tokens；拿 input/output 两列算会记成 0（像免费）。"""
+        cost = pricing.cost_of_rerank({"total_tokens": 5_400}, price_micro_per_1k=500)
+        self.assertEqual(cost.input_tokens, 5_400)
+        self.assertEqual(cost.output_tokens, 0)
+        self.assertEqual(cost.micro, 2_700, "5400 × 0.5 元/百万 = 0.0027 元")
+        self.assertTrue(cost.priced)
+
+    def test_unpriced_rerank_is_not_free(self):
+        cost = pricing.cost_of_rerank({"total_tokens": 5_400}, price_micro_per_1k=0)
+        self.assertEqual(cost.micro, 0)
+        self.assertFalse(cost.priced)
+
     def test_format_micro_is_readable(self):
         self.assertEqual(pricing.format_micro(0), "0")
         self.assertEqual(pricing.format_micro(1), "0.000001")

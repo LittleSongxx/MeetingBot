@@ -595,10 +595,14 @@ async def search_knowledge(
     vectors = await model_factory.embed_texts(config, [text], biz_id=biz_id,
                                               call_type="KB_QUERY_EMBED")
     dense = vectors[0]
-    # rerank 开着时先多召回一批候选，再由模型挑出真正能回答问题的那些
-    fetch = max(int(limit), RERANK_CANDIDATES) if rerank_enabled() else int(limit)
+    # rerank 开着时先多召回一批候选，再由模型挑出真正能回答问题的那些。
+    # 候选深度两处必须一致：Qdrant 的 prefetch 深度与融合后的 limit，
+    # 只放大其中一个会被另一个卡住（看起来"候选加了但结果没变"）。
+    candidates = rerank_candidates() if rerank_enabled() else 0
+    fetch = max(int(limit), candidates) if candidates else int(limit)
     raw = await qdrant.hybrid_search(
         dense=dense, sparse=kb_sparse.encode(text), limit=fetch,
+        prefetch_limit=candidates or None,
         allowed_meeting_ids=allowed_meeting_ids, authority=authority,
         chunk_type=chunk_type, source_ids=source_ids,
         meeting_time_from=meeting_time_from, meeting_time_to=meeting_time_to,
@@ -632,8 +636,17 @@ async def search_knowledge(
 
 # 重排的调用类型（新调用类型必须登记 CALL_TYPE_OWNERSHIP，见 observability_service）
 RERANK_CALL_TYPE = "KB_RERANK"
-# 先召回多少候选再重排。取与 Qdrant 的 PREFETCH_LIMIT 同量级：再大也超出融合深度。
-RERANK_CANDIDATES = qdrant.PREFETCH_LIMIT
+# 先召回多少候选再重排。默认与 Qdrant 的 PREFETCH_LIMIT 同量级；可用
+# `RERANK_CANDIDATES` 覆盖（任务 6 的 24 vs 40 对照就是只改这一个值）。
+DEFAULT_RERANK_CANDIDATES = qdrant.PREFETCH_LIMIT
+
+
+def rerank_candidates() -> int:
+    raw = os.getenv("RERANK_CANDIDATES", str(DEFAULT_RERANK_CANDIDATES)).strip()
+    try:
+        return max(1, int(raw))
+    except ValueError as error:
+        raise ValueError("RERANK_CANDIDATES 必须为正整数") from error
 
 
 def rerank_top_k() -> int:

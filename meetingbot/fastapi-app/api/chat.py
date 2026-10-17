@@ -38,7 +38,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from models import AiModelConfig, ChatSession, User
 from pydantic import BaseModel, Field
-from services import chat_service, kb_chunking, kb_service, kb_tools, moderation, query_plan
+from services import chat_service, kb_chunking, kb_service, kb_tools, model_factory, moderation, query_plan
 
 router = APIRouter(prefix="/chat")
 
@@ -102,7 +102,8 @@ async def status(current_user: User = Depends(get_current_user)):
         # "这一臂跑的到底是 300/500 字、k=3/5"，否则只能靠命令行回忆（没有证据）
         "kb_chunk_target_chars": kb_chunking.target_chars(),
         "rerank_top_k": kb_service.rerank_top_k(),
-        "rerank_candidates": kb_service.RERANK_CANDIDATES,
+        "rerank_candidates": kb_service.rerank_candidates(),
+        "rerank_input_price_micro_per_1k": model_factory.rerank_price_micro_per_1k(),
         "kb_dedupe_enabled": kb_service.dedupe_enabled(),
         "kb_dedupe_overlap_seconds": kb_service.dedupe_overlap_seconds(),
         "kb_contextual_enabled": kb_service.contextual_enabled(),

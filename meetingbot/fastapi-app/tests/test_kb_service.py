@@ -322,6 +322,14 @@ class RerankTest(_KbBase):
             with patch.dict(os.environ, {"KB_RERANK_ENABLED": value}):
                 self.assertFalse(kb_service.rerank_enabled(), value)
 
+    def test_candidate_depth_is_configurable(self):
+        with patch.dict(os.environ, {"RERANK_CANDIDATES": "40"}):
+            self.assertEqual(kb_service.rerank_candidates(), 40)
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("RERANK_CANDIDATES", None)
+            self.assertEqual(kb_service.rerank_candidates(),
+                             kb_service.DEFAULT_RERANK_CANDIDATES)
+
     def _hits(self, count: int) -> list[dict]:
         return [{"chunk_id": index, "score": 0.5,
                  "payload": {"meeting_id": 1, "authority": "RAW", "text": f"第{index}片",
@@ -350,7 +358,8 @@ class RerankTest(_KbBase):
                           AsyncMock(return_value=[(4, 0.9), (2, 0.5), (0, 0.1)])) as rerank_call:
             hits = await kb_service.search_knowledge("灰度", allowed_meeting_ids=None, limit=3)
         # 召回先放大到候选数，再由重排决定顺序
-        self.assertEqual(search.await_args.kwargs["limit"], kb_service.RERANK_CANDIDATES)
+        self.assertEqual(search.await_args.kwargs["limit"], kb_service.rerank_candidates())
+        self.assertEqual(search.await_args.kwargs["prefetch_limit"], kb_service.rerank_candidates())
         self.assertEqual(rerank_call.await_args.kwargs["call_type"], kb_service.RERANK_CALL_TYPE)
         self.assertEqual([hit.chunk_id for hit in hits], [5, 3, 1])
 
