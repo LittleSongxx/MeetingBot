@@ -38,7 +38,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from models import AiModelConfig, ChatSession, User
 from pydantic import BaseModel, Field
-from services import chat_service, kb_service, kb_tools, moderation, query_plan
+from services import chat_service, kb_chunking, kb_service, kb_tools, moderation, query_plan
 
 router = APIRouter(prefix="/chat")
 
@@ -98,6 +98,12 @@ async def status(current_user: User = Depends(get_current_user)):
         # 从外面猜开关状态等于没有证据（product_model 留空已经演示过这个坑）
         "kb_rerank_enabled": kb_service.rerank_enabled(),
         "kb_query_plan_enabled": query_plan.plan_enabled(),
+        # 检索漏斗的三个可调参数也由被测进程自报：标定实验的产物必须能证明
+        # "这一臂跑的到底是 300/500 字、k=3/5"，否则只能靠命令行回忆（没有证据）
+        "kb_chunk_target_chars": kb_chunking.target_chars(),
+        "rerank_top_k": kb_service.rerank_top_k(),
+        "rerank_candidates": kb_service.RERANK_CANDIDATES,
+        "qdrant_collection": qdrant.collection_name(),
     })
 
 

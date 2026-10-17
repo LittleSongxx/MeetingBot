@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import httpx
 from api import chat as chat_api
@@ -144,6 +145,21 @@ class ChatEndpointTest(unittest.IsolatedAsyncioTestCase):
     async def test_missing_token_is_401(self):
         response = await self.client.post("/chat/session", json={})
         self.assertEqual(response.status_code, 401)
+
+    async def test_status_self_reports_the_retrieval_funnel(self):
+        """产物要能自证这一臂的窗口与 k：抓取进程与容器 env 是两个空间，
+        从外面猜等于没有证据（标定实验的对照就靠这三个字段区分）。"""
+        with patch.dict(os.environ, {"KB_CHUNK_TARGET_CHARS": "300",
+                                     "RERANK_TOP_K": "3",
+                                     "QDRANT_COLLECTION": "funnel_test"}), \
+                patch.object(chat_api.qdrant, "health", new=AsyncMock(return_value=True)), \
+                patch.object(chat_api.moderation, "status", return_value={"enabled": False}):
+            response = await self.client.get("/chat/status", headers={"token": self.token})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()["data"]
+        self.assertEqual(data["kb_chunk_target_chars"], 300)
+        self.assertEqual(data["rerank_top_k"], 3)
+        self.assertEqual(data["qdrant_collection"], "funnel_test")
 
     async def test_stream_returns_sse_frames_with_anti_buffering_headers(self):
         created = await self.client.post("/chat/session", json={},
