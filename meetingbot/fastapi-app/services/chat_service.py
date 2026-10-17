@@ -318,6 +318,21 @@ def wants_cross_recording(question: str) -> bool:
     return bool(_CROSS_RECORDING_MARKERS.search(str(question or "")))
 
 
+def cross_recording_prefetch_k() -> int:
+    """每段录音预检索注入多少条（0=关，1–5 可配）。
+
+    cross8 标定：无预检索 71.4/75.0（precision/recall）；k=1 60.0/87.5、
+    k=2 51.2/93.8、k=3 60.0/93.8。按“recall ≥75% 下取 precision 最高”的预注册
+    规则，**默认关**——预检索保覆盖，但会压低 precision。要覆盖两段就配 1–5。
+    """
+    raw = os.getenv("CROSS_RECORDING_PREFETCH_K", "0").strip()
+    try:
+        value = int(raw)
+    except ValueError as error:
+        raise ValueError("CROSS_RECORDING_PREFETCH_K 必须为 0–5 的整数") from error
+    return max(0, min(5, value))
+
+
 async def _cross_recording_message(actor: kb_tools.Actor, registry: citations.CitationRegistry,
                                    question: str, *, scope: list[int],
                                    biz_id: int) -> SystemMessage | None:
@@ -325,12 +340,13 @@ async def _cross_recording_message(actor: kb_tools.Actor, registry: citations.Ci
 
     为什么放在 Agent 循环之前：提示词说“两段各检索一次”是概率性的——实测 q91
     只调 list_facts/get_minutes、q94 只覆盖 task 6。这里在入口处**结构性**补上
-    两段各 top-3，引用编号也登记好；Agent 后面还可以自己再检索，但两段的覆盖
-    不再取决于它是否听话。
+    两段各 top-k（`CROSS_RECORDING_PREFETCH_K`，默认 3），引用编号也登记好；
+    Agent 后面还可以自己再检索，但两段的覆盖不再取决于它是否听话。
 
     只在会话限定了会议、且该会议确有 ≥2 段转写时执行；失败不打断主链路。
     """
-    if not scope or not wants_cross_recording(question):
+    depth = cross_recording_prefetch_k()
+    if depth <= 0 or not scope or not wants_cross_recording(question):
         return None
     tasks = await TranscriptionTask.filter(
         meeting_id__in=scope, status="SUCCEEDED").order_by("id")
@@ -341,8 +357,8 @@ async def _cross_recording_message(actor: kb_tools.Actor, registry: citations.Ci
     for task in tasks:
         try:
             hits = await kb_service.search_knowledge(
-                question, allowed_meeting_ids=scope, limit=3, source_ids=[task.id],
-                biz_id=biz_id)
+                question, allowed_meeting_ids=scope,
+                limit=depth, source_ids=[task.id], biz_id=biz_id)
         except Exception:  # noqa: BLE001 - 预检索失败退回 Agent 自己的工具路径
             logger.exception("跨录音预检索失败（task=%s），本轮退回模型自行检索", task.id)
             continue
