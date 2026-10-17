@@ -35,7 +35,7 @@ from typing import Any, AsyncIterator
 
 from common.prompts import render_prompt
 from common.times import format_datetime, now
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import StructuredTool
 from langgraph.prebuilt import ToolNode
 from models import AiCallLog, AiModelConfig, ChatMessage, ChatSession, Meeting, PromptTemplate, TranscriptionTask, User
@@ -88,10 +88,16 @@ SOURCE_COVERAGE_PROTOCOL = (
     "而 list_facts 没有给出完整清单时，才必须再用 search_knowledge 检索转写原话。"
     "**先做一次不限来源的检索**；只有 list_facts(kind=recording) 的 recorded_at/period "
     "明确指向某段录音时，才用 source_ids 收窄到那一段。不要为了区分上午/下午先分别检索两段。"
-    "问单一事实、流程步骤、时间点、原因或一般决策复述时，不要为了「覆盖」额外检索。\n"
+    "问单一事实、流程步骤、时间点、原因或一般决策复述时，不要为了「覆盖」额外检索；"
+    "**但如果问题问到的槽位在事实里缺失**（例如问协作人，条目只有负责人/截止时间），"
+    "必须用 search_knowledge 到转写原话补查——这是补缺，不是为覆盖而检索。\n"
     "3. 录音清单里的 recorded_at 是实际开始时间、period 是上午/下午/晚上/未标注。"
     "问「上午/下午那场」时按 period 选 source_ids，并在答案里说明依据；"
-    "period 未标注时不要猜，检索所有相关录音并如实说明；猜错的日期/来源限定空了会自动放宽。"
+    "period 未标注时不要猜，检索所有相关录音并如实说明；猜错的日期/来源限定空了会自动放宽。\n"
+    "4. **只对明确提到「两段录音/两段分别/是否一致/各自」的跨录音题**："
+    "必须对每段录音各检索一次（用 source_ids 分别检索），并在答案里分别标注来源"
+    "（task_id/recorded_at）；不要只答一段。多问句分解（同一段录音里的两个问题）"
+    "不适用本条。此时第 2 条的「先不限来源」不适用。"
 )
 
 # 引用协议：**这不是可编辑的提示词**，而是前后端之间的协议——页面按 `[n]`
@@ -287,6 +293,9 @@ async def build_memory(session: ChatSession, user: User) -> list[Any]:
         if row.role == MESSAGE_USER:
             messages.append(HumanMessage(row.content))
         else:
+            # 历史里**保留**引用编号：剥掉它们会让模型下一轮干脆不写引用
+            #（实测 27 题回归里 q27 变成 0 引用）。旧编号的死链在落库时解析，
+            # 见 `_resolve_unknown_refs`。
             messages.append(AIMessage(compress_answer(row.content or "",
                                                       citations=_used_refs(row))))
     return messages
@@ -296,6 +305,69 @@ def _used_refs(row: ChatMessage) -> list[int]:
     """这条助手消息引用过的编号（落库的引用快照，与页面渲染同源）。"""
     used = (row.citations_json or {}).get("used") or []
     return [int(item.get("ref")) for item in used if item.get("ref")]
+
+
+def _entity_haystack(registry: citations.CitationRegistry,
+                     state: dict[str, Any] | None) -> str:
+    """实体核查的对照物：引用正文 + **本轮全部工具结果**。
+
+    只给引用快照不够：录音清单的 `recorded_at`、get_minutes 的字段、list_facts
+    的事实都可能被答案引用，却不一定登记成引用。实测里 `2026-09-10`、`14:00`
+    被当成"检索结果里没有"的编造，就是对照物缺了工具结果。
+    """
+    parts: list[str] = []
+    for item in registry.as_dicts():
+        for key in ("source_text", "quote", "text"):
+            value = item.get(key)
+            if isinstance(value, str) and value:
+                parts.append(value)
+                break
+    for message in (state or {}).get("messages") or []:
+        if isinstance(message, ToolMessage):
+            parts.append(str(message.content or ""))
+    return "\n".join(part for part in parts if part)
+
+
+async def _history_citations(session_id: int, before_id: int) -> dict[int, dict[str, Any]]:
+    """本会话里此前各轮用过的引用，按编号索引（最近的轮次优先）。
+
+    引用登记表是**按轮**新建的，上一轮的 [3] 在本轮不在登记表里；但模型会在
+    历史回答里看到它并复用。落库时用这张表把旧编号补回引用快照，页面才能渲染
+    卡片；补不到的才记 `unknown_refs`。不是"改历史编号"，只是把旧编号解析回
+    它当时指向的条目。
+    """
+    rows = await ChatMessage.filter(
+        session_id=session_id, role=MESSAGE_ASSISTANT, id__lt=before_id,
+    ).order_by("-id")
+    mapping: dict[int, dict[str, Any]] = {}
+    for row in rows:
+        for item in (row.citations_json or {}).get("used") or []:
+            if not isinstance(item, dict):
+                continue
+            ref = item.get("ref")
+            if ref is not None and int(ref) not in mapping:
+                mapping[int(ref)] = item
+    return mapping
+
+
+def _resolve_unknown_refs(answer: str, registry: citations.CitationRegistry,
+                          history: dict[int, dict[str, Any]]) -> tuple[list[dict[str, Any]],
+                                                                     list[int]]:
+    """本轮用到的引用 + 能从历史解析的旧编号；返回 (引用快照, 仍未知的编号)。
+
+    只解析**能对上号的**旧编号；对不上号的保持 unknown，不猜、不静默丢。
+    """
+    used = [item.as_dict() for item in citations.used_citations(answer, registry)]
+    known = {int(item.get("ref")) for item in used}
+    remaining: list[int] = []
+    for ref in citations.unknown_refs(answer, registry):
+        item = history.get(int(ref))
+        if item is not None and int(ref) not in known:
+            used.append(dict(item))
+            known.add(int(ref))
+        else:
+            remaining.append(int(ref))
+    return used, remaining
 
 
 # 回答里"依据段"的常见小标题。压掉的是**从这个小标题到结尾**的整段：
@@ -604,15 +676,19 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     # 实体核查（生成后、落库前）：答案里的人名/数字如果在本轮检索结果里找不到，
     # **如实标注、不拦截**（与 no_retrieval 同款处置）。实测背景 q14：答案里出现了
     # 种子里不存在的人名"李婷"与通知渠道，判定侧逮到了、产品侧没有任何环节会报警。
-    entity_flags = entity_check.check_entities(answer, registry.as_dicts()) if answer else []
+    entity_flags = (entity_check.check_entities(
+        answer, _entity_haystack(registry, final_state)) if answer else [])
     entity_note = entity_check.describe(entity_flags)
-    if entity_note and failure is None:      # 已经失败的那一轮不叠加标注（原因只说一次）
-        failure = entity_note
+    if entity_note and failure is None:
+        # **只标注，不把这一轮变成失败**：`failure` 会让 SSE 走 error 分支、没有 done，
+        # 而实体核查是代理（有误报），不该据此判一轮失败。标注进 error_message
+        # 与 done 事件，页面按警告渲染；答案仍照常返回与落库。
         logger.warning("会话 %s 的这一轮出现检索结果外的实体：%s",
                        session.id, [flag["text"] for flag in entity_flags])
     tokens = await turn_tokens(assistant_row.id)
     stored = await _persist_turn(assistant_row, answer=answer, stop_reason=stop_reason,
                                  registry=registry, state=final_state, failure=failure,
+                                 entity_note=entity_note,
                                  tokens=tokens, moderation_verdict=output_verdict, plan=plan)
     if interrupted is not None:
         raise interrupted
@@ -723,18 +799,24 @@ async def turn_tokens(message_id: int, *, call_types: tuple[str, ...] = (CHAT_CA
 async def _persist_turn(assistant_row: ChatMessage, *, answer: str, stop_reason: str,
                         registry: citations.CitationRegistry, state: dict[str, Any],
                         failure: str | None, tokens: dict[str, int],
+                        entity_note: str = "",
                         moderation_verdict: Any = None,
                         plan: dict[str, Any] | None = None) -> dict[str, Any]:
     """把这一轮的结果落库：正文、停止原因、引用快照、工具轨迹、用量。"""
-    used = citations.used_citations(answer, registry)
+    # 旧编号解析：引用登记表按轮新建，模型可能复用历史回答里的 [n]。
+    # 能从本会话此前的引用快照对上号的补回 used（页面卡片可渲染）；
+    # 对不上号的才记 unknown_refs。**不在生成前剥历史编号**——实测那会让模型
+    # 干脆不写引用（27 题回归 q27 变成 0 引用）。
+    history = await _history_citations(assistant_row.session_id, assistant_row.id)
+    used, unknown = _resolve_unknown_refs(answer, registry, history)
     stored = {
         "citations": {
-            "used": [item.as_dict() for item in used],
+            "used": used,
             # 检索到但答案没引用的也留着：页面要展示"查到了什么"，
             # 复盘时要能回答"明明查到了为什么没引用"
             "all": registry.as_dicts(),
-            # 引用了登记表里没有的编号 = 模型的自由发挥。如实记录、不静默丢弃
-            "unknown_refs": citations.unknown_refs(answer, registry),
+            # 补不回来的编号 = 真未知；如实记录、不静默丢弃
+            "unknown_refs": unknown,
         },
         "tools": chat_graph.tool_trace(state.get("messages") or []),
     }
@@ -746,7 +828,9 @@ async def _persist_turn(assistant_row: ChatMessage, *, answer: str, stop_reason:
         moderation_json=(moderation_verdict.as_dict() if moderation_verdict is not None
                          else None),
         token_count=tokens["total_tokens"],
-        error_message=failure,
+        # 失败原因优先；没有失败时，实体核查的标注也留在这里（页面按警告渲染），
+        # 但 stop_reason 仍是 finished——标注不是失败
+        error_message=failure or entity_note or None,
         plan_json=plan,
     )
     return stored

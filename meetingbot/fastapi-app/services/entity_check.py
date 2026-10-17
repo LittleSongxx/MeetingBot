@@ -60,6 +60,13 @@ _NUMBER_PATTERN = re.compile(
     r"\d+年\d+月(?:\d+日)?|\d+月\d+日|\d+(?:\.\d+)?(?:[:：/-]\d+)*(?:%|％)?")
 # 不要拿引用编号去核对：`[1]` 是宿主编的，不在检索结果正文里
 _CITATION = re.compile(r"\[\d{1,3}\]")
+# 时间定位装置（`224s–293s`、`第293秒`）也不是会议事实：它们是引用锚点
+_LOCATOR_TIME = re.compile(r"\d{1,6}s|第?\d{1,6}秒")
+# 角色词后常见的系词/介词，不能算进人名（"负责人**为**王工"）
+_NAME_LEAD = re.compile(r"^[为是由：:\s]+")
+# 候选生成阶段的非人名残片：只用来**降噪**，不用于判定"可疑"
+_NON_NAME_FRAGMENTS = ("和秒数", "时间点", "原文片", "来源类", "会议名", "纪要版",
+                       "附件文", "转写来", "显示时", "包括会")
 
 
 def _candidate_names(answer: str) -> list[str]:
@@ -67,16 +74,25 @@ def _candidate_names(answer: str) -> list[str]:
     found: list[str] = []
     for pattern in (_ROLE_PATTERN, _PREFIX_PATTERN):
         for match in pattern.finditer(answer):
-            name = match.group(1)
+            name = _NAME_LEAD.sub("", match.group(1))
+            if len(name) < 2:
+                continue
             if any(word in name for word in _ROLEISH):
                 continue      # 角色/集体称谓不是人名（"来自人工"+"确认"就是这么被误捞的）
+            if any(fragment in name for fragment in _NON_NAME_FRAGMENTS):
+                continue      # 已知的句式残片（"时间点和秒数"）；只降噪，不判定可疑
             if name not in found:
                 found.append(name)
     return found
 
 
 def _numbers(answer: str) -> list[str]:
-    return list(dict.fromkeys(_NUMBER_PATTERN.findall(answer)))
+    # 先去掉时间定位装置，再抽数字：`224s–293s` 里的 293 不是会议事实。
+    # 纯 1–2 位整数（"4 项""第 2 条"）是计数，不是需要核对的会议事实；
+    # 保留日期/时间/百分比/长数字（2026、17:00、12%）。
+    tokens = _NUMBER_PATTERN.findall(_LOCATOR_TIME.sub("", answer))
+    return [token for token in dict.fromkeys(tokens)
+            if not (token.isdigit() and len(token) <= 2)]
 
 
 def _present(token: str, haystack: str) -> bool:

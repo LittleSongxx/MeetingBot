@@ -509,6 +509,33 @@ class KbToolsDbTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result["ok"])
         self.assertIn("至少要给一个", result["error"])
 
+    async def test_get_minutes_fields_filter_narrows_the_context(self):
+        """问待办时只取 pending_items，不要把决策/风险/议题一起塞进上下文。"""
+        meeting = await self._meeting("MTG-9F", self.owner)
+        await self._minutes(meeting, self.owner, status="CONFIRMED",
+                            decisions=[self._decision("不该出现的决策")],
+                            pending=[self._decision("只应出现的待办")])
+        actor = await kb_tools.Actor.resolve(self.owner)
+        result = await kb_tools.execute_tool(actor, "get_minutes", {
+            "meeting_id": meeting.id, "fields": ["pending_items"]})
+        self.assertTrue(result["ok"])
+        self.assertEqual(list(result["fields"]), ["pending_items"])
+        self.assertNotIn("decisions", result["fields"])
+        self.assertIn("只应出现的待办", str(result["fields"]["pending_items"]))
+
+    async def test_list_facts_keywords_narrow_the_facts(self):
+        meeting = await self._meeting("MTG-9K", self.owner)
+        await self._minutes(meeting, self.owner, status="CONFIRMED",
+                            pending=[self._decision("报表导出异步化改造"),
+                                     self._decision("灰度值班排班表")])
+        actor = await kb_tools.Actor.resolve(self.owner)
+        result = await kb_tools.execute_tool(actor, "list_facts", {
+            "kind": "pending_item", "meeting_ids": [meeting.id],
+            "keywords": ["报表"]})
+        self.assertTrue(result["ok"])
+        self.assertEqual(len(result["facts"]), 1)
+        self.assertIn("报表", str(result["facts"][0]))
+
     # ------------------------------------------------------------------ #
     # get_transcript_excerpt
     # ------------------------------------------------------------------ #
@@ -563,6 +590,26 @@ class KbToolsDbTest(unittest.IsolatedAsyncioTestCase):
                                                  {"task_id": task.id})
         self.assertEqual(len(result["segments"]), 2)
         self.assertTrue(result["truncated"])
+
+    async def test_excerpt_budget_is_per_turn_not_per_call(self):
+        """单次上限管不住多次调用：同一轮第二次调用必须看到预算用尽。"""
+        meeting = await self._meeting("MTG-15B", self.owner)
+        task = await self._transcript(meeting, self.owner)
+        actor = await kb_tools.Actor.resolve(self.owner)
+        with patch.object(kb_tools, "excerpt_segments_per_turn", return_value=3):
+            first = await kb_tools.execute_tool(actor, "get_transcript_excerpt",
+                                                {"task_id": task.id})
+            second = await kb_tools.execute_tool(actor, "get_transcript_excerpt",
+                                                 {"task_id": task.id})
+        self.assertEqual(len(first["segments"]), 3)
+        self.assertEqual(second["segments"], [])
+        self.assertIn("预算已用完", second["notice"])
+        # 新一轮（新 Actor）预算重置
+        fresh = await kb_tools.Actor.resolve(self.owner)
+        with patch.object(kb_tools, "excerpt_segments_per_turn", return_value=3):
+            third = await kb_tools.execute_tool(fresh, "get_transcript_excerpt",
+                                                {"task_id": task.id})
+        self.assertEqual(len(third["segments"]), 3)
 
 
 class AdminScopeTest(unittest.IsolatedAsyncioTestCase):

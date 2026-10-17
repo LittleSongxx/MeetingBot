@@ -457,6 +457,14 @@ class PromptTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(await PromptTemplate.filter(code="CHAT_SUMMARY").exists())
         self.assertIn("压缩", chat_service.SUMMARY_SYSTEM_PROMPT)
 
+    async def test_history_citations_reads_previous_used_refs(self):
+        from models import ChatMessage
+        await ChatMessage.create(
+            session_id=1, role="ASSISTANT", content="x",
+            citations_json={"used": [{"ref": 3, "quote": "乙"}]})
+        mapping = await chat_service._history_citations(1, 999)
+        self.assertEqual(mapping[3]["quote"], "乙")
+
 
 class SessionApiTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -620,6 +628,30 @@ class EntityCheckTest(unittest.TestCase):
         retrieved = [{"quote": "本次灰度从 8 月 20 日开始"}]
         self.assertEqual(entity_check.check_entities("灰度从8月20日开始", retrieved), [])
 
+    def test_role_phrase_with_a_copula_does_not_capture_the_prefix(self):
+        """'负责人为王工' 里的人名是王工，不是 '为王工'（实测扩展集的高频误报）。"""
+        retrieved = [{"quote": "负责人王工，协作人陈琳"}]
+        self.assertEqual(entity_check.check_entities("负责人为王工。", retrieved), [])
+
+    def test_locator_seconds_are_not_meeting_numbers(self):
+        """'224s–293s' 是引用锚点，不是会议事实（q09 的误报）。"""
+        retrieved = [{"quote": "音频会按时长切分，转写完成后生成带时间轴的片段"}]
+        answer = "张晨在 224s–293s 的原话：音频会按时长切分。"
+        self.assertEqual(entity_check.check_entities(answer, retrieved), [])
+
+    def test_tool_messages_are_part_of_the_entity_haystack(self):
+        from langchain_core.messages import ToolMessage
+        state = {"messages": [ToolMessage(content="recorded_at=2026-09-10 14:00",
+                                          tool_call_id="t")]}
+        haystack = chat_service._entity_haystack(
+            chat_service.citations.CitationRegistry(), state)
+        self.assertIn("14:00", haystack)
+
+    def test_bare_small_counts_are_not_meeting_numbers(self):
+        self.assertEqual(entity_check._numbers("共 4 项，第 2 条"), [])
+        self.assertEqual(entity_check._numbers("2026年9月10日 17:00 12%"),
+                         ["2026年9月10日", "17:00", "12%"])
+
     def test_nothing_retrieved_means_no_verdict(self):
         """没有检索结果时**不判**：那会变成"凡事都标"，标注失去意义。"""
         self.assertEqual(entity_check.check_entities("李婷负责这件事", []), [])
@@ -676,15 +708,17 @@ class EntityFlagPipelineTest(unittest.IsolatedAsyncioTestCase):
             async for kind, payload in chat_service.stream_answer(
                     session, "谁负责灰度", user=self.user, model=model):
                 events.append((kind, payload))
-        # 处置与 no_retrieval 一致：走**错误通道**（页面红色告警），答案本身照常落库
+        # 只标注、不拦截：本轮仍是正常结束（done），标注在 entity_flags 与 error_message
         kinds = [kind for kind, _ in events]
-        self.assertNotIn("done", kinds)
-        self.assertEqual(kinds[-1], "error")
-        message = events[-1][1]["message"]
-        self.assertIn("李婷", message)
-        self.assertIn("没有拦截", message)
+        self.assertIn("done", kinds)
+        self.assertNotIn("error", kinds)
+        done = [payload for kind, payload in events if kind == "done"][0]
+        self.assertEqual(done["stop_reason"], "finished")
+        self.assertIn("李婷", [flag["text"] for flag in done["entity_flags"]])
         assistant = await ChatMessage.filter(session_id=session.id, role="ASSISTANT").first()
-        self.assertEqual(assistant.error_message, message, "页面与库里是同一句话")
+        self.assertEqual(assistant.stop_reason, "finished")
+        self.assertIn("李婷", assistant.error_message or "")
+        self.assertIn("没有拦截", assistant.error_message or "")
         self.assertEqual(assistant.stop_reason, chat_graph.STOP_FINISHED, "标注不改停止原因")
         self.assertEqual(assistant.content, "由李婷负责这次灰度，来源见[1]。", "正文原样保留")
 
@@ -838,9 +872,14 @@ class QueryPlanPipelineTest(unittest.IsolatedAsyncioTestCase):
                   AIMessage(content="根据纪要[1]，是 98.6%。")]
         session = await chat_service.create_session(self.user)
         events = []
+        grounded = Hit(chunk_id=1, score=1.0, text="调用成功率是 98.6%",
+                       meeting_id=self.meeting.id, authority="RAW",
+                       chunk_type="TRANSCRIPT_WINDOW", field=None, item_index=None,
+                       speaker="张晨", start_ms=0, end_ms=1000, document_id=1,
+                       origin=None, source_id=6)
         with patch.dict(os.environ, {"KB_QUERY_PLAN_ENABLED": "1"}), \
                 patch.object(query_plan, "plan_query", AsyncMock(return_value=self._plan())), \
-                patch.object(kb_service, "search_knowledge", AsyncMock(return_value=[])):
+                patch.object(kb_service, "search_knowledge", AsyncMock(return_value=[grounded])):
             async for kind, payload in chat_service.stream_answer(
                     session, question, user=self.user, model=ScriptedChatModel(rounds=script)):
                 events.append((kind, payload))
@@ -856,6 +895,29 @@ class QueryPlanPipelineTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(assistant.plan_json["intent"], "aggregation", "规划要落库，否则无法归因")
         messages = await chat_service.list_messages(session.id, self.user)
         self.assertEqual(messages[-1]["plan"]["intent"], "aggregation")
+
+    async def test_entity_flag_is_a_warning_not_a_failed_turn(self):
+        """实体核查只标注：有人名找不到时仍要有 done，stop_reason 仍是 finished。"""
+        script = [AIMessage(content="", tool_calls=[_tool_call("search_knowledge", {"query": "负责人"})]),
+                  AIMessage(content="会上提到李婷负责这件事[1]。")]
+        grounded = Hit(chunk_id=1, score=1.0, text="张晨负责这件事",
+                       meeting_id=self.meeting.id, authority="RAW",
+                       chunk_type="TRANSCRIPT_WINDOW", field=None, item_index=None,
+                       speaker="张晨", start_ms=0, end_ms=1000, document_id=1,
+                       origin=None, source_id=6)
+        session = await chat_service.create_session(self.user)
+        events = []
+        with patch.object(kb_service, "search_knowledge", AsyncMock(return_value=[grounded])):
+            async for kind, payload in chat_service.stream_answer(
+                    session, "谁负责这件事", user=self.user,
+                    model=ScriptedChatModel(rounds=script)):
+                events.append((kind, payload))
+        done = [payload for kind, payload in events if kind == "done"][0]
+        self.assertTrue(done["entity_flags"])
+        self.assertEqual(done["stop_reason"], "finished")
+        assistant = await ChatMessage.filter(session_id=session.id, role="ASSISTANT").first()
+        self.assertEqual(assistant.stop_reason, "finished")
+        self.assertIn("李婷", assistant.error_message or "")
 
     async def test_plan_call_failure_does_not_break_the_turn(self):
         from services import query_plan
@@ -941,3 +1003,19 @@ class FailureDiagnosisTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotEqual(assistant.stop_reason, chat_graph.STOP_NO_RETRIEVAL,
                             "中间失败不是「没有检索」")
         self.assertIn("调用失败", assistant.error_message or "")
+
+
+class CitationResolutionTest(unittest.TestCase):
+    """旧引用编号的落库解析：能从历史对上号的补回，补不回的才记 unknown。"""
+
+    def test_old_refs_are_resolved_from_history_and_true_unknowns_kept(self):
+        registry = chat_service.citations.CitationRegistry()
+        registry.annotate("search_knowledge", {"ok": True, "hits": [{
+            "chunk_id": 1, "meeting_id": 2, "quote": "甲", "meeting_title": "会",
+            "start_second": 1, "end_second": 2, "authority": "RAW", "source_id": 6,
+        }]})
+        used, unknown = chat_service._resolve_unknown_refs(
+            "答 [1][3][9]", registry,
+            {3: {"ref": 3, "kind": "chunk", "meeting_id": 2, "quote": "乙"}})
+        self.assertEqual([item["ref"] for item in used], [1, 3])
+        self.assertEqual(unknown, [9])

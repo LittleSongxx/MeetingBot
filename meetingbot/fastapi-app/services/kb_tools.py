@@ -39,7 +39,8 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Awaitable, Callable, Literal
 
@@ -75,6 +76,27 @@ class ToolError(RuntimeError):
 # --------------------------------------------------------------------------- #
 
 
+@dataclass
+class ToolBudget:
+    """一轮问答内的工具输出预算（目前只有摘录片段总数）。
+
+    为什么需要它：单次 `get_transcript_excerpt` 的上限（60 段）管不住**多次调用**——
+    扩展集 q90 两次调用拉回 112 条片段，只有 2 条有用，context_precision 被拖到 1.8%。
+    预算是**每轮**的：同一 Actor 在整轮里共享，跨轮自动重置。
+    """
+
+    excerpt_segments: int = 0
+
+
+def excerpt_segments_per_turn() -> int:
+    """每轮允许通过 `get_transcript_excerpt` 拉回的总片段数。"""
+    raw = os.getenv("EXCERPT_SEGMENTS_PER_TURN", "30").strip()
+    try:
+        return max(1, int(raw))
+    except ValueError as error:
+        raise ValueError("EXCERPT_SEGMENTS_PER_TURN 必须为正整数") from error
+
+
 @dataclass(frozen=True)
 class Actor:
     """一次工具调用里的"谁"。
@@ -85,11 +107,15 @@ class Actor:
     `biz_id` 是"这次检索属于哪条业务记录"，只用于**记账归属**
     （`ai_call_log.biz_id` → 观测页能说出"这一轮问答花了多少 token"）。
     工具层不解释它、也不拿它判权，只透传给模型调用。
+
+    `budget` 是**可变**的：同一轮里的多个工具调用共享它。Actor 本身仍然冻结，
+    但预算对象按轮递增；跨轮由 `Actor.resolve` 新建。
     """
 
     user: User
     allowed_meeting_ids: list[int] | None
     biz_id: int = 0
+    budget: ToolBudget = field(default_factory=ToolBudget)
 
     @property
     def user_id(self) -> int:
@@ -216,9 +242,14 @@ class ListFactsArgs(BaseModel):
         description="按负责人过滤（只对 kind=decision / pending_item 有意义），"
                     "取值为人名，例如「张晨」",
     )
+    keywords: list[str] | None = Field(
+        default=None,
+        description="按关键词缩小事实（任一命中即可）。先把问题里的关键名词放进来"
+                    "（例如「报表导出」「回滚」），不要一次把整类事实都当上下文。",
+    )
     limit: int = Field(default=20, ge=1, le=50, description="返回条数上限")
 
-    @field_validator("meeting_ids", mode="before")
+    @field_validator("meeting_ids", "keywords", mode="before")
     @classmethod
     def _loose_meeting_ids(cls, value: Any) -> Any:
         # 这一条就是 q26/q27 的现场：模型发的是字符串 "[2]"
@@ -233,6 +264,18 @@ class ListFactsArgs(BaseModel):
 class GetMinutesArgs(BaseModel):
     minutes_id: int | None = Field(default=None, description="纪要 id，与 meeting_id 二选一")
     meeting_id: int | None = Field(default=None, description="会议 id，与 minutes_id 二选一")
+    fields: list[Literal["summary", "topics", "viewpoints", "decisions",
+                         "pending_items", "risks"]] | None = Field(
+        default=None,
+        description="只取这些字段（可按需缩小）。问会议时长/议题只取 summary/topics；"
+                    "问待办只取 pending_items；不确定才留空取全部六字段。"
+                    "一次把六字段全部当上下文会让无关条目占满窗口。",
+    )
+
+    @field_validator("fields", mode="before")
+    @classmethod
+    def _loose_fields(cls, value: Any) -> Any:
+        return _loose(value, (list, type(None)))
 
     @field_validator("minutes_id", "meeting_id", mode="before")
     @classmethod
@@ -383,6 +426,8 @@ async def _list_facts(actor: Actor, args: ListFactsArgs) -> dict[str, Any]:
         for index, item in enumerate(items.get(field) or []):
             if args.owner and not _owner_matches(item, args.owner):
                 continue
+            if args.keywords and not _keywords_match(item, args.keywords):
+                continue
             facts.append(_fact(minutes, field, index, item, titles))
             if len(facts) >= args.limit:
                 break
@@ -415,6 +460,8 @@ async def _list_facts(actor: Actor, args: ListFactsArgs) -> dict[str, Any]:
                 "recorded_at/period 明确指向某段录音时才用 source_ids 收窄。")
         else:
             notice += "如果问题需要原文依据，可以按需检索转写；不要仅仅为了覆盖而额外检索。"
+        notice += ("如果问题问到的槽位（负责人/协作人/截止时间）在条目里缺失，"
+                   "用 search_knowledge 到转写原话补查——这是补缺，不是为覆盖而检索。")
         result["notice"] = notice
     return result
 
@@ -444,12 +491,15 @@ async def _get_minutes(actor: Actor, args: GetMinutesArgs) -> dict[str, Any]:
     # 与详情页、导出走同一个适配出口：这里不自己拼字符串
     presented = contracts.present_minutes_fields(
         contracts.upgrade_output(stored))
+    if args.fields:
+        presented = {name: presented[name] for name in args.fields if name in presented}
     draft = minutes.status != "CONFIRMED"
     return {
         "meeting": {"id": meeting.id, "title": meeting.title,
                     "start_time": _fmt(meeting.start_time)},
         "minutes_id": minutes.id,
         "authority": "DRAFT" if draft else "CONFIRMED",
+        "fields_requested": args.fields,
         # 草稿的说明直接写进结果，模型引用时必须如实标注（"人拍板才算数"）
         "notice": ("这是尚未确认的草稿，引用时必须说明是草稿。" if draft
                    else "这是人工确认过的纪要，可以直接作为会议事实引用。"),
@@ -471,11 +521,30 @@ async def _transcript_excerpt(actor: Actor, args: TranscriptExcerptArgs) -> dict
         if args.end_ms < args.start_ms:
             raise ToolError("end_ms 不能小于 start_ms")
         query = query.filter(start_ms__lte=args.end_ms)
-    segments = await query.order_by("segment_no").limit(MAX_EXCERPT_SEGMENTS + 1)
-    truncated = len(segments) > MAX_EXCERPT_SEGMENTS
-    segments = segments[:MAX_EXCERPT_SEGMENTS]
+    # **每轮总量预算**：单次 60 段管不住多次调用（扩展集 q90 两次拉回 112 段）。
+    # 预算用尽时返回空 + 可读说明，让模型改用 search_knowledge 或缩小窗口，
+    # 而不是继续把整段转写塞进上下文。
+    total_budget = excerpt_segments_per_turn()
+    remaining = total_budget - actor.budget.excerpt_segments
+    if remaining <= 0:
+        return {
+            "meeting": {"id": meeting.id, "title": meeting.title},
+            "task_id": task.id,
+            "window": {"start_ms": args.start_ms, "end_ms": args.end_ms},
+            "truncated": True,
+            "segments": [],
+            "notice": (f"本轮摘录预算已用完（上限 {total_budget} 段）。"
+                       "请改用 search_knowledge 命中具体窗口，或缩小 start_ms/end_ms 后再取；"
+                       "不要把整段转写重复拉进上下文。"),
+        }
+    take = min(MAX_EXCERPT_SEGMENTS, remaining)
+    segments = await query.order_by("segment_no").limit(take + 1)
+    truncated = len(segments) > take
+    segments = segments[:take]
+    actor.budget.excerpt_segments += len(segments)
 
     names = await _speaker_names(segments)
+    left = max(0, total_budget - actor.budget.excerpt_segments)
     return {
         "meeting": {"id": meeting.id, "title": meeting.title},
         "task_id": task.id,
@@ -488,7 +557,8 @@ async def _transcript_excerpt(actor: Actor, args: TranscriptExcerptArgs) -> dict
             "end_second": segment.end_ms // 1000,
             "text": segment.content,
         } for segment in segments],
-        "notice": "引用原文时写清说话人与秒数；想要更早或更晚的原话就调大 start_ms 再取。",
+        "notice": (f"引用原文时写清说话人与秒数；本轮剩余摘录预算 {left} 段。"
+                   "想要更早或更晚的原话就调大 start_ms 再取。"),
     }
 
 
@@ -540,19 +610,26 @@ TOOL_SPECS: tuple[ToolSpec, ...] = (
     ToolSpec(
         name="list_facts",
         description="按类别查已确认纪要里的结构化事实：决策 / 待办 / 风险 / 会议清单。"
-                    "适合「有哪些待办」「谁负责什么」「这周开了哪些会」这类枚举问题。",
+                    "适合「有哪些待办/决策/风险」「这周开了哪些会」这类**清单**；"
+                    "**查单条事实（某个负责人/截止时间/某句话的原文出处）优先用 "
+                    "search_knowledge**，不要用本工具代替检索。"
+                    "需要时可用 keywords/owner/limit 缩小，避免一次把整类事实都当上下文。",
         arguments=ListFactsArgs,
         handler=_list_facts,
     ),
     ToolSpec(
         name="get_minutes",
-        description="取某场会的完整六字段纪要（摘要、议题、观点、决策、待办、风险，含证据）。",
+        description="取某场会的纪要字段（摘要、议题、观点、决策、待办、风险，含证据）。"
+                    "**按需传 fields**：问时长/议题只取 summary/topics，问待办只取 "
+                    "pending_items；不确定才取全部。一次取六字段会把无关条目塞满上下文。",
         arguments=GetMinutesArgs,
         handler=_get_minutes,
     ),
     ToolSpec(
         name="get_transcript_excerpt",
-        description="按时间窗口取转写原文片段，用于把引用落到具体句子。",
+        description="按时间窗口取转写原文片段，用于把引用落到具体句子。"
+                    "**每轮有总片段预算（默认 30 段）**；先用 search_knowledge 命中窗口，"
+                    "再用本工具取窄窗口，不要把整段转写重复拉取。",
         arguments=TranscriptExcerptArgs,
         handler=_transcript_excerpt,
     ),
@@ -685,6 +762,16 @@ async def _source_coverage(allowed: list[int] | None) -> dict[str, int]:
         TranscriptionTask.filter(status="SUCCEEDED"), allowed).count()
     return {"confirmed_minutes": confirmed, "draft_minutes": drafts,
             "recordings": recordings}
+
+
+def _keywords_match(item: Any, keywords: list[str]) -> bool:
+    """任一关键词出现在条目的渲染文本里就算命中（OR，大小写不敏感）。
+
+    只做**缩小**，不做语义匹配：模型给的关键词来自问题本身，命中与否可解释。
+    """
+    blob = json.dumps(item, ensure_ascii=False).lower()
+    return any(str(keyword).strip().lower() in blob
+               for keyword in keywords if str(keyword).strip())
 
 
 def _owner_matches(item: Any, owner: str) -> bool:
