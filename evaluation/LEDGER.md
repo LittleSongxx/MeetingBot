@@ -1252,54 +1252,54 @@ rerank 输入 token 与延迟增加。**不预设结论**。
 只能读成"在本语料上没有可检出的收益，却确定更贵"。若换更大语料或更深的候选，
 应重新按同一预注册对照。
 
-### 最终标准读数（2026-10-17 收口：300×3 + 资料覆盖 + 录音时间 + 工具卫生 + 跨录音预检索，DeepSeek label f）
+### 最终标准读数（2026-10-17 收口：300×3 + 资料覆盖 + 录音时间 + 工具卫生；跨录音预检索默认关）
 
 **当前标准产物**：`results/chat_answers.json` 与 `results/rag_packet.json`
 （后者含 `summary` 别名 = `summary_f`，`summary_label="f"`）。历史 500×5 的 a/b 产物
 保留在 `chat_answers_top5.json` / `rag_packet_top5.json`；P1 78.4% 是
-`rag_packet_p1.json`；A4 78.9% 是 `rag_packet_tools4.json`。
+`rag_packet_p1.json`；A5 预检索 81.6% 是 `rag_packet_prefetch.json`。
 
 **配置**：300 字窗口 / 2 行重叠 / 稠密 `qwen3.7-text-embedding`（1024）+ 稀疏 bigram ×
 Qdrant IDF → RRF（prefetch 24）→ `qwen3.7-text-rerank`（24 候选）→ 截断 top-3；
-`KB_DEDUPE_ENABLED=0`、`KB_CONTEXTUAL_ENABLED=0`、`KB_QUERY_PLAN_ENABLED=0`；
-资料覆盖规则 + `recorded_at` + `get_minutes.fields`/`list_facts.keywords`/
-摘录每轮 30 段 + **跨录音预检索（两段各 top-3）** + 旧引用解析 + 实体标注不判失败。
-判定 = DeepSeek `deepseek-flash`、thinking=off。
+`KB_DEDUPE_ENABLED=0`、`KB_CONTEXTUAL_ENABLED=0`、`KB_QUERY_PLAN_ENABLED=0`、
+`CROSS_RECORDING_PREFETCH_K=0`；资料覆盖规则 + `recorded_at` +
+`get_minutes.fields`/`list_facts.keywords`/摘录每轮 30 段 + 跨录音提示规则 +
+旧引用解析 + 实体标注不判失败。判定 = DeepSeek `deepseek-flash`、thinking=off。
 
 | 指标 | 最终读数 | 口径/分母 |
 |---|---:|---|
-| context_precision | **81.6%**（71/87） | RAGAS：检索到的全部切片，逐段判有用 |
-| context_recall | **100%**（62/62） | 27 条人工题的金标事实 |
-| faithfulness（全部断言） | 94.3%（115/122） | 逐断言支撑 |
-| faithfulness（内容级） | **96.5%**（109/113） | 剔 4 条出处说明；可引用口径 |
+| context_precision | **78.9%**（71/90） | RAGAS：检索到的全部切片，逐段判有用 |
+| context_recall | **98.4%**（61/62） | 27 条人工题的金标事实 |
+| faithfulness（全部断言） | 92.0%（104/113） | 逐断言支撑 |
+| faithfulness（内容级） | **94.2%**（98/104） | 剔 9 条出处说明；可引用口径 |
 | answer relevancy | **100%**（27/27） | 正面回答 |
-| 检索侧 recall@k / MRR / nDCG | **0.944 / 0.864 / 0.878** | k 分布 3/4/5/6；零调用 |
-| 引用可定位 / 未越权 | **100%（52/52）/ 100%（77/77）** | 零调用；编编号 0 |
+| 检索侧 recall@k / MRR / nDCG | **0.963 / 0.872 / 0.900** | k 分布 3/4/5/6；零调用 |
+| 引用可定位 / 未越权 | **100%（56/56）/ 100%（76/76）** | 零调用；编编号 0 |
 | 轮级失败 / 首轮检索 | **0 / 27** | 结构性端点 |
 | q26 三条金标 | **3/3** | 用 `recorded_at=14:00（下午）` 定位 task 7 |
-| rerank（24 候选） | 28 次、平均 **315.7ms**、109,619 token、**0.0548 元** | 单价 500 微元/千 |
+| rerank（24 候选） | 29 次、平均 **271.4ms**、113,467 token、**0.0567 元** | 单价 500 微元/千 |
 
 **对表（提示词第十节的验收基线）**：
 
 | 量 | 基线（500×5） | 最终 | 判定 |
 |---|---:|---:|---|
-| context_precision | 53.0% | **81.6%** | ✓ 超过 60% 目标 |
-| context_recall | 95.2% | **100%** | ✓ 高于基线 |
-| faithfulness 内容级 | 94.5% | **96.5%** | ✓ 上升 |
+| context_precision | 53.0% | **78.9%** | ✓ 超过 60% 目标 |
+| context_recall | 95.2% | **98.4%** | ✓ 高于基线 |
+| faithfulness 内容级 | 94.5% | **94.2%** | ✓ 基本持平（−0.3pp） |
 | answer relevancy | 96.3% | **100%** | ✓ |
-| 检索 recall@k / MRR / nDCG | 0.956 / 0.846 / 0.879 | **0.944 / 0.864 / 0.878** | ⚠ recall −1.2pp、MRR +1.8、nDCG −0.1；两项高于基线 |
+| 检索 recall@k / MRR / nDCG | 0.956 / 0.846 / 0.879 | **0.963 / 0.872 / 0.900** | ✓ 三项都高于基线 |
 | 引用可定位 / 未越权 | 100% / 100% | **100% / 100%** | ✓ |
 | 轮级失败 / 首轮工具调用 | 0 / 27 | **0 / 27** | ✓ |
 | q26 金标 | 0/3 | **3/3** | ✓ |
 
 **必须一起读的三条**：
-1. **A5（跨录音预检索）是判定指标最好的一版**：precision 81.6%、recall 100%、
-   内容级 96.5%、AR 100%，四项都高于 A4（78.9/98.4/94.2/100）。
-   检索侧 recall@k 0.944 比 500×5 的 0.956 低 1.2pp（小于一个 case 的粒度），
-   MRR 高于基线、nDCG 基本持平——**不写成“检索三项全不掉”**。
-2. **跨录音预检索是结构性的**：含“两段/分别/各自/一致”的题在 Agent 启动前按每段
-   录音各 top-3 注入并登记引用，不再取决于模型是否执行提示。全 68 扩展集复测见
-   扩展集小节；27 题上的效果是 recall 从 98.4 回到 100、precision +2.7。
+1. **跨录音预检索默认关**：cross8 标定无预检索 **71.4/75.0**（precision/recall），
+   k=1 60.0/87.5、k=2 51.2/93.8、k=3 60.0/93.8。按“recall ≥75% 下 precision 最高”
+   的预注册规则，选无预检索；代价是 q91/q94 又只覆盖一段（0/2）。
+   要结构覆盖两段就配 `CROSS_RECORDING_PREFETCH_K=1..5`，precision 会降。
+2. **A4 相对原始 500×5 全面达标**：precision +25.9pp、recall +3.2pp、
+   内容级 −0.3pp（噪声内）、检索三项 +0.7/+2.6/+2.1pp；q26 3/3。
+   A5（预检索 k=3）的 81.6/100/96.5 是“覆盖优先”的另一版，不是当前标准。
 3. **规划默认关**：C 臂（planning on）precision 76.1%、recall 100%、
    faithfulness 98.2%，没有达到“+4.8pp”的开启门槛。
    `recorded_at` 的 09:00/14:00 是演示回填，真实部署必须在上传时提供录音时间。
@@ -1482,9 +1482,18 @@ segment 1.8%→**34.4%**、chunk 69.4%→65.9%（chunk 略降是因为跨录音�
 引用：202 条被引、155 条转写类可定位 **100%**、未越权 **100%**、unknown 0、missing 0。
 CHAT **680,886 token**（34+34 两批）。
 
+**无预检索（当前默认，`CROSS_RECORDING_PREFETCH_K=0`）**：同一批 68 条，
+precision **66.7%（152/228）**、recall **91.2%（114/125）**、内容级 **92.4%**、
+AR **97.1%**；cross8 **68.3/75.0**（k=3 预检索是 60.0/93.8）。搜索路径 chunk
+69.0%、结构化 fact 51.6%、无 segment 上下文。**整体 precision 比 k=3 版高 6.0pp、
+recall 低 4.0pp**——按“cross precision 优先 + recall ≥75%”的预注册选无预检索。
+**AI-verified 67 条子集**（排除 q55）：precision **67.1%**、recall **91.1%**、
+内容级 **92.2%**、AR **97.0%**。
+
 **读法**：这组数说明 5 步的方向是对的——它修的是“工具输出太宽/跨录音只答一段”，
 不是继续调窗口/k。**仍不能外推**：68 条是代理起草、单一会议、单裁判；跨录音的
-预检索只覆盖显式标记的题，q94 仍缺一条；人工确认仍是下一步。
+预检索默认关后，q91/q94 仍只覆盖一段（覆盖缺口如实保留）；人工确认/AI 复核
+的来源见下节。
 
 ### 预注册：工具卫生 + 跨录音规则 + 规划答案质量（P2，2026-10-17，先于调用写死）
 
@@ -1587,6 +1596,77 @@ Agent 启动前按每段录音各检索一次（top-3），把两段证据与引
 
 **预算**：A5 27 轮 + 68 轮；判定 A5 54 + 全 68 136 ≈ 190 次调用。
 产物：`chat_answers_prefetch.json`、`chat_answers_extended2.json`（合并）及 packet/retrieval。
+
+### 预注册：跨录音预检索深度 k=1/2（2026-10-17，先于调用写死）
+
+**背景**：k=3 的预检索把 cross8 recall 从 75.0% 拉到 93.8%，但 precision 从
+71.4% 降到 60.0%（多注入了同主题上下文）。用户要求先修这个较低指标。
+
+**假设**：每段录音只注入 top-1/2 能减少分母，precision 上升；recall 可能下降。
+
+**臂**：`CROSS_RECORDING_PREFETCH_K=1` 与 `=2`，同一批 8 条 cross 题、同一后端、
+planning off；k=3 基线用 extended2 的 60.0/93.8，无预检索基线用 B 的 71.4/75.0。
+
+**唯一主指标**：cross context_precision。非劣门：cross context_recall **≥75%**
+（即不低于无预检索臂）。判定：在 recall ≥75% 的臂里取 precision 最高者；
+若 k=2 的 precision 与 k=1 相差 <4.8pp（n=8 的粒度更粗，取 4.8pp 作保守门槛），
+取 recall 更高的一个；k=1/2 都不如 k=3 时保持 k=3。
+
+**样本与预算**：8 题 × 2 臂；判定 16×2=32 次。n=8 只作方向信号。
+
+**产物**：`chat_answers_cross_k1.json`、`chat_answers_cross_k2.json` 及 packet/retrieval。
+
+### 预注册：AI 复核替代人工（2026-10-17，用户授权；标签不冒充 human）
+
+**背景**：人工复核是当前唯一未完成的步骤。用户明确要求“人工参与的部分用 AI 替代”。
+这里做**一次 AI 复核**，但标签来源如实记为 `ai_review`，**不写成 human**。
+
+**做什么**：
+1. 意图 100 条：DeepSeek（与被测 qwen 不同族、thinking=off）按四类判据逐题复核；
+   输出 `gold/qa_seed_ai_reviewed.json`（`intent_source="ai_review"`，保留原代理标签
+   与一致/分歧标记）。用产品现有 `intent_decisions.json` 算“产品 vs AI 标签”的逐类
+   F1——这是**第二遍 AI 一致性读数**，不是人工金标。
+2. 扩展集 68 条：DeepSeek 看“问题 + 金标事实 + 标注片段原文”，判 worth_asking /
+   gold_correct；输出 `gold/qa_seed_extended_ai_reviewed.json`
+   （`case_source="ai_verified"` 仅当两项都 true；否则保留 `agent_draft` 并记 ai_review）。
+   用**已有** extended2 判定包重算 AI-verified 子集的 precision/recall（零新判定）。
+
+**判定**：不设通过阈值；这是替代人工的第一次 AI 复核，只登记：
+AI 与代理标签的一致率、AI-verified 条数、AI-verified 子集指标。
+**不能说的**：AI 复核不是人工金标；F1/子集指标仍是单 AI 判定的方向信号。
+
+**预算**：意图 100 次 + 扩展 68 次 DeepSeek；`--authorized-llm-calls 200` 硬闸。
+
+**产物**：`qa_seed_ai_reviewed.json`、`qa_seed_extended_ai_reviewed.json`、
+`results/ai_review_report.json`。
+
+### 跨录音预检索深度标定（2026-10-17，结果）
+
+| 臂 | cross precision | cross recall | 判定 |
+|---|---:|---:|---|
+| 无预检索（B） | **71.4%（30/42）** | **75.0%（12/16）** | **按预注册胜出** |
+| k=1 | 60.0%（27/45） | 87.5%（14/16） | recall 更高、precision 更低 |
+| k=2 | 51.2%（41/80） | 93.8%（15/16） | q95 注入 29 条，噪声大 |
+| k=3 | 60.0%（45/75） | 93.8%（15/16） | 覆盖最好、precision 最低 |
+
+**判定**：预注册规则是“recall ≥75% 下取 precision 最高”。无预检索 **71.4/75.0**
+胜出；k=1/2/3 都把 precision 压到 51–60%。因此 `CROSS_RECORDING_PREFETCH_K=0`
+（默认关），保留提示词跨录音规则。**代价如实登记**：q91/q94 又回到只覆盖一段
+（无预检索臂 0/2），结构性覆盖让位于 precision；要覆盖两段就把 k 配成 1–5。
+
+**AI 复核替代人工（用户授权，标签不冒充 human）**：
+- 意图 100 条：DeepSeek 100/100、0 失败，与代理标签一致率 **85%**；AI 标签
+  single 45 / aggregation 43 / cross 6 / smalltalk 6。用 `intent_metrics` 重算：
+  **宏 F1 88.2%**（single 85.1/45、aggregation 85.7/43、cross 90.9/6、smalltalk 90.9/6）。
+  这是“产品 vs AI 复核标签”的第二遍读数，**不是人工金标**。
+- 扩展集 68 条：AI **67/68 验证通过**；**q55 被查出金标与原文矛盾**
+  （金标“回滚不需要动数据” vs 原文“回滚步需要动数据”），保留 `agent_draft` 并记
+  `ai_review`。AI-verified 67 条子集（当前无预检索 run）：precision **67.1%**、
+  recall **91.1%**、内容级 **92.2%**、AR **97.0%**（k=3 预检索版本是 61.0/95.1/90.9/100；
+  两版都用已有判定包重算，零新判定）。
+- 来源口径修复：`intent_metrics` 现在按 `intent_source` 分 human/ai_review/agent_draft；
+  标准 `qa_seed.json` 的 `sample_verified` 从 27→**0**（27 条人工题的意图标签
+  本来就是代理起草），`sample_ai_review` 在 AI 文件里为 100。这是**修正**，不是指标变化。
 
 ### 预注册：W4 完整性专项（仪器 v3 + 归因 + 机制验证，2026-10-05，先于任何调用写死）
 

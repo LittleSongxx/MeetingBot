@@ -1,0 +1,91 @@
+{
+  "sample": 8,
+  "k_distribution": [
+    3,
+    4,
+    5,
+    6,
+    7,
+    10
+  ],
+  "recall_at_k": 0.875,
+  "mrr": 0.9375,
+  "ndcg_at_k": 0.9278017754354252,
+  "per_case": [
+    {
+      "case_id": "q88",
+      "k": 6,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9896062251871524,
+      "relevant_count": 5,
+      "sources_known": true
+    },
+    {
+      "case_id": "q89",
+      "k": 6,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 5,
+      "sources_known": true
+    },
+    {
+      "case_id": "q90",
+      "k": 7,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9558295932317544,
+      "relevant_count": 4,
+      "sources_known": true
+    },
+    {
+      "case_id": "q91",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q92",
+      "k": 10,
+      "recall": 0.5,
+      "mrr": 1.0,
+      "ndcg": 0.8529278650606567,
+      "relevant_count": 3,
+      "sources_known": true
+    },
+    {
+      "case_id": "q93",
+      "k": 4,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 3,
+      "sources_known": true
+    },
+    {
+      "case_id": "q94",
+      "k": 5,
+      "recall": 0.5,
+      "mrr": 0.5,
+      "ndcg": 0.6240505200038379,
+      "relevant_count": 2,
+      "sources_known": true
+    },
+    {
+      "case_id": "q95",
+      "k": 4,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true
+    }
+  ],
+  "skipped": [],
+  "reading": "recall_at_k = 金标片段被本次检索（全部 k 条）覆盖的比例，**k 是模型自选的条数**，报数必须连 k 一起报；mrr = 第一条相关切片的排名倒数；ndcg_at_k = 二值增益的归一化折损累计增益。三者都由片段时间窗与金标片段号算得，**零模型调用**——判定模型换族/换思考开关都不会动它们。",
+  "not_measured": "切块粒度与金标片段是多对一关系（一个窗口盖住多句），因此这里是「覆盖」口径而不是「精确命中」；不能与判定式的 context recall 相减。"
+}

@@ -1,0 +1,59 @@
+{
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "thinking": false,
+  "provenance": "AI 复核替代人工（用户授权）；intent_source=ai_review / case_source=ai_verified，绝不记为 human",
+  "intent": {
+    "reviewed": 100,
+    "calls": 100,
+    "errors": 0,
+    "agreement_with_agent_draft": 0.85,
+    "labels": {
+      "aggregation": 43,
+      "single_fact": 45,
+      "cross_meeting": 6,
+      "smalltalk": 6
+    },
+    "macro_f1_vs_product": 0.8815971262779774,
+    "per_class": {
+      "single_fact": {
+        "support": 45,
+        "f1": 0.851063829787234
+      },
+      "aggregation": {
+        "support": 43,
+        "f1": 0.8571428571428572
+      },
+      "cross_meeting": {
+        "support": 6,
+        "f1": 0.9090909090909091
+      },
+      "smalltalk": {
+        "support": 6,
+        "f1": 0.9090909090909091
+      }
+    },
+    "sample_ai_review": 100
+  },
+  "extended": {
+    "reviewed": 68,
+    "verified": 67,
+    "rejected": 1,
+    "calls": 68,
+    "errors": 0,
+    "rejected_cases": [
+      {
+        "case_id": "q55",
+        "question": "数据库改动对回滚有什么影响？",
+        "why": "片段原文说“回滚步需要动数据”，与金标“回滚不需要动数据”矛盾，金标事实有误。"
+      }
+    ],
+    "verified_metrics": {
+      "cases": 67,
+      "context_precision": 67.1,
+      "context_recall": 91.1,
+      "faithfulness_content": 92.2,
+      "answer_relevancy": 97.0
+    }
+  }
+}
