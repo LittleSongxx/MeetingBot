@@ -553,6 +553,11 @@ class KbChunk(Model):
     chunk_type = fields.CharField(max_length=30)
     # 对应 kb_chunk.text：切片正文（引用回显与人工核对都靠它）
     text = fields.TextField()
+    # 对应 kb_chunk.embed_text：真正送去嵌入的文本（Contextual Retrieval 的
+    # 会议/时间/主题上下文 + 原文）。**与 text 分开存**：引用要回显原文并逐字定位，
+    # 把上下文句写进 text 会让引用在转写里定位不到。为空表示直接用 text（未开启）。
+    # 存库而不是每次重算：嵌入失败重试时不必重新付一次上下文生成的调用。
+    embed_text = fields.TextField(null=True)
     # 对应 kb_chunk.speaker、start_ms、end_ms：转写窗口的定位信息
     speaker = fields.CharField(max_length=50, null=True)
     start_ms = fields.BigIntField(null=True)

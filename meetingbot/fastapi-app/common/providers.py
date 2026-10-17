@@ -185,6 +185,8 @@ REASONING_BY_CALL_TYPE: dict[str, bool] = {
     "kb_rerank": False,
     # 查询规划：机械改写 + 五选一分类，关推理
     "kb_query_plan": False,
+    # 索引时的上下文句：一句话概括，机械任务，关推理
+    "kb_contextualize": False,
 }
 DEFAULT_REASONING = False
 

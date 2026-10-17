@@ -105,6 +105,7 @@ async def status(current_user: User = Depends(get_current_user)):
         "rerank_candidates": kb_service.RERANK_CANDIDATES,
         "kb_dedupe_enabled": kb_service.dedupe_enabled(),
         "kb_dedupe_overlap_seconds": kb_service.dedupe_overlap_seconds(),
+        "kb_contextual_enabled": kb_service.contextual_enabled(),
         "qdrant_collection": qdrant.collection_name(),
     })
 

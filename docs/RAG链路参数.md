@@ -58,6 +58,12 @@ qwen 不再当裁判；旧读数只作历史对照，不与新读数相减。
 且模型这一轮没检索转写）。n=27 下 1.2pp 小于一个 case 的粒度，判为方向性持平，
 不作"召回无损"的强表述。历史 qwen 读数（51.5%）保留作对照，不与本表相减。
 
+**Contextual Retrieval（已实现、默认关）**：索引时给每块加"规则头 + 一句 LLM 生成的主题"
+再嵌入，引用正文不变（`kb_chunk.embed_text` 与 `text` 分开）。300×3 上实测
+precision 77.3%（68/88）vs 关时的 81.0%（68/84）：有用条数一样，分母多了 4 条；
+MRR 0.870→0.889、nDCG 0.886→0.893、answer relevancy 96.3%→100%，但主指标未过成功线。
+因此 `KB_CONTEXTUAL_ENABLED=0`；要开就按 LEDGER 任务 3 的预注册重跑。
+
 ## 三、改参数的正确顺序
 
 1. 改 `.env`（块大小/模型/k）→ 重启 backend（bootstrap 会把模型配置同步进库）；
@@ -75,3 +81,4 @@ qwen 不再当裁判；旧读数只作历史对照，不与新读数相减。
 | k 的自适应（按问题类型给不同 k） | 需要先有可靠的意图路由；该路由的逐类 F1 目前还有两类不可用（见 LEDGER） |
 | 修改 BM25 的 k1/b | Qdrant 的稀疏 IDF 只暴露 modifier；完整 BM25 参数要自建检索服务，超出本项目范围 |
 | 重叠窗口去重（**已实现、默认关**） | 300×3 的零调用反事实：删掉的 10 条全部被判有用，precision 81.0%→78.4%、recall 不变。相邻窗口不是重复噪声，而是各含答案的有用上下文。开关 `KB_DEDUPE_ENABLED=1` 可开，阈值见 `.env.example` |
+| Contextual Retrieval（**已实现、默认关**） | 索引时逐块一次 LLM 调用（`KB_CONTEXTUALIZE`，61 次/0.023M token）；300×3 上 precision 77.3% vs 81.0%，主指标未过成功线。机制保留，`KB_CONTEXTUAL_ENABLED=1` 可开；语义切分与父子块仍不做 |

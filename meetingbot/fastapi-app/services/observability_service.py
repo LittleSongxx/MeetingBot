@@ -95,6 +95,8 @@ CALL_TYPE_OWNERSHIP: dict[str, str] = {
     "CHAT": "CHAT",
     "CHAT_SUMMARY": "CHAT_SESSION",
     "KB_EMBEDDING": "KB",
+    # 索引时逐块生成上下文句：biz_id 是索引任务 id，归知识库
+    "KB_CONTEXTUALIZE": "KB",
     # 检索用的查询嵌入：biz_id 是发起它的那条助手消息（接口预览时为 0，归平台级）
     "KB_QUERY_EMBED": "CHAT",
     # 检索结果重排：同一条助手消息发起，因此同样归到这条问答上

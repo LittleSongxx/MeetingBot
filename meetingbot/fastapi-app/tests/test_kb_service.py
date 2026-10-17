@@ -480,3 +480,58 @@ class PayloadIndexTest(IndexTranscriptTest):
         ensure.assert_awaited(), "但索引就绪这一步必须照跑"
         kb_task = await KbIndexTask.get(id=kb_task_id)
         self.assertIn("内容未变化", kb_task.stage or "")
+
+
+class ContextualIndexTest(_KbBase):
+    """Contextual Retrieval：只改嵌入文本，不改引用正文；失败退回规则上下文。"""
+
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
+        self.agent = await AiModelConfig.create(
+            name="问答模型", model_type="AGENT", provider="OPENAI_COMPATIBLE",
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            api_key="unit-test-key", model_name="qwen-test", enabled=True)
+
+    async def _run(self, task_id: int, *, invoke):
+        embed = AsyncMock(side_effect=self._ok_vectors())
+        upsert = AsyncMock()
+        with patch.dict(os.environ, {"KB_CONTEXTUAL_ENABLED": "1"}), \
+             patch.object(kb_service.model_factory, "embed_texts", embed), \
+             patch.object(kb_service.model_factory, "invoke_json", invoke), \
+             patch.object(kb_service.qdrant, "ensure_collection", AsyncMock()), \
+             patch.object(kb_service.qdrant, "upsert_chunks", upsert), \
+             patch.object(kb_service.qdrant, "delete_points", AsyncMock()), \
+             patch.object(kb_service.task_queue, "enqueue", AsyncMock()):
+            kb_task_id = await kb_service.schedule_kb_index(
+                kb_service.SOURCE_TRANSCRIPT, task_id, self.meeting.id, self.user.id)
+            await kb_service.execute_kb_index(kb_task_id)
+        return kb_task_id, embed, upsert
+
+    async def test_embedding_text_gets_header_and_one_sentence_context(self):
+        task_id = await self._transcript_id()
+        kb_task_id, embed, _ = await self._run(
+            task_id, invoke=AsyncMock(return_value="讨论灰度发布与回滚方案"))
+        chunks = await KbChunk.filter(document_id=(await KbIndexTask.get(id=kb_task_id)).document_id)
+        self.assertTrue(chunks)
+        for chunk in chunks:
+            self.assertIsNotNone(chunk.embed_text)
+            self.assertTrue(chunk.embed_text.startswith("[会议：产品发布评审会议"))
+            self.assertIn("[上下文] 讨论灰度发布与回滚方案", chunk.embed_text)
+            self.assertTrue(chunk.embed_text.endswith(chunk.text))
+        embedded = embed.await_args.args[1]
+        self.assertTrue(all("[上下文]" in text for text in embedded))
+
+    async def test_context_generation_failure_falls_back_to_rule_header(self):
+        task_id = await self._transcript_id()
+        kb_task_id, _, _ = await self._run(
+            task_id, invoke=AsyncMock(side_effect=RuntimeError("模型不可达")))
+        kb_task = await KbIndexTask.get(id=kb_task_id)
+        self.assertEqual(kb_task.status, kb_service.SUCCEEDED, "增强失败不能弄挂索引")
+        chunk = await KbChunk.filter(document_id=kb_task.document_id).first()
+        self.assertTrue(chunk.embed_text.startswith("[会议：产品发布评审会议"))
+        self.assertNotIn("[上下文]", chunk.embed_text)
+        self.assertIn(chunk.text, chunk.embed_text)
+
+    async def _transcript_id(self) -> int:
+        task = await self._transcript()
+        return task.id

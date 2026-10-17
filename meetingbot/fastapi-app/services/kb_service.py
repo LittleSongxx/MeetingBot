@@ -63,6 +63,22 @@ _UPSERT_BATCH_SIZE = 64
 # 历史：1 = 最早的一版（无 meeting_start_epoch）；2 = 加会议开始时间（时间过滤用）。
 PAYLOAD_SCHEMA_VERSION = 2
 
+# Contextual Retrieval 的上下文生成版本。改提示词/改拼接形态时 +1——它进内容指纹，
+# 否则旧库会被判"内容没变"而继续用旧上下文（与 payload 版本同一条理由）。
+CONTEXTUAL_VERSION = 1
+CONTEXTUAL_CALL_TYPE = "KB_CONTEXTUALIZE"
+CONTEXTUAL_SYSTEM_PROMPT = (
+    "你是会议知识库的索引助手。给定一场会议的一小段内容，用一句不超过 40 字的中文"
+    "说明这段内容在会议中的位置与主题（例如：讨论灰度发布时间与覆盖比例；"
+    "张晨说明回滚方案）。只依据给定内容，不补充原文没有的事实、人名、数字或结论。"
+)
+CONTEXTUAL_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {"context": {"type": "string"}},
+    "required": ["context"],
+}
+
 
 class KbError(RuntimeError):
     """知识库相关的可读错误（接口层转成页面提示）。"""
@@ -110,11 +126,32 @@ class Hit:
 # 来源装载与指纹
 # --------------------------------------------------------------------------- #
 
+
+@dataclass(frozen=True)
+class MeetingMeta:
+    """索引时给 Contextual Retrieval 用的会议元数据（一次查询，整批复用）。"""
+
+    title: str
+    start_epoch: int | None
+    date_text: str | None
+
+
 async def _embedding_config() -> AiModelConfig:
     config = await AiModelConfig.filter(model_type="EMBEDDING", enabled=True).order_by("-id").first()
     if config is None:
         raise KbError("没有启用中的嵌入模型配置，请先在「AI模型配置」里启用一个 EMBEDDING 用途的配置")
     return config
+
+
+async def _agent_config() -> AiModelConfig | None:
+    """Contextual Retrieval 用问答模型生成上下文句；没配就退回纯规则上下文。"""
+    return await AiModelConfig.filter(model_type="AGENT", enabled=True).order_by("-id").first()
+
+
+def contextual_enabled() -> bool:
+    """Contextual Retrieval 开关。默认**关**：它要重建全部切片并逐块花一次模型调用，
+    收益必须先在本语料量出来（LEDGER 任务 3），量到正收益再改默认。"""
+    return os.getenv("KB_CONTEXTUAL_ENABLED", "0").strip().lower() not in {"0", "false", "no", "off"}
 
 
 async def transcript_chunks(task_id: int) -> tuple[list[chunking.Chunk], str]:
@@ -256,11 +293,26 @@ async def execute_kb_index(kb_task_id: int) -> None:
         await qdrant.ensure_collection(model_factory.embedding_dim())
 
         chunks, text_fingerprint = await _load_source_chunks(task)
+        meta = await _meeting_meta(task.meeting_id)
+        # Contextual Retrieval：上下文句也进嵌入文本，因此它必须进指纹。
+        # 会议标题/日期影响规则上下文，所以把它们的短哈希也并进作用域——
+        # 否则改标题后旧库会被判"内容没变"，继续用旧上下文（与 payload 版本同一条理由）。
+        contextual = contextual_enabled()
+        contextual_config = await _agent_config() if contextual else None
+        if contextual and contextual_config is None:
+            logger.warning("Contextual Retrieval 已开启但没有 AGENT 模型配置，退回纯规则上下文")
+        context_scope = ""
+        if contextual:
+            meta_digest = hashlib.sha256(
+                f"{meta.title}\x00{meta.date_text or ''}".encode("utf-8")).hexdigest()[:12]
+            context_scope = (f"|ctx:v{CONTEXTUAL_VERSION}:"
+                             f"{contextual_config.model_name if contextual_config else 'rule'}"
+                             f":{meta_digest}")
         # 写入形态进指纹：换嵌入模型/维度/collection 都要重建（否则新库里没有这些向量）
         fingerprint = content_fingerprint(
             [chunk.text for chunk in chunks],
             embed_scope=f"{config.model_name}:{model_factory.embedding_dim()}"
-                        f"@{qdrant.collection_name()}")
+                        f"@{qdrant.collection_name()}{context_scope}")
         if not chunks:
             await _finish(task.id, chunk_count=0, embedded_count=0, stage="来源没有可索引的内容")
             return
@@ -309,8 +361,8 @@ async def execute_kb_index(kb_task_id: int) -> None:
         await KbIndexTask.filter(id=task.id).update(
             chunk_count=len(created), stage=f"正在生成向量（共 {len(created)} 片）", progress=30)
 
-        embedded = await _embed_and_store(task, config, document, created,
-                                          await _meeting_start_epoch(task.meeting_id))
+        embedded = await _embed_and_store(task, config, document, created, meta,
+                                          contextual_config if contextual else None)
         await _finish(task.id, chunk_count=len(created), embedded_count=embedded,
                       stage="索引完成", document_id=document.id)
     except KbError as error:
@@ -361,29 +413,49 @@ async def _drop_chunks(document_id: int) -> None:
 
 
 async def _embed_and_store(task: KbIndexTask, config: AiModelConfig, document: KbDocument,
-                           chunks: Sequence[KbChunk],
-                           meeting_start_epoch: int | None = None) -> int:
+                           chunks: Sequence[KbChunk], meta: MeetingMeta,
+                           contextual_config: AiModelConfig | None = None) -> int:
     """嵌入未完成的切片并写入向量库，返回已嵌入的切片数。
 
     只处理 `embedded=False`：中途失败重跑时，已写成功的部分不重复付费。
+    `embed_text` 已落库的切片直接复用——上下文句是花钱生成的，重试不该再付一次。
     """
     await qdrant.ensure_collection(model_factory.embedding_dim())
     pending = [chunk for chunk in chunks if not chunk.embedded]
     if not pending:
         return len(chunks)
 
+    contextual = contextual_enabled()
     done = len(chunks) - len(pending)
     for start in range(0, len(pending), _UPSERT_BATCH_SIZE):
         batch = pending[start:start + _UPSERT_BATCH_SIZE]
+        inputs: list[str] = []
+        for chunk in batch:
+            embed_text = chunk.embed_text
+            if not embed_text:
+                if contextual:
+                    header = chunking.context_header(
+                        meeting_title=meta.title, meeting_date=meta.date_text,
+                        source_label=_source_label(task), chunk=chunk)
+                    sentence = ""
+                    if contextual_config is not None:
+                        sentence = await _contextual_sentence(
+                            contextual_config, meta, task, chunk, header)
+                    embed_text = chunking.embedding_text(header, sentence, chunk.text)
+                else:
+                    embed_text = chunk.text
+                await KbChunk.filter(id=chunk.id).update(embed_text=embed_text)
+                chunk.embed_text = embed_text
+            inputs.append(embed_text)
         vectors = await model_factory.embed_texts(
-            config, [chunk.text for chunk in batch], biz_id=task.id, call_type="KB_EMBEDDING")
+            config, inputs, biz_id=task.id, call_type="KB_EMBEDDING")
         points = []
-        for chunk, vector in zip(batch, vectors, strict=True):
+        for chunk, vector, embed_text in zip(batch, vectors, inputs, strict=True):
             points.append({
                 "id": chunk.id,
                 "dense": vector,
-                "sparse": kb_sparse.encode(chunk.text),
-                "payload": _payload_for(task, document, chunk, meeting_start_epoch),
+                "sparse": kb_sparse.encode(embed_text),
+                "payload": _payload_for(task, document, chunk, meta.start_epoch),
             })
         await qdrant.upsert_chunks(points)
         await KbChunk.filter(id__in=[c.id for c in batch]).update(embedded=True)
@@ -395,11 +467,58 @@ async def _embed_and_store(task: KbIndexTask, config: AiModelConfig, document: K
     return done
 
 
-async def _meeting_start_epoch(meeting_id: int) -> int | None:
-    """会议开始时间的 epoch 秒（时间过滤用）。会议不存在或没填开始时间就返回 None。"""
-    start_time = await Meeting.filter(id=meeting_id).values_list("start_time", flat=True)
-    value = start_time[0] if start_time else None
-    return int(to_local(value).timestamp()) if value else None
+async def _meeting_meta(meeting_id: int) -> MeetingMeta:
+    """会议标题与开始时间：payload 的时间过滤与 Contextual Retrieval 的规则上下文共用。"""
+    row = await Meeting.filter(id=meeting_id).first()
+    if row is None:
+        return MeetingMeta(title="", start_epoch=None, date_text=None)
+    title, start_time = row.title, row.start_time
+    if start_time is None:
+        return MeetingMeta(title=str(title or ""), start_epoch=None, date_text=None)
+    local = to_local(start_time)
+    return MeetingMeta(title=str(title or ""), start_epoch=int(local.timestamp()),
+                       date_text=local.strftime("%Y-%m-%d"))
+
+
+def _source_label(task: KbIndexTask) -> str:
+    """规则上下文里的来源标签：转写用任务 id（两段录音必须能区分），纪要写明权威级。"""
+    if task.source_type == SOURCE_TRANSCRIPT:
+        return f"录音 {task.source_id}"
+    return "人工确认纪要"
+
+
+def _context_value(payload: dict[str, Any]) -> str:
+    """上下文句的形状校验：空句会让"上下文"这一行变成噪声，必须让 re-ask 重来。"""
+    if not isinstance(payload, dict):
+        raise ValueError("上下文必须是 JSON 对象")
+    text = str(payload.get("context") or "").strip().replace("\n", " ")
+    if not text:
+        raise ValueError("context 不能为空")
+    return text[:200]
+
+
+async def _contextual_sentence(config: AiModelConfig, meta: MeetingMeta,
+                               task: KbIndexTask, chunk: KbChunk, header: str) -> str:
+    """让问答模型用一句话说明"这段在会里的位置/主题"（Contextual Retrieval）。
+
+    失败**不打断索引**：上下文是增强，退回规则上下文（会议/日期/时间/说话人）
+    仍然可用；失败本身由 `invoke_json` 写进 `ai_call_log`（call_type 已登记）。
+    """
+    user_prompt = (
+        f"{header}\n"
+        f"会议标题：{meta.title or '未命名会议'}\n"
+        f"内容：\n{chunk.text[:1200]}\n\n"
+        "请输出 JSON：{\"context\": \"一句话主题\"}。"
+    )
+    try:
+        return await model_factory.invoke_json(
+            config, CONTEXTUAL_SYSTEM_PROMPT, user_prompt, CONTEXTUAL_SCHEMA,
+            call_type=CONTEXTUAL_CALL_TYPE, biz_id=task.id, label=config.model_name,
+            validator=_context_value)
+    except Exception:  # noqa: BLE001 - 增强失败退回规则上下文，索引继续
+        logger.exception("生成上下文句失败，退回规则上下文（task=%s chunk=%s）",
+                         task.id, chunk.id)
+        return ""
 
 
 def _payload_for(task: KbIndexTask, document: KbDocument, chunk: KbChunk,
