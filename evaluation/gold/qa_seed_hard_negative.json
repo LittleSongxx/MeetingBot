@@ -1,0 +1,174 @@
+{
+  "qa_set_version": 2,
+  "name": "种子会议硬负样（20 条；同主题但事实不存在）",
+  "corpus": "db/02-seed.sql 的种子会议：两段录音（task 6 上午、task 7 下午）",
+  "annotation": {
+    "by": "agent_draft（AI 起草，待人工复核）",
+    "date": "2026-10-17",
+    "rule": "问题与会议同主题（沿用会议词汇），但问的具体事实/数字/责任在转写与纪要里不存在；expected_facts 为空、unanswerable=true。",
+    "verification": "逐题用关键短语在转写全文与纪要条目里做零出现核对；note 记录核对短语。"
+  },
+  "discipline": "只用于负样：拒答率越高越好、编造率越低越好；不并进四个质量指标。",
+  "cases": [
+    {
+      "id": "n13",
+      "question": "发布公告的最终文案是谁审阅的？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「审阅」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n14",
+      "question": "灰度期间客服收到的投诉工单有多少条？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「投诉工单」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n15",
+      "question": "移动端附件下载修复后，灰度验证覆盖了多少台设备？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「设备」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n16",
+      "question": "报表导出异步改造的预算是多少？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「预算」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n17",
+      "question": "王工负责的移动端任务，代码评审是谁做的？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「代码评审」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n18",
+      "question": "9月1日发布当天安排了几个人值班？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「几个人值班」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n19",
+      "question": "对外通稿最终发布在哪些媒体渠道？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「媒体渠道」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n20",
+      "question": "知识索引重建一次需要多长时间？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「重建耗时」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n21",
+      "question": "张涛的报表导出改造投入了几名开发？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「几名开发」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n22",
+      "question": "陈琳的回归测试一共执行了多少条用例？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「用例」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n23",
+      "question": "发布首周日报的模板是谁定的？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「模板」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n24",
+      "question": "灰度回滚演练最近一次是什么时候？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「演练」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n25",
+      "question": "会议纪要导出文件的命名规则是什么？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「命名规则」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n26",
+      "question": "移动端附件下载问题影响了多少名用户？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「多少名用户」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n27",
+      "question": "报表导出隐藏入口后，用户在哪个页面反馈问题？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「反馈页面」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n28",
+      "question": "发布公告定稿后的审核人是谁？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「审核人」出现 0 次（“审核时间”只说明要留时间，未指定审核人）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n29",
+      "question": "知识库问答支持哪些语言的提问？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「语言」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n30",
+      "question": "灰度期间转化率的目标值是多少？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「目标值」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n31",
+      "question": "9月1日发布会的现场参会人数是多少？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「参会人数」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    },
+    {
+      "id": "n32",
+      "question": "对外通稿定稿后由谁负责对外发布？",
+      "expected_facts": [],
+      "unanswerable": true,
+      "case_source": "agent_draft",
+      "note": "硬负样：问题与会议同主题，但语料没有答案；机械核对关键短语「对外发布」出现 0 次（期望 0）。正确行为是明确说资料未提及，不硬凑。"
+    }
+  ]
+}

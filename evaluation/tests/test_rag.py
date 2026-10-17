@@ -59,6 +59,19 @@ class ProductSwitchesTest(unittest.TestCase):
         self.assertEqual(switches["cross_recording_supplement_k"], 1)
 
 
+class HardNegativeSetTest(unittest.TestCase):
+    def test_hard_negative_set_is_well_formed(self):
+        path = EVALUATION_DIR / "gold" / "qa_seed_hard_negative.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(len(data["cases"]), 20)
+        self.assertEqual(len({case["id"] for case in data["cases"]}), 20)
+        for case in data["cases"]:
+            self.assertTrue(case["unanswerable"], case["id"])
+            self.assertEqual(case["expected_facts"], [], case["id"])
+            self.assertEqual(case["case_source"], "agent_draft", case["id"])
+            self.assertIn("硬负样", case["note"], case["id"])
+
+
 class BuildPacketTest(unittest.TestCase):
     def test_answers_are_matched_by_question(self):
         packet = rag.build_packet(_qa_set(), _answers())

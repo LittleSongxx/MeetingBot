@@ -17,11 +17,15 @@
 无样本时如实报"无样本"）；**需授权**部分是四个质量指标（`judges/rag.py --ask/--judge`）。
 两个部分都各自独立报，不合成总分。
 
-**判定族与跨族复判**（宪法第 2 条）：主判用 `--provider qwen --label a`；
-复判换族用 `--provider deepseek --label b`（凭据读 `DEEPSEEK_API_KEY`）——
-两个族的判定**各自成数、互不覆盖**（标签只追加），报告与账本里都要带族的名字。
-判定调用建议 `--thinking off`：判定是机械分类，开思考实测 30–120 秒/次且贵，
-关掉后同一任务 0.5 秒量级（本文件里的 27 轮复判就是这么跑的）。
+**判定族**（宪法第 2 条）：当前标准用 DeepSeek `deepseek-flash`、
+`--provider deepseek --label f --thinking off`（与被测 qwen 不同族）；旧 qwen
+`label a` 只保留历史对照，不再当裁判。单裁判读数只是方向信号，产品决策仍应
+过双族/人工校准。判定调用建议 `--thinking off`：判定是机械分类，开思考实测
+30–120 秒/次且贵，关掉后同一任务 0.5 秒量级。
+
+**负样**：`gold/qa_seed_negative.json`（12 条“完全没提”）与
+`gold/qa_seed_hard_negative.json`（20 条“同主题但事实不存在”）用 `--label g`
+单独报拒答/编造/上下文 useful，**不并进四个质量指标**。
 
 可靠性（崩溃/截断/超时率）单列为体验层：`regression/reliability.py`。
 
@@ -34,7 +38,7 @@ make deep    # L1 深度评测：抽样 + 裁判判读（judges/，里程碑时�
 make gate    # L2 变更门禁：留出集双臂 A/B + 内容盲判（产品改动合并前置）
 make gold    # 金标与裁判校准：标注包构建 / 裁判跨族校准（防"无锚点裁判"）
 make rag     # 轴5 检索与回答：组包（零调用）与判定（需授权，见脚本顶部）
-make test    # 评测代码自身单测（数字由 CI 实跑，当前 223 项）
+make test    # 评测代码自身单测（数字由 CI 实跑，当前 293 项）
 ```
 
 判定标准（什么算"有依据"）：`meetingbot/fastapi-app/JUDGMENT_STANDARD.md`
