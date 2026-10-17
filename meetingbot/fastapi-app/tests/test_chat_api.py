@@ -151,6 +151,7 @@ class ChatEndpointTest(unittest.IsolatedAsyncioTestCase):
         从外面猜等于没有证据（标定实验的对照就靠这三个字段区分）。"""
         with patch.dict(os.environ, {"KB_CHUNK_TARGET_CHARS": "300",
                                      "RERANK_TOP_K": "3",
+                                     "CROSS_RECORDING_SUPPLEMENT_K": "1",
                                      "QDRANT_COLLECTION": "funnel_test"}), \
                 patch.object(chat_api.qdrant, "health", new=AsyncMock(return_value=True)), \
                 patch.object(chat_api.moderation, "status", return_value={"enabled": False}):
@@ -161,6 +162,7 @@ class ChatEndpointTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(data["rerank_top_k"], 3)
         self.assertFalse(data["kb_dedupe_enabled"])
         self.assertFalse(data["kb_contextual_enabled"])
+        self.assertEqual(data["cross_recording_supplement_k"], 1)
         self.assertEqual(data["qdrant_collection"], "funnel_test")
 
     async def test_stream_returns_sse_frames_with_anti_buffering_headers(self):

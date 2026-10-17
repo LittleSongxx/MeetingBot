@@ -108,6 +108,9 @@ async def status(current_user: User = Depends(get_current_user)):
         "kb_dedupe_overlap_seconds": kb_service.dedupe_overlap_seconds(),
         "kb_contextual_enabled": kb_service.contextual_enabled(),
         "cross_recording_prefetch_k": chat_service.cross_recording_prefetch_k(),
+        # 条件补搜：只在“强跨录音标记 + 已做两次工具 + 转写覆盖 <2 段”时触发，
+        # 与入口预检索互斥；同样由被测进程自报，产物才能证明这一臂开没开。
+        "cross_recording_supplement_k": chat_service.cross_recording_supplement_k(),
         "qdrant_collection": qdrant.collection_name(),
     })
 

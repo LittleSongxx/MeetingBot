@@ -308,6 +308,8 @@ def _product_switches(base_url: str, token: str) -> dict[str, Any]:
         "kb_dedupe_overlap_seconds": data.get("kb_dedupe_overlap_seconds"),
         "kb_contextual_enabled": data.get("kb_contextual_enabled"),
         "cross_recording_prefetch_k": data.get("cross_recording_prefetch_k"),
+        # 条件补搜与预检索是两个不同的覆盖机制，产物必须分别记，不能靠回忆。
+        "cross_recording_supplement_k": data.get("cross_recording_supplement_k"),
         "qdrant_collection": data.get("qdrant_collection"),
     }
 
