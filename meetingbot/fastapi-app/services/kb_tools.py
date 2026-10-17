@@ -401,12 +401,21 @@ async def _list_facts(actor: Actor, args: ListFactsArgs) -> dict[str, Any]:
     coverage = await _source_coverage(allowed)
     result["source_coverage"] = coverage
     if coverage["draft_minutes"] or coverage["recordings"] > coverage["confirmed_minutes"]:
-        result["notice"] = (
+        notice = (
             f"资料覆盖：已确认纪要 {coverage['confirmed_minutes']} 份、"
             f"未确认纪要 {coverage['draft_minutes']} 份、转写录音 {coverage['recordings']} 段。"
             "未确认的纪要**不算事实**（这里的 facts 只来自已确认纪要）；"
-            "所以「这里没有」不等于「没发生过」——可以 search_knowledge 到转写原话里核实，"
-            "并说清依据来自转写而不是确认纪要。")
+            "所以「这里没有」不等于「没发生过」。")
+        if args.kind == "pending_item":
+            # **只对行动项给"必须回退检索"的明确提示**：实测（任务 4a）
+            # 决策复述题也被这句话带去做额外检索，precision 掉了 5pp。
+            notice += (
+                "行动项/待办清单不完整时，必须再用 search_knowledge 检索转写原话；"
+                "先做一次不限来源的检索，只有 list_facts(kind=recording) 的 "
+                "recorded_at/period 明确指向某段录音时才用 source_ids 收窄。")
+        else:
+            notice += "如果问题需要原文依据，可以按需检索转写；不要仅仅为了覆盖而额外检索。"
+        result["notice"] = notice
     return result
 
 
@@ -646,13 +655,19 @@ async def _list_recordings(allowed: list[int] | None, limit: int) -> dict[str, A
         "facts": [{
             "task_id": row.id, "meeting_id": row.meeting_id,
             "meeting_title": titles.get(row.meeting_id, ""),
+            # **录音实际开始时间（墙钟）**：不是上传时间，也不是会议名义时间。
+            # 一场会两段录音时，这是"上午/下午"唯一的依据；未标注就是 None。
+            "recorded_at": _fmt(row.recorded_at),
+            "period": _period_of(row.recorded_at),
             "create_time": _fmt(row.create_time),
             "transcribed_at": _fmt(row.finished_at) or _fmt(row.started_at),
             "duration_minutes": round((row.total_duration_ms or 0) / 60_000, 1) or None,
         } for row in rows],
         "notice": "task_id 可用于 search_knowledge 的 source_ids（只搜这一段录音）、"
                   "也用于 get_transcript_excerpt（取这段录音的原话）。"
-                  "引用时用 meeting_id + start_second，并说清是哪段录音。",
+                  "recorded_at 是录音实际开始时间；period 是上午/下午/晚上/未标注。"
+                  "问「下午那场」时按 period 选 source_ids；period 未标注时不要猜，"
+                  "检索所有相关录音并如实说明。引用时用 meeting_id + start_second。",
     }
 
 
@@ -718,6 +733,26 @@ async def _speaker_names(segments: list[TranscriptSegment]) -> dict[int, str]:
 
 def _fmt(value: Any) -> str | None:
     return format_datetime(value)
+
+
+def _period_of(value: Any) -> str | None:
+    """把录音开始时间归到上午/下午/晚上；未标注返回 None。
+
+    只做**展示与选择依据**，不参与权限或事实判断。用格式化后的本地时间取小时，
+    与页面看到的时间一致（避免 UTC/本地时区在边界上差 8 小时）。
+    """
+    text = format_datetime(value)
+    if not text or len(text) < 13:
+        return None
+    try:
+        hour = int(text[11:13])
+    except ValueError:
+        return None
+    if hour < 12:
+        return "上午"
+    if hour < 18:
+        return "下午"
+    return "晚上"
 
 
 __all__ = [

@@ -436,17 +436,39 @@ class KbToolsDbTest(unittest.IsolatedAsyncioTestCase):
                          {"confirmed_minutes": 1, "draft_minutes": 1, "recordings": 3})
         self.assertIn("search_knowledge", result["notice"])
 
+    async def test_decision_coverage_does_not_nudge_extra_transcript_search(self):
+        """决策复述题不该被“覆盖”提示带去做额外检索（任务 4a 的 q23）。"""
+        meeting = await self._meeting("MTG-8E", self.owner)
+        await self._minutes(meeting, self.owner, status="CONFIRMED",
+                            decisions=[self._decision("已确认的决策")])
+        await self._minutes(meeting, self.owner, status="DRAFT",
+                            decisions=[self._decision("草稿里的决策")])
+        actor = await kb_tools.Actor.resolve(self.owner)
+        result = await kb_tools.execute_tool(actor, "list_facts",
+                                             {"kind": "decision", "meeting_ids": [meeting.id]})
+        self.assertIn("未确认", result["notice"])
+        self.assertIn("不要仅仅为了覆盖", result["notice"])
+        self.assertNotIn("必须再用 search_knowledge", result["notice"])
+
     async def test_list_facts_recording_lists_succeeded_transcriptions(self):
         meeting = await self._meeting("MTG-8C", self.owner)
         task = await TranscriptionTask.create(
             meeting_id=meeting.id, material_id=88_001, model_config_id=self.config.id,
-            initiator_id=self.owner.id, status="SUCCEEDED", total_duration_ms=3_600_000)
+            initiator_id=self.owner.id, status="SUCCEEDED", total_duration_ms=3_600_000,
+            recorded_at=datetime(2026, 9, 10, 14, 0))
         actor = await kb_tools.Actor.resolve(self.owner)
         result = await kb_tools.execute_tool(actor, "list_facts", {"kind": "recording"})
         self.assertTrue(result["ok"])
         self.assertEqual([fact["task_id"] for fact in result["facts"]], [task.id])
         self.assertEqual(result["facts"][0]["duration_minutes"], 60.0)
-        self.assertIn("task_id", result["notice"])
+        self.assertEqual(result["facts"][0]["period"], "下午")
+        self.assertIn("recorded_at", result["notice"])
+
+    def test_period_of_recordings(self):
+        self.assertEqual(kb_tools._period_of(datetime(2026, 9, 10, 9, 0)), "上午")
+        self.assertEqual(kb_tools._period_of(datetime(2026, 9, 10, 14, 0)), "下午")
+        self.assertEqual(kb_tools._period_of(datetime(2026, 9, 10, 19, 0)), "晚上")
+        self.assertIsNone(kb_tools._period_of(None))
 
     # ------------------------------------------------------------------ #
     # get_minutes

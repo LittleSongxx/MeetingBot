@@ -4,6 +4,7 @@ import tempfile
 import types
 import unittest
 import unittest.mock
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -180,6 +181,19 @@ class TranscriptionTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(task.status, "PENDING")
         self.assertEqual(task.retry_count, 1)
         self.assertIsNone(task.error_message)
+
+    async def test_start_records_the_wall_clock_recording_time(self):
+        """上传时间与录音时间不是一回事：一场会的两段录音要靠 recorded_at 分上午/下午。"""
+        await self.task.delete()
+        with patch("api.transcription.schedule_transcription"):
+            result = await start(
+                self.material.id,
+                StartPayload(language="zh", recorded_at=datetime(2026, 9, 10, 14, 0)),
+                self.participant,
+            )
+        task = await TranscriptionTask.get(id=result.data["id"])
+        self.assertEqual(task.recorded_at.replace(tzinfo=None), datetime(2026, 9, 10, 14, 0))
+        self.assertEqual(result.data["recorded_at"], "2026-09-10 14:00:00")
 
     def test_parse_segments_uses_absolute_time_and_raw_labels(self):
         segments, duration_ms = parse_segments(
