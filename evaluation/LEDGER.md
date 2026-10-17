@@ -1761,6 +1761,53 @@ q88 本轮 AR 0 是 judge 严格/答案加了“无法换算具体日期”的�
 31/228（13.6%），全删也只到 69.0%；本轮的“空录音清单引用”“get_minutes 按题取条目”
 留到下一轮（见交接文档）。
 
+### 预注册：结构化工具收窄 + 召回缺口修复（P0-1/P1-1，2026-10-17，先于调用写死）
+
+**背景读数**：当前标准 68 条 fact 上下文 **17/41=41.5%** 有用（decisions 4/16=25%、
+topics 6/12=50%、recording_list 0/4=0%）；q60 一次 `get_minutes` 11 条只 1 条有用，
+q62 8 条只 3 条有用，q28 3 条 topics 全无用，q42 owner 返回错误事实；68 缺 8 条金标
+（q28×2、q42×2、q88×1、q94×1、q95×1、q62×1）。27 条 80.0/98.4/96.4/100；
+68 条 64.3/93.6/90.5/98.5；独立 cross8 71.1/87.5。
+
+**改动（一个臂，一起测）**：
+1. `get_minutes` 新增 `keywords`、`limit`（每列表字段，默认 **5**）、`order`
+   （first/last）；返回 `field_meta`（total/returned/truncated），条目保留
+   **原始 item_index**（引用不能因过滤而错位）。描述写明“最后 N 条用 order=last、
+   问某主题用 keywords”。
+2. `list_facts` 新增 `kind=task`（decisions + pending_items），描述写明“问某人负责的
+   任务用 task”；owner 子串匹配保持（不猜意图，只降低漏查）。
+3. 录音/会议清单不再产生空引用：给 quote/source_text 和唯一 key
+   （recording 按 task_id、meeting 按 meeting_id），q91 的 `[1]` 变成可点的录音卡片。
+4. 资料覆盖规则的“缺槽位必须检索转写”从负责人/截止时间扩展到**时长/数量/时间点**
+   （q28：工具返回没有 45 分钟/三个议题时必须检索转写）。
+5. **不动** chunk/rerank/dedupe/contextual/planning/prefetch/条件补搜触发面；
+   不为任何单题加词表。
+
+**唯一主指标**：68 条 **fact context 有用率**（micro，DeepSeek label f、thinking off）。
+基线 17/41=41.5%；目标 **≥65%**。
+
+**非劣门**：68 precision ≥**68.0%**（基线 64.3）、recall ≥**90.0%**（93.6）、
+内容级 ≥**88.0%**（90.5）；27 precision ≥**74.1%**、recall ≥**93.6%**、AR ≥**95.2%**；
+cross8 子集 recall ≥**12/16**（基线 13/16；本轮不修 q94/q95，只防退化）；
+引用可定位/未越权 **100%**、`unknown_refs=0`、**0 轮级失败/0 判定错误**；
+负样 12 条 **拒答 ≥10/12、编造 0/12**。
+
+**回退/失败**：
+- 68 recall <90% 或 27 precision <74.1% 或 27 recall <93.6% → 判失败：把
+  `get_minutes.limit` 默认改回 None（保留新参数），只重跑 27，不再跑 68。
+- fact 有用率 <65% 但其余非劣门全过 → 记“方向性改善、未达主指标”；保留参数，
+  默认 limit 回退，下一轮再按 tool path 调整。
+- 任一引用不变量/轮级失败 → 立即停止，先修缺陷。
+
+**样本量与功效**：fact 共 41 条，1 条事实≈2.4pp；65% 需 +10 条有用（或等量减少无用）。
+68 条 1 条上下文≈0.43pp；27 条 3 条事实≈4.8pp。单次运行的工具路径变化本身可能
+>4.8pp（q60 的 search 3/3 vs get_minutes 1/11 就是例子），结果只作方向信号，
+必须同时登记每题的 tool path（尤其 q28/q42/q60/q62/q91）。
+
+**预算**：27 轮 + 54 判定；cross8 8 + 16；68 轮 + 136；负样 12 + 24（label g）。
+产品日预算 500k，批次间清 Redis。产物：`chat_answers_tools2.json`、
+`rag_packet_tools2.json`、`chat_answers_extended_tools2.json` 及同名 packet/retrieval。
+
 ### 预注册：W4 完整性专项（仪器 v3 + 归因 + 机制验证，2026-10-05，先于任何调用写死）
 
 **背景与换尺声明**：轴3 v2 仪器（复合关键点、同族裁判）测得 baseline 0.811 /
