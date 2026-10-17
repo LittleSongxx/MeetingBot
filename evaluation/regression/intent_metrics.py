@@ -8,9 +8,9 @@
 
 ## 数据从哪来
 
-- **金标**：`gold/qa_seed.json` 每个 case 的 `intent` 字段（5 类枚举，见
-  `annotation.intent_taxonomy`）。**全部由代理起草、待人工确认**，所以本模块报两个口径：
-  人工已确认的题（`case_source != "agent_draft"`）与全部题。
+- **金标**：`gold/qa_seed.json` 每个 case 的 `intent` 字段（四类枚举，见
+  `annotation.intent_taxonomy`）。标签来源三种：`human` / `ai_review` / `agent_draft`；
+  本模块分开报，**AI 复核不冒充人工金标**。
 - **产品决策**：`results/intent_decisions.json`——`judges/intent.py` 逐题打产品
   `/chat/plan` 端点抓下来的 `{question, intent, rewritten, suggested_tools}`。
   抓取要花钱（每题一次廉价调用），但**评分不需要**：本模块只读产物。
@@ -65,10 +65,26 @@ def summarize(decisions: Mapping[str, Any] | None, qa_set: Mapping[str, Any] | N
     taxonomy = list(((qa_set or {}).get("annotation") or {}).get("intent_taxonomy") or [])
     gold: dict[str, str] = {}
     draft_ids: set[str] = set()
+    verified_ids: set[str] = set()
+    ai_review_ids: set[str] = set()
     for case in (qa_set or {}).get("cases") or []:
         if case.get("intent"):
             gold[str(case["id"])] = str(case["intent"])
-        if case.get("case_source") == "agent_draft":
+        # 标签来源优先看 intent_source；老数据没有这一列时才退回 case_source。
+        # 之前只看 case_source，把 27 条"人工题"的**代理意图标签**误算成 verified。
+        source = case.get("intent_source")
+        if source == "agent_draft":
+            draft_ids.add(str(case["id"]))
+        elif source == "human":
+            verified_ids.add(str(case["id"]))
+        elif source == "ai_review":
+            ai_review_ids.add(str(case["id"]))
+        elif case.get("case_source") == "agent_draft":
+            draft_ids.add(str(case["id"]))
+        elif case.get("case_source") == "human":
+            verified_ids.add(str(case["id"]))
+        else:
+            # 没有来源 = 不是人工确认：按代理起草算，宁可低估"已验证"
             draft_ids.add(str(case["id"]))
     decided: dict[str, str] = {}
     for row in (decisions or {}).get("decisions") or []:
@@ -126,15 +142,17 @@ def summarize(decisions: Mapping[str, Any] | None, qa_set: Mapping[str, Any] | N
             "f1": f1,
         }
 
-    # 两个口径：人工已确认的题 vs 全部（含代理起草）
-    verified = [row for row in paired if row[0] not in draft_ids]
+    # 三种来源分开报：人工确认 / 代理起草 / AI 复核（AI 不冒充人工）
+    verified = [row for row in paired if row[0] in verified_ids]
+    ai_review = [row for row in paired if row[0] in ai_review_ids]
     verified_hits = sum(1 for _, actual, predicted in verified if actual == predicted)
     all_hits = sum(1 for _, actual, predicted in paired if actual == predicted)
 
     return {
         "sample": len(paired),
         "sample_verified": len(verified),
-        "sample_draft": len(paired) - len(verified),
+        "sample_ai_review": len(ai_review),
+        "sample_draft": len(paired) - len(verified) - len(ai_review),
         "per_class": per_class,
         "confusion": confusion,
         # 宏平均是"类等权的平均"，与准确率不是一回事——类别不平衡时准确率会骗人
@@ -150,8 +168,9 @@ def summarize(decisions: Mapping[str, Any] | None, qa_set: Mapping[str, Any] | N
             "逐类 precision/recall/F1 + 混淆矩阵（真实→预测）。"
             "**没有加权总分**：宏平均只是「类等权的平均」，逐类数字一个都不能省；"
             "支持数为 0 的类报 null（判不了不等于 0 分）。"
-            f"两类标注来源分开报：人工已确认 {len(verified)} 题、代理起草 {len(paired) - len(verified)} 题——"
-            "**代理起草的标签尚未人工确认，逐类结论只作方向信号**。"),
+            f"三种标注来源分开报：人工确认 {len(verified)} 题、AI 复核 {len(ai_review)} 题、"
+            f"代理起草 {len(paired) - len(verified) - len(ai_review)} 题——"
+            "**AI 复核与代理起草都不是人工金标，逐类结论只作方向信号**。"),
         "not_measured": ("本模块只测「意图分类对不对」，不测「路由对答案质量有没有帮助」——"
                          "后者需要带/不带路由的两臂答案 + 判定，属于需授权的 A/B。"),
     }
