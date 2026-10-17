@@ -1237,6 +1237,150 @@
         "smalltalk": null
       },
       "note": ""
+    },
+    {
+      "anonymous_id": "n01",
+      "question": "这次发布评审批准的预算金额是多少？",
+      "labels": {
+        "single_fact": null,
+        "aggregation": null,
+        "cross_meeting": null,
+        "procedure": null,
+        "smalltalk": null
+      },
+      "note": ""
+    },
+    {
+      "anonymous_id": "n02",
+      "question": "会上有没有讨论竞品的定价策略？",
+      "labels": {
+        "single_fact": null,
+        "aggregation": null,
+        "cross_meeting": null,
+        "procedure": null,
+        "smalltalk": null
+      },
+      "note": ""
+    },
+    {
+      "anonymous_id": "n03",
+      "question": "这次发布需要采购多少台服务器？",
+      "labels": {
+        "single_fact": null,
+        "aggregation": null,
+        "cross_meeting": null,
+        "procedure": null,
+        "smalltalk": null
+      },
+      "note": ""
+    },
+    {
+      "anonymous_id": "n04",
+      "question": "数据中心的机房在哪个城市？",
+      "labels": {
+        "single_fact": null,
+        "aggregation": null,
+        "cross_meeting": null,
+        "procedure": null,
+        "smalltalk": null
+      },
+      "note": ""
+    },
+    {
+      "anonymous_id": "n05",
+      "question": "会上提到的专利申请数量是多少？",
+      "labels": {
+        "single_fact": null,
+        "aggregation": null,
+        "cross_meeting": null,
+        "procedure": null,
+        "smalltalk": null
+      },
+      "note": ""
+    },
+    {
+      "anonymous_id": "n06",
+      "question": "海外市场的发布时间是什么时候？",
+      "labels": {
+        "single_fact": null,
+        "aggregation": null,
+        "cross_meeting": null,
+        "procedure": null,
+        "smalltalk": null
+      },
+      "note": ""
+    },
+    {
+      "anonymous_id": "n07",
+      "question": "客户投诉的官方电话是多少？",
+      "labels": {
+        "single_fact": null,
+        "aggregation": null,
+        "cross_meeting": null,
+        "procedure": null,
+        "smalltalk": null
+      },
+      "note": ""
+    },
+    {
+      "anonymous_id": "n08",
+      "question": "这次发布采用了哪种加密算法？",
+      "labels": {
+        "single_fact": null,
+        "aggregation": null,
+        "cross_meeting": null,
+        "procedure": null,
+        "smalltalk": null
+      },
+      "note": ""
+    },
+    {
+      "anonymous_id": "n09",
+      "question": "会上决定与哪家供应商签合同？",
+      "labels": {
+        "single_fact": null,
+        "aggregation": null,
+        "cross_meeting": null,
+        "procedure": null,
+        "smalltalk": null
+      },
+      "note": ""
+    },
+    {
+      "anonymous_id": "n10",
+      "question": "V2.0 的研发预算和人力投入是多少？",
+      "labels": {
+        "single_fact": null,
+        "aggregation": null,
+        "cross_meeting": null,
+        "procedure": null,
+        "smalltalk": null
+      },
+      "note": ""
+    },
+    {
+      "anonymous_id": "n11",
+      "question": "法务部门对发布时间的意见是什么？",
+      "labels": {
+        "single_fact": null,
+        "aggregation": null,
+        "cross_meeting": null,
+        "procedure": null,
+        "smalltalk": null
+      },
+      "note": ""
+    },
+    {
+      "anonymous_id": "n12",
+      "question": "会上有没有确定下一次发布评审的具体日期？",
+      "labels": {
+        "single_fact": null,
+        "aggregation": null,
+        "cross_meeting": null,
+        "procedure": null,
+        "smalltalk": null
+      },
+      "note": ""
     }
   ]
 }
