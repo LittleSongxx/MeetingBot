@@ -233,7 +233,9 @@ class SearchKnowledgeArgs(BaseModel):
 class ListFactsArgs(BaseModel):
     kind: Literal["decision", "pending_item", "risk", "task", "meeting", "recording"] = Field(
         description="要查的事实类别：decision 决策 / pending_item 待办 / "
-                    "risk 风险 / **task 决策+待办（问某人负责的任务时用这个，避免只查一类漏掉）** / "
+                    "risk 风险 / **task 决策+待办（只用于问某一个人负责的任务，"
+                    "例如「张晨负责什么」；问「有哪些行动项/待办/决策清单」仍用 "
+                    "pending_item/decision，不要用 task 拉整类清单）** / "
                     "meeting 会议清单 / recording 录音清单"
                     "（哪几段录音、分别是什么时候的，用于「下午那场会」这类指代）")
     meeting_ids: list[int] | None = Field(
@@ -674,9 +676,10 @@ TOOL_SPECS: tuple[ToolSpec, ...] = (
         name="list_facts",
         description="按类别查已确认纪要里的结构化事实：决策 / 待办 / 风险 / task（决策+待办）"
                     "/ 会议清单 / 录音清单。适合「有哪些待办/决策/风险」「这周开了哪些会」"
-                    "这类**清单**；**问某人负责的任务/截止时间用 kind=task**（同时查决策与"
-                    "待办，避免只查一类漏掉）；**查单条事实（某个负责人/截止时间/某句话的"
-                    "原文出处）优先用 search_knowledge**，不要用本工具代替检索。"
+                    "这类**清单**；**kind=task 只用于问某一个人负责的任务**（例如「张晨"
+                    "负责什么」），问「有哪些行动项/待办/决策清单」仍用 pending_item/"
+                    "decision，不要用 task 拉整类清单；**查单条事实（某个负责人/截止时间/"
+                    "某句话的原文出处）优先用 search_knowledge**，不要用本工具代替检索。"
                     "需要时可用 keywords/owner/limit 缩小，避免一次把整类事实都当上下文。",
         arguments=ListFactsArgs,
         handler=_list_facts,

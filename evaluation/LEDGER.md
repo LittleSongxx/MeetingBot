@@ -1808,6 +1808,22 @@ cross8 子集 recall ≥**12/16**（基线 13/16；本轮不修 q94/q95，只防
 产品日预算 500k，批次间清 Redis。产物：`chat_answers_tools2.json`、
 `rag_packet_tools2.json`、`chat_answers_extended_tools2.json` 及同名 packet/retrieval。
 
+### P0-1 第一臂结果与第二臂处置（2026-10-17）
+
+**27 首跑（chat_answers_tools2.json）**：precision **72/98=73.5%**（低于预注册
+74.1% 非劣门）、recall **62/62=100%**、内容级 **108/111=97.3%**、AR 27/27；
+检索 recall@k 0.963、MRR 0.867、nDCG 0.891；recording coverage 27/27。
+
+**根因**：q26「下午这场会定了哪些行动项和负责人」被模型当成“任务”题，调用
+`list_facts(kind="task", limit=50)`，一次返回 **9 条决策+待办**；q26 共 14 条上下文
+只有 3 条（3 条转写切片）有用。其余 26 题没有退化；27 的 recall 还从 98.4% 到 100%。
+这是**工具适用面描述太宽**，不是默认 limit 造成的（27 没有调用 get_minutes）。
+
+**处置**：按预注册判第一臂失败，不跑 68。第二臂只改 `kind=task` 的描述：
+“只用于问某一个人负责的任务；问行动项/待办/决策清单仍用 pending_item/decision”。
+主指标、非劣门、样本与失败条件不变；`get_minutes.limit=5` 保持（第一臂未触发，
+不能归因）。第二臂只重跑 27，通过后再跑 cross8/68。
+
 ### 预注册：W4 完整性专项（仪器 v3 + 归因 + 机制验证，2026-10-05，先于任何调用写死）
 
 **背景与换尺声明**：轴3 v2 仪器（复合关键点、同族裁判）测得 baseline 0.811 /
