@@ -258,15 +258,16 @@ def build_validity_packet(packet_path: Path = RESULTS_DIR / "adjudication_packet
 INTENT_PACKET = RESULTS_DIR / "annotation_intent.json"
 
 # 意图判据：写在一张表里，标注者按表判，不按感觉判（与 validity 四分类同款纪律）
+# 四类，每类对应一个不同的路由动作（与 qa_seed 的 intent_taxonomy 一致）。
+# procedure 已合并进 single_fact/aggregation：它与 single_fact 的路由动作相同，
+# 而两版提示词下 F1 从 53% 摆到 12%，不可稳定测量——不再让人工判一条不存在的边界。
 INTENT_CRITERIA: list[dict[str, str]] = [
-    {"label": "single_fact", "meaning": "问一个具体事实（时间、数值、负责人、某一条决定）",
-     "criterion": "答案是一句话能说清的一个事实，不需要罗列。例：发布公告的截止时间是什么"},
+    {"label": "single_fact", "meaning": "问一个具体事实（时间、数值、负责人、某一条决定、流程解释）",
+     "criterion": "答案是一句话能说清的一个事实/一段流程，不需要罗列。例：发布公告的截止时间是什么"},
     {"label": "aggregation", "meaning": "枚举/聚合：问「有哪些」「哪几项」「分别是什么」",
      "criterion": "答案天然是列表（≥2 项）。例：首周复盘要看哪五项数据"},
     {"label": "cross_meeting", "meaning": "跨会议（本语料是跨两段录音）汇总",
      "criterion": "答案必须来自两段录音，或多场会议的比较/汇总。例：两段录音里的风险分别是什么"},
-    {"label": "procedure", "meaning": "流程与机制解释：问「怎么处理」「流程是怎样的」「为什么这样做」",
-     "criterion": "答案描述的是一套流程、规则或机制，而不是单一事实或清单。例：资料更新时索引会怎么处理"},
     {"label": "smalltalk", "meaning": "寒暄或与会议无关的请求",
      "criterion": "答案不该来自会议资料（打招呼、道谢、问能力边界、问天气）。这一类没有金标事实"},
 ]
@@ -283,6 +284,9 @@ def build_intent_packet(*, qa_path: Path | None = None) -> dict[str, Any]:
         encoding="utf-8"))
     items = []
     for case in source["cases"]:
+        # 不可答题没有意图标签：它们不进逐类 F1，也不该占人工判包（判了也无处用）
+        if case.get("unanswerable"):
+            continue
         items.append({
             "anonymous_id": case["id"],
             "question": case["question"],

@@ -525,7 +525,8 @@ class IntentAnnotationTest(unittest.TestCase):
         from gold import annotation
         packet = annotation.build_intent_packet()
         qa_set = json.loads((EVALUATION_DIR / "gold" / "qa_seed.json").read_text(encoding="utf-8"))
-        self.assertEqual(len(packet["items"]), len(qa_set["cases"]))
+        answerable = [case for case in qa_set["cases"] if not case.get("unanswerable")]
+        self.assertEqual(len(packet["items"]), len(answerable))
         for item in packet["items"]:
             self.assertTrue(item["question"].strip())
             self.assertEqual(set(item["labels"]), set(packet["labels_allowed"]))
