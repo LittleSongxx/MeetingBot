@@ -17,12 +17,13 @@ from models import (
     MeetingMaterial,
     MeetingMinutes,
     MeetingParticipant,
+    MeetingSeries,
     TranscriptionTask,
     TranscriptSegment,
     User,
 )
 from pydantic import BaseModel, ConfigDict, Field
-from services import kb_outbox, kb_service
+from services import kb_outbox, kb_service, memory_service
 from tortoise.transactions import in_transaction
 
 router = APIRouter(prefix="/meeting")
@@ -47,6 +48,8 @@ class MeetingPayload(BaseModel):
     host_id: int | None = None
     # 弹窗参会人员多选框，默认空列表，避免未传时为 None
     participant_ids: List[int] = Field(default_factory=list)
+    # 弹窗系列下拉框：一场会议最多属于一个系列（周会/项目例会），不选为空
+    series_id: int | None = None
 
 
 class MeetingStatusPayload(BaseModel):
@@ -86,6 +89,17 @@ async def validate_meeting(payload: MeetingPayload):
         # 数量对不上说明其中有不存在或已停用的账号
         if participant_count != len(participant_ids):
             raise CustomException("参会人员中包含不存在或已停用的账号")
+
+
+async def validate_series_access(series_id: int | None, current_user: User) -> None:
+    """新增/编辑会议时校验系列可见性：看不到的系列不允许挂靠（403）。"""
+    if series_id is None:
+        return
+    series = await MeetingSeries.get_or_none(id=series_id)
+    if series is None:
+        raise CustomException("会议系列不存在")
+    if not await access.has_series_access(series, current_user):
+        raise CustomException("没有会议系列访问权限", "403")
 
 
 async def has_meeting_access(meeting: Meeting, current_user: User) -> bool:
@@ -168,7 +182,7 @@ async def participant_dict(row: MeetingParticipant) -> dict:
     }
 
 
-async def prefetch_meeting_context(meetings: list[Meeting]) -> tuple[dict, dict, dict]:
+async def prefetch_meeting_context(meetings: list[Meeting]) -> tuple[dict, dict, dict, dict]:
     """列表页的关联预取：用户、部门、参会记录各查一次，消掉逐行 N+1。"""
     meeting_ids = [m.id for m in meetings]
     user_ids = {m.creator_id for m in meetings} | {m.host_id for m in meetings}
@@ -183,13 +197,16 @@ async def prefetch_meeting_context(meetings: list[Meeting]) -> tuple[dict, dict,
     by_meeting: dict[int, list] = {}
     for row in participant_rows:
         by_meeting.setdefault(row.meeting_id, []).append(row)
-    return users, departments, by_meeting
+    series_ids = {m.series_id for m in meetings if m.series_id}
+    series_names = ({row.id: row.name for row in await MeetingSeries.filter(
+        id__in=series_ids)} if series_ids else {})
+    return users, departments, by_meeting, series_names
 
 
 async def meeting_dict(meeting: Meeting, current_user: User,
-                       context: tuple[dict, dict, dict] | None = None) -> dict:
+                       context: tuple[dict, dict, dict, dict] | None = None) -> dict:
     if context is not None:
-        users, departments, by_meeting = context
+        users, departments, by_meeting, series_names = context
         creator = users.get(meeting.creator_id)
         host = users.get(meeting.host_id)
 
@@ -213,6 +230,9 @@ async def meeting_dict(meeting: Meeting, current_user: User,
         # 按ID升序取全部参会记录，保证详情里的人员顺序稳定
         participant_rows = await MeetingParticipant.filter(meeting_id=meeting.id).order_by("id")
         participants = [await participant_dict(row) for row in participant_rows]
+        series = (await MeetingSeries.get_or_none(id=meeting.series_id)
+                  if meeting.series_id else None)
+        series_names = {series.id: series.name} if series is not None else {}
     # 从名单里找出当前登录用户自己那条，用于告诉前端“我在这场会议里是什么角色”
     my_participant = next((item for item in participants if item["user_id"] == current_user.id), None)
     return {
@@ -242,6 +262,9 @@ async def meeting_dict(meeting: Meeting, current_user: User,
         "status": meeting.status,
         # 详情弹窗的“取消原因”，非取消状态时为 None，那一行不渲染
         "cancel_reason": meeting.cancel_reason,
+        # 所属会议系列；未归类时为 None。名称供列表直接展示，编辑弹窗回填 series_id
+        "series_id": meeting.series_id,
+        "series_name": series_names.get(meeting.series_id) if meeting.series_id else None,
         # 编辑弹窗回填参会人员多选框
         "participant_ids": [item["user_id"] for item in participants],
         # 详情弹窗的参会人员表格
@@ -261,6 +284,7 @@ async def add(payload: MeetingPayload, current_user: User = Depends(get_current_
     if payload.host_id is None:
         payload.host_id = current_user.id
     await validate_meeting(payload)
+    await validate_series_access(payload.series_id, current_user)
     meeting = await Meeting.create(
         # 会议编号由后端生成，页面上没有这个输入框
         meeting_no=generate_meeting_no(),
@@ -274,6 +298,7 @@ async def add(payload: MeetingPayload, current_user: User = Depends(get_current_
         host_id=payload.host_id,
         # 新建会议一律是待开始状态，后续通过状态流转接口推进
         status="SCHEDULED",
+        series_id=payload.series_id,
     )
     # 会议记录建好后再写参会名单，因为要用到 meeting.id
     await save_participants(meeting, payload.participant_ids)
@@ -296,7 +321,9 @@ async def update(payload: MeetingPayload, current_user: User = Depends(get_curre
         raise CustomException("只有待开始会议可以编辑")
     # 和新增共用同一套字段校验
     await validate_meeting(payload)
-    # 只更新页面能改的六个字段，会议编号、创建人和状态都不在其中
+    # 系列可见性同样校验：不能把会议挂到看不到的系列上
+    await validate_series_access(payload.series_id, current_user)
+    # 只更新页面能改的字段，会议编号、创建人和状态都不在其中
     await Meeting.filter(id=meeting.id).update(
         title=payload.title,
         start_time=payload.start_time,
@@ -304,6 +331,7 @@ async def update(payload: MeetingPayload, current_user: User = Depends(get_curre
         location=payload.location,
         agenda=payload.agenda,
         host_id=payload.host_id,
+        series_id=payload.series_id,
     )
     # 重新读一次，拿到更新后的 host_id，下面重建名单时要用
     meeting = await Meeting.get(id=meeting.id)
@@ -405,6 +433,8 @@ async def delete(meeting_id: int, _: User = Depends(require_admin)):
             await kb_outbox.mark_source_state(
                 kb_service.SOURCE_MINUTES, int(minutes_id), meeting_id,
                 kb_outbox.STATE_DELETE)
+            # 纪要随会议被删后它生成的候选失去来源：撤回为 REJECTED（已确认记忆保留）
+            await memory_service.reject_proposed_from_minutes(int(minutes_id))
         for transcription_id in transcription_ids:
             await kb_outbox.mark_source_state(
                 kb_service.SOURCE_TRANSCRIPT, int(transcription_id), meeting_id,
@@ -480,6 +510,8 @@ async def select_page(
     status: str = "",
     # view_type 来自页面视图下拉框，默认 MY
     view_type: str = "MY",
+    # series_id 来自页面系列下拉框，有值时只返回该系列下的会议
+    series_id: int | None = None,
     page_num: int = 1,
     page_size: int = 10,
     # 会议列表对所有登录用户开放，数据范围在下面按当前用户收窄
@@ -501,6 +533,9 @@ async def select_page(
     # 管理员选“全部会议”时两个条件都不成立，不加任何范围限制
     elif current_user.role != "ADMIN" or view_type == "MY":
         query = query.filter(access.visible_meeting_query(current_user, participant_meeting_ids))
+    # 系列筛选：可见性已在上面的范围条件里收窄，这里只是再叠一个等值条件
+    if series_id is not None:
+        query = query.filter(series_id=series_id)
     # 状态下拉框有值时追加等值条件
     if status:
         query = query.filter(status=status)

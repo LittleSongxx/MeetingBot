@@ -15,8 +15,8 @@
   唯一的差别是**呈现层编号**：聊天侧会由宿主给条目编号（`ref`，见
   `services/citations.py`）好让答案能写 `[n]`；MCP 侧不带 `ref`（那边没有"答案"，
   客户端直接用 `chunk_id` 或 `minutes_id + field + item_index` 定位即可）。
-- **工具数量**：四个。业界（Google / Anthropic / Microsoft 的工具设计建议）收敛在
-  3–5 个：每多一个工具，模型选错的概率就上升一档。事实类问题走 `list_facts`
+- **工具数量**：五个（3–5 区间）。业界（Google / Anthropic / Microsoft 的工具设计建议）
+  收敛在 3–5 个：每多一个工具，模型选错的概率就上升一档。事实类问题走 `list_facts`
   具名参数，**不做自由文本转 SQL**——那同时带来注入面与幻觉 SQL。
 
 ## 权限模型
@@ -50,6 +50,7 @@ from common.times import LOCAL_TZ, format_datetime
 from models import (
     Meeting,
     MeetingMinutes,
+    MeetingSeries,
     TranscriptionTask,
     TranscriptSegment,
     User,
@@ -193,6 +194,12 @@ class SearchKnowledgeArgs(BaseModel):
         description="限定在这些会议里搜（会议 id 见 list_facts(kind=meeting)）；"
                     "超过权限范围的会被忽略",
     )
+    series_id: int | None = Field(
+        default=None,
+        description="限定在某个系列（周会/项目例会）的会议里搜；"
+                    "系列 id 可先用 query_meeting_state(kind=decision) 或会议列表确认；"
+                    "超过权限范围的系列会被拒绝",
+    )
     date_from: str | None = Field(
         default=None,
         description="按**会议日期**限定起始（含当天），格式 YYYY-MM-DD。"
@@ -224,6 +231,11 @@ class SearchKnowledgeArgs(BaseModel):
     @classmethod
     def _loose_authority(cls, value: Any) -> Any:
         return _loose(value, (list, type(None)))
+
+    @field_validator("series_id", mode="before")
+    @classmethod
+    def _loose_series_id(cls, value: Any) -> Any:
+        return _loose(value, (int, type(None)))
 
     @field_validator("meeting_ids", "chunk_type", "source_ids", mode="before")
     @classmethod
@@ -316,6 +328,30 @@ class TranscriptExcerptArgs(BaseModel):
         return _loose(value, (int, type(None)))
 
 
+class QueryMeetingStateArgs(BaseModel):
+    kind: Literal["decision", "conclusion", "action_item", "preference"] = Field(
+        description="要查的状态：decision 先前决策 / conclusion 结论 / "
+                    "action_item 待办 / preference 个人偏好（仅本人）")
+    query: str | None = Field(
+        default=None,
+        description="可选的检索词（如项目名、事项名）；留空取最近的条目")
+    series_id: int | None = Field(
+        default=None,
+        description="限定系列；系列 id 可从会议详情或会议列表确认")
+    status: Literal["open", "done", "all"] = Field(
+        default="open",
+        description="仅对 action_item 有意义：open 未完成 / done 已完成 / all 全部")
+    owner: str | None = Field(
+        default=None,
+        description="仅对 action_item 有意义：按负责人姓名过滤")
+    limit: int = Field(default=10, ge=1, le=30, description="返回条数上限")
+
+    @field_validator("series_id", "limit", mode="before")
+    @classmethod
+    def _loose_ids(cls, value: Any) -> Any:
+        return _loose(value, (int, type(None)))
+
+
 # --------------------------------------------------------------------------- #
 # 工具实现
 # --------------------------------------------------------------------------- #
@@ -344,6 +380,8 @@ def _epoch_of(value: str, *, end_of_day: bool) -> int:
 def _applied_filters(args: SearchKnowledgeArgs, meeting_scope: list[int] | None) -> list[str]:
     """这次检索真正生效的限定，用于告诉模型（与用户）"结果是在什么范围内得到的"。"""
     applied: list[str] = []
+    if args.series_id is not None:
+        applied.append(f"系列 {args.series_id}")
     if meeting_scope is not None:
         applied.append(f"会议 {meeting_scope}")
     if args.date_from:
@@ -362,6 +400,16 @@ def _applied_filters(args: SearchKnowledgeArgs, meeting_scope: list[int] | None)
 async def _search_knowledge(actor: Actor, args: SearchKnowledgeArgs) -> dict[str, Any]:
     # 会议范围走与其余工具同一条收窄路径：参数只能缩小可见集合，绝不能扩大
     allowed = _narrow(actor.allowed_meeting_ids, args.meeting_ids)
+    if args.series_id is not None:
+        series = await MeetingSeries.get_or_none(id=args.series_id)
+        if series is None:
+            raise ToolError("系列不存在")
+        if not await access.has_series_access(series, actor.user):
+            raise ToolError("没有该系列的访问权限")
+        series_meetings = {
+            int(item) for item in await Meeting.filter(series_id=series.id).values_list("id", flat=True)
+        }
+        allowed = sorted(series_meetings if allowed is None else (set(allowed) & series_meetings))
     time_from = _epoch_of(args.date_from, end_of_day=False) if args.date_from else None
     time_to = _epoch_of(args.date_to, end_of_day=True) if args.date_to else None
     if time_from is not None and time_to is not None and time_to < time_from:
@@ -628,6 +676,22 @@ async def _transcript_excerpt(actor: Actor, args: TranscriptExcerptArgs) -> dict
     }
 
 
+async def _query_meeting_state(actor: Actor, args: QueryMeetingStateArgs) -> dict[str, Any]:
+    """查询系列/个人的已确认状态（决策、结论、待办、偏好）。
+
+    只返回人工确认过的记忆与有效待办；待办状态以 action_item 为准，不另存一份。
+    """
+    # 延迟导入：工具模块先于领域服务存在时也能被 import（MCP/能力探测不依赖它）
+    from services import state_service
+
+    items = await state_service.query_state(
+        actor, kind=args.kind, query=args.query, series_id=args.series_id,
+        status=args.status, owner=args.owner, limit=args.limit)
+    notice = ("只返回 CONFIRMED 记忆与有效待办；未确认候选不得当作事实。"
+              "引用时写清来源会议/纪要；待办状态以工具返回为准，不要按上下文猜。")
+    return {"kind": args.kind, "items": items, "notice": notice}
+
+
 # --------------------------------------------------------------------------- #
 # 工具表：唯一真源，派生给模型看的 schema、聊天侧的分发、MCP 侧的工具注册
 # --------------------------------------------------------------------------- #
@@ -705,6 +769,15 @@ TOOL_SPECS: tuple[ToolSpec, ...] = (
         arguments=TranscriptExcerptArgs,
         handler=_transcript_excerpt,
     ),
+    ToolSpec(
+        name="query_meeting_state",
+        description="查询系列/个人的已确认状态：先前决策（decision）、结论（conclusion）、"
+                    "待办及完成情况（action_item）、个人偏好（preference）。"
+                    "问「上次定了什么」「还有哪些待办」「谁负责」「项目现在什么状态」"
+                    "时**先用它**，再用 search_knowledge 补原文；只返回人工确认过的内容。",
+        arguments=QueryMeetingStateArgs,
+        handler=_query_meeting_state,
+    ),
 )
 
 TOOLS_BY_NAME: dict[str, ToolSpec] = {spec.name: spec for spec in TOOL_SPECS}
@@ -748,8 +821,14 @@ async def execute_tool(actor: Actor, name: str, arguments: Any) -> dict[str, Any
 
 
 def tool_result_text(result: dict[str, Any]) -> str:
-    """工具结果 → tool message 文本。聊天与 MCP 共用同一种序列化。"""
-    return json.dumps(result, ensure_ascii=False, default=str)
+    """工具结果 → tool message 文本。聊天与 MCP 共用同一种序列化。
+
+    序列化前统一标记 `trust=untrusted` 并扫描指令样式文本：会议原文是数据，
+    模型不得把它当指令执行（见 services/prompt_injection）。
+    """
+    from services import prompt_injection
+
+    return json.dumps(prompt_injection.annotate_result(result), ensure_ascii=False, default=str)
 
 
 # --------------------------------------------------------------------------- #

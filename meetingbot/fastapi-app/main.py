@@ -28,11 +28,12 @@ async def lifespan(app: FastAPI):
     # 只支持 json_object 的供应商（如 DeepSeek）靠 invoke_json 的 re-ask 兜底，
     # 但主力路径应为约束解码——启动即校验，配置漂移当场暴露而不是运行期偶发。
     from common import providers
-    from models import AiModelConfig
+    from models import AiModelConfig, ModelRoute
     from services import chat_checkpoint, chat_events, kb_outbox, pg_kb
     from services.agent_service import recover_agent_runs
     from services.kb_service import recover_kb_index_tasks
     from services.minutes_service import recover_minutes_tasks
+    from services.model_config import STRUCTURED_ROUTE_KEYS
     from services.transcription_service import recover_transcription_tasks
     for config in await AiModelConfig.filter(model_type__in=("MINUTES", "AGENT", "SPEAKER"), enabled=True):
         strategy = providers.structured_output_strategy(config.base_url)
@@ -41,6 +42,20 @@ async def lifespan(app: FastAPI):
                 f"模型配置 {config.name}（{config.base_url}）不支持 strict json_schema，"
                 "主力模型请使用支持约束解码的供应商（当前策略 "
                 f"{strategy}，仅靠 re-ask 兜底）")
+
+    # 路由目标也要过同一道结构化输出能力校验：把 CHEAP 模型路由到纪要/自检/
+    # 规划/摘要上时，若它不支持 strict json_schema，宁可启动失败也不要在运行期
+    # 变成"模型不听话"的假象。CHAT 走工具调用，不在结构化校验范围内。
+    for route in await ModelRoute.filter(enabled=True):
+        if route.route_key not in STRUCTURED_ROUTE_KEYS:
+            continue
+        routed = await AiModelConfig.filter(id=route.model_config_id, enabled=True).first()
+        if routed is None:
+            raise RuntimeError(f"模型路由 {route.route_key} 的目标配置不存在或未启用")
+        strategy = providers.structured_output_strategy(routed.base_url)
+        if strategy != providers.JSON_SCHEMA:
+            raise RuntimeError(
+                f"模型路由 {route.route_key} 的目标 {routed.name} 不支持 strict json_schema")
 
     # PG 同时承载检索索引与 checkpoint：不可用时检索关闭、checkpoint 不启用，
     # 但不阻断服务启动（无检索依据的问答由 no_retrieval 闸标注）。

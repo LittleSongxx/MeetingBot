@@ -44,6 +44,9 @@
       </div>
     </div>
 
+    <!-- 在线评测：抽样最近的问答由裁判模型评分；仅管理员可触发 -->
+    <OnlineEvalPanel v-if="isAdmin" />
+
     <!-- 四个带 ref 的 div 是 ECharts 容器，由 renderCharts 绘制 -->
     <div class="chart-grid">
       <!-- 趋势图容器占两列宽 -->
@@ -88,6 +91,9 @@
       </div>
     </div>
 
+    <!-- 成本与缓存：接口仅管理员可读，跟随查询按钮提交的日期范围 -->
+    <CostPanel v-if="isAdmin" :date-from="data.appliedRange[0]" :date-to="data.appliedRange[1]" />
+
     <div class="card failure-card">
       <div class="chart-title">最近失败记录</div>
       <!-- 最近失败记录绑定 recent_failures，source 区分 AI 调用失败和自检运行失败 -->
@@ -120,6 +126,8 @@ import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/compon
 import { CanvasRenderer } from 'echarts/renderers'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
+import CostPanel from '@/components/CostPanel.vue'
+import OnlineEvalPanel from '@/components/OnlineEvalPanel.vue'
 import { AGENT_RUN_STATUS } from '@/constants/status'
 import { stepTypeText as STEP_TYPE_TEXT_FN } from '@/constants/label'
 
@@ -133,6 +141,10 @@ echarts.use([
   TooltipComponent,
   CanvasRenderer,
 ])
+
+// 登录缓存里的角色：在线评测会真实调用裁判模型，只给管理员开放触发入口
+const user = JSON.parse(localStorage.getItem('xm-user') || '{}')
+const isAdmin = user.role === 'ADMIN'
 
 // 四个图表容器的模板引用
 const trendRef = ref()
@@ -248,6 +260,8 @@ interface ObservabilityResult {
 interface ObservabilityPageState {
   // 日期范围控件绑定的两个日期字符串
   dateRange: string[]
+  // 已提交查询的日期范围：成本面板只跟随它，避免拨动日期就发请求
+  appliedRange: string[]
   // 模型下拉框选中的配置主键，null 表示全部模型
   modelConfigId: number | null
   // 模型下拉框的选项，内容就是有调用记录的模型排行（只用到主键和名称两列）
@@ -261,6 +275,8 @@ interface ObservabilityPageState {
 const data = reactive<ObservabilityPageState>({
   // 日期范围控件绑定的两个日期字符串
   dateRange: defaultRange(),
+  // 已提交查询的日期范围（成本面板的入参）
+  appliedRange: defaultRange(),
   // 模型下拉框选中的配置主键，null 表示全部模型
   modelConfigId: null,
   // 模型下拉框的选项
@@ -528,6 +544,8 @@ const renderCharts = () => {
 
 const load = () => {
   if (!data.dateRange?.length) return ElMessage.warning('请选择观测日期范围')
+  // 成本面板只跟随已提交的范围：拨动日期控件时不发请求，点查询才更新
+  data.appliedRange = [...data.dateRange]
   data.loading = true
   request
     .get<ObservabilityResult>('/observability/overview', {

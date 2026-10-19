@@ -11,7 +11,12 @@
         <el-button type="primary" style="width: 100%" @click="newSession">新建对话</el-button>
         <div class="scope-box">
           <div class="scope-label">对话范围</div>
+          <el-radio-group v-model="scopeMode" size="small" class="scope-mode">
+            <el-radio-button value="meeting">按会议</el-radio-button>
+            <el-radio-button value="series">按系列</el-radio-button>
+          </el-radio-group>
           <el-select
+            v-if="scopeMode === 'meeting'"
             v-model="scopeMeetingIds"
             multiple
             collapse-tags
@@ -28,7 +33,27 @@
               :value="item.id"
             />
           </el-select>
-          <div class="scope-tip">留空表示在你有权查看的全部会议里检索</div>
+          <el-select
+            v-else
+            v-model="scopeSeriesIds"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            clearable
+            filterable
+            placeholder="全部系列"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="item in data.series"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+          <div class="scope-tip">
+            留空表示在你有权查看的全部会议里检索；按系列时会展开成该系列下的会议。
+          </div>
         </div>
         <el-scrollbar class="session-list">
           <div
@@ -40,7 +65,8 @@
           >
             <div class="session-title">{{ item.title }}</div>
             <div class="session-meta">
-              {{ item.message_count }} 条 · {{ item.last_active_time || item.create_time }}
+              {{ scopeSummary(item) }} · {{ item.message_count }} 条 ·
+              {{ item.last_active_time || item.create_time }}
             </div>
             <el-icon class="session-del" @click.stop="removeSession(item.id)"><Delete /></el-icon>
           </div>
@@ -50,10 +76,21 @@
 
       <!-- 右：消息流 + 输入 -->
       <div class="card chat-main">
+        <!-- 当前会话实际生效的范围：会话建立后以服务端返回为准 -->
+        <div class="scope-chips">
+          <span class="scope-chip-label">当前范围</span>
+          <template v-if="scopeChips.length">
+            <el-tag v-for="chip in scopeChips" :key="chip.key" size="small" :type="chip.type">
+              {{ chip.label }}
+            </el-tag>
+          </template>
+          <el-tag v-else size="small" type="info">全部可见会议</el-tag>
+          <span v-if="sessionId == null" class="scope-chip-tip">新范围在首次提问时生效</span>
+        </div>
         <el-scrollbar ref="scrollRef" class="message-area">
           <div v-if="!messages.length" class="empty-tip">
             问点什么吧，例如「上次评审会上定的上线时间是什么」「这周有哪些待办」。 回答里的 [1]
-            可以点开看是哪场会、谁说的、说了什么。
+            可以点开看是哪场会、谁说的、说了什么；决策/待办/偏好会显示成带状态的状态卡片。
           </div>
           <div
             v-for="(message, index) in messages"
@@ -82,7 +119,8 @@
             <el-collapse v-if="message.tools?.length" class="tool-trace">
               <el-collapse-item :title="toolTitle(message.tools)">
                 <div v-for="(tool, i) in message.tools" :key="i" class="tool-item">
-                  <span class="tool-name">{{ tool.name }}</span>
+                  <span class="tool-name">{{ chatToolText(tool.name) }}</span>
+                  <span class="tool-raw">{{ tool.name }}</span>
                   <span class="tool-args">{{ JSON.stringify(tool.arguments) }}</span>
                   <span class="tool-summary" :class="{ failed: tool.ok === false }">{{
                     tool.summary
@@ -93,11 +131,10 @@
 
             <!-- 引用卡片：答案里真正用到的那些（编号与 [n] 一一对应） -->
             <div v-if="usedCitations(message).length" class="citation-list">
-              <CitationCard
-                v-for="citation in usedCitations(message)"
-                :key="citation.ref"
-                :citation="citation"
-              />
+              <template v-for="citation in usedCitations(message)" :key="citation.ref">
+                <StateCitationCard v-if="citation.kind === 'state'" :citation="citation" />
+                <CitationCard v-else :citation="citation" />
+              </template>
             </div>
 
             <el-alert
@@ -115,6 +152,15 @@
               :closable="false"
               show-icon
               :title="message.error_message"
+            />
+            <!-- 命中注入/越权等安全规则时给警示；后端未返回 security 时不会出现 -->
+            <el-alert
+              v-if="message.security_notice"
+              class="message-notice"
+              type="warning"
+              :closable="false"
+              show-icon
+              :title="message.security_notice"
             />
             <el-button
               v-if="
@@ -169,6 +215,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
 import { renderMarkdown, splitCitations } from '@/utils/markdown'
 import CitationCard from '@/components/CitationCard.vue'
+import StateCitationCard from '@/components/StateCitationCard.vue'
+import { seriesOptions, type SeriesOption } from '@/api/series'
+import { chatToolText } from '@/constants/label'
 import {
   chatStatus,
   createSession,
@@ -178,6 +227,7 @@ import {
   streamChat,
   type ChatCitation,
   type ChatMessageInfo,
+  type ChatSecurity,
   type ChatSessionInfo,
   type ChatStatus,
 } from '@/api/chat'
@@ -206,15 +256,21 @@ interface PageMessage {
   thread_id?: string | null
   trace_id?: string | null
   last_event_id?: string | null
+  /** done/error 事件里的安全标记摘要（命中注入规则时显示警示条） */
+  security_notice?: string
 }
 
 const data = reactive({
   sessions: [] as ChatSessionInfo[],
   meetings: [] as MeetingOption[],
+  series: [] as SeriesOption[],
   status: null as ChatStatus | null,
 })
 
+/** 范围模式：按会议 / 按系列；一次会话只提交一种范围（后端取并集） */
+const scopeMode = ref<'meeting' | 'series'>('meeting')
 const scopeMeetingIds = ref<number[]>([])
+const scopeSeriesIds = ref<number[]>([])
 const messages = ref<PageMessage[]>([])
 const sessionId = ref<number | null>(null)
 const question = ref('')
@@ -249,6 +305,7 @@ const bannerText = computed(() => {
 onMounted(() => {
   loadStatus()
   loadMeetings()
+  loadSeries()
   loadSessions()
 })
 
@@ -264,6 +321,12 @@ function loadMeetings(): void {
   })
 }
 
+function loadSeries(): void {
+  seriesOptions().then((res) => {
+    data.series = res.data || []
+  })
+}
+
 function loadSessions(): void {
   listSessions().then((res) => {
     data.sessions = res.data.list || []
@@ -276,9 +339,17 @@ function abortActiveStream(): void {
   controller?.abort()
 }
 
+/** 本次会话的范围载荷：按当前模式只提交会议或系列，两者都空表示全部。 */
+function sessionScopePayload(): { meetingIds?: number[]; seriesIds?: number[] } {
+  if (scopeMode.value === 'series') {
+    return { seriesIds: scopeSeriesIds.value.length ? scopeSeriesIds.value : undefined }
+  }
+  return { meetingIds: scopeMeetingIds.value.length ? scopeMeetingIds.value : undefined }
+}
+
 function newSession(): void {
   abortActiveStream()
-  createSession(scopeMeetingIds.value.length ? scopeMeetingIds.value : undefined).then((res) => {
+  createSession(sessionScopePayload()).then((res) => {
     data.sessions.unshift(res.data)
     sessionId.value = res.data.id
     messages.value = []
@@ -290,6 +361,9 @@ function openSession(id: number): void {
   sessionId.value = id
   const session = data.sessions.find((item) => item.id === id)
   scopeMeetingIds.value = session?.scope_meeting_ids || []
+  scopeSeriesIds.value = session?.scope_series_ids || []
+  // 有系列范围时切到"按系列"，否则按会议展示
+  scopeMode.value = scopeSeriesIds.value.length ? 'series' : 'meeting'
   listMessages(id).then((res) => {
     messages.value = (res.data.list || []).map((row) => ({
       id: row.id,
@@ -332,8 +406,14 @@ function removeSession(id: number): void {
 function scopeChanged(): boolean {
   if (sessionId.value == null) return true
   const current = data.sessions.find((item) => item.id === sessionId.value)
-  const before = current?.scope_meeting_ids || []
-  const after = scopeMeetingIds.value
+  return (
+    diffScope(current?.scope_meeting_ids || [], scopeMeetingIds.value) ||
+    diffScope(current?.scope_series_ids || [], scopeSeriesIds.value)
+  )
+}
+
+/** 两个 id 集合是否不同（顺序无关）。 */
+function diffScope(before: number[], after: number[]): boolean {
   return before.length !== after.length || before.some((id) => !after.includes(id))
 }
 
@@ -347,9 +427,7 @@ async function send(): Promise<void> {
   let target: PageMessage | undefined
   try {
     if (sessionId.value == null || scopeChanged()) {
-      const created = await createSession(
-        scopeMeetingIds.value.length ? scopeMeetingIds.value : undefined,
-      )
+      const created = await createSession(sessionScopePayload())
       data.sessions.unshift(created.data)
       sessionId.value = created.data.id
     }
@@ -421,11 +499,13 @@ async function send(): Promise<void> {
             current.run_status = 'FINISHED'
             current.token_count = event.tokens.total_tokens
             current.citations = event.citations?.length ? event.citations : current.citations
+            current.security_notice = securityNotice(event.security)
             tokenTip.value = `本轮 ${event.tokens.total_tokens} token`
             break
           case 'error':
             current.error_message = event.message
             current.run_status = 'FAILED'
+            current.security_notice = securityNotice(event.security)
             break
         }
       },
@@ -524,11 +604,13 @@ async function resume(message: PageMessage): Promise<void> {
             message.run_status = 'FINISHED'
             message.token_count = event.tokens.total_tokens
             message.citations = event.citations?.length ? event.citations : message.citations
+            message.security_notice = securityNotice(event.security)
             tokenTip.value = `本轮 ${event.tokens.total_tokens} token`
             break
           case 'error':
             message.error_message = event.message
             message.run_status = 'FAILED'
+            message.security_notice = securityNotice(event.security)
             break
           default:
             break
@@ -577,6 +659,59 @@ function scrollToBottom(): void {
   })
 }
 
+/** 当前生效范围的标签：会话已建立时以服务端返回为准，否则显示待生效的选择。 */
+const scopeChips = computed<{ key: string; label: string; type: 'primary' | 'success' }[]>(() => {
+  const current = data.sessions.find((item) => item.id === sessionId.value)
+  // 会话已建立时以服务端返回为准；未建立时只显示当前模式下待生效的选择
+  const meetingIds = current
+    ? current.scope_meeting_ids || []
+    : scopeMode.value === 'meeting'
+      ? scopeMeetingIds.value
+      : []
+  const seriesIds = current
+    ? current.scope_series_ids || []
+    : scopeMode.value === 'series'
+      ? scopeSeriesIds.value
+      : []
+  const chips: { key: string; label: string; type: 'primary' | 'success' }[] = []
+  for (const id of seriesIds) {
+    const series = data.series.find((item) => item.id === id)
+    chips.push({ key: `series-${id}`, label: `系列：${series?.name || id}`, type: 'success' })
+  }
+  for (const id of meetingIds) {
+    const meeting = data.meetings.find((item) => item.id === id)
+    chips.push({
+      key: `meeting-${id}`,
+      label: `会议：${meeting?.meeting_no || id}`,
+      type: 'primary',
+    })
+  }
+  return chips
+})
+
+/** 会话列表里的一行范围摘要。 */
+function scopeSummary(session: ChatSessionInfo): string {
+  const meetingCount = (session.scope_meeting_ids || []).length
+  const seriesCount = (session.scope_series_ids || []).length
+  if (!meetingCount && !seriesCount) return '全部会议'
+  const parts: string[] = []
+  if (seriesCount) parts.push(`${seriesCount} 个系列`)
+  if (meetingCount) parts.push(`${meetingCount} 场会议`)
+  return parts.join(' + ')
+}
+
+/** 安全标记 → 一句可读警示；没有命中规则时返回空串（不渲染警示条）。 */
+function securityNotice(security: ChatSecurity | null | undefined): string {
+  if (!security) return ''
+  const flags = security.flags || []
+  if (!flags.length && !security.blocked) return ''
+  const rules = Array.from(new Set(flags.map((flag) => flag.rule).filter(Boolean)))
+  const head = security.blocked
+    ? '本轮回答被安全策略拦截，内容可能不可信'
+    : '本轮内容命中安全规则，已按不可信内容处理'
+  return rules.length ? `${head}：${rules.join('、')}` : head
+}
+
 /** 答案里真正引用到的卡片（按出现顺序）。未引用的检索结果只在工具折叠里体现。 */
 function usedCitations(message: PageMessage): ChatCitation[] {
   const refs = splitCitations(message.content)
@@ -589,7 +724,7 @@ function usedCitations(message: PageMessage): ChatCitation[] {
 }
 
 function toolTitle(tools: ChatMessageInfo['tools']): string {
-  const names = tools.map((item) => item.name).join('、')
+  const names = tools.map((item) => chatToolText(item.name)).join('、')
   return `查询过程（${tools.length} 次：${names}）`
 }
 </script>
@@ -624,6 +759,34 @@ function toolTitle(tools: ChatMessageInfo['tools']): string {
 .scope-box {
   border-top: 1px solid #f0f2f5;
   padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scope-mode {
+  margin-bottom: 2px;
+}
+
+.scope-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.scope-chip-label {
+  font-size: 12px;
+  color: rgba(17, 24, 39, 0.5);
+}
+
+.scope-chip-tip {
+  font-size: 12px;
+  color: rgba(17, 24, 39, 0.4);
+  margin-left: 4px;
 }
 
 .scope-label {
@@ -748,6 +911,12 @@ function toolTitle(tools: ChatMessageInfo['tools']): string {
 
 .tool-name {
   font-weight: 600;
+}
+
+.tool-raw {
+  font-size: 11px;
+  color: rgba(17, 24, 39, 0.4);
+  font-family: monospace;
 }
 
 .tool-args {

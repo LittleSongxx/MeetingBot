@@ -3,8 +3,9 @@ from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime
 from fastapi import APIRouter, Depends
-from models import AgentRun, AiModelConfig, MeetingMinutes, TranscriptionTask, User
+from models import AgentRun, AiModelConfig, MeetingMinutes, ModelRoute, TranscriptionTask, User
 from pydantic import BaseModel, ConfigDict
+from services.model_config import ROUTE_KEYS
 
 router = APIRouter(prefix="/aiModel")
 
@@ -80,7 +81,8 @@ async def validate_payload(payload: AiModelPayload, old_config: AiModelConfig | 
     if not payload.name or not payload.base_url or not payload.model_name:
         raise CustomException("配置名称、API地址和模型名称不能为空")
     # 用途只接受下拉框里的取值；JUDGE 是可选跨族裁判，未配置时回退 AGENT
-    if payload.model_type not in {"TRANSCRIPTION", "MINUTES", "AGENT", "SPEAKER", "EMBEDDING", "JUDGE"}:
+    if payload.model_type not in {"TRANSCRIPTION", "MINUTES", "AGENT", "SPEAKER",
+                                  "EMBEDDING", "JUDGE", "CHEAP"}:
         raise CustomException("模型类型参数错误")
     # 纪要、纪要自检和说话人匹配走 OpenAI 兼容协议；转写走百炼自己的录音文件识别协议
     if payload.provider not in {"OPENAI_COMPATIBLE", "DASHSCOPE"}:
@@ -213,3 +215,71 @@ async def select_page(
     return Result.success(
         PageInfo(total=total, list=[model_dict(config) for config in configs])
     )
+
+
+class RoutePayload(BaseModel):
+    id: int | None = None
+    route_key: str = ""
+    model_config_id: int | None = None
+    enabled: bool = True
+    note: str | None = None
+
+
+def _route_dict(route: ModelRoute, config: AiModelConfig | None) -> dict:
+    return {
+        "id": route.id, "route_key": route.route_key,
+        "model_config_id": route.model_config_id,
+        "model_name": config.model_name if config else None,
+        "enabled": route.enabled, "note": route.note,
+        "create_time": format_datetime(route.create_time),
+        "update_time": format_datetime(route.update_time),
+    }
+
+
+@router.get("/routes")
+async def list_routes(_: User = Depends(require_admin)):
+    rows = await ModelRoute.all().order_by("route_key")
+    config_ids = {row.model_config_id for row in rows}
+    configs = {item.id: item for item in await AiModelConfig.filter(id__in=list(config_ids) or [-1])}
+    return Result.success([_route_dict(row, configs.get(row.model_config_id)) for row in rows])
+
+
+@router.post("/routes")
+async def add_route(payload: RoutePayload, _: User = Depends(require_admin)):
+    if payload.route_key not in ROUTE_KEYS:
+        raise CustomException("不支持的模型路由键")
+    if payload.model_config_id is None:
+        raise CustomException("请选择目标模型配置")
+    if not await AiModelConfig.filter(id=payload.model_config_id).exists():
+        raise CustomException("模型配置不存在")
+    if await ModelRoute.filter(route_key=payload.route_key).exists():
+        raise CustomException("该路由键已存在，请直接编辑")
+    route = await ModelRoute.create(
+        route_key=payload.route_key, model_config_id=payload.model_config_id,
+        enabled=payload.enabled, note=payload.note)
+    return Result.success(_route_dict(route, await AiModelConfig.get(id=payload.model_config_id)))
+
+
+@router.put("/routes/{route_id}")
+async def update_route(route_id: int, payload: RoutePayload,
+                       _: User = Depends(require_admin)):
+    route = await ModelRoute.get_or_none(id=route_id)
+    if route is None:
+        raise CustomException("模型路由不存在")
+    values: dict = {"enabled": payload.enabled, "note": payload.note}
+    if payload.model_config_id is not None:
+        if not await AiModelConfig.filter(id=payload.model_config_id).exists():
+            raise CustomException("模型配置不存在")
+        values["model_config_id"] = payload.model_config_id
+    await ModelRoute.filter(id=route_id).update(**values)
+    route = await ModelRoute.get(id=route_id)
+    config = await AiModelConfig.get_or_none(id=route.model_config_id)
+    return Result.success(_route_dict(route, config))
+
+
+@router.delete("/routes/{route_id}")
+async def delete_route(route_id: int, _: User = Depends(require_admin)):
+    deleted = await ModelRoute.filter(id=route_id).delete()
+    if not deleted:
+        raise CustomException("模型路由不存在")
+    return Result.success()

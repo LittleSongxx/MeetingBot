@@ -145,8 +145,13 @@ async def _embedding_config() -> AiModelConfig:
 
 
 async def _agent_config() -> AiModelConfig | None:
-    """Contextual Retrieval 用问答模型生成上下文句；没配就退回纯规则上下文。"""
-    return await AiModelConfig.filter(model_type="AGENT", enabled=True).order_by("-id").first()
+    """Contextual Retrieval 用问答/便宜模型生成上下文句；没配就退回纯规则上下文。"""
+    from services import model_config
+
+    try:
+        return await model_config.resolve_route("KB_CONTEXTUALIZE", "AGENT")
+    except model_config.ModelConfigError:
+        return None
 
 
 def contextual_enabled() -> bool:

@@ -17,7 +17,7 @@
 
 from __future__ import annotations
 
-from models import Meeting, MeetingParticipant, User
+from models import Meeting, MeetingParticipant, MeetingSeries, User
 from tortoise.expressions import Q
 
 
@@ -54,6 +54,51 @@ async def visible_meeting_ids(user: User, *, requested: list[int] | None = None)
     if requested:
         query = query.filter(id__in=requested)
     return [int(i) for i in await query.values_list("id", flat=True)]
+
+
+async def series_meeting_ids(series_ids: list[int]) -> dict[int, list[int]]:
+    """系列 → 该系列下的会议 id 列表。一次查询，避免每个系列各查一遍。"""
+    if not series_ids:
+        return {}
+    rows = await Meeting.filter(series_id__in=series_ids).values_list("series_id", "id")
+    grouped: dict[int, list[int]] = {}
+    for series_id, meeting_id in rows:
+        grouped.setdefault(int(series_id), []).append(int(meeting_id))
+    return grouped
+
+
+async def visible_series_ids(user: User, *, requested: list[int] | None = None
+                             ) -> list[int] | None:
+    """当前用户可见的系列 id。
+
+    系列不单独授权：管理员全量；其他人能看到自己负责的系列，或自己可见会议
+    所属的系列。`None` 与空列表的语义与 `visible_meeting_ids` 完全一致。
+    """
+    if user.role == "ADMIN" and not requested:
+        return None
+    visible_meetings = await visible_meeting_ids(user)
+    query = MeetingSeries.all()
+    if user.role != "ADMIN":
+        conditions = Q(owner_id=user.id)
+        if visible_meetings:
+            meeting_series = await Meeting.filter(
+                id__in=visible_meetings, series_id__isnull=False,
+            ).values_list("series_id", flat=True)
+            series_ids = sorted({int(item) for item in meeting_series})
+            if series_ids:
+                conditions |= Q(id__in=series_ids)
+        query = query.filter(conditions)
+    if requested:
+        query = query.filter(id__in=requested)
+    return [int(i) for i in await query.values_list("id", flat=True)]
+
+
+async def has_series_access(series: MeetingSeries, user: User) -> bool:
+    """能否访问某个系列：管理员、系列负责人、或系列下有可见会议。"""
+    if user.role == "ADMIN" or series.owner_id == user.id:
+        return True
+    visible = await visible_series_ids(user, requested=[series.id])
+    return bool(visible)
 
 
 async def has_meeting_access(meeting: Meeting, user: User) -> bool:

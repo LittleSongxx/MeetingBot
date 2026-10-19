@@ -12,6 +12,9 @@ import Meeting from '@/views/manager/Meeting.vue'
 import MeetingMaterial from '@/views/manager/MeetingMaterial.vue'
 import Transcription from '@/views/manager/Transcription.vue'
 import MeetingMinutes from '@/views/manager/MeetingMinutes.vue'
+import MeetingSeries from '@/views/manager/MeetingSeries.vue'
+import ActionItems from '@/views/manager/ActionItems.vue'
+import Memory from '@/views/manager/Memory.vue'
 import Agent from '@/views/manager/Agent.vue'
 import Chat from '@/views/manager/Chat.vue'
 import Observability from '@/views/manager/Observability.vue'
@@ -46,9 +49,15 @@ const router = createRouter({
         { path: 'meetingMaterial', meta: { name: '会议资料' }, component: MeetingMaterial },
         { path: 'transcription', meta: { name: '转写任务' }, component: Transcription },
         { path: 'meetingMinutes', meta: { name: '会议纪要' }, component: MeetingMinutes },
+        // 会议系列：周会/项目例会的容器（时间线 + 决策记忆 + 待办看板）
+        { path: 'series', meta: { name: '会议系列' }, component: MeetingSeries },
+        // 待办事项：看板/列表、状态更新留痕
+        { path: 'actionItems', meta: { name: '待办事项' }, component: ActionItems },
         { path: 'agent', meta: { name: '纪要自检' }, component: Agent },
         // 知识问答：检索 + 带引用回答
         { path: 'chat', meta: { name: '知识问答' }, component: Chat },
+        // 长期记忆：决策/结论/偏好的审核与维护
+        { path: 'memory', meta: { name: '长期记忆' }, component: Memory },
         { path: 'observability', meta: { name: '运行观测' }, component: Observability },
         { path: 'aiModel', meta: { name: 'AI模型配置', requiresAdmin: true }, component: AiModel },
         {

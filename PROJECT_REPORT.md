@@ -61,7 +61,7 @@ v3 下 baseline 核心点覆盖 0.781（deepseek 裁判）/ 0.869（qwen 裁判�
 
 ## 三、工程质量
 
-- **测试**：产品 576 项 + 评测 293 项 + 前端 33 项单元测试（全部零模型调用）；
+- **测试**：产品 615 项 + 评测 330 项 + 前端 65 项单元测试（全部零模型调用）；
   命令与实跑数字见 `DEPLOYMENT.md`，CI（`.github/workflows/ci.yml`）每次推送重跑并复算。
   CI 含前端四道门：`vue-tsc --noEmit`（全量 TS）、ESLint、Prettier `--check`、vitest。
 - **安全**：bcrypt 密码哈希、JWT 密码指纹（改密即吊销）、服务端 MIME 映射 +
@@ -94,6 +94,6 @@ v3 下 baseline 核心点覆盖 0.781（deepseek 裁判）/ 0.869（qwen 裁判�
 ```bash
 ./scripts/compose.sh up -d          # db + backend + web（http://127.0.0.1:18082）
 make -C evaluation smoke            # 零调用回归：契约不变量/可定位率/可靠性复算
-make -C evaluation test             # 评测侧 293 项单测
+make -C evaluation test             # 评测侧 330 项单测
 # 本地 ASR 侧车（可选引擎）：scripts/moss_asr_server.py + requirements-moss.txt
 ```

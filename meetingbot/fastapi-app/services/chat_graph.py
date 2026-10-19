@@ -433,6 +433,7 @@ _COUNT_KEYS = {
     "search_knowledge": ("hits", "条切片"),
     "list_facts": ("facts", "条事实"),
     "get_transcript_excerpt": ("segments", "句原文"),
+    "query_meeting_state": ("items", "条状态"),
 }
 
 

@@ -27,12 +27,19 @@ MESSAGE_ASSISTANT = "ASSISTANT"
 SESSION_TITLE_CHARS = 30
 
 
-async def create_session(user: User, *, meeting_ids: list[int] | None = None) -> ChatSession:
-    """建会话。范围先过一遍权限：用户无权看的会议不会进范围（静默取交集）。"""
+async def create_session(user: User, *, meeting_ids: list[int] | None = None,
+                         series_ids: list[int] | None = None) -> ChatSession:
+    """建会话。范围先过一遍权限：用户无权看的会议/系列不会进范围（静默取交集）。
+
+    `scope_series_ids` 只存系列 id，不展开成会议：系列后续新增会议时，
+    权限仍在每轮按当前可见会议实时判定，不会把"建会话时的快照"当成授权。
+    """
     scoped = await access.visible_meeting_ids(user, requested=meeting_ids or None)
+    scoped_series = await access.visible_series_ids(user, requested=series_ids or None)
     return await ChatSession.create(
         user_id=user.id, title="新对话",
         scope_meeting_ids=[] if scoped is None else sorted(scoped),
+        scope_series_ids=[] if scoped_series is None else sorted(scoped_series),
         last_active_time=now(),
     )
 
@@ -51,6 +58,7 @@ async def list_sessions(user: User, *, page_num: int = 1, page_size: int = 20) -
         (page_num - 1) * page_size).limit(page_size)
     return {"total": total, "list": [{
         "id": row.id, "title": row.title, "scope_meeting_ids": row.scope_meeting_ids or [],
+        "scope_series_ids": row.scope_series_ids or [],
         "message_count": row.message_count,
         "last_active_time": _fmt(row.last_active_time), "create_time": _fmt(row.create_time),
     } for row in rows], "pageNum": page_num, "pageSize": page_size}

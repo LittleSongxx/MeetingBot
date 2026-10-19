@@ -80,6 +80,8 @@ DAILY_TOKEN_BUDGET = int(os.getenv("CHAT_DAILY_TOKEN_BUDGET", "500000"))
 class SessionPayload(BaseModel):
     meeting_ids: list[int] | None = Field(
         default=None, description="本次对话限定的会议；留空表示当前用户可见的全部会议")
+    series_ids: list[int] | None = Field(
+        default=None, description="本次对话限定的系列；每轮按当前可见会议展开")
 
 
 class StreamPayload(BaseModel):
@@ -93,6 +95,7 @@ def _session_dict(session: ChatSession) -> dict[str, Any]:
     return {
         "id": session.id, "title": session.title,
         "scope_meeting_ids": session.scope_meeting_ids or [],
+        "scope_series_ids": session.scope_series_ids or [],
         "message_count": session.message_count,
     }
 
@@ -136,7 +139,8 @@ async def status(current_user: User = Depends(get_current_user)):
 async def create_session(payload: SessionPayload,
                          current_user: User = Depends(get_current_user)):
     try:
-        session = await chat_service.create_session(current_user, meeting_ids=payload.meeting_ids)
+        session = await chat_service.create_session(
+            current_user, meeting_ids=payload.meeting_ids, series_ids=payload.series_ids)
     except chat_service.ChatError as error:
         raise CustomException(str(error)) from error
     return Result.success(_session_dict(session))

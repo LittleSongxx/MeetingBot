@@ -86,7 +86,7 @@ INSERT INTO `department` VALUES (2, '市场运营部', '负责市场活动和运
 -- ----------------------------
 -- Records of meeting
 -- ----------------------------
-INSERT INTO `meeting` VALUES (2, 'MTG2026091010370115A0AF', '产品发布评审会议', '2026-09-10 10:40:00', '2026-09-10 13:00:00', '线上会议', '暂无', 1, 1, 'IN_PROGRESS', NULL, '2026-09-10 02:37:02', '2026-09-10 02:37:53');
+INSERT INTO `meeting` VALUES (2, 'MTG2026091010370115A0AF', '产品发布评审会议', '2026-09-10 10:40:00', '2026-09-10 13:00:00', '线上会议', '暂无', 1, 1, 'IN_PROGRESS', NULL, 1, '2026-09-10 02:37:02', '2026-09-10 02:37:53');
 
 -- ----------------------------
 -- Records of meeting_material
@@ -283,3 +283,16 @@ INSERT INTO `user` VALUES (9, 'chenlei', '$2b$10$brMvBunZvuYXcBlGR5B8veAufomGb0z
 INSERT INTO `user` VALUES (10, 'zhaomin', '$2b$10$brMvBunZvuYXcBlGR5B8veAufomGb0zW4O.wdKxnN7TwyesHuYh0.', '赵敏', NULL, 'EMPLOYEE', NULL, NULL, 2, '运营负责人', 'NORMAL', '2026-09-08 23:57:06', '2026-09-08 23:57:06');
 INSERT INTO `user` VALUES (11, 'zhouning', '$2b$10$brMvBunZvuYXcBlGR5B8veAufomGb0zW4O.wdKxnN7TwyesHuYh0.', '周宁', NULL, 'EMPLOYEE', NULL, NULL, 2, '客户支持负责人', 'NORMAL', '2026-09-08 23:57:06', '2026-09-08 23:57:06');
 INSERT INTO `user` VALUES (12, 'liuying', '$2b$10$brMvBunZvuYXcBlGR5B8veAufomGb0zW4O.wdKxnN7TwyesHuYh0.', '刘颖', NULL, 'EMPLOYEE', NULL, NULL, 2, '市场专员', 'NORMAL', '2026-09-08 23:57:06', '2026-09-08 23:57:06');
+
+
+-- ----------------------------
+-- Records of meeting_series / meeting_memory / action_item / action_item_event
+-- ----------------------------
+INSERT INTO `meeting_series` (`id`, `name`, `description`, `cadence`, `owner_id`, `status`, `create_time`, `update_time`) VALUES (1, '产品发布评审系列', '围绕产品发布范围、灰度与对外通稿的系列评审会', 'IRREGULAR', 1, 'ACTIVE', '2026-09-08 23:57:06', '2026-09-08 23:57:06');
+INSERT INTO `meeting_memory` (`id`, `scope_type`, `scope_id`, `kind`, `content`, `normalized`, `source_type`, `source_id`, `source_meeting_id`, `evidence_json`, `status`, `supersedes_id`, `valid_from`, `valid_to`, `created_by`, `confirmed_by`, `confirmed_time`, `create_time`, `update_time`) VALUES (1, 'SERIES', 1, 'DECISION', '9月1日9:00正式发布AI智能会议助手与任务跟踪系统，发布范围含会议全生命周期、AI纪要与知识库问答。', '9月1日9:00正式发布AI智能会议助手与任务跟踪系统', 'MINUTES', 3, 2, '{"quote":"同意于9月1日9:00正式发布AI智能会议助手与任务跟踪系统","speaker":"李月"}', 'CONFIRMED', NULL, '2026-09-10 10:40:29', NULL, 1, 1, '2026-09-10 10:41:00', '2026-09-10 10:41:00', '2026-10-19 09:00:00');
+INSERT INTO `meeting_memory` (`id`, `scope_type`, `scope_id`, `kind`, `content`, `normalized`, `source_type`, `source_id`, `source_meeting_id`, `evidence_json`, `status`, `supersedes_id`, `valid_from`, `valid_to`, `created_by`, `confirmed_by`, `confirmed_time`, `create_time`, `update_time`) VALUES (2, 'SERIES', 1, 'DECISION', '移动端附件下载进度问题须在发布前修复，并在发布说明中写明处理结果。', '移动端附件下载进度问题须在发布前修复', 'MINUTES', 3, 2, '{"quote":"移动端附件下载进度问题须在发布前修复","speaker":"张晨"}', 'PROPOSED', NULL, NULL, NULL, 1, NULL, NULL, '2026-10-19 09:00:00', '2026-10-19 09:00:00');
+INSERT INTO `meeting_memory` (`id`, `scope_type`, `scope_id`, `kind`, `content`, `normalized`, `source_type`, `source_id`, `source_meeting_id`, `evidence_json`, `status`, `supersedes_id`, `valid_from`, `valid_to`, `created_by`, `confirmed_by`, `confirmed_time`, `create_time`, `update_time`) VALUES (3, 'USER', 1, 'PREFERENCE', '回答先给结论，再给依据；没有资料时直接说没有找到。', '回答先给结论再给依据', 'MANUAL', NULL, NULL, NULL, 'CONFIRMED', NULL, '2026-10-19 09:00:00', NULL, 1, 1, '2026-10-19 09:00:00', '2026-10-19 09:00:00', '2026-10-19 09:00:00');
+INSERT INTO `action_item` (`id`, `series_id`, `meeting_id`, `minutes_id`, `source_field`, `source_index`, `content`, `owner_user_id`, `owner_name`, `deadline`, `deadline_text`, `status`, `evidence_json`, `dedupe_key`, `last_seen_meeting_id`, `created_by`, `create_time`, `update_time`) VALUES (1, 1, 2, 3, 'pending_items', 0, '移动端附件下载进度问题须在发布前修复', 5, '王工', '2026-08-30 18:00:00', '8月30日18:00', 'OPEN', '{"quote":"移动端附件下载进度问题须在发布前修复","speaker":"张晨"}', 'f7d3a1c1e2b4', 2, 1, '2026-10-19 09:10:00', '2026-10-19 09:10:00');
+INSERT INTO `action_item` (`id`, `series_id`, `meeting_id`, `minutes_id`, `source_field`, `source_index`, `content`, `owner_user_id`, `owner_name`, `deadline`, `deadline_text`, `status`, `evidence_json`, `dedupe_key`, `last_seen_meeting_id`, `created_by`, `create_time`, `update_time`) VALUES (2, 1, 2, 3, 'pending_items', 1, '发布前完成两组补充验收：长音频与多角色说话人匹配', 6, '陈琳', '2026-08-31 12:00:00', '8月31日12:00', 'OPEN', '{"quote":"发布前须完成两组补充验收","speaker":"陈琳"}', 'a1b2c3d4e5f6', 2, 1, '2026-10-19 09:10:00', '2026-10-19 09:10:00');
+INSERT INTO `action_item_event` (`id`, `action_item_id`, `event_type`, `from_value`, `to_value`, `note`, `actor_id`, `create_time`) VALUES (1, 1, 'CREATE', NULL, 'OPEN', '由已确认纪要生成', 1, '2026-10-19 09:10:00');
+INSERT INTO `action_item_event` (`id`, `action_item_id`, `event_type`, `from_value`, `to_value`, `note`, `actor_id`, `create_time`) VALUES (2, 2, 'CREATE', NULL, 'OPEN', '由已确认纪要生成', 1, '2026-10-19 09:10:00');

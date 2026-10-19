@@ -28,12 +28,18 @@ APP_DIR = Path(__file__).resolve().parents[1] / "meetingbot" / "fastapi-app"
 REQUIRED_COLUMNS = {
     "chat_message": {"plan_json", "run_status", "thread_id", "checkpoint_id",
                      "trace_id", "charged_tokens"},
+    "chat_session": {"scope_series_ids"},
+    "meeting": {"series_id"},
     "ai_call_log": {"cost_micro", "trace_id", "span_id"},
     "ai_model_config": {"input_price_micro_per_1k", "output_price_micro_per_1k"},
     "kb_chunk": {"embed_text"},
     "transcription_task": {"recorded_at"},
 }
-REQUIRED_TABLES = {"kb_index_task", "kb_document", "kb_chunk", "kb_index_outbox"}
+REQUIRED_TABLES = {
+    "kb_index_task", "kb_document", "kb_chunk", "kb_index_outbox",
+    "meeting_series", "meeting_memory", "action_item", "action_item_event",
+    "model_route", "online_eval_run", "online_eval_case",
+}
 
 
 def load_env(path: Path) -> dict[str, str]:

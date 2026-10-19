@@ -26,6 +26,8 @@ export interface ChatSessionInfo {
   title: string
   /** 本次对话限定的会议 id；空数组表示"当前用户可见的全部会议" */
   scope_meeting_ids: number[]
+  /** 本次对话限定的系列 id；与 scope_meeting_ids 取并集，空数组表示未按系列限定 */
+  scope_series_ids: number[]
   message_count: number
   last_active_time?: string | null
   create_time?: string | null
@@ -33,7 +35,8 @@ export interface ChatSessionInfo {
 
 export interface ChatCitation {
   ref: number
-  kind: 'chunk' | 'fact' | 'segment'
+  /** state 是长期记忆/待办的状态引用，其余是原文检索引用 */
+  kind: 'chunk' | 'fact' | 'segment' | 'state'
   meeting_id: number
   quote: string
   meeting_title?: string
@@ -44,6 +47,20 @@ export interface ChatCitation {
   minutes_id?: number
   field?: string | null
   item_index?: number
+  // ---- 以下字段只在 kind === 'state' 时出现 ----
+  /** DECISION / CONCLUSION / PREFERENCE / ACTION_ITEM */
+  state_type?: string
+  /** 记忆 id 或待办 id，点击卡片跳转时用 */
+  state_id?: number
+  /** 待办状态：OPEN / DONE / BLOCKED / CANCELLED；记忆状态：CONFIRMED 等 */
+  status?: string | null
+  owner_name?: string | null
+  /** 纪要里的原文期限（例如「下周五前」） */
+  deadline_text?: string | null
+  series_id?: number | null
+  series_name?: string | null
+  /** 工具返回的证据原文（有则卡片里单独展示） */
+  source_text?: string | null
 }
 
 export interface ChatToolCall {
@@ -81,6 +98,13 @@ export interface ChatStatus {
   vector_store_reachable: boolean
 }
 
+/** 一轮回答的安全标记（done/error 事件可选携带）：命中规则时页面显示警示条。 */
+export interface ChatSecurity {
+  flags: { rule: string; severity?: string; source?: string; match?: string }[]
+  /** 后端判定整轮被拦截时为 true；为 false 时只提示命中规则 */
+  blocked?: boolean
+}
+
 /** 流式事件的联合类型：页面 switch 这个 type，编译器保证不遗漏。 */
 export type ChatStreamEvent =
   | {
@@ -90,6 +114,7 @@ export type ChatStreamEvent =
       user_message_id: number
       model: string
       scope_meeting_ids: number[]
+      scope_series_ids?: number[]
       question: string
       trace_id?: string
       thread_id?: string
@@ -109,11 +134,28 @@ export type ChatStreamEvent =
       citations: ChatCitation[]
       tool_calls: number
       unknown_refs: number[]
+      security?: ChatSecurity | null
     }
-  | { type: 'error'; message: string; message_id?: number }
+  | {
+      type: 'error'
+      message: string
+      message_id?: number
+      security?: ChatSecurity | null
+    }
 
-export function createSession(meetingIds?: number[]): Promise<ApiResult<ChatSessionInfo>> {
-  return request.post<ChatSessionInfo>('/chat/session', { meeting_ids: meetingIds })
+/** 新建会话的范围：会议与系列取并集；都不传表示当前用户可见的全部会议。 */
+export interface CreateSessionPayload {
+  meetingIds?: number[]
+  seriesIds?: number[]
+}
+
+export function createSession(
+  payload: CreateSessionPayload = {},
+): Promise<ApiResult<ChatSessionInfo>> {
+  return request.post<ChatSessionInfo>('/chat/session', {
+    meeting_ids: payload.meetingIds,
+    series_ids: payload.seriesIds,
+  })
 }
 
 export function listSessions(
@@ -235,6 +277,7 @@ export async function streamChat(options: {
           user_message_id: Number(payload.user_message_id),
           model: String(payload.model ?? ''),
           scope_meeting_ids: (payload.scope_meeting_ids as number[]) ?? [],
+          scope_series_ids: (payload.scope_series_ids as number[]) ?? [],
           question: String(payload.question ?? ''),
           trace_id: payload.trace_id ? String(payload.trace_id) : undefined,
           thread_id: payload.thread_id ? String(payload.thread_id) : undefined,
@@ -252,6 +295,7 @@ export async function streamChat(options: {
           type: 'error',
           message: String(payload.message ?? '问答失败'),
           message_id: payload.message_id,
+          security: (payload.security as ChatSecurity | undefined) ?? null,
         })
         break
       default:

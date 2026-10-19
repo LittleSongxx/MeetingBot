@@ -64,13 +64,15 @@ MySQL 仅在 Compose 网络内开放，网页及后端仅绑定宿主机回环�
 ## 验证
 
 ```bash
-./scripts/compose.sh exec -T backend python -m unittest discover -s tests -v   # 产品 576 项
-make -C evaluation test && make -C evaluation smoke                            # 评测 293 项 + 零调用回归
-cd meetingbot/vue && npm ci && npm run type-check && npm run lint && npm run test   # 前端 33 项
+./scripts/compose.sh exec -T backend python -m unittest discover -s tests -v   # 产品 615 项
+make -C evaluation test && make -C evaluation smoke                            # 评测 330 项 + 零调用回归
+cd meetingbot/vue && npm ci && npm run type-check && npm run lint && npm run test   # 前端 65 项
 ```
 
-**新增表怎么进已有库**：`chat_session` / `chat_message`、KB 三表、`kb_index_outbox`
-以及后续增量列都由 aerich 迁移链管理（0–7 号）。
+**新增表怎么进已有库**：`chat_session` / `chat_message`、KB 三表、`kb_index_outbox`、
+系列/记忆/待办四表（`meeting_series` / `meeting_memory` / `action_item` /
+`action_item_event`）、模型路由与在线评测三表（`model_route` / `online_eval_run` /
+`online_eval_case`）以及后续增量列都由 aerich 迁移链管理（0–9 号）。
 
 - **空库 / 已经由当前 `db/01-schema.sql` 建好的库**：不要再从 0 号重放迁移
   （会在 2 号报 `Duplicate column`）。用带结构校验的登记脚本：
@@ -81,16 +83,17 @@ cd meetingbot/fastapi-app
 ```
 
   脚本会先检查当前结构的关键表/列；不是当前终态就拒绝 `--fake`。随后创建
-  `aerich` 表并登记 0–7 号版本，重复执行是幂等的。
+  `aerich` 表并登记 0–9 号版本，重复执行是幂等的。
 
 - **从旧版 schema.sql 升级的库**：先备份，按实际已有列手工执行缺少的增量；
   脚本检测到缺列会直接退出，不会把旧库伪装成最新。增量补齐后再跑登记脚本。
-- **迁移链本身**由 `tests/test_schema_sync.py` 重放 0–7 号并与 schema.sql 逐列比对；
+- **迁移链本身**由 `tests/test_schema_sync.py` 重放 0–9 号并与 schema.sql 逐列比对；
   空库 / 当前结构两条路径的终点必须一致。
 
 现有业务测试使用内存 SQLite 和 Mock 模型，包含实际 FFmpeg 格式处理，不需要付费 API。
 质量评测入口、固定样本、预算与指标口径见 `evaluation/README.md`。默认 dry-run 不调用模型；live 必须显式启用。
-本次授权上限是 30 次 Qwen 调用和 2 次录音转写。调用数不是金额硬上限，不应在评测期间重启后端或同时手动触发评测任务。
+本次授权上限是 30 次 Qwen 调用和 2 次录音转写。新增能力的付费预算与预注册见
+`evaluation/LEDGER.md`（总上限 ≤300 次调用；在线评测手动触发、单次 ≤50 条判定）。调用数不是金额硬上限，不应在评测期间重启后端或同时手动触发评测任务。
 合成样本的参考要点规则评分、模型自评分、真实录音转写运行结果分别报告；没有人工逐字稿时不报告 ASR 字错率。
 
 ## 停止与日志
@@ -177,8 +180,8 @@ uv pip install --python .venv/bin/python -r requirements.txt
 .venv/bin/python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-当前实测：**收集 576 项，570 项通过，6 项条件跳过**（5 个 PG 实库测试无 `PG_TEST_DSN`，1 个评测产物不在本工作区；CI 的 `postgres-integration` 作业会执行前五个）。
-评测侧 293 项、前端 33 项，命令见下文「验证」一节；数字以 CI 实跑为准。
+当前实测：**收集 615 项，609 项通过，6 项条件跳过**（5 个 PG 实库测试无 `PG_TEST_DSN`，1 个评测产物不在本工作区；CI 的 `postgres-integration` 作业会执行前五个）。
+评测侧 330 项、前端 65 项，命令见下文「验证」一节；数字以 CI 实跑为准。
 其中 74 项是契约层测试（`tests/test_contracts.py`），只依赖 pydantic、不碰数据库。
 数字以 CI（`.github/workflows/ci.yml` 的 backend 作业）每次实跑为准。
 
@@ -247,3 +250,16 @@ ALTER TABLE department
 
 **密钥泄露处置**：.env 曾被误提交入 git。若仓库曾离开本机，必须到供应商控制台轮换
 DASHSCOPE/LLM/MODELSCOPE 密钥与 MySQL/JWT 口令——历史剥离不能替代轮换。
+
+## 新增配置（均为可选，不填则行为与改造前一致）
+
+| 变量 | 作用 |
+|---|---|
+| `CHEAP_MODEL` / `CHEAP_API_KEY` / `CHEAP_BASE_URL` | 成本路由目标；不填不建 CHEAP 配置，`model_route` 为空时所有调用走原用途 |
+| `CHEAP_INPUT_PRICE_MICRO_PER_1K` / `CHEAP_OUTPUT_PRICE_MICRO_PER_1K` | CHEAP 单价；0 表示未定价（成本记 0，观测页单独计数） |
+| `JUDGE_MODEL` / `JUDGE_*` | 在线评测与离线判定使用；未配置时回退 AGENT 并在结果里如实标注 |
+
+启用顺序：先建 CHEAP 模型配置 → 在「AI模型配置 → 模型路由」加路由（可只开
+`SPEAKER`/`CHAT_SUMMARY`/`KB_QUERY_PLAN`）→ 看成本与缓存看板 → 质量非劣后再扩到
+`MINUTES`。结构化输出（纪要/自检/规划/摘要）的路由目标必须支持 strict JSON Schema，
+启动时会校验并在不满足时拒绝启动。

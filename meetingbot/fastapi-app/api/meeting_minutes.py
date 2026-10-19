@@ -1,10 +1,11 @@
+import logging
 from html import escape
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote
 
 from common import access
-from common.auth import get_current_user
+from common.auth import get_current_user, require_admin
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime, now
@@ -36,6 +37,7 @@ from tortoise.transactions import in_transaction
 from api.meeting import get_accessible_meeting
 
 router = APIRouter(prefix="/meetingMinutes")
+logger = logging.getLogger("meetingbot.meeting_minutes")
 
 
 class EditPayload(MinutesResult):
@@ -190,6 +192,43 @@ async def generate(task_id: int, current_user: User = Depends(get_current_user))
     return Result.success(await minutes_dict(minutes))
 
 
+async def sync_domain_candidates(minutes: MeetingMinutes, actor_id: int) -> dict:
+    """确认成功后的 best-effort 域同步：生成 PROPOSED 记忆与待办。
+
+    失败只记日志、不阻断确认：纪要归档是用户的主操作，候选生成是派生产物，
+    把它做成硬依赖会让「模型候选写失败」变成「纪要确认失败」。
+    """
+    result = {"memory_created": 0, "action_created": 0, "action_carried": 0}
+    try:
+        from services import memory_service
+        memory_result = await memory_service.propose_from_minutes(
+            minutes, actor_id=actor_id)
+        result["memory_created"] = int(memory_result.get("created", 0))
+    except Exception:
+        logger.exception("纪要 %s 确认后生成记忆候选失败（已忽略）", minutes.id)
+    try:
+        from services import action_item_service
+        action_result = await action_item_service.sync_from_minutes(
+            minutes, actor_id=actor_id)
+        result["action_created"] = int(action_result.get("created", 0))
+        result["action_carried"] = int(action_result.get("carried", 0))
+    except Exception:
+        logger.exception("纪要 %s 确认后同步待办失败（已忽略）", minutes.id)
+    return result
+
+
+async def reject_domain_candidates(minutes_id: int) -> None:
+    """取消确认/删除纪要时撤回候选：该纪要来源的 PROPOSED 记忆置 REJECTED。
+
+    待办**不删除**：它可能已经在别的会议上被结转/推进，历史要保留。
+    """
+    try:
+        from services import memory_service
+        await memory_service.reject_proposed_from_minutes(minutes_id)
+    except Exception:
+        logger.exception("纪要 %s 撤回记忆候选失败（已忽略）", minutes_id)
+
+
 async def delete_minutes(minutes: MeetingMinutes, current_user: User):
     """删除一份纪要。"""
     # 权限比查看更严：能看到这场会议不代表能删纪要，只有管理员或发起生成的人可以
@@ -202,6 +241,8 @@ async def delete_minutes(minutes: MeetingMinutes, current_user: User):
             kb_service.SOURCE_MINUTES, minutes.id, minutes.meeting_id,
             kb_outbox.STATE_DELETE)
         await MeetingMinutes.filter(id=minutes.id).delete()
+    # 纪要没了，它生成的候选就没有可回看的来源：撤回为 REJECTED（已确认记忆保留）
+    await reject_domain_candidates(minutes.id)
 
 
 @router.delete("/delete/{minutes_id}")
@@ -325,6 +366,9 @@ async def confirm(minutes_id: int, current_user: User = Depends(get_current_user
         await kb_outbox.mark_source_state(
             kb_service.SOURCE_MINUTES, minutes.id, minutes.meeting_id,
             kb_outbox.STATE_INDEX)
+    # 确认后生成候选：失败不影响确认结果（内部已吞异常并记日志）
+    confirmed = await MeetingMinutes.get(id=minutes.id)
+    await sync_domain_candidates(confirmed, current_user.id)
     return Result.success()
 
 
@@ -353,7 +397,29 @@ async def unconfirm(minutes_id: int, current_user: User = Depends(get_current_us
         await kb_outbox.mark_source_state(
             kb_service.SOURCE_MINUTES, minutes.id, minutes.meeting_id,
             kb_outbox.STATE_DELETE)
+    # 退回草稿后候选失去依据：撤回该纪要来源的 PROPOSED 记忆（待办保留）
+    await reject_domain_candidates(minutes.id)
     return Result.success()
+
+
+@router.post("/regenerateCandidates/{minutes_id}")
+async def regenerate_candidates(minutes_id: int, current_user: User = Depends(require_admin)):
+    """管理员：按当前纪要内容重新生成候选（记忆 + 待办），不删除历史已确认数据。"""
+    minutes = await get_accessible_minutes(minutes_id, current_user)
+    if minutes.status != "CONFIRMED":
+        raise CustomException("只有已确认的纪要可以重新生成候选")
+    from services import action_item_service, memory_service
+
+    memory_result = await memory_service.regenerate_from_minutes(
+        minutes_id, actor_id=current_user.id)
+    action_result = await action_item_service.regenerate_from_minutes(
+        minutes_id, actor_id=current_user.id)
+    return Result.success({
+        "memory_rejected": int(memory_result.get("rejected", 0)),
+        "memory_created": int(memory_result.get("created", 0)),
+        "action_created": int(action_result.get("created", 0)),
+        "action_carried": int(action_result.get("carried", 0)),
+    })
 
 
 def section_rows(title: str, items: list, columns: list[str]) -> list[list[str]]:

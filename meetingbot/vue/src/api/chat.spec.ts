@@ -1,6 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { streamChat, type ChatStreamEvent } from '@/api/chat'
+import { createSession, streamChat, type ChatStreamEvent } from '@/api/chat'
+
+// createSession 走 axios 实例（@/utils/request），这里换成纯 mock；
+// streamChat 走 fetch，不受影响（下面用 stubGlobal 单独控制）。
+const requestMocks = vi.hoisted(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  delete: vi.fn(),
+}))
+
+vi.mock('@/utils/request', () => ({ default: requestMocks }))
 
 /** 构造一个"像 Response"的对象：只需要 ok/status/body/json 四个用到的东西。 */
 function responseOf(chunks: string[], init: Partial<Response> = {}): Response {
@@ -20,6 +31,7 @@ const DONE =
 describe('streamChat', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.clearAllMocks()
     localStorage.clear()
   })
 
@@ -120,5 +132,40 @@ describe('streamChat', () => {
     await expect(streamChat({ sessionId: 1, question: '问', onEvent: () => {} })).rejects.toThrow(
       '连接中断',
     )
+  })
+
+  it('meta 的系列范围与 done 的安全标记原样透传', async () => {
+    const frames = [
+      'event: meta\ndata: {"session_id":1,"message_id":9,"model":"m","scope_meeting_ids":[],"scope_series_ids":[3],"question":"q"}\n\n',
+      'event: done\ndata: {"message_id":9,"stop_reason":"finished","notice":"","tokens":{"total_tokens":3},"citations":[],"tool_calls":0,"unknown_refs":[],"security":{"flags":[{"rule":"injection.ignore_instructions","severity":"high","source":"user","match":"忽略"}],"blocked":false}}\n\n',
+    ]
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(responseOf(frames)))
+    const events: ChatStreamEvent[] = []
+    await streamChat({ sessionId: 1, question: '问', onEvent: (event) => events.push(event) })
+    expect(events[0]).toMatchObject({ type: 'meta', scope_series_ids: [3] })
+    expect(events[1]).toMatchObject({
+      type: 'done',
+      security: { blocked: false, flags: [{ rule: 'injection.ignore_instructions' }] },
+    })
+  })
+})
+
+describe('createSession', () => {
+  it('会议与系列范围一起提交（后端取并集）', async () => {
+    requestMocks.post.mockResolvedValue({ code: '200', msg: 'ok', data: { id: 1 } })
+    await createSession({ meetingIds: [5], seriesIds: [3] })
+    expect(requestMocks.post).toHaveBeenCalledWith('/chat/session', {
+      meeting_ids: [5],
+      series_ids: [3],
+    })
+  })
+
+  it('不选范围时两个字段都是 undefined（全部可见会议）', async () => {
+    requestMocks.post.mockResolvedValue({ code: '200', msg: 'ok', data: { id: 2 } })
+    await createSession()
+    expect(requestMocks.post).toHaveBeenCalledWith('/chat/session', {
+      meeting_ids: undefined,
+      series_ids: undefined,
+    })
   })
 })
