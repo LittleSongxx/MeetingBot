@@ -17,11 +17,17 @@
 export interface SseEvent {
   event: string
   data: string
+  /** 服务端事件 id（用于 Last-Event-ID 续传） */
+  id?: string
+  /** 服务端建议的重连间隔（毫秒） */
+  retry?: number
 }
 
 /** 把一段块（两个空行之间）解析成事件；只有注释行时返回 null。 */
 export function parseSseBlock(block: string): SseEvent | null {
   let event = 'message'
+  let id: string | undefined
+  let retry: number | undefined
   const dataLines: string[] = []
   let sawField = false
   for (const rawLine of block.split(/\r?\n/)) {
@@ -37,10 +43,17 @@ export function parseSseBlock(block: string): SseEvent | null {
     } else if (field === 'data') {
       dataLines.push(value)
       sawField = true
+    } else if (field === 'id') {
+      id = value
+      sawField = true
+    } else if (field === 'retry') {
+      const parsed = Number(value)
+      if (Number.isFinite(parsed)) retry = parsed
+      sawField = true
     }
   }
   if (!sawField) return null
-  return { event, data: dataLines.join('\n') }
+  return { event, data: dataLines.join('\n'), id, retry }
 }
 
 /**

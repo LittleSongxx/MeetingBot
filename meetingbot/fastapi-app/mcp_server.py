@@ -12,7 +12,7 @@ text content、把异常包成可读错误。
 - 中间件（CORS、限流、追踪）随父应用自动继承，独立进程要再配一遍；
 - 鉴权复用同一个 JWT 校验函数（含密码指纹 `pv`），不存在"MCP 侧忘了校验 pv"
   这种只在一条路径上出现的漏洞；
-- 部署形态不变（还是那六个容器），少一个进程就少一处要监控的东西。
+- 部署形态不变（compose 仍是同一组服务），少一个进程就少一处要监控的东西。
 
 代价是 MCP 的会话状态与 Web 进程同生命周期——因此用 `stateless_http=True`：
 每个请求自成一次会话，不留服务端状态，多副本部署也不粘会话。
@@ -35,6 +35,7 @@ import logging
 import os
 from typing import Annotated, Any, Awaitable, Callable
 
+from common import tracing
 from common.auth import user_from_token
 from common.exception_handler import CustomException
 from mcp.server.mcpserver import Context, MCPServer
@@ -81,7 +82,11 @@ def _make_runner(spec: kb_tools.ToolSpec) -> Callable[..., Awaitable[str]]:
         except CustomException as error:
             # 鉴权失败对客户端是"这次调用不成立"，不是服务端故障
             return kb_tools.tool_result_text({"ok": False, "error": error.message})
-        result = await kb_tools.execute_tool(actor, spec.name, kwargs)
+        token = tracing.set_trace_id(tracing.new_trace_id())
+        try:
+            result = await kb_tools.execute_tool(actor, spec.name, kwargs)
+        finally:
+            tracing.reset_trace_id(token)
         return kb_tools.tool_result_text(result)
 
     # 把参数名、类型与默认值写成真实签名：MCP 靠它做参数校验与 schema 派生，

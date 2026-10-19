@@ -131,6 +131,39 @@ class CitationRegistry:
             annotated[key] = [item for item, _ in pairs]
         return annotated
 
+    @classmethod
+    def from_dicts(cls, items: list[dict[str, Any]] | None) -> "CitationRegistry":
+        """从落库的引用快照重建登记表（恢复一轮对话时用）。
+
+        重新按顺序发号：旧快照里的编号可能有缺号/重复；恢复后的新引用必须从
+        max+1 继续，不能让 `[n]` 指向另一条。
+        """
+        registry = cls()
+        for item in sorted(items or [], key=lambda row: int(row.get("ref") or 0)):
+            if not isinstance(item, dict):
+                continue
+            candidate = Citation(
+                ref=0,
+                kind=str(item.get("kind") or KIND_CHUNK),
+                meeting_id=int(item.get("meeting_id") or 0),
+                quote=str(item.get("quote") or ""),
+                meeting_title=str(item.get("meeting_title") or ""),
+                chunk_id=item.get("chunk_id"),
+                minutes_id=item.get("minutes_id"),
+                field=item.get("field"),
+                item_index=item.get("item_index"),
+                speaker=item.get("speaker"),
+                start_second=item.get("start_second"),
+                end_second=item.get("end_second"),
+                authority=item.get("authority"),
+                source_text=item.get("source_text"),
+                source_id=item.get("source_id"),
+                task_id=item.get("task_id"),
+                segment_no=item.get("segment_no"),
+            )
+            registry._register(candidate)
+        return registry
+
     def _register(self, candidate: Citation) -> Citation:
         existing = self._by_key.get(candidate.key)
         if existing is not None:

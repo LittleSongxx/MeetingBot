@@ -178,7 +178,7 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
             excerpt = await transcript_excerpt(self.task.id)
             await execute_agent_run(run.id)
         self.assertEqual([call.args[5] for call in model.await_args_list],
-                         ["AGENT_REVIEW", "AGENT_REVIEW_SUPPORT", "AGENT_REFINE"])
+                         ["AGENT_REVIEW", "AGENT_JUDGE", "AGENT_REFINE"])
         for call in model.await_args_list:
             self.assertIn(excerpt, call.args[3])
             self.assertNotIn("未提供的尾部证据", call.args[3])
@@ -206,7 +206,7 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await AgentRun.get(id=run.id)).status, "WAITING_CONFIRMATION")
         self.assertEqual(model.await_args_list[2].args[5], "AGENT_REFINE")
         # 中间那次是支撑复核：审查意见要先过"依据是否支撑该判定"
-        self.assertEqual(model.await_args_list[1].args[5], "AGENT_REVIEW_SUPPORT")
+        self.assertEqual(model.await_args_list[1].args[5], "AGENT_JUDGE")
 
     def test_model_json_and_issue_line(self):
         # 模型把 JSON 包在代码块里时，解析器剥掉围栏；返回数组或非 JSON 文本时抛异常

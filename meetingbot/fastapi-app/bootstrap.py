@@ -50,6 +50,19 @@ async def main():
              os.getenv("EMBEDDING_MODEL", "text-embedding-v4"), int(os.getenv("EMBEDDING_TIMEOUT_SECONDS", "120")),
              embed_price_in, 0),
         ]
+        # 跨族裁判是可选用途：只有显式给了 JUDGE_MODEL 才建配置；
+        # 未配置时产品侧 resolve("JUDGE", fallback="AGENT") 自动回退。
+        judge_model = (os.getenv("JUDGE_MODEL") or "").strip()
+        if judge_model:
+            specs.append((
+                "JUDGE",
+                (os.getenv("JUDGE_API_KEY") or "").strip() or llm_key,
+                "OPENAI_COMPATIBLE",
+                (os.getenv("JUDGE_BASE_URL") or llm_url).rstrip("/"),
+                judge_model,
+                int(os.getenv("JUDGE_TIMEOUT_SECONDS", "180")),
+                0, 0,
+            ))
         configured = []
         for kind, key, provider, base_url, model, timeout, price_in, price_out in specs:
             if not key:

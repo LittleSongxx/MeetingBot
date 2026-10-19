@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import List
 from uuid import uuid4
 
 from common import access
 from common.auth import get_current_user, require_admin
 from common.exception_handler import CustomException
+from common.paths import MATERIAL_DIR
 from common.result import PageInfo, Result
 from common.times import format_datetime, now, to_local
 from fastapi import APIRouter, Depends
@@ -22,10 +22,8 @@ from models import (
     User,
 )
 from pydantic import BaseModel, ConfigDict, Field
+from services import kb_outbox, kb_service
 from tortoise.transactions import in_transaction
-
-# 会议资料的存放目录，删除会议时要把这些文件一并从磁盘上清掉
-MATERIAL_DIR = Path(__file__).resolve().parent.parent / "files" / "meeting_material"
 
 router = APIRouter(prefix="/meeting")
 
@@ -398,6 +396,20 @@ async def delete(meeting_id: int, _: User = Depends(require_admin)):
     materials = await MeetingMaterial.filter(meeting_id=meeting_id)
 
     async with in_transaction():
+        # 先写派生索引的 DELETE 期望状态：来源行马上要没了，之后无法再推导 id
+        minute_ids = await MeetingMinutes.filter(
+            meeting_id=meeting_id).values_list("id", flat=True)
+        transcription_ids = await TranscriptionTask.filter(
+            meeting_id=meeting_id).values_list("id", flat=True)
+        for minutes_id in minute_ids:
+            await kb_outbox.mark_source_state(
+                kb_service.SOURCE_MINUTES, int(minutes_id), meeting_id,
+                kb_outbox.STATE_DELETE)
+        for transcription_id in transcription_ids:
+            await kb_outbox.mark_source_state(
+                kb_service.SOURCE_TRANSCRIPT, int(transcription_id), meeting_id,
+                kb_outbox.STATE_DELETE)
+
         # Agent 的步骤按 run_id 关联，同样先取运行ID
         run_ids = await AgentRun.filter(meeting_id=meeting_id).values_list("id", flat=True)
         if run_ids:

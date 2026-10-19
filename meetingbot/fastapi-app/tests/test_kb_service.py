@@ -10,10 +10,8 @@ from __future__ import annotations
 
 import os
 import unittest
-from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
-from common.times import LOCAL_TZ
 from models import (
     AiModelConfig,
     KbChunk,
@@ -26,6 +24,7 @@ from models import (
     User,
 )
 from services import kb_service
+from temporalio.exceptions import ApplicationError
 from tortoise import Tortoise
 
 
@@ -71,6 +70,17 @@ class _KbBase(unittest.IsolatedAsyncioTestCase):
         return await KbIndexTask.filter(
             source_type=kb_service.SOURCE_TRANSCRIPT).order_by("-id").first()
 
+    def _search_hit(self, chunk_id: int, score: float = 0.5,
+                    *, text: str | None = None) -> kb_service.Hit:
+        return kb_service.Hit(
+            chunk_id=chunk_id, score=score, text=text or f"第{chunk_id}片",
+            meeting_id=self.meeting.id, authority="RAW",
+            chunk_type="TRANSCRIPT_WINDOW", field=None, item_index=None,
+            speaker=None, start_ms=chunk_id * 1000, end_ms=chunk_id * 1000 + 500,
+            document_id=chunk_id, origin=None, source_id=None,
+            source_type=None,
+        )
+
 
 class IndexTranscriptTest(_KbBase):
     async def _run_index(self, task_id: int, *, side_effect=None):
@@ -81,9 +91,13 @@ class IndexTranscriptTest(_KbBase):
         embed = AsyncMock(side_effect=side_effect or self._ok_vectors())
         upsert, delete = AsyncMock(), AsyncMock()
         with patch.object(kb_service.model_factory, "embed_texts", embed), \
-             patch.object(kb_service.qdrant, "ensure_collection", AsyncMock()), \
-             patch.object(kb_service.qdrant, "upsert_chunks", upsert), \
-             patch.object(kb_service.qdrant, "delete_points", delete), \
+             patch.object(kb_service.pg_kb, "available", return_value=True), \
+             patch.object(kb_service.pg_kb, "ensure_schema", AsyncMock()), \
+             patch.object(kb_service.pg_kb, "upsert_chunks", AsyncMock()), \
+             patch.object(kb_service.pg_kb, "missing_embeddings", AsyncMock(return_value=[])), \
+             patch.object(kb_service.pg_kb, "upsert_embeddings", upsert), \
+             patch.object(kb_service.pg_kb, "delete_chunks", delete), \
+             patch.object(kb_service.pg_kb, "delete_by_source", AsyncMock()), \
              patch.object(kb_service.task_queue, "enqueue", AsyncMock()):
             kb_task_id = await kb_service.schedule_kb_index(
                 kb_service.SOURCE_TRANSCRIPT, task_id, self.meeting.id, self.user.id)
@@ -106,11 +120,10 @@ class IndexTranscriptTest(_KbBase):
         self.assertEqual(kb_task.embedded_count, len(chunks))
         self.assertGreaterEqual(embed.await_count, 1)
 
-        # 向量库拿到的载荷必须带 meeting_id 与 authority——过滤就靠这两个字段
         written = upsert.await_args.args[0]
-        self.assertEqual({p["payload"]["meeting_id"] for p in written}, {self.meeting.id})
-        self.assertEqual({p["payload"]["authority"] for p in written}, {"RAW"})
-        self.assertTrue(all(p["sparse"]["indices"] for p in written))
+        self.assertEqual({chunk_id for chunk_id, _vector in written},
+                         set(await KbChunk.filter(document_id=kb_task.document_id).values_list("id", flat=True)))
+        self.assertTrue(all(len(vector) > 0 for _, vector in written))
 
     async def test_unchanged_content_does_not_re_embed(self):
         task = await self._transcript()
@@ -123,6 +136,31 @@ class IndexTranscriptTest(_KbBase):
         self.assertIn("未变化", kb_task.stage)
         self.assertEqual(embed2.await_count, 0, "内容未变化时不该重复为嵌入付费")
         self.assertEqual(upsert2.await_count, 0, "内容未变化时不该重写向量")
+
+    async def test_unchanged_content_repairs_missing_pg_vectors(self):
+        task = await self._transcript()
+        kb_task_id, _, _, _ = await self._run_index(task.id)
+        document_id = (await KbIndexTask.get(id=kb_task_id)).document_id
+        chunk_ids = list(await KbChunk.filter(document_id=document_id)
+                         .values_list("id", flat=True))
+        embed = AsyncMock(side_effect=self._ok_vectors())
+        upsert = AsyncMock()
+        with patch.object(kb_service.model_factory, "embed_texts", embed), \
+             patch.object(kb_service.pg_kb, "available", return_value=True), \
+             patch.object(kb_service.pg_kb, "ensure_schema", AsyncMock()), \
+             patch.object(kb_service.pg_kb, "upsert_chunks", AsyncMock()), \
+             patch.object(kb_service.pg_kb, "missing_embeddings",
+                          AsyncMock(return_value=chunk_ids[:1])), \
+             patch.object(kb_service.pg_kb, "upsert_embeddings", upsert), \
+             patch.object(kb_service.task_queue, "enqueue", AsyncMock()):
+            kb_task_id = await kb_service.schedule_kb_index(
+                kb_service.SOURCE_TRANSCRIPT, task.id, self.meeting.id, self.user.id)
+            await kb_service.execute_kb_index(kb_task_id)
+        self.assertGreater(embed.await_count, 0, "缺向量的来源必须补嵌")
+        upsert.assert_awaited()
+        kb_task = await KbIndexTask.get(id=kb_task_id)
+        self.assertEqual(kb_task.status, kb_service.SUCCEEDED)
+        self.assertIn("补齐", kb_task.stage or "")
 
     async def test_changed_content_rebuilds_and_drops_old_chunks(self):
         task = await self._transcript()
@@ -155,8 +193,9 @@ class IndexTranscriptTest(_KbBase):
             raise RuntimeError("嵌入服务 429")
 
         # 批次压到 1：这样第 1 片成功、第 2 片失败，才真的考到"部分成功"。
-        # 断言具体类型：嵌入失败原样抛出（可重试类），不会被包成 ApplicationError
-        with patch.object(kb_service, "_UPSERT_BATCH_SIZE", 1), self.assertRaises(RuntimeError):
+        # 失败会落 FAILED 并抛 non_retryable，避免 Temporal 重试撞 FAILED 空转。
+        with patch.object(kb_service, "_UPSERT_BATCH_SIZE", 1), \
+                self.assertRaises(ApplicationError):
             await self._run_index(task.id, side_effect=flaky)
 
         kb_task = await self._only_task()
@@ -188,15 +227,6 @@ class IndexTranscriptTest(_KbBase):
         self.assertGreaterEqual(before, 1)
 
 
-    async def test_payload_carries_the_meeting_start_epoch(self):
-        """会议开始时间进 payload：时间过滤（"最近七天"）靠它，靠录音内偏移做不到。"""
-        task = await self._transcript()
-        _, _, upsert, _ = await self._run_index(task.id)
-        payload = upsert.await_args.args[0][0]["payload"]
-        # 2026-09-10 10:40:00 本地（UTC+8）→ epoch 秒
-        self.assertEqual(payload["meeting_start_epoch"],
-                         int(datetime(2026, 9, 10, 10, 40, tzinfo=LOCAL_TZ).timestamp()))
-
 class IndexMinutesTest(_KbBase):
     async def _minutes(self, *, status: str) -> MeetingMinutes:
         task = await self._transcript()
@@ -211,9 +241,13 @@ class IndexMinutesTest(_KbBase):
         upsert = AsyncMock()
         with patch.object(kb_service.model_factory, "embed_texts",
                           AsyncMock(side_effect=self._ok_vectors())), \
-             patch.object(kb_service.qdrant, "ensure_collection", AsyncMock()), \
-             patch.object(kb_service.qdrant, "upsert_chunks", upsert), \
-             patch.object(kb_service.qdrant, "delete_points", AsyncMock()), \
+             patch.object(kb_service.pg_kb, "available", return_value=True), \
+             patch.object(kb_service.pg_kb, "ensure_schema", AsyncMock()), \
+             patch.object(kb_service.pg_kb, "upsert_chunks", AsyncMock()), \
+             patch.object(kb_service.pg_kb, "missing_embeddings", AsyncMock(return_value=[])), \
+             patch.object(kb_service.pg_kb, "upsert_embeddings", upsert), \
+             patch.object(kb_service.pg_kb, "delete_chunks", AsyncMock()), \
+             patch.object(kb_service.pg_kb, "delete_by_source", AsyncMock()), \
              patch.object(kb_service.task_queue, "enqueue", AsyncMock()):
             kb_task_id = await kb_service.schedule_kb_index(
                 kb_service.SOURCE_MINUTES, minutes_id, self.meeting.id, self.user.id)
@@ -233,9 +267,23 @@ class IndexMinutesTest(_KbBase):
         kb_task = await KbIndexTask.get(id=kb_task_id)
         self.assertEqual(kb_task.status, kb_service.SUCCEEDED)
         written = upsert.await_args.args[0]
-        self.assertEqual({p["payload"]["authority"] for p in written}, {"CONFIRMED"})
+        self.assertTrue(written)
+        self.assertTrue(all(len(vector) > 0 for _, vector in written))
         document = await KbDocument.get(id=kb_task.document_id)
         self.assertEqual(document.authority, kb_service.chunking.AUTHORITY_CONFIRMED)
+
+
+    async def test_empty_source_removes_previous_documents(self):
+        minutes = await self._minutes(status="CONFIRMED")
+        await self._run(minutes.id)
+        self.assertGreater(await KbDocument.filter(source_id=minutes.id).count(), 0)
+
+        await MeetingMinutes.filter(id=minutes.id).update(
+            summary="", decisions_json=[], topics_json=[], viewpoints_json=[],
+            pending_items_json=[], risks_json=[])
+        await self._run(minutes.id)
+        self.assertEqual(await KbDocument.filter(source_id=minutes.id).count(), 0)
+        self.assertEqual(await KbChunk.filter().count(), 0)
 
 
 class SearchKnowledgeTest(_KbBase):
@@ -245,27 +293,37 @@ class SearchKnowledgeTest(_KbBase):
                 "   ", allowed_meeting_ids=[self.meeting.id]), [])
             self.assertEqual(embed.await_count, 0)
 
-    async def test_hits_are_mapped_from_payload(self):
-        payload = {"meeting_id": self.meeting.id, "authority": "CONFIRMED",
-                   "chunk_type": "MINUTES_ITEM", "field": "decisions", "item_index": 0,
-                   "origin": "stated", "speaker": None, "start_ms": None, "end_ms": None,
-                   "document_id": 7, "text": "[decisions] 隐藏报表导出入口"}
+    async def test_hits_are_mapped_from_mysql(self):
+        minutes = await MeetingMinutes.create(
+            meeting_id=self.meeting.id, source_task_id=99, model_config_id=self.config.id,
+            status="CONFIRMED", created_by=self.user.id, summary="摘要")
+        document = await KbDocument.create(
+            meeting_id=self.meeting.id, source_type=kb_service.SOURCE_MINUTES,
+            source_id=minutes.id, task_id=1, authority="CONFIRMED",
+            content_hash="x", chunk_count=1, embed_model="m", embed_dim=8)
+        chunk = await KbChunk.create(
+            document_id=document.id, meeting_id=self.meeting.id, chunk_no=1,
+            chunk_type="MINUTES_ITEM", field="decisions", item_index=0,
+            origin="stated", text="[decisions] 隐藏报表导出入口")
         with patch.object(kb_service.model_factory, "embed_texts", AsyncMock(return_value=[[0.1] * 8])), \
-             patch.object(kb_service.qdrant, "hybrid_search",
-                          AsyncMock(return_value=[{"chunk_id": 42, "score": 0.5, "payload": payload}])) as search:
+             patch.object(kb_service.pg_kb, "dense_search",
+                          AsyncMock(return_value=[{"chunk_id": chunk.id, "score": 0.5}])) as search, \
+             patch.object(kb_service.pg_kb, "available", return_value=True), \
+             patch.object(kb_service.pg_kb, "bm25_search", AsyncMock(return_value=[])):
             hits = await kb_service.search_knowledge("报表导出", allowed_meeting_ids=None, limit=3)
         self.assertEqual(len(hits), 1)
-        self.assertEqual(hits[0].chunk_id, 42)
+        self.assertEqual(hits[0].chunk_id, chunk.id)
         citation = hits[0].as_citation()
         self.assertEqual(citation["field"], "decisions")
         self.assertEqual(citation["authority"], "CONFIRMED")
         self.assertIsNone(citation["start_second"])
-        # None 表示管理员不过滤，不能在这里被当成"空集合"
         self.assertIsNone(search.await_args.kwargs["allowed_meeting_ids"])
 
     async def test_empty_permission_set_is_passed_through_unchanged(self):
         with patch.object(kb_service.model_factory, "embed_texts", AsyncMock(return_value=[[0.1] * 8])), \
-             patch.object(kb_service.qdrant, "hybrid_search", AsyncMock(return_value=[])) as search:
+             patch.object(kb_service.pg_kb, "dense_search", AsyncMock(return_value=[])) as search, \
+             patch.object(kb_service.pg_kb, "available", return_value=True), \
+             patch.object(kb_service.pg_kb, "bm25_search", AsyncMock(return_value=[])):
             await kb_service.search_knowledge("报表导出", allowed_meeting_ids=[], limit=3)
         self.assertEqual(search.await_args.kwargs["allowed_meeting_ids"], [],
                          "空权限集合必须原样传递，不能变成 None（那会变成越权）")
@@ -276,16 +334,21 @@ class SearchKnowledgeTest(_KbBase):
             await kb_service.search_knowledge("任意问题", allowed_meeting_ids=None)
         self.assertIn("嵌入模型配置", str(caught.exception))
 
-    async def test_filters_are_passed_down_to_the_vector_store(self):
+    async def test_filters_are_passed_down_to_both_retrievers(self):
         with patch.object(kb_service.model_factory, "embed_texts", AsyncMock(return_value=[[0.1] * 8])), \
-             patch.object(kb_service.qdrant, "hybrid_search", AsyncMock(return_value=[])) as search:
+             patch.object(kb_service.pg_kb, "dense_search", AsyncMock(return_value=[])) as dense, \
+             patch.object(kb_service.pg_kb, "available", return_value=True), \
+             patch.object(kb_service.pg_kb, "bm25_search", AsyncMock(return_value=[])) as bm25:
             await kb_service.search_knowledge(
                 "灰度", allowed_meeting_ids=[self.meeting.id], chunk_type=["TRANSCRIPT_WINDOW"],
+                source_ids=[6], source_types=["TRANSCRIPT"],
                 meeting_time_from=1_700_000_000, meeting_time_to=1_700_900_000)
-        kwargs = search.await_args.kwargs
-        self.assertEqual(kwargs["chunk_type"], ["TRANSCRIPT_WINDOW"])
-        self.assertEqual(kwargs["meeting_time_from"], 1_700_000_000)
-        self.assertEqual(kwargs["meeting_time_to"], 1_700_900_000)
+        for kwargs in (dense.await_args.kwargs, bm25.await_args.kwargs):
+            self.assertEqual(kwargs["chunk_type"], ["TRANSCRIPT_WINDOW"])
+            self.assertEqual(kwargs["source_ids"], [6])
+            self.assertEqual(kwargs["source_types"], ["TRANSCRIPT"])
+            self.assertEqual(kwargs["meeting_time_from"], 1_700_000_000)
+            self.assertEqual(kwargs["meeting_time_to"], 1_700_900_000)
 
     def test_embedding_scope_is_part_of_the_fingerprint(self):
         """换嵌入模型/维度/collection 都要触发重建——否则新库里没有这些向量，
@@ -314,6 +377,12 @@ if __name__ == "__main__":
 class RerankTest(_KbBase):
     """rerank 是**专用模型**（qwen3.7-text-rerank）：开关控制、失败不打断检索。"""
 
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
+        patcher = patch.object(kb_service, "_hits_by_ids", side_effect=self._map_hits)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_enabled_by_default(self):
         with patch.dict(os.environ, {}, clear=False):
             os.environ.pop("KB_RERANK_ENABLED", None)
@@ -331,17 +400,19 @@ class RerankTest(_KbBase):
                              kb_service.DEFAULT_RERANK_CANDIDATES)
 
     def _hits(self, count: int) -> list[dict]:
-        return [{"chunk_id": index, "score": 0.5,
-                 "payload": {"meeting_id": 1, "authority": "RAW", "text": f"第{index}片",
-                             "start_ms": index * 1000, "end_ms": index * 1000 + 500,
-                             "chunk_type": "TRANSCRIPT_WINDOW"}}
+        return [{"chunk_id": index, "score": 1.0 - index / 100}
                 for index in range(1, count + 1)]
+
+    async def _map_hits(self, scores: dict[int, float]) -> list[kb_service.Hit]:
+        return [self._search_hit(chunk_id, score) for chunk_id, score in scores.items()]
 
     async def test_disabled_keeps_the_original_path(self):
         with patch.dict(os.environ, {"KB_RERANK_ENABLED": "0"}), \
+             patch.object(kb_service.pg_kb, "available", return_value=True), \
+             patch.object(kb_service.pg_kb, "bm25_search", AsyncMock(return_value=[])), \
              patch.object(kb_service.model_factory, "embed_texts",
                           AsyncMock(return_value=[[0.1] * 8])), \
-             patch.object(kb_service.qdrant, "hybrid_search",
+             patch.object(kb_service.pg_kb, "dense_search",
                           AsyncMock(return_value=self._hits(5))) as search, \
              patch.object(kb_service.model_factory, "rerank_documents", AsyncMock()) as rerank_call:
             await kb_service.search_knowledge("灰度", allowed_meeting_ids=None, limit=3)
@@ -350,24 +421,27 @@ class RerankTest(_KbBase):
 
     async def test_enabled_reranks_candidates_and_returns_top_limit(self):
         with patch.dict(os.environ, {"KB_RERANK_ENABLED": "1"}), \
+             patch.object(kb_service.pg_kb, "available", return_value=True), \
+             patch.object(kb_service.pg_kb, "bm25_search", AsyncMock(return_value=[])), \
              patch.object(kb_service.model_factory, "embed_texts",
                           AsyncMock(return_value=[[0.1] * 8])), \
-             patch.object(kb_service.qdrant, "hybrid_search",
+             patch.object(kb_service.pg_kb, "dense_search",
                           AsyncMock(return_value=self._hits(5))) as search, \
              patch.object(kb_service.model_factory, "rerank_documents",
                           AsyncMock(return_value=[(4, 0.9), (2, 0.5), (0, 0.1)])) as rerank_call:
             hits = await kb_service.search_knowledge("灰度", allowed_meeting_ids=None, limit=3)
         # 召回先放大到候选数，再由重排决定顺序
         self.assertEqual(search.await_args.kwargs["limit"], kb_service.rerank_candidates())
-        self.assertEqual(search.await_args.kwargs["prefetch_limit"], kb_service.rerank_candidates())
         self.assertEqual(rerank_call.await_args.kwargs["call_type"], kb_service.RERANK_CALL_TYPE)
         self.assertEqual([hit.chunk_id for hit in hits], [5, 3, 1])
 
     async def test_rerank_failure_falls_back_to_the_original_order(self):
         with patch.dict(os.environ, {"KB_RERANK_ENABLED": "1"}), \
+             patch.object(kb_service.pg_kb, "available", return_value=True), \
+             patch.object(kb_service.pg_kb, "bm25_search", AsyncMock(return_value=[])), \
              patch.object(kb_service.model_factory, "embed_texts",
                           AsyncMock(return_value=[[0.1] * 8])), \
-             patch.object(kb_service.qdrant, "hybrid_search",
+             patch.object(kb_service.pg_kb, "dense_search",
                           AsyncMock(return_value=self._hits(5))), \
              patch.object(kb_service.model_factory, "rerank_documents",
                           AsyncMock(side_effect=RuntimeError("rerank 服务不可达"))):
@@ -377,9 +451,11 @@ class RerankTest(_KbBase):
     async def test_top_k_caps_what_goes_to_the_model(self):
         """漏斗的截断口：模型要 10 条，也只给最相关的 RERANK_TOP_K 条。"""
         with patch.dict(os.environ, {"KB_RERANK_ENABLED": "1", "RERANK_TOP_K": "3"}), \
+             patch.object(kb_service.pg_kb, "available", return_value=True), \
+             patch.object(kb_service.pg_kb, "bm25_search", AsyncMock(return_value=[])), \
              patch.object(kb_service.model_factory, "embed_texts",
                           AsyncMock(return_value=[[0.1] * 8])), \
-             patch.object(kb_service.qdrant, "hybrid_search",
+             patch.object(kb_service.pg_kb, "dense_search",
                           AsyncMock(return_value=self._hits(8))), \
              patch.object(kb_service.model_factory, "rerank_documents",
                           AsyncMock(return_value=[(i, 1 - i / 10) for i in range(8)])):
@@ -389,9 +465,11 @@ class RerankTest(_KbBase):
     async def test_candidates_missing_from_the_ranking_keep_their_order(self):
         """模型只回前 top_n 条时，剩下的按原顺序接在后面（它们本来就被召回了）。"""
         with patch.dict(os.environ, {"KB_RERANK_ENABLED": "1"}), \
+             patch.object(kb_service.pg_kb, "available", return_value=True), \
+             patch.object(kb_service.pg_kb, "bm25_search", AsyncMock(return_value=[])), \
              patch.object(kb_service.model_factory, "embed_texts",
                           AsyncMock(return_value=[[0.1] * 8])), \
-             patch.object(kb_service.qdrant, "hybrid_search",
+             patch.object(kb_service.pg_kb, "dense_search",
                           AsyncMock(return_value=self._hits(5))), \
              patch.object(kb_service.model_factory, "rerank_documents",
                           AsyncMock(return_value=[(4, 0.9)])):
@@ -457,11 +535,22 @@ class OverlapDedupeSearchTest(_KbBase):
                 "meeting_id": 1, "authority": "RAW", "chunk_type": "TRANSCRIPT_WINDOW",
                 "text": "第三段", "start_ms": 0, "end_ms": 60_000, "source_id": 6}},
         ]
+        mapped = [kb_service.Hit(
+            chunk_id=item["chunk_id"], score=item["score"], text=item["payload"]["text"],
+            meeting_id=1, authority="RAW", chunk_type="TRANSCRIPT_WINDOW",
+            field=None, item_index=None, speaker=None,
+            start_ms=item["payload"]["start_ms"], end_ms=item["payload"]["end_ms"],
+            document_id=item["chunk_id"], origin=None, source_id=6,
+            source_type=None,
+        ) for item in raw]
         with patch.dict(os.environ, {"KB_RERANK_ENABLED": "1", "RERANK_TOP_K": "3",
                                      "KB_DEDUPE_ENABLED": "1"}), \
+             patch.object(kb_service.pg_kb, "available", return_value=True), \
+             patch.object(kb_service.pg_kb, "bm25_search", AsyncMock(return_value=[])), \
              patch.object(kb_service.model_factory, "embed_texts",
                           AsyncMock(return_value=[[0.1] * 8])), \
-             patch.object(kb_service.qdrant, "hybrid_search", AsyncMock(return_value=raw)), \
+             patch.object(kb_service.pg_kb, "dense_search", AsyncMock(return_value=raw)), \
+             patch.object(kb_service, "_hits_by_ids", AsyncMock(return_value=mapped)), \
              patch.object(kb_service.model_factory, "rerank_documents",
                           AsyncMock(return_value=[(0, 0.9), (1, 0.8), (2, 0.7)])):
             hits = await kb_service.search_knowledge("灰度", allowed_meeting_ids=None, limit=3)
@@ -469,8 +558,8 @@ class OverlapDedupeSearchTest(_KbBase):
                          "重叠的第二段应被丢掉，而不是把 top-3 变成两条再补一条无关的")
 
 
-class PayloadIndexTest(IndexTranscriptTest):
-    """payload 索引：过滤性能的前提，且**必须在"跳过重建"的那条路径上也建**。
+class PgSchemaTest(IndexTranscriptTest):
+    """PG 索引表结构：过滤/BM25/HNSW 索引必须在"跳过重建"的路径上也存在。
 
     实测踩过：建索引原先只发生在 `_embed_and_store` 里，而内容未变化的库会在它之前
     就返回——于是最常见的情形（内容没变）永远建不出索引，过滤一直是慢查询且不报错。
@@ -480,7 +569,10 @@ class PayloadIndexTest(IndexTranscriptTest):
         task = await self._transcript()
         await self._run_index(task.id)                     # 第一次：真建
         with patch.object(kb_service.model_factory, "embed_texts", AsyncMock()) as embed, \
-             patch.object(kb_service.qdrant, "ensure_collection", AsyncMock()) as ensure, \
+             patch.object(kb_service.pg_kb, "available", return_value=True), \
+             patch.object(kb_service.pg_kb, "ensure_schema", AsyncMock()) as ensure, \
+             patch.object(kb_service.pg_kb, "upsert_chunks", AsyncMock()), \
+             patch.object(kb_service.pg_kb, "missing_embeddings", AsyncMock(return_value=[])), \
              patch.object(kb_service.task_queue, "enqueue", AsyncMock()):
             kb_task_id = await kb_service.schedule_kb_index(
                 kb_service.SOURCE_TRANSCRIPT, task.id, self.meeting.id, self.user.id)
@@ -507,9 +599,13 @@ class ContextualIndexTest(_KbBase):
         with patch.dict(os.environ, {"KB_CONTEXTUAL_ENABLED": "1"}), \
              patch.object(kb_service.model_factory, "embed_texts", embed), \
              patch.object(kb_service.model_factory, "invoke_json", invoke), \
-             patch.object(kb_service.qdrant, "ensure_collection", AsyncMock()), \
-             patch.object(kb_service.qdrant, "upsert_chunks", upsert), \
-             patch.object(kb_service.qdrant, "delete_points", AsyncMock()), \
+             patch.object(kb_service.pg_kb, "available", return_value=True), \
+             patch.object(kb_service.pg_kb, "ensure_schema", AsyncMock()), \
+             patch.object(kb_service.pg_kb, "upsert_chunks", AsyncMock()), \
+             patch.object(kb_service.pg_kb, "missing_embeddings", AsyncMock(return_value=[])), \
+             patch.object(kb_service.pg_kb, "upsert_embeddings", upsert), \
+             patch.object(kb_service.pg_kb, "delete_chunks", AsyncMock()), \
+             patch.object(kb_service.pg_kb, "delete_by_source", AsyncMock()), \
              patch.object(kb_service.task_queue, "enqueue", AsyncMock()):
             kb_task_id = await kb_service.schedule_kb_index(
                 kb_service.SOURCE_TRANSCRIPT, task_id, self.meeting.id, self.user.id)

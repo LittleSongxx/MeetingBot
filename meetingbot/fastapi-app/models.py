@@ -293,6 +293,9 @@ class AiCallLog(Model):
     # 对应 ai_call_log.trace_id：跨阶段串联用（同一次业务操作里的多次调用共享它），
     # 为空表示该调用未参与链路追踪
     trace_id = fields.CharField(max_length=64, null=True)
+    # 对应 ai_call_log.span_id：这一次调用在 trace 里的 span（没有 OTel 导出时
+    # 也由应用生成并落库，保证"调用能对上 span"）
+    span_id = fields.CharField(max_length=32, null=True)
     # 对应 ai_call_log.error_message
     error_message = fields.TextField(null=True)
     # 对应 ai_call_log.create_time，写日志时自动填入
@@ -301,7 +304,8 @@ class AiCallLog(Model):
     class Meta:
         table = "ai_call_log"
         # 对应 scripts/indexes.sql 的二级索引（列表页/观测页过滤列）
-        indexes = [("create_time", "model_config_id"), ("biz_id", "call_type")]
+        indexes = [("create_time", "model_config_id"), ("biz_id", "call_type"),
+                   ("trace_id",)]
 
 
 class PromptTemplate(Model):
@@ -506,8 +510,8 @@ class KbIndexTask(Model):
 class KbDocument(Model):
     """一次索引产出的文档版本：一个来源 + 一次内容指纹 = 一份文档。
 
-    与纪要的"重新生成覆盖同一行"不同，这里每次重建都新起一行：检索结果要能指回
-    "当时索引的是哪一版内容"，覆盖掉就说不清了。旧版本在重建时物理删除其切片。
+    同来源重建时复用同一行并覆盖切片；失败/半成品版本保留到下一次成功索引为止，
+    读侧只认 `status=SUCCEEDED`，所以不会把半成品交给模型。
     """
 
     # 对应 kb_document.id
@@ -530,7 +534,7 @@ class KbDocument(Model):
     # 换嵌入模型时能一眼看出哪些文档需要重嵌
     embed_model = fields.CharField(max_length=100)
     embed_dim = fields.IntField(default=0)
-    # 对应 kb_document.status：SUCCEEDED、FAILED（失败保留原因，供排障）
+    # 对应 kb_document.status：BUILDING、SUCCEEDED、FAILED（BUILDING 对检索不可见）
     status = fields.CharField(max_length=30, default="SUCCEEDED")
     error_message = fields.TextField(null=True)
     # 对应 kb_document.create_time
@@ -543,11 +547,11 @@ class KbDocument(Model):
 class KbChunk(Model):
     """知识库切片：检索的最小单位，也是引用能落到的地方。
 
-    切片的 id 同时就是 Qdrant 里的 point id——不做第二套编号，
-    否则"库里这条切片"和"向量库那个点"迟早对不上。
+    切片的 id 同时就是 PG 向量行的主键——不做第二套编号，
+    否则"库里这条切片"和"PG 向量行"迟早对不上。
     """
 
-    # 对应 kb_chunk.id（同时是 Qdrant point id）
+    # 对应 kb_chunk.id（同时是 PG 向量行的主键）
     id = fields.IntField(pk=True)
     # 对应 kb_chunk.document_id 与 meeting_id
     document_id = fields.IntField()
@@ -576,7 +580,7 @@ class KbChunk(Model):
     evidence_json = fields.JSONField(null=True)
     # 对应 kb_chunk.token_count：粗估字符数，用于预算与截断，不是精确 token 数
     token_count = fields.IntField(default=0)
-    # 对应 kb_chunk.embedded：向量是否已写入 Qdrant。
+    # 对应 kb_chunk.embedded：向量是否已写入 PG/pgvector。
     # 重试时只补 embedded=0 的切片——不重复为已成功的切片付费（沿用纪要缓存同款理由）
     embedded = fields.BooleanField(default=False)
     # 对应 kb_chunk.create_time
@@ -588,6 +592,42 @@ class KbChunk(Model):
         unique_together = (("document_id", "chunk_no"),)
         # 对应 scripts/indexes.sql 的二级索引（按会议收窄检索范围）
         indexes = [("meeting_id",)]
+
+
+class KbIndexOutbox(Model):
+    """知识库索引的期望状态（outbox）。
+
+    为什么不能只靠 KbIndexTask：它按“来源”唯一、且会被重新调度覆盖，无法表达
+    “这一份来源现在应该被删除”。取消确认、删除纪要、删除会议这些状态变化发生时，
+    来源行可能已经不在（无法再推导 source_id），必须有一行**与来源解耦**的期望状态
+    留下来，后台 worker 才能把 PG 里的派生数据清干净。
+
+    语义：每个 (source_type, source_id) 一行，desired_state 是最终目标；
+    同一来源反复变化只覆盖这一行（version 递增），不堆事件。
+    """
+
+    id = fields.IntField(pk=True)
+    meeting_id = fields.IntField()
+    source_type = fields.CharField(max_length=30)
+    source_id = fields.IntField()
+    # INDEX = 来源可索引，应存在；DELETE = 来源不可索引/已删除，应清理
+    desired_state = fields.CharField(max_length=20, default="INDEX")
+    # PENDING / PROCESSING / DONE / FAILED
+    status = fields.CharField(max_length=20, default="PENDING")
+    # 同一来源每变一次就 +1；worker 处理完只认最后版本，避免旧事件覆盖新状态
+    version = fields.IntField(default=1)
+    attempts = fields.IntField(default=0)
+    last_error = fields.TextField(null=True)
+    available_at = fields.DatetimeField(null=True)
+    started_at = fields.DatetimeField(null=True)
+    finished_at = fields.DatetimeField(null=True)
+    create_time = fields.DatetimeField(auto_now_add=True)
+    update_time = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "kb_index_outbox"
+        unique_together = (("source_type", "source_id"),)
+        indexes = [("status", "available_at"), ("meeting_id",)]
 
 
 class ChatSession(Model):
@@ -662,13 +702,24 @@ class ChatMessage(Model):
     error_message = fields.TextField(null=True)
     # 对应 chat_message.token_count：本轮 token 用量（来自 ai_call_log 的用量汇总）
     token_count = fields.IntField(default=0)
+    # 这一轮的生命周期：RUNNING / FINISHED / FAILED / INTERRUPTED。
+    # 老数据默认 FINISHED；新助手行显式写 RUNNING，恢复/续传据此判断。
+    run_status = fields.CharField(max_length=20, default="FINISHED")
+    # LangGraph checkpoint 的 thread 键（chat-turn-<assistant_id>），以及最后一次
+    # checkpoint。它们是恢复入口，不是业务状态。
+    thread_id = fields.CharField(max_length=128, null=True)
+    checkpoint_id = fields.CharField(max_length=128, null=True)
+    # 这一轮共享的 trace id；SSE 恢复后仍能对上同一批模型/工具调用
+    trace_id = fields.CharField(max_length=64, null=True)
+    # 已记入配额的 token 数（幂等计费：恢复时不重复扣）
+    charged_tokens = fields.IntField(default=0)
     # 对应 chat_message.create_time
     create_time = fields.DatetimeField(auto_now_add=True)
 
     class Meta:
         table = "chat_message"
         # 对应 scripts/indexes.sql 的二级索引（按会话取历史消息）
-        indexes = [("session_id",)]
+        indexes = [("session_id",), ("run_status",), ("trace_id",)]
 
 
 

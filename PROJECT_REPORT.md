@@ -3,7 +3,7 @@
 > 会议纪要 Agent + 会议知识库问答：音视频上传 → 语音转写（说话人归属）→ LLM 生成
 > 六字段结构化纪要 → 审查-重写反思环 → 人工确认归档 → 自动建索引 → 带引用问答
 > （同一组工具同时经 HTTP 与 MCP 暴露）。
-> FastAPI + Vue 3 + MySQL + Qdrant + Redis + LangGraph + Temporal，Docker Compose 部署。
+> FastAPI + Vue 3 + MySQL + PostgreSQL（pgvector + ParadeDB BM25 + checkpoint）+ Redis + LangGraph + Temporal，Docker Compose 部署。
 
 ## 一、质量评测体系（本项目的主线工作）
 
@@ -61,7 +61,7 @@ v3 下 baseline 核心点覆盖 0.781（deepseek 裁判）/ 0.869（qwen 裁判�
 
 ## 三、工程质量
 
-- **测试**：产品 405 项 + 评测 223 项 + 前端 32 项单元测试（全部零模型调用）；
+- **测试**：产品 576 项 + 评测 293 项 + 前端 33 项单元测试（全部零模型调用）；
   命令与实跑数字见 `DEPLOYMENT.md`，CI（`.github/workflows/ci.yml`）每次推送重跑并复算。
   CI 含前端四道门：`vue-tsc --noEmit`（全量 TS）、ESLint、Prettier `--check`、vitest。
 - **安全**：bcrypt 密码哈希、JWT 密码指纹（改密即吊销）、服务端 MIME 映射 +
@@ -85,7 +85,7 @@ v3 下 baseline 核心点覆盖 0.781（deepseek 裁判）/ 0.869（qwen 裁判�
   判定模型与被测**同族（近乎同模型）**，一致性被高估，因此只作基线、不作决策依据。
   零调用两条不变量同期跑出 **引用可定位 100%（71/71）、未越权 100%（107/107）**；
   其中有 **36 条纪要条目引用属于"口径不适用"且当前无覆盖**——这是缺口而不是通过。
-- **首次真实运行暴露 4 个真缺陷**（嵌入字段名、Qdrant 建库竞态、首轮不检索就编造内容、
+- **首次真实运行暴露 4 个真缺陷**（嵌入字段名、向量库建库竞态、首轮不检索就编造内容、
   整份纪要条目不可引用），全部属于"打桩测不出、真跑才暴露"这一类，已修并补测试；
   清单见 `LEDGER.md` 的运行账本一节。
 
@@ -94,6 +94,6 @@ v3 下 baseline 核心点覆盖 0.781（deepseek 裁判）/ 0.869（qwen 裁判�
 ```bash
 ./scripts/compose.sh up -d          # db + backend + web（http://127.0.0.1:18082）
 make -C evaluation smoke            # 零调用回归：契约不变量/可定位率/可靠性复算
-make -C evaluation test             # 评测侧 223 项单测
+make -C evaluation test             # 评测侧 293 项单测
 # 本地 ASR 侧车（可选引擎）：scripts/moss_asr_server.py + requirements-moss.txt
 ```

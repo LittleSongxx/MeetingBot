@@ -12,9 +12,9 @@
 - **activity 即 execute_* 协程**：转写/纪要/自检的 `execute_*` 保持可直接
   await 的普通协程（评测的 manage_fixture 在自己进程里直接调用它们并拦截
   模型调用——这个预算护栏依赖"协程不经调度层也能跑"）；
-- **恢复原生**：worker 崩溃后 Temporal 自动续跑未完 workflow，`recover_*`
-  只剩"重新入队曾建行但 workflow 未启动"的兜底扫尾（API 写行与 start_workflow
-  之间的窗口）。
+- **恢复**：worker 崩溃后 Temporal 自动续跑未完 workflow；`recover_*` 同时补投
+  “曾建行但 workflow 未启动”的任务，并回收超过阈值的 PROCESSING 行（单副本口径），
+  否则进程被杀后行会永久卡在执行中。
 
 DB 的 status/stage/progress 仍是 UI 与观测的唯一真源，activity 内照旧更新。
 """
@@ -23,11 +23,14 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
 import os
 
 from temporalio.client import Client
 from temporalio.exceptions import WorkflowAlreadyStartedError
 from temporalio.worker import Worker
+
+logger = logging.getLogger("meetingbot.task_queue")
 
 TEMPORAL_ADDRESS = os.getenv("TEMPORAL_ADDRESS", "temporal:7233")
 TEMPORAL_NAMESPACE = os.getenv("TEMPORAL_NAMESPACE", "default")
@@ -95,7 +98,8 @@ def workflow_id(kind: str, business_id: int) -> str:
     return f"{kind}-{business_id}"
 
 
-async def enqueue(kind: str, business_id: int, input_args: tuple = ()) -> bool:
+async def enqueue(kind: str, business_id: int, input_args: tuple = (),
+                  trace_id: str | None = None) -> bool:
     """启动一个任务 workflow。同名 workflow 仍在运行时跳过并返回 False，否则返回 True。
 
     幂等语义分两半：
@@ -106,12 +110,17 @@ async def enqueue(kind: str, business_id: int, input_args: tuple = ()) -> bool:
     返回值，静默忽略会让"还想再跑"的意图无声丢失。
     """
     client = await get_client()
+    from common import tracing
+
     from services import temporal_workflows
     workflow_cls = temporal_workflows.WORKFLOW_BY_KIND[kind]
+    # 长任务也带同一条 trace：activity 里模型/工具调用都落同一个 trace_id
+    trace_id = trace_id or tracing.current_trace_id() or tracing.new_trace_id()
+    args = tuple(input_args) + (trace_id,)
     try:
         await client.start_workflow(
             workflow_cls.run,
-            args=input_args,
+            args=args,
             id=workflow_id(kind, business_id),
             task_queue=task_queue_for(kind),
         )
@@ -140,9 +149,32 @@ async def run_worker() -> None:
     from settings import TORTOISE_ORM
     from tortoise import Tortoise
 
-    from services import temporal_workflows
+    from services import (
+        agent_service,
+        kb_outbox,
+        kb_service,
+        minutes_service,
+        pg_kb,
+        temporal_workflows,
+        transcription_service,
+    )
 
     await Tortoise.init(config=TORTOISE_ORM)
+    await pg_kb.init()
+    # worker 也会重启：只靠 API lifespan 回收，会让“worker 崩溃后重启”留下的
+    # PROCESSING 任务一直卡住。这里再跑一遍，workflow id 保证不会双跑。
+    for name, recover in (
+        ("transcription", transcription_service.recover_transcription_tasks),
+        ("minutes", minutes_service.recover_minutes_tasks),
+        ("agent", agent_service.recover_agent_runs),
+        ("kb-index", kb_service.recover_kb_index_tasks),
+    ):
+        try:
+            await recover()
+        except Exception:  # noqa: BLE001 - 恢复失败不能阻止 worker 消费新任务
+            logger.exception("worker 启动恢复失败（%s）", name)
+    stop_event = asyncio.Event()
+    outbox_task = asyncio.create_task(kb_outbox.loop(stop_event))
     try:
         client = await get_client()
         workers = [
@@ -165,4 +197,9 @@ async def run_worker() -> None:
         ))
         await asyncio.gather(*(worker.run() for worker in workers))
     finally:
+        stop_event.set()
+        outbox_task.cancel()
+        with contextlib.suppress(BaseException):
+            await outbox_task
+        await pg_kb.close()
         await Tortoise.close_connections()

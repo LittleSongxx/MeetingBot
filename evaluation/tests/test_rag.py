@@ -50,13 +50,13 @@ def _answers() -> dict:
 
 
 class ProductSwitchesTest(unittest.TestCase):
-    def test_cross_recording_supplement_is_captured(self):
-        payload = {"data": {"model": "qwen", "cross_recording_prefetch_k": 0,
-                            "cross_recording_supplement_k": 1}}
+    def test_pg_index_provenance_is_captured(self):
+        payload = {"data": {"model": "qwen", "pg_kb_table": "kb.chunk_search",
+                            "vector_dim": 1024}}
         with mock.patch.object(rag, "_http_json", return_value=payload):
             switches = rag._product_switches("http://example", "token")
-        self.assertEqual(switches["cross_recording_prefetch_k"], 0)
-        self.assertEqual(switches["cross_recording_supplement_k"], 1)
+        self.assertEqual(switches["pg_kb_table"], "kb.chunk_search")
+        self.assertEqual(switches["vector_dim"], 1024)
 
 
 class HardNegativeSetTest(unittest.TestCase):

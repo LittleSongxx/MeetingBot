@@ -3,6 +3,7 @@ from datetime import datetime
 from common import access
 from common.auth import get_current_user
 from common.exception_handler import CustomException
+from common.paths import MATERIAL_DIR
 from common.result import PageInfo, Result
 from common.times import format_datetime, now
 from fastapi import APIRouter, Depends
@@ -18,12 +19,14 @@ from models import (
     User,
 )
 from pydantic import BaseModel
+from services import kb_outbox, kb_service
 from services.speaker_service import suggest_speakers
 from services.transcription_service import cancel_transcription, reject_overlong_audio, schedule_transcription
 from tortoise.exceptions import IntegrityError
+from tortoise.transactions import in_transaction
 
 from api.meeting import get_accessible_meeting
-from api.meeting_material import MATERIAL_DIR, get_accessible_material
+from api.meeting_material import get_accessible_material
 
 router = APIRouter(prefix="/transcription")
 
@@ -326,10 +329,14 @@ async def delete(task_id: int, current_user: User = Depends(get_current_user)):
             raise CustomException("该转写的纪要正在生成中，请等生成结束后再删除")
         await delete_minutes(minutes, current_user)
 
-    # 删除这个任务写入的全部时间轴片段
-    await TranscriptSegment.filter(task_id=task.id).delete()
-    # 最后删除 transcription_task 记录，前端收到 code '200' 后刷新列表
-    await TranscriptionTask.filter(id=task.id).delete()
+    # 删除这个任务写入的全部时间轴片段，并写 RAW 索引的清理期望状态。
+    # 任务行删掉后就无法再推导 source_id，所以 DELETE 必须与删除同事务落库。
+    async with in_transaction():
+        await kb_outbox.mark_source_state(
+            kb_service.SOURCE_TRANSCRIPT, task.id, task.meeting_id,
+            kb_outbox.STATE_DELETE)
+        await TranscriptSegment.filter(task_id=task.id).delete()
+        await TranscriptionTask.filter(id=task.id).delete()
     return Result.success()
 
 
@@ -424,16 +431,20 @@ async def update_segment(
     content = payload.content.strip()
     if not content:
         raise CustomException("转写文本不能为空")
-    await TranscriptSegment.filter(id=segment.id).update(
-        # 只改 content，original_text 保持模型的原始输出不变
-        content=content,
-        # 记下是谁改的，取自 Token 里的当前用户
-        revised_by=current_user.id,
-        # 记下改的时间，用东八区当前时间
-        revised_time=now(),
-    )
-    # 片段变了，任务上的整段文本也要跟着重拼
-    await refresh_full_text(task.id)
+    # 片段变了，任务上的整段文本也要跟着重拼；RAW 切片需要重索引。
+    async with in_transaction():
+        await TranscriptSegment.filter(id=segment.id).update(
+            # 只改 content，original_text 保持模型的原始输出不变
+            content=content,
+            # 记下是谁改的，取自 Token 里的当前用户
+            revised_by=current_user.id,
+            # 记下改的时间，用东八区当前时间
+            revised_time=now(),
+        )
+        await refresh_full_text(task.id)
+        await kb_outbox.mark_source_state(
+            kb_service.SOURCE_TRANSCRIPT, task.id, task.meeting_id,
+            kb_outbox.STATE_INDEX)
     return Result.success()
 
 
@@ -460,8 +471,13 @@ async def match_speaker(
     ).exists():
         raise CustomException("只能匹配该会议的参会人员")
     # 整批更新：同一标签下的所有片段一次性写入同一个 speaker_user_id
-    # user_id 为 None 时相当于把这批片段的匹配清空
-    await label_query.update(speaker_user_id=payload.user_id)
+    # user_id 为 None 时相当于把这批片段的匹配清空。
+    # 切片正文里的说话人姓名会变，RAW 索引必须重建。
+    async with in_transaction():
+        await label_query.update(speaker_user_id=payload.user_id)
+        await kb_outbox.mark_source_state(
+            kb_service.SOURCE_TRANSCRIPT, task.id, task.meeting_id,
+            kb_outbox.STATE_INDEX)
     return Result.success()
 
 

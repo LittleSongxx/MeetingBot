@@ -7,7 +7,7 @@
 **两条不同形状的接口，别混用**：
 
 - `visible_meeting_ids(user)` → 一个 `id` 列表，适合"把这个条件塞进另一个查询"
-  （例如 `query.filter(meeting_id__in=...)`），也适合向量库的 payload 过滤
+  （例如 `query.filter(meeting_id__in=...)`），也适合 PG 检索索引的过滤
 - `has_meeting_access(meeting, user)` → 布尔判断，适合"已经拿到了具体的会议行"
 
 两者都由 `ADMIN` 全通过。原先 `has_meeting_access` 住在 `api/meeting.py` 里，

@@ -139,7 +139,7 @@ class EmployeeCanSeeLogTest(unittest.TestCase):
 
     def test_agent_review_support_maps_to_agent_ownership(self):
         from services.observability_service import employee_can_see_log
-        for call_type in ("AGENT_REVIEW", "AGENT_REFINE", "AGENT_REVIEW_SUPPORT"):
+        for call_type in ("AGENT_REVIEW", "AGENT_REFINE", "AGENT_REVIEW_SUPPORT", "AGENT_JUDGE"):
             self.assertTrue(employee_can_see_log(self._log(call_type, 30), self.owned), call_type)
             self.assertFalse(employee_can_see_log(self._log(call_type, 20), self.owned), call_type)
 
@@ -161,7 +161,7 @@ class EmployeeCanSeeLogTest(unittest.TestCase):
         """登记表漏一行的表现是"观测页少一块"而不是报错，所以逐条钉住。"""
         from services.observability_service import CALL_TYPE_OWNERSHIP
         for call_type in ("TRANSCRIPTION", "MINUTES", "AGENT_REVIEW", "AGENT_REFINE",
-                          "AGENT_REVIEW_SUPPORT", "CHAT", "CHAT_SUMMARY", "KB_EMBEDDING",
+                          "AGENT_REVIEW_SUPPORT", "AGENT_JUDGE", "CHAT", "CHAT_SUMMARY", "KB_EMBEDDING",
                           "KB_QUERY_EMBED", "KB_RERANK", "KB_QUERY_PLAN"):
             self.assertIn(call_type, CALL_TYPE_OWNERSHIP, call_type)
 

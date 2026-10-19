@@ -79,8 +79,8 @@ async def validate_payload(payload: AiModelPayload, old_config: AiModelConfig | 
     # 三个必填项，页面校验之外后端独立再校验一次
     if not payload.name or not payload.base_url or not payload.model_name:
         raise CustomException("配置名称、API地址和模型名称不能为空")
-    # 用途只接受下拉框里的四个取值
-    if payload.model_type not in {"TRANSCRIPTION", "MINUTES", "AGENT", "SPEAKER", "EMBEDDING"}:
+    # 用途只接受下拉框里的取值；JUDGE 是可选跨族裁判，未配置时回退 AGENT
+    if payload.model_type not in {"TRANSCRIPTION", "MINUTES", "AGENT", "SPEAKER", "EMBEDDING", "JUDGE"}:
         raise CustomException("模型类型参数错误")
     # 纪要、纪要自检和说话人匹配走 OpenAI 兼容协议；转写走百炼自己的录音文件识别协议
     if payload.provider not in {"OPENAI_COMPATIBLE", "DASHSCOPE"}:

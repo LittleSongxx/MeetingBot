@@ -25,11 +25,43 @@ from __future__ import annotations
 import logging
 import os
 from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any, Iterator
+from uuid import uuid4
 
 logger = logging.getLogger("meetingbot.tracing")
 
 _installed = False
+
+# 应用级 trace 上下文：不依赖 OTel 是否启用（未配 OTLP 时 OTel id 是无效值，
+# 但产品仍然要能把一次问答的模型/工具调用串起来）。
+_trace_id: ContextVar[str | None] = ContextVar("meetingbot_trace_id", default=None)
+
+
+def new_trace_id() -> str:
+    return uuid4().hex
+
+
+def new_span_id() -> str:
+    # 32 hex 与 OTel span id 同长度；不要求全局唯一，只要求同 trace 内可区分
+    return uuid4().hex[:16]
+
+
+def set_trace_id(value: str | None):
+    return _trace_id.set(value)
+
+
+def reset_trace_id(token) -> None:
+    _trace_id.reset(token)
+
+
+def current_trace_id() -> str | None:
+    return _trace_id.get()
+
+
+def call_fields() -> dict[str, str | None]:
+    """一次模型/工具调用落库时用的 trace 字段。"""
+    return {"trace_id": current_trace_id(), "span_id": new_span_id()}
 
 
 def enabled() -> bool:
@@ -74,6 +106,9 @@ def tracer() -> Any:
 def span(name: str, attributes: dict[str, Any] | None = None) -> Iterator[Any]:
     """开一个 span。异常会照常向上抛，同时被记进 span 状态（不吞异常、不改变控制流）。"""
     with tracer().start_as_current_span(name) as current:
+        trace_id = current_trace_id()
+        if trace_id:
+            current.set_attribute("meetingbot.trace_id", trace_id)
         for key, value in (attributes or {}).items():
             if value is not None:
                 current.set_attribute(key, value)
@@ -102,4 +137,5 @@ def usage_attributes(*, input_tokens: int = 0, output_tokens: int = 0,
 
 
 __all__ = ["setup_tracing", "enabled", "span", "tracer", "model_attributes",
-           "usage_attributes"]
+           "usage_attributes", "new_trace_id", "new_span_id", "set_trace_id",
+           "reset_trace_id", "current_trace_id", "call_fields"]

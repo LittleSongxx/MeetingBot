@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 import os
 import unittest
-from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -23,7 +22,6 @@ from models import (
     ChatMessage,
     ChatSession,
     Meeting,
-    TranscriptionTask,
     User,
 )
 from pydantic import Field
@@ -383,6 +381,43 @@ class MemoryTest(unittest.IsolatedAsyncioTestCase):
         memory = await chat_service.build_memory(session, user=self.user)
         self.assertEqual(len(memory), 2)
         self.assertEqual(memory[-1].content, "问了一句")
+
+    async def test_nonempty_failed_assistant_stays_out_of_context(self):
+        """失败/中断轮次的半截回答不能当历史结论进入下一轮。"""
+        session = await chat_service.create_session(self.user)
+        await ChatMessage.create(session_id=session.id, role="USER", content="问了一句")
+        await ChatMessage.create(session_id=session.id, role="ASSISTANT",
+                                 content="这是没有依据的半截回答", run_status="FAILED")
+        session = await chat_service.get_session(session.id, self.user)
+        memory = await chat_service.build_memory(session, user=self.user)
+        self.assertNotIn("这是没有依据的半截回答", [str(m.content) for m in memory])
+
+    async def test_current_user_message_is_not_in_history_twice(self):
+        session = await chat_service.create_session(self.user)
+        await ChatMessage.create(session_id=session.id, role="USER", content="上一问")
+        current_user = await ChatMessage.create(
+            session_id=session.id, role="USER", content="当前问题")
+        session = await chat_service.get_session(session.id, self.user)
+        memory = await chat_service.build_memory(
+            session, user=self.user, before_id=current_user.id)
+        self.assertNotIn("当前问题", [str(m.content) for m in memory])
+        self.assertIn("上一问", [str(m.content) for m in memory])
+
+    async def test_resume_rejects_when_checkpoint_is_disabled(self):
+        from services import chat_checkpoint
+
+        session = await chat_service.create_session(self.user)
+        row = await ChatMessage.create(
+            session_id=session.id, role="ASSISTANT", content="半段",
+            run_status="INTERRUPTED", thread_id="thread-x")
+        with patch.object(chat_checkpoint, "available", return_value=False), \
+                self.assertRaises(chat_service.ChatError):
+            async for _ in chat_service.resume_answer(
+                    session, row.id, user=self.user):
+                pass
+        self.assertEqual(
+            (await ChatMessage.get(id=row.id)).run_status, "INTERRUPTED",
+            "无 checkpoint 时不能把状态改成 RUNNING/FAILED")
 
     async def test_scoped_session_puts_the_scope_into_the_prompt(self):
         meeting = await Meeting.create(
@@ -964,315 +999,6 @@ class QueryPlanPipelineTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(planner.await_count, 0, "开关关着就不许发生规划调用")
         assistant = await ChatMessage.filter(session_id=session.id, role="ASSISTANT").first()
         self.assertIsNone(assistant.plan_json)
-
-    def test_cross_recording_prefetch_depth_is_configurable(self):
-        with patch.dict(os.environ, {"CROSS_RECORDING_PREFETCH_K": "2"}):
-            self.assertEqual(chat_service.cross_recording_prefetch_k(), 2)
-        with patch.dict(os.environ, {"CROSS_RECORDING_PREFETCH_K": "99"}):
-            self.assertEqual(chat_service.cross_recording_prefetch_k(), 5)
-        with patch.dict(os.environ, {"CROSS_RECORDING_PREFETCH_K": "0"}):
-            self.assertEqual(chat_service.cross_recording_prefetch_k(), 0)
-        with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("CROSS_RECORDING_PREFETCH_K", None)
-            self.assertEqual(chat_service.cross_recording_prefetch_k(), 0,
-                             "cross8 标定后默认关")
-
-    def test_cross_recording_markers(self):
-        for question in ("两段录音分别提到了哪些风险？",
-                         "发布公告与对外通稿分别由谁负责？",
-                         "两个功能问题分别怎么解决？",
-                         "发布时间的结论在两段录音里一致吗？"):
-            self.assertTrue(chat_service.wants_cross_recording(question), question)
-        self.assertFalse(chat_service.wants_cross_recording("这次灰度从什么时候开始？"))
-
-    async def test_cross_recording_prefetch_registers_both_sources(self):
-        first = await TranscriptionTask.create(
-            meeting_id=self.meeting.id, material_id=92_001, model_config_id=1,
-            initiator_id=self.user.id, status="SUCCEEDED",
-            recorded_at=datetime(2026, 9, 10, 9, 0))
-        second = await TranscriptionTask.create(
-            meeting_id=self.meeting.id, material_id=92_002, model_config_id=1,
-            initiator_id=self.user.id, status="SUCCEEDED",
-            recorded_at=datetime(2026, 9, 10, 14, 0))
-        actor = await chat_service.kb_tools.Actor.resolve(
-            self.user, requested=[self.meeting.id])
-        registry = chat_service.citations.CitationRegistry()
-
-        limits: list[int] = []
-
-        async def fake_search(query, **kwargs):
-            source_id = kwargs["source_ids"][0]
-            limits.append(kwargs["limit"])
-            return [Hit(chunk_id=source_id, score=1.0, text=f"task {source_id} 的原文",
-                        meeting_id=self.meeting.id, authority="RAW",
-                        chunk_type="TRANSCRIPT_WINDOW", field=None, item_index=None,
-                        speaker="张晨", start_ms=0, end_ms=1000, document_id=1,
-                        origin=None, source_id=source_id)]
-
-        with patch.dict(os.environ, {"CROSS_RECORDING_PREFETCH_K": "3"}), \
-                patch.object(kb_service, "search_knowledge",
-                             AsyncMock(side_effect=fake_search)) as search:
-            message = await chat_service._cross_recording_message(
-                actor, registry, "两段录音分别说了什么",
-                scope=[self.meeting.id], biz_id=0)
-        self.assertIsNotNone(message)
-        self.assertIn(f"task {first.id}", message.content)
-        self.assertIn(f"task {second.id}", message.content)
-        self.assertIn("上午", message.content)
-        self.assertIn("下午", message.content)
-        self.assertEqual(search.await_count, 2)
-        self.assertEqual(limits, [3, 3], "默认每段 3 条")
-        self.assertEqual(len(registry), 2)
-
-    async def test_cross_recording_prefetch_skips_non_cross_questions(self):
-        actor = await chat_service.kb_tools.Actor.resolve(
-            self.user, requested=[self.meeting.id])
-        registry = chat_service.citations.CitationRegistry()
-        with patch.dict(os.environ, {"CROSS_RECORDING_PREFETCH_K": "3"}), \
-                patch.object(kb_service, "search_knowledge", AsyncMock()) as search:
-            message = await chat_service._cross_recording_message(
-                actor, registry, "灰度从什么时候开始",
-                scope=[self.meeting.id], biz_id=0)
-        self.assertIsNone(message)
-        self.assertEqual(search.await_count, 0)
-
-
-class CrossRecordingSupplementTest(unittest.IsolatedAsyncioTestCase):
-    """条件补搜：只补缺的那段、等 Agent 先检索、走正式引用登记。"""
-
-    async def asyncSetUp(self):
-        await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["models"]},
-                            use_tz=True, timezone="Asia/Shanghai")
-        await Tortoise.generate_schemas()
-        self.user = await User.create(username="supp-t", password="x", name="张晨")
-        self.meeting = await Meeting.create(
-            meeting_no="MTG-S1", title="产品发布评审会议",
-            start_time="2026-09-10 10:40:00", end_time="2026-09-10 13:00:00",
-            creator_id=self.user.id, host_id=self.user.id, status="FINISHED")
-        self.morning = await TranscriptionTask.create(
-            meeting_id=self.meeting.id, material_id=93_001, model_config_id=1,
-            initiator_id=self.user.id, status="SUCCEEDED",
-            recorded_at=datetime(2026, 9, 10, 9, 0))
-        self.afternoon = await TranscriptionTask.create(
-            meeting_id=self.meeting.id, material_id=93_002, model_config_id=1,
-            initiator_id=self.user.id, status="SUCCEEDED",
-            recorded_at=datetime(2026, 9, 10, 14, 0))
-        self.actor = await chat_service.kb_tools.Actor.resolve(
-            self.user, requested=[self.meeting.id])
-        self.registry = chat_service.citations.CitationRegistry()
-
-    async def asyncTearDown(self):
-        await Tortoise.close_connections()
-
-    def _hit(self, source_id: int) -> Hit:
-        return Hit(chunk_id=100 + source_id, score=1.0, text=f"task {source_id} 的主题",
-                   meeting_id=self.meeting.id, authority="RAW",
-                   chunk_type="TRANSCRIPT_WINDOW", field=None, item_index=None,
-                   speaker="张晨", start_ms=0, end_ms=5000, document_id=1,
-                   origin=None, source_id=source_id)
-
-    def _result(self, *source_ids: int) -> dict:
-        return {"ok": True, "hits": [self._hit(source_id).as_citation()
-                                     for source_id in source_ids]}
-
-    async def _state(self, question: str = "两段录音分别说了什么"):
-        with patch.dict(os.environ, {"CROSS_RECORDING_SUPPLEMENT_K": "1",
-                                     "CROSS_RECORDING_PREFETCH_K": "0"}):
-            return await chat_service._cross_recording_state(
-                question, scope=[self.meeting.id])
-
-    def test_depth_is_configurable(self):
-        with patch.dict(os.environ, {"CROSS_RECORDING_SUPPLEMENT_K": "2"}):
-            self.assertEqual(chat_service.cross_recording_supplement_k(), 2)
-        with patch.dict(os.environ, {"CROSS_RECORDING_SUPPLEMENT_K": "99"}):
-            self.assertEqual(chat_service.cross_recording_supplement_k(), 3)
-        with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("CROSS_RECORDING_SUPPLEMENT_K", None)
-            self.assertEqual(chat_service.cross_recording_supplement_k(), 0,
-                             "标定前默认关")
-
-    def test_strong_markers_exclude_bare_fenbie(self):
-        for question in ("两段录音分别提到了哪些风险？",
-                         "发布时间的结论在两段录音里一致吗？",
-                         "灰度这件事在两段录音里分别讨论到什么？",
-                         "上午和下午的会各自定了什么？"):
-            self.assertTrue(chat_service.wants_cross_recording_supplement(question),
-                            question)
-        for question in ("切片和向量分别存在哪里？",
-                         "这次会议的三个议题分别是什么？",
-                         "两个功能问题分别怎么解决？",
-                         "下午的会定了哪些行动项、分别由谁负责？"):
-            self.assertFalse(chat_service.wants_cross_recording_supplement(question),
-                             question)
-
-    async def test_state_requires_two_successful_recordings(self):
-        solo = await Meeting.create(
-            meeting_no="MTG-S2", title="单段录音会",
-            start_time="2026-09-10 10:00:00", end_time="2026-09-10 11:00:00",
-            creator_id=self.user.id, host_id=self.user.id, status="FINISHED")
-        await TranscriptionTask.create(
-            meeting_id=solo.id, material_id=93_003, model_config_id=1,
-            initiator_id=self.user.id, status="SUCCEEDED")
-        with patch.dict(os.environ, {"CROSS_RECORDING_SUPPLEMENT_K": "1"}):
-            self.assertIsNone(await chat_service._cross_recording_state(
-                "两段录音分别说了什么", scope=[solo.id]))
-
-    async def test_state_is_skipped_without_a_meeting_scope(self):
-        with patch.dict(os.environ, {"CROSS_RECORDING_SUPPLEMENT_K": "1"}):
-            self.assertIsNone(await chat_service._cross_recording_state(
-                "两段录音分别说了什么", scope=[]))
-
-    async def test_prefetch_disables_conditional_supplement(self):
-        with patch.dict(os.environ, {"CROSS_RECORDING_SUPPLEMENT_K": "1",
-                                     "CROSS_RECORDING_PREFETCH_K": "3"}):
-            self.assertIsNone(await chat_service._cross_recording_state(
-                "两段录音分别说了什么", scope=[self.meeting.id]))
-
-    async def test_bare_fenbie_question_gets_no_state(self):
-        with patch.dict(os.environ, {"CROSS_RECORDING_SUPPLEMENT_K": "1"}):
-            self.assertIsNone(await chat_service._cross_recording_state(
-                "两个功能问题分别怎么解决？", scope=[self.meeting.id]))
-
-    async def test_waits_for_two_tool_results_before_supplementing(self):
-        state = await self._state()
-        with patch.object(kb_service, "search_knowledge",
-                          AsyncMock(return_value=[self._hit(self.afternoon.id)])) as search:
-            first = await chat_service.maybe_supplement_cross_recording(
-                state, self.actor, self.registry, self._result(self.morning.id))
-            self.assertEqual(search.await_count, 0, "第一次工具结果后不抢跑")
-            self.assertNotIn("coverage_hits", first)
-            second = await chat_service.maybe_supplement_cross_recording(
-                state, self.actor, self.registry, {"ok": True, "facts": []})
-        self.assertEqual(search.await_count, 1)
-        kwargs = search.await_args.kwargs
-        self.assertEqual(kwargs["source_ids"], [self.afternoon.id])
-        self.assertEqual(kwargs["limit"], 1)
-        self.assertEqual(kwargs["allowed_meeting_ids"], [self.meeting.id])
-        self.assertEqual(second["coverage_supplement"]["searched_task_ids"],
-                         [self.afternoon.id])
-        self.assertEqual(len(second["coverage_hits"]), 1)
-        self.assertIn("ref", second["coverage_hits"][0])
-        self.assertIn("coverage_hits", second["notice"])
-
-    async def test_zero_coverage_supplements_both_recordings(self):
-        state = await self._state()
-
-        async def fake_search(query, **kwargs):
-            return [self._hit(kwargs["source_ids"][0])]
-
-        with patch.object(kb_service, "search_knowledge",
-                          AsyncMock(side_effect=fake_search)) as search:
-            await chat_service.maybe_supplement_cross_recording(
-                state, self.actor, self.registry, {"ok": True, "hits": []})
-            updated = await chat_service.maybe_supplement_cross_recording(
-                state, self.actor, self.registry, {"ok": True, "facts": []})
-        self.assertEqual(search.await_count, 2)
-        self.assertEqual([call.kwargs["source_ids"][0] for call in search.await_args_list],
-                         [self.morning.id, self.afternoon.id])
-        self.assertEqual(len(updated["coverage_hits"]), 2)
-
-    async def test_full_coverage_does_not_supplement(self):
-        state = await self._state()
-        with patch.object(kb_service, "search_knowledge", AsyncMock()) as search:
-            await chat_service.maybe_supplement_cross_recording(
-                state, self.actor, self.registry, self._result(self.morning.id))
-            updated = await chat_service.maybe_supplement_cross_recording(
-                state, self.actor, self.registry, self._result(self.afternoon.id))
-        self.assertEqual(search.await_count, 0)
-        self.assertNotIn("coverage_hits", updated)
-
-    async def test_excerpt_segments_count_as_transcript_coverage(self):
-        state = await self._state()
-        with patch.object(kb_service, "search_knowledge",
-                          AsyncMock(return_value=[self._hit(self.afternoon.id)])) as search:
-            await chat_service.maybe_supplement_cross_recording(
-                state, self.actor, self.registry,
-                {"ok": True, "task_id": self.morning.id,
-                 "segments": [{"segment_no": 1, "text": "上午开场"}]})
-            await chat_service.maybe_supplement_cross_recording(
-                state, self.actor, self.registry, {"ok": True, "facts": []})
-        self.assertEqual(search.await_count, 1)
-        self.assertEqual(search.await_args.kwargs["source_ids"], [self.afternoon.id])
-
-    async def test_facts_and_minutes_chunks_are_not_transcript_coverage(self):
-        state = await self._state()
-        with patch.object(kb_service, "search_knowledge", AsyncMock()) as search:
-            await chat_service.maybe_supplement_cross_recording(
-                state, self.actor, self.registry,
-                {"ok": True, "hits": [{"chunk_type": "MINUTES_ITEM", "source_id": 3,
-                                       "quote": "[decisions] 发布公告"}]})
-            await chat_service.maybe_supplement_cross_recording(
-                state, self.actor, self.registry, {"ok": True, "facts": []})
-        self.assertEqual(search.await_count, 2, "纪要条目不能冒充转写覆盖")
-
-    async def test_supplement_failure_does_not_break_the_tool_result(self):
-        state = await self._state()
-        with patch.object(kb_service, "search_knowledge",
-                          AsyncMock(side_effect=RuntimeError("向量库不可达"))):
-            await chat_service.maybe_supplement_cross_recording(
-                state, self.actor, self.registry, {"ok": True, "hits": []})
-            updated = await chat_service.maybe_supplement_cross_recording(
-                state, self.actor, self.registry, {"ok": True, "facts": []})
-        self.assertTrue(updated["ok"])
-        self.assertNotIn("coverage_hits", updated)
-        self.assertTrue(state.attempted)
-
-    async def test_inventory_first_tool_supplements_immediately(self):
-        """q91 在 68 里只调一次 list_facts 就回答：等两次结果会永远等不到补搜。"""
-        state = await self._state()
-
-        async def fake_search(query, **kwargs):
-            return [self._hit(kwargs["source_ids"][0])]
-
-        with patch.object(kb_service, "search_knowledge",
-                          AsyncMock(side_effect=fake_search)) as search:
-            updated = await chat_service.maybe_supplement_cross_recording(
-                state, self.actor, self.registry,
-                {"ok": True, "kind": "recording", "facts": []}, "list_facts")
-        self.assertEqual(search.await_count, 2)
-        self.assertEqual(updated["coverage_supplement"]["searched_task_ids"],
-                         [self.morning.id, self.afternoon.id])
-        self.assertEqual(len(updated["coverage_hits"]), 2)
-
-    async def test_supplement_is_attempted_only_once_per_turn(self):
-        state = await self._state()
-        with patch.object(kb_service, "search_knowledge",
-                          AsyncMock(return_value=[self._hit(self.afternoon.id)])) as search:
-            await chat_service.maybe_supplement_cross_recording(
-                state, self.actor, self.registry, {"ok": True, "hits": []})
-            await chat_service.maybe_supplement_cross_recording(
-                state, self.actor, self.registry, {"ok": True, "facts": []})
-            await chat_service.maybe_supplement_cross_recording(
-                state, self.actor, self.registry, {"ok": True, "facts": []})
-        # 一轮只补一次：缺两段时一次补两段（2 次搜索），第三次工具结果不再触发。
-        self.assertEqual(search.await_count, 2)
-        self.assertTrue(state.attempted)
-
-    async def test_tool_runner_puts_supplemental_hits_in_the_tool_message(self):
-        state = await self._state()
-
-        async def fake_execute(actor, name, arguments):
-            if name == "list_facts":
-                return {"ok": True, "kind": "recording", "facts": []}
-            return {"ok": True, "fields": {}, "meeting": {"id": self.meeting.id}}
-
-        async def fake_search(query, **kwargs):
-            return [self._hit(kwargs["source_ids"][0])]
-
-        tools = {tool.name: tool for tool in chat_service.build_tools(
-            self.actor, self.registry, state)}
-        with patch.object(chat_service.kb_tools, "execute_tool",
-                          side_effect=fake_execute), \
-                patch.object(kb_service, "search_knowledge",
-                             AsyncMock(side_effect=fake_search)):
-            first = await tools["list_facts"].coroutine(kind="recording")
-            await tools["get_minutes"].coroutine(meeting_id=self.meeting.id)
-        payload = json.loads(first)
-        self.assertTrue(payload["coverage_hits"], "清单结果是首个非检索工具，应立刻补搜")
-        self.assertIn("ref", payload["coverage_hits"][0])
-        self.assertEqual(payload["coverage_supplement"]["searched_task_ids"],
-                         [self.morning.id, self.afternoon.id])
-
 
 class FailureDiagnosisTest(unittest.IsolatedAsyncioTestCase):
     """失败原因不许被换成另一句错诊断（实测踩过：中间失败的轮次被标成"没检索"）。

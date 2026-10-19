@@ -12,7 +12,8 @@
 ```
 
 网页：<http://127.0.0.1:18082>。后端健康检查：<http://127.0.0.1:19091/health>。
-登录账号和密码分别查看 `.env` 的 `APP_ADMIN_USERNAME`、`APP_ADMIN_PASSWORD`，本次已生成独立本地密码。
+登录账号和密码分别查看 `.env` 的 `APP_ADMIN_USERNAME`、`APP_ADMIN_PASSWORD`。
+**若 `APP_ADMIN_PASSWORD` 留空，种子账号 `admin/admin` 会生效——只适用于本地演示，公网部署必须设置强密码。**
 
 `scripts/compose.sh` 统一从指定位置读取 `.env`，无需把密钥放到项目根目录。
 后端可以多 worker / 多副本：登录限流与问答预算的计数已搬到 Redis（`common/ratelimit.py`），
@@ -40,9 +41,13 @@ MySQL 仅在 Compose 网络内开放，网页及后端仅绑定宿主机回环�
 | `LLM_ENABLE_THINKING` | Qwen 思考开关；本轮固定为 `false` |
 | `LLM_MAX_TOKENS` | 单次文本输出上限（可按调用类型分档：`LLM_MAX_TOKENS_MINUTES` 等） |
 | `LLM_INPUT_PRICE_MICRO_PER_1K` / `LLM_OUTPUT_PRICE_MICRO_PER_1K` | 每 1000 token 的单价（单位：微元=1e-6 元）。不填=未定价：成本记 0 但**在观测页标注"未计入"**，不是免费 |
-| `EMBEDDING_MODEL` / `EMBEDDING_DIM` | 知识库嵌入模型与维度（默认 `text-embedding-v4` / 1024）。**换模型需要重建知识库** |
-| `QDRANT_URL` | 向量库地址（compose 内为 `http://qdrant:6333`） |
+| `EMBEDDING_MODEL` / `EMBEDDING_DIM` | 知识库嵌入模型与维度（默认 `qwen3.7-text-embedding` / 1024，以 `.env.example` 为准）。**换模型需要重建知识库** |
 | `REDIS_URL` | 限流与预算的集中式计数（compose 内为 `redis://redis:6379/0`） |
+| `PG_DSN` | PostgreSQL/ParadeDB 连接串（pgvector dense + BM25 + LangGraph checkpoint；compose 内由 `PG_*` 拼出） |
+| `KB_BM25_TOKENIZER` | PG BM25 中文分词器：`jieba`（默认）/ `chinese_lindera` / `chinese_compatible` |
+| `CHAT_CHECKPOINT_ENABLED` | `1` 时在线问答使用 PostgreSQL checkpoint；未配 PG 时不启用（已落库消息仍可读） |
+| `JUDGE_MODEL` / `JUDGE_API_KEY` / `JUDGE_BASE_URL` | 可选跨族裁判；未配置时自检复核回退 `AGENT` |
+| `CHAT_CONTEXT_MAX_CHARS` | 问答上下文装配预算（system 与当前问题永远保留） |
 
 2026-09-25 根据官方模型文档选择 Qwen3.8-Max 的 `0902` 快照及 Qwen-Audio-3.1-ASR-Flash-Filetrans。前者支持严格 JSON Schema，后者支持长录音与说话人分离，HTTP 请求及结果结构兼容项目已有适配器。模型权限以实际 API 调用结果为准。
 
@@ -59,19 +64,29 @@ MySQL 仅在 Compose 网络内开放，网页及后端仅绑定宿主机回环�
 ## 验证
 
 ```bash
-./scripts/compose.sh exec -T backend python -m unittest discover -s tests -v   # 产品 405 项
-make -C evaluation test && make -C evaluation smoke                            # 评测 223 项 + 零调用回归
-cd meetingbot/vue && npm ci && npm run type-check && npm run lint && npm run test   # 前端 32 项
+./scripts/compose.sh exec -T backend python -m unittest discover -s tests -v   # 产品 576 项
+make -C evaluation test && make -C evaluation smoke                            # 评测 293 项 + 零调用回归
+cd meetingbot/vue && npm ci && npm run type-check && npm run lint && npm run test   # 前端 33 项
 ```
 
-**新增表怎么进已有库**：`chat_session` / `chat_message` 与两个单价列 + `cost_micro`
-在本轮引入，走迁移：
+**新增表怎么进已有库**：`chat_session` / `chat_message`、KB 三表、`kb_index_outbox`
+以及后续增量列都由 aerich 迁移链管理（0–7 号）。
+
+- **空库 / 已经由当前 `db/01-schema.sql` 建好的库**：不要再从 0 号重放迁移
+  （会在 2 号报 `Duplicate column`）。用带结构校验的登记脚本：
 
 ```bash
 cd meetingbot/fastapi-app
-MYSQL_HOST=… MYSQL_DATABASE=… .venv/bin/python -m aerich upgrade   # 1_…chat_session、2_…cost_tracking
+.venv/bin/python ../../scripts/stamp_aerich.py
 ```
-空库由 `db/01-schema.sql` 直接建出最新结构（与迁移殊途同归，有漂移测试兜底）。
+
+  脚本会先检查当前结构的关键表/列；不是当前终态就拒绝 `--fake`。随后创建
+  `aerich` 表并登记 0–7 号版本，重复执行是幂等的。
+
+- **从旧版 schema.sql 升级的库**：先备份，按实际已有列手工执行缺少的增量；
+  脚本检测到缺列会直接退出，不会把旧库伪装成最新。增量补齐后再跑登记脚本。
+- **迁移链本身**由 `tests/test_schema_sync.py` 重放 0–7 号并与 schema.sql 逐列比对；
+  空库 / 当前结构两条路径的终点必须一致。
 
 现有业务测试使用内存 SQLite 和 Mock 模型，包含实际 FFmpeg 格式处理，不需要付费 API。
 质量评测入口、固定样本、预算与指标口径见 `evaluation/README.md`。默认 dry-run 不调用模型；live 必须显式启用。
@@ -91,8 +106,8 @@ MYSQL_HOST=… MYSQL_DATABASE=… .venv/bin/python -m aerich upgrade   # 1_…ch
 
 | 子系统 | 关键开关 | 排障入口 |
 |---|---|---|
-| 知识库 | `EMBEDDING_MODEL`、`EMBEDDING_DIM`、`QDRANT_URL` | `GET /kb/status`：向量库可达性、嵌入配置、文档/切片/待处理任务计数 |
-| 问答 | `CHAT_MAX_ROUNDS`、`CHAT_MAX_TOKENS`、`CHAT_HISTORY_WINDOW`、`CHAT_SUMMARY_THRESHOLD` | `GET /chat/status`：模型是否配好、供应商是否声明支持工具调用、向量库与嵌入是否就绪、**内容审核是否启用** |
+| 知识库 | `EMBEDDING_MODEL`、`EMBEDDING_DIM` | `GET /kb/status`：PG 索引可达性、嵌入配置、文档/切片/待处理任务计数 |
+| 问答 | `CHAT_MAX_ROUNDS`、`CHAT_MAX_TOKENS`、`CHAT_HISTORY_WINDOW`、`CHAT_SUMMARY_THRESHOLD` | `GET /chat/status`：模型是否配好、供应商是否声明支持工具调用、PG 检索索引与嵌入是否就绪、**内容审核是否启用** |
 | 限流与预算 | `CHAT_ASK_LIMIT_PER_USER`、`CHAT_ASK_LIMIT_PER_IP`、`CHAT_ASK_WINDOW_SECONDS`、`CHAT_DAILY_TOKEN_BUDGET` | 被拒时返回 429 并带 `X-RateLimit-*` / `Retry-After`；`common/ratelimit.py` 的 fail-open 会记 ERROR |
 | 内容审核 | `MODERATION_WORDS` 或 `MODERATION_WORDS_FILE`、`MODERATION_OUTPUT_ACTION`(`flag`/`redact`/`block`) | 命中写 WARNING 日志；留痕存 `chat_message.moderation_json`（只记词与位置，不含上下文） |
 | 可观测 | `LOG_FORMAT`(默认 json)、`LOG_LEVEL`、`OTEL_EXPORTER_OTLP_ENDPOINT`（未设=不上报）、`OTEL_SERVICE_NAME`、`METRICS_TOKEN` | `/metrics`（Prometheus 文本）；设了 `METRICS_TOKEN` 后采集器要带 `x-metrics-token` |
@@ -141,9 +156,10 @@ python -m unittest discover -s tests -p 'test_*.py'
   **空库统一走 initdb**，aerich 只负责增量变更。别反过来用 aerich 建空库——
   能建，但会丢掉列注释这层文档。
 - **`generate_schemas` 只在测试里用**（内存 sqlite）。产品运行时不允许它建表。
-- **本轮的三个迁移**：`0_*_init`（基线，IF NOT EXISTS）、
-  `1_20261016190000_chat_session`（问答两张表，同样用 IF NOT EXISTS 便于重复执行）、
-  `2_20261016200000_cost_tracking`（两列单价 + `cost_micro`/`trace_id`，ALTER 加列）。
+- **本轮的迁移链**：`0_*_init`（基线，含 KB 三表；IF NOT EXISTS）、
+  `1_*_chat_session`（问答两张表）、`2_*_cost_tracking`、`3_*_query_plan`、
+  `4_*_contextual_retrieval`、`5_*_recording_time`、`6_*_agent_runtime`（outbox +
+  checkpoint/trace 列）、`7_*_runtime_cleanup`（条件删除 write-only 的 `last_event_id`）。
   增量迁移用普通 ALTER 而不是 IF NOT EXISTS：MySQL 的 ADD COLUMN 不支持它，
   而 aerich 的版本表保证每条迁移只执行一次。
 - 改结构时记得同步三处：模型、`db/01-schema.sql`、迁移文件。漏了第一处或第二处
@@ -161,8 +177,8 @@ uv pip install --python .venv/bin/python -r requirements.txt
 .venv/bin/python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-当前实测：**收集 406 项，405 项通过，1 项条件跳过**（缺 ffmpeg 时跳过）。
-评测侧 223 项、前端 32 项，命令见下文「验证」一节；数字以 CI 实跑为准。
+当前实测：**收集 576 项，570 项通过，6 项条件跳过**（5 个 PG 实库测试无 `PG_TEST_DSN`，1 个评测产物不在本工作区；CI 的 `postgres-integration` 作业会执行前五个）。
+评测侧 293 项、前端 33 项，命令见下文「验证」一节；数字以 CI 实跑为准。
 其中 74 项是契约层测试（`tests/test_contracts.py`），只依赖 pydantic、不碰数据库。
 数字以 CI（`.github/workflows/ci.yml` 的 backend 作业）每次实跑为准。
 
@@ -183,17 +199,28 @@ meetingbot/fastapi-app/.venv/bin/python evaluation/regression/run.py --set all
 
 ## 部署约束与新配置（2026-09-27 修复轮）
 
-**单进程约束**：backend 必须以 `--workers 1` 运行（Dockerfile 已钉住）。原因：登录/注册
-限流器的失败计数在进程内存里（`common/ratelimit.py`），多 worker 会让每个进程各自计数，
-爆破阈值被隐性放大。转写/纪要/自检的防双跑已不依赖进程内存——任务调度在 Temporal
-（workflow id 同 id 在跑即拒 + activity 内 DB 条件抢占），backend 与 temporal-worker
-可以各自多副本；需要多副本 backend 时先给限流器换集中式存储。
+**多 worker 已解禁**：登录/注册限流与问答预算计数已搬到 Redis
+（`common/ratelimit.py`，原子 Lua 滑动窗口），backend 不再依赖进程内计数。
+Dockerfile 用 `WEB_CONCURRENCY`（默认 2）控制 uvicorn worker 数；Redis 故障时限流
+fail-open（放行并记 ERROR），不会把业务打挂。转写/纪要/自检/索引的防双跑仍由
+Temporal workflow id 与 activity 内 DB 条件抢占保证，backend/worker 都可多副本。
 
-**必须设置的环境变量**：`JWT_SECRET`（缺失时后端拒绝启动；`openssl rand -hex 32` 生成）。
-样例与全部可选项见 `meetingbot/fastapi-app/.env.example`（.env 不入库）。
+**必须设置的环境变量**：`JWT_SECRET`（缺失时后端拒绝启动；`openssl rand -hex 32` 生成）、
+`PG_PASSWORD`（compose 的 PostgreSQL 初始化口令）。样例与全部可选项见
+`meetingbot/fastapi-app/.env.example`（.env 不入库）。
 
-**新增开关**：`REGISTER_ENABLED=false` 关闭自助注册（对外部署建议）；
-`CORS_ALLOW_ORIGINS` 收紧跨域来源；`LOGIN_RATE_MAX_FAILURES/LOGIN_RATE_WINDOW_SECONDS`
+**PostgreSQL（推荐）**：compose 的 `postgres` 用 ParadeDB PG17，一张
+`kb.chunk_search` 同时承载 pgvector dense 与 ParadeDB BM25，`langgraph` schema 承载
+checkpoint。dense/BM25 都是派生索引，丢了可从 MySQL 的 `kb_chunk` 重建；checkpoint
+丢了只影响在途对话续跑，不影响已落库消息。PG 不可用时检索不可用，`/chat/status`
+报告 `pg_kb_reachable=false`；不再有第二个向量库。`kb.chunk_search` 的
+`embedding` 列 / HNSW 索引 / BM25 索引由 `services/pg_kb.ensure_schema` 在启动时
+幂等创建；升级后先启动一次让 DDL 生效，再对三个来源重新索引以补向量。
+生产建议配 `PG_DSN` + `CHAT_CHECKPOINT_ENABLED=1`；未启用 checkpoint 时断线不能续跑。
+`paradedb/pg_search` 为 AGPL-3.0，分发/商用前需确认许可证口径。
+
+**新增开关**：`REGISTER_ENABLED` 默认关闭，设为 `true` 才开放自助注册；
+`CORS_ALLOW_ORIGINS` 留空表示同源、不允许跨域，跨域时写逗号分隔来源；`LOGIN_RATE_MAX_FAILURES/LOGIN_RATE_WINDOW_SECONDS`
 登录限流参数。
 
 **索引**：存量库执行 `docker exec -i meetingbot-local-db-1 mysql -umeetingbot -p$MYSQL_PASSWORD

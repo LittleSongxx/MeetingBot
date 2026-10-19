@@ -34,16 +34,41 @@ class CustomException(Exception):
 _HTTP_BY_CODE = {"400": 400, "401": 401, "403": 403, "404": 404, "429": 429}
 
 
-def _cors_headers() -> dict[str, str]:
+def _cors_headers(request: Request | None = None) -> dict[str, str]:
     """兜底处理器不经过 CORS 中间件，需要手工补头，否则浏览器读不到响应体。
-    来源与主 CORS 配置同源（CORS_ALLOW_ORIGINS，缺省 * 保持本地开发行为）。"""
+
+    `CORS_ALLOW_ORIGINS` 未设置 → 本地开发通配；显式空串 → 不补跨域头；
+    多来源时只回显请求 origin，不能把逗号分隔的整串塞进一个头。
+    """
     import os
-    origin = os.getenv("CORS_ALLOW_ORIGINS", "*").strip() or "*"
-    return {
-        "Access-Control-Allow-Origin": origin,
+
+    raw = os.getenv("CORS_ALLOW_ORIGINS")
+    if raw is None:
+        allow = "*"
+    else:
+        allowed = [item.strip() for item in raw.split(",") if item.strip()]
+        if not allowed:
+            return {}
+        request_origin = request.headers.get("origin") if request is not None else None
+        if request_origin:
+            if "*" in allowed:
+                allow = "*"
+            elif request_origin in allowed:
+                allow = request_origin
+            else:
+                return {}
+        elif len(allowed) == 1:
+            allow = allowed[0]
+        else:
+            return {}
+    headers = {
+        "Access-Control-Allow-Origin": allow,
         "Access-Control-Allow-Methods": "*",
         "Access-Control-Allow-Headers": "*",
     }
+    if allow != "*":
+        headers["Vary"] = "Origin"
+    return headers
 
 
 def setup_exceptions(app: FastAPI):
@@ -53,7 +78,7 @@ def setup_exceptions(app: FastAPI):
             status_code=_HTTP_BY_CODE.get(exc.code, 400),
             # body 保持 {code, msg} 结构：前端既有 code 分支继续可用
             content={"code": exc.code, "msg": exc.message},
-            headers={**_cors_headers(), **exc.headers},
+            headers={**_cors_headers(request), **exc.headers},
         )
 
     @app.exception_handler(RequestValidationError)
@@ -63,7 +88,7 @@ def setup_exceptions(app: FastAPI):
         return JSONResponse(
             status_code=422,
             content={"code": "422", "msg": "请求参数错误"},
-            headers=_cors_headers(),
+            headers=_cors_headers(request),
         )
 
     @app.exception_handler(Exception)
@@ -73,5 +98,5 @@ def setup_exceptions(app: FastAPI):
         return JSONResponse(
             status_code=500,
             content={"code": "500", "msg": "系统错误"},
-            headers=_cors_headers(),
+            headers=_cors_headers(request),
         )

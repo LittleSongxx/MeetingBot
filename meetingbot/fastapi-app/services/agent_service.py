@@ -16,7 +16,7 @@ from models import (
     TranscriptionTask,
 )
 
-from services import contracts
+from services import contracts, model_config
 from services.agent_graph import build_review_graph, recursion_limit, review_passed
 from services.minutes_service import MinutesResult
 from services.model_factory import invoke_json
@@ -273,11 +273,14 @@ async def review_round(
         # 先初始化：首轮直接通过时 kept_issues 为空、不会进下面这个分支，
         # 但 payload 里要写它（这个 UnboundLocalError 被产品测试当场抓到）
         support_dropped: list[dict[str, str]] = []
+        judge_config = config
         if kept_issues:
             try:
+                # 跨族裁判优先：JUDGE 未配置时回退 AGENT，现有部署/测试不受影响
+                judge_config = await model_config.resolve("JUDGE", fallback="AGENT")
                 support_system, support_user = contracts.issue_support_prompt()
                 verdicts = await call_model(
-                    run, config, support_system,
+                    run, judge_config, support_system,
                     render_prompt(
                         support_user,
                         transcript=reviewed_transcript,
@@ -288,7 +291,7 @@ async def review_round(
                         ),
                     ),
                     contracts.issue_support_schema(),
-                    "AGENT_REVIEW_SUPPORT",
+                    "AGENT_JUDGE",
                 )
                 filtered = contracts.filter_issues_by_support(
                     kept_issues, (verdicts or {}).get("verdicts") or []
@@ -332,6 +335,8 @@ async def review_round(
                                   "by_kind": gate["by_kind"]},
                 "issues_dropped_by_support_check": support_dropped,
                 "evidence_check": evidence_report,
+                # 审计：这一轮支撑复核实际用了哪个模型用途/模型
+                "support_check_model": judge_config.model_name,
             },
         )
         return result

@@ -1254,6 +1254,10 @@ rerank 输入 token 与延迟增加。**不预设结论**。
 
 ### 最终标准读数（2026-10-17 收口：300×3 + 资料覆盖 + 录音时间 + 工具卫生；跨录音预检索默认关）
 
+> **历史记录**：本节读数采集于双词法后端与跨录音预检索/补搜机制仍存在的版本。
+> 这些开关与机制已在 2026-10-18 的运行时清理中删除；当前环境不可再按本文配置，
+> 复现请以 `docs/运行时与索引一致性.md` 的单一路径为准。
+
 **当前标准产物**：`results/chat_answers.json` 与 `results/rag_packet.json`
 （后者含 `summary` 别名 = `summary_f`，`summary_label="f"`）。历史 500×5 的 a/b 产物
 保留在 `chat_answers_top5.json` / `rag_packet_top5.json`；P1 78.4% 是
@@ -2002,3 +2006,31 @@ plan 臂 core 0.800 vs baseline 0.781，**宏平均差 +1.92pp < +3pp 阈值**�
 | 五道护栏/优化机制开关状态 | 全部默认关，未变 | — |
 | **model_json 加 `repair_dangling_fields`**（提前闭括号/游离闭括号悬挂字段的有界合并） | 解析容错面：此前这类模型畸形直接记失败并中断任务；现在无损失救回（`LAST_SALVAGE` 如实记录 merged_dangling_fields / dropped_stray_bracket） | 实测两起真实事故原文均零丢弃救回（vcsum_221 的 AGENT_REVIEW、vcsum_72 的 AGENT_REFINE）；有界规则：首值必须为 dict、余部至多一个游离闭括号、拼接必须整体过 json.loads 且字段变多；产品 205 项单测全绿；镜像已重建并容器内核对 |
 | **评测侧契约双形态化**（bench_common schema_errors 增加 v2/legacy） | 新运行的结构检查口径：v2=含 origin/evidence 当前契约（默认），legacy=AliMeeting4MUG 冻结产物形态 | 此前 v2 表未跟上产品契约升级，所有新运行 structure.schema_valid 系统性全 False（评测侧漂移，非产品回归）；金样测试钉住 v2 run 对真实产物防再漂移；评测 208 项单测全绿 |
+
+### 轴5 词法后端 A/B：Qdrant sparse vs PostgreSQL BM25（2026-10-18）
+
+**问题**：把词法臂从 Qdrant sparse（字符 bigram + 服务端 IDF）换成 ParadeDB
+`pg_search` BM25（jieba）后，检索侧是否退化？
+
+**样本与口径**：`gold/qa_seed.json` 中有金标来源的 **95 题**（17 条无金标片段/
+不可答题不计入分母）；同一索引、同一 `limit=5`、rerank 开；直接调用
+`kb_service.search_knowledge`，不生成答案。读数用
+`evaluation/regression/retrieval_metrics.py` 的片段→时间窗映射。
+
+| 端点 | Qdrant sparse | PG BM25 | 差值 |
+|---|---:|---:|---:|
+| recall@k | 95.70% | 95.70% | 0 |
+| MRR | 0.9228 | 0.9228 | 0 |
+| nDCG@k | 0.9332 | 0.9341 | **+0.09pp** |
+| recording coverage | 96.12% | 96.12% | 0 |
+
+逐题只有 q62 的 nDCG 不同（0.92→1.00），其余 94 题一致。PG 不劣于 Qdrant
+超过预注册的 1pp，**门禁通过**。随后项目收敛为 PG BM25 单一词法实现，
+Qdrant sparse 臂与双后端开关已删除；随后 Qdrant 整体移除，PG 的 `kb.chunk_search` 一表承载 pgvector dense + BM25，PG 不可用时检索不可用。
+
+**清理后复跑（同一 95 题、limit=5、rerank 开）**：recall@k **95.70%**、
+MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
+与 PG BM25 臂逐项一致，无回退。检索集与读数：`results/retrieval_after_cleanup.json`、`results/retrieval_after_fixes.json`、`results/retrieval_pgvector.json` 及对应 metrics；Qdrant 合入 pgvector 后复跑读数仍逐项不变。
+
+**不能说的**：只测检索侧（rerank 后 top-3），不测答案质量；
+单一语料、95 题，不能外推为普遍水平。

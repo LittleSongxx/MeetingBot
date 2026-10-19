@@ -19,6 +19,7 @@
         <el-option label="纪要自检" value="AGENT"></el-option>
         <el-option label="说话人匹配" value="SPEAKER"></el-option>
         <el-option label="向量嵌入" value="EMBEDDING"></el-option>
+        <el-option label="跨族裁判" value="JUDGE"></el-option>
       </el-select>
       <el-button type="info" plain @click="search">查询</el-button>
       <el-button type="warning" plain style="margin-left: 10px" @click="reset">重置</el-button>
@@ -92,6 +93,7 @@
             <el-option label="纪要自检" value="AGENT"></el-option>
             <el-option label="说话人匹配" value="SPEAKER"></el-option>
             <el-option label="向量嵌入" value="EMBEDDING"></el-option>
+            <el-option label="跨族裁判" value="JUDGE"></el-option>
           </el-select>
         </el-form-item>
         <!-- 服务协议只读，切换用途时由 changeModelType 自动填，转写和另外两类不是同一种协议 -->
@@ -274,6 +276,7 @@ const modelTypeText = (value) =>
     AGENT: '纪要自检',
     SPEAKER: '说话人匹配',
     EMBEDDING: '向量嵌入',
+    JUDGE: '跨族裁判',
   })[value] || value
 
 // 微元（1e-6 元）→ 元，去掉多余的 0；成本在库里是整数微元，展示时才换算
@@ -315,6 +318,13 @@ const MODEL_DEFAULTS = {
     base_url: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     model_name: 'text-embedding-v4',
     timeout_seconds: 120,
+    provider: 'OPENAI_COMPATIBLE',
+  },
+  // 跨族裁判：建议填与被测不同族的供应商；未配置时后端回退 AGENT
+  JUDGE: {
+    base_url: 'https://api.deepseek.com',
+    model_name: 'deepseek-flash',
+    timeout_seconds: 180,
     provider: 'OPENAI_COMPATIBLE',
   },
 }

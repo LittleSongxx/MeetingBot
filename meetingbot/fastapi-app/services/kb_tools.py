@@ -42,9 +42,10 @@ import logging
 import os
 from dataclasses import dataclass, field
 from datetime import datetime
+from time import perf_counter
 from typing import Any, Awaitable, Callable, Literal
 
-from common import access, qdrant
+from common import access, tracing
 from common.times import LOCAL_TZ, format_datetime
 from models import (
     Meeting,
@@ -370,10 +371,13 @@ async def _search_knowledge(actor: Actor, args: SearchKnowledgeArgs) -> dict[str
             args.query, allowed_meeting_ids=allowed, limit=args.limit,
             authority=args.authority, chunk_type=args.chunk_type,
             source_ids=args.source_ids,
+            # source_id 在纪要表与转写任务表里各自独立编号；工具语义明确是
+            # “录音任务 id”，必须同时限定来源类型，否则同号纪要会被误纳入。
+            source_types=("TRANSCRIPT",) if args.source_ids else None,
             meeting_time_from=time_from, meeting_time_to=time_to, biz_id=actor.biz_id)
     except kb_service.KbError as error:
         raise ToolError(str(error)) from error
-    except qdrant.QdrantError as error:
+    except Exception as error:  # noqa: BLE001 - PG 检索失败转成模型可读的工具错误
         raise ToolError(f"检索失败：{error}") from error
 
     titles = await _meeting_titles([hit.meeting_id for hit in hits])
@@ -722,15 +726,25 @@ async def execute_tool(actor: Actor, name: str, arguments: Any) -> dict[str, Any
     if spec is None:
         return {"ok": False, "error": f"没有这个工具：{name}",
                 "available": sorted(TOOLS_BY_NAME)}
-    try:
-        parsed = spec.validate(arguments)
-        data = await spec.handler(actor, parsed)
-        return {"ok": True, **data}
-    except ToolError as error:
-        return {"ok": False, "error": str(error)}
-    except Exception as error:  # noqa: BLE001 - 工具边界：任何异常都不得打断对话主流程
-        logger.exception("工具 %s 执行失败", name)
-        return {"ok": False, "error": f"工具执行失败：{(str(error) or type(error).__name__)[:300]}"}
+    started = perf_counter()
+    with tracing.span("chat.tool", {
+        "gen_ai.operation.name": "execute_tool",
+        "gen_ai.tool.name": str(name),
+        "meetingbot.tool.meeting_scope": (
+            None if actor.allowed_meeting_ids is None else len(actor.allowed_meeting_ids)),
+    }) as current:
+        try:
+            parsed = spec.validate(arguments)
+            data = await spec.handler(actor, parsed)
+            result = {"ok": True, **data}
+        except ToolError as error:
+            result = {"ok": False, "error": str(error)}
+        except Exception as error:  # noqa: BLE001 - 工具边界：任何异常都不得打断对话主流程
+            logger.exception("工具 %s 执行失败", name)
+            result = {"ok": False, "error": f"工具执行失败：{(str(error) or type(error).__name__)[:300]}"}
+        current.set_attribute("meetingbot.tool.ok", bool(result.get("ok")))
+        current.set_attribute("meetingbot.tool.elapsed_ms", int((perf_counter() - started) * 1000))
+        return result
 
 
 def tool_result_text(result: dict[str, Any]) -> str:
@@ -855,6 +869,23 @@ def _owner_matches(item: Any, owner: str) -> bool:
     return owner.strip() in text
 
 
+def _slot_status(item: Any) -> dict[str, dict[str, Any]]:
+    """把类型化槽位的 basis 保留下来，供覆盖/充分性判断。
+
+    `present_output` 只留展示文本；这里在展示之外附一份机器可读状态。
+    """
+    if not isinstance(item, dict):
+        return {}
+    status: dict[str, dict[str, Any]] = {}
+    for name, value in item.items():
+        if isinstance(value, dict) and ("basis" in value or "text" in value):
+            status[str(name)] = {
+                "basis": value.get("basis"),
+                "text": value.get("text"),
+            }
+    return status
+
+
 def _fact(minutes: MeetingMinutes, field: str, index: int, item: Any,
           titles: dict[int, str]) -> dict[str, Any]:
     """一条事实：能回答问题，也能被引用回条目。"""
@@ -867,6 +898,8 @@ def _fact(minutes: MeetingMinutes, field: str, index: int, item: Any,
         "item_index": index,
         "authority": "CONFIRMED",
         "item": presented,
+        # additive：不改变展示/引用，只给覆盖判断一个可读的槽位状态
+        "slot_status": _slot_status(item),
     }
 
 
@@ -908,11 +941,6 @@ def _period_of(value: Any) -> str | None:
     if hour < 18:
         return "下午"
     return "晚上"
-
-
-def period_of(value: Any) -> str | None:
-    """公开别名：跨录音预检索也要用同一套上午/下午判定。"""
-    return _period_of(value)
 
 
 __all__ = [

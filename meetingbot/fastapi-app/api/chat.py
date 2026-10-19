@@ -30,23 +30,40 @@ import json
 import os
 from typing import Any, AsyncIterator
 
-from common import providers, qdrant, ratelimit
-from common.auth import get_current_user
+from common import providers, ratelimit
+from common.auth import get_current_user, require_admin
 from common.exception_handler import CustomException
 from common.result import Result
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
-from models import AiModelConfig, ChatSession, User
+from models import AiModelConfig, ChatMessage, ChatSession, User
 from pydantic import BaseModel, Field
-from services import chat_service, kb_chunking, kb_service, kb_tools, model_factory, moderation, query_plan
+from services import (
+    chat_checkpoint,
+    chat_events,
+    chat_service,
+    kb_chunking,
+    kb_service,
+    kb_tools,
+    model_factory,
+    moderation,
+    pg_kb,
+    query_plan,
+)
 
 router = APIRouter(prefix="/chat")
 
 # 心跳间隔（秒）。取 15 是反代空闲超时的常见下限（nginx 默认 60s）的安全值
 HEARTBEAT_SECONDS = float(os.getenv("CHAT_HEARTBEAT_SECONDS", "15"))
 # 一轮问答里除问答模型之外、同样要计入当日 token 配额的调用类型
-# （检索重排、查询规划）。口径写在这里一处，done 事件与配额闸共用。
-AUX_CALL_TYPES = (chat_service.CHAT_CALL_TYPE, "KB_RERANK", "KB_QUERY_PLAN")
+# （摘要、查询嵌入、检索重排、查询规划）。done 事件与配额闸使用同一组类型。
+AUX_CALL_TYPES = (
+    chat_service.CHAT_CALL_TYPE,
+    chat_service.SUMMARY_CALL_TYPE,
+    "KB_QUERY_EMBED",
+    "KB_RERANK",
+    "KB_QUERY_PLAN",
+)
 # 断开连接后等待落库收尾的上限：不设上限会把"客户端走了"变成"服务端挂住"
 CLOSE_PERSIST_TIMEOUT = 10.0
 
@@ -67,7 +84,9 @@ class SessionPayload(BaseModel):
 
 class StreamPayload(BaseModel):
     session_id: int
-    question: str
+    question: str = ""
+    # 非空表示恢复这条助手消息；此时 question 可留空（服务端从上一轮用户消息取）
+    resume_message_id: int | None = None
 
 
 def _session_dict(session: ChatSession) -> dict[str, Any]:
@@ -80,7 +99,7 @@ def _session_dict(session: ChatSession) -> dict[str, Any]:
 
 @router.get("/status")
 async def status(current_user: User = Depends(get_current_user)):
-    """聊天是否可用：模型配好没有、供应商支不支持工具调用、向量库通不通。
+    """聊天是否可用：模型配好没有、供应商支不支持工具调用、PG 检索索引通不通。
 
     页面据此显示一条横幅，而不是让用户问一句再看到报错。
     """
@@ -91,7 +110,7 @@ async def status(current_user: User = Depends(get_current_user)):
         "model_configured": config is not None,
         "tool_calling_supported": bool(config) and providers.supports_tool_calling(config.base_url),
         "embedding_configured": embedding is not None,
-        "vector_store_reachable": await qdrant.health(),
+        "vector_store_reachable": pg_kb.available(),
         # 内容审核是否在跑：没配词表时如实显示"未启用"，而不是让页面以为扫过了
         "moderation": moderation.status(),
         # 机制开关**由被测进程自己报**：抓取进程的 env 与容器的 env 是两个空间，
@@ -107,11 +126,9 @@ async def status(current_user: User = Depends(get_current_user)):
         "kb_dedupe_enabled": kb_service.dedupe_enabled(),
         "kb_dedupe_overlap_seconds": kb_service.dedupe_overlap_seconds(),
         "kb_contextual_enabled": kb_service.contextual_enabled(),
-        "cross_recording_prefetch_k": chat_service.cross_recording_prefetch_k(),
-        # 条件补搜：只在“强跨录音标记 + 已做两次工具 + 转写覆盖 <2 段”时触发，
-        # 与入口预检索互斥；同样由被测进程自报，产物才能证明这一臂开没开。
-        "cross_recording_supplement_k": chat_service.cross_recording_supplement_k(),
-        "qdrant_collection": qdrant.collection_name(),
+        "pg_kb_table": pg_kb.table_name(),
+        "pg_kb_reachable": pg_kb.available(),
+        "checkpoint_backend": "postgres" if chat_checkpoint.available() else "none",
     })
 
 
@@ -158,13 +175,16 @@ class PlanPayload(BaseModel):
 
 
 @router.post("/plan")
-async def plan(payload: PlanPayload, current_user: User = Depends(get_current_user)):
+async def plan(payload: PlanPayload, current_user: User = Depends(require_admin)):
     """**查询规划预览**：只跑一次规划并返回结构，不落库、不产答案。
 
     存在的理由：意图 F1 只需要"产品怎么判"这一个信号（每题一次廉价调用），
     走完整问答链路要多花几倍的调用与 token。它跑的是**产品自己的**规划实现
     （不是评测侧另写一份），因此量出来的就是线上行为——评测侧只负责打这个端点、存产物。
+    这是评测/排障端点：仅管理员可用，且开关关闭时不产生付费调用。
     """
+    if not query_plan.plan_enabled():
+        raise CustomException("查询规划未启用（KB_QUERY_PLAN_ENABLED=0）")
     text = (payload.question or "").strip()
     if not text:
         raise CustomException("问题不能为空")
@@ -183,9 +203,15 @@ async def stream(payload: StreamPayload, request: Request,
         session = await chat_service.get_session(payload.session_id, current_user)
     except chat_service.ChatError as error:
         raise CustomException(str(error)) from error
-    source = _charged_stream(session, payload.question, current_user)
+    source = _charged_stream(
+        session, payload.question, current_user,
+        resume_message_id=payload.resume_message_id,
+        # 客户端把最后收到的 SSE id 带回来：先按它回放 Redis Stream 里的事件，
+        # 回放未终态时再从 PostgreSQL checkpoint 继续生成。
+        last_event_id=request.headers.get("Last-Event-ID"),
+    )
     return StreamingResponse(
-        _sse_frames(source),
+        _sse_frames(source, emit_ids=True),
         media_type="text/event-stream",
         headers={
             # 关掉反向代理的响应缓冲，否则逐 token 会退化成"憋一大段再吐"
@@ -223,7 +249,10 @@ async def _guard_ask(request: Request, current_user: User) -> None:
 
 
 async def _charged_stream(session: ChatSession, question: str,
-                          current_user: User) -> AsyncIterator[tuple[str, dict[str, Any]]]:
+                          current_user: User, *,
+                          resume_message_id: int | None = None,
+                          last_event_id: str | None = None
+                          ) -> AsyncIterator[tuple[str, dict[str, Any], str | None]]:
     """跑一轮问答，并把这一轮真实用掉的 token 记进当日额度。
 
     两条口径：
@@ -233,28 +262,55 @@ async def _charged_stream(session: ChatSession, question: str,
     - 记账放在 `finally`，且**尽力而为**：正常结束、模型失败、客户端断开都会尝试
       记一次；应用关停的极窄窗口里可能记不上（那时日志里查得到账本行，
       预算少算这一次不会累积放大）。限流后端故障时 fail-open。
+
+    恢复轮次按 `charged_tokens` 只补差额：同一轮重连不会重复扣预算。
+    如果客户端带回 `Last-Event-ID`，先从 Redis Stream 回放已发事件；回放到
+    done/error 就结束，否则再从 checkpoint 继续生成。
     """
-    message_id: int | None = None
+    message_id: int | None = resume_message_id
     try:
-        async for kind, payload in chat_service.stream_answer(session, question, user=current_user):
+        if resume_message_id and last_event_id:
+            replay = await chat_events.read_after(int(resume_message_id), last_event_id)
+            for event_id, name, data in replay:
+                if name == "meta":
+                    message_id = int(data.get("message_id") or message_id or 0) or message_id
+                yield (name, data, event_id)
+            if chat_events.terminal(replay):
+                return
+        source = (
+            chat_service.resume_answer(
+                session, int(resume_message_id), user=current_user)
+            if resume_message_id else
+            chat_service.stream_answer(session, question, user=current_user)
+        )
+        async for kind, payload in source:
             if kind == "meta":
                 message_id = int(payload.get("message_id") or 0) or None
-            yield (kind, payload)
+            event_id = (await chat_events.append(message_id, kind, payload)
+                        if message_id else None)
+            yield (kind, payload, event_id)
     finally:
         if DAILY_TOKEN_BUDGET > 0:
             with contextlib.suppress(BaseException):
                 used = 0
+                already = 0
                 if message_id:
                     # 配额按**全部相关调用类型**计：辅助调用（重排/规划）同样花钱
                     used = int((await chat_service.turn_tokens(
                         message_id, call_types=AUX_CALL_TYPES)).get("total_tokens") or 0)
-                if used:
-                    await ratelimit.spend("chat-tokens", str(current_user.id), used,
+                    row = await ChatMessage.get_or_none(id=message_id)
+                    already = int((row.charged_tokens if row else 0) or 0)
+                delta = max(0, used - already)
+                if delta:
+                    await ratelimit.spend("chat-tokens", str(current_user.id), delta,
                                           limit=DAILY_TOKEN_BUDGET, window_seconds=86_400)
+                    if message_id:
+                        await ChatMessage.filter(id=message_id).update(charged_tokens=used)
 
 
-async def _sse_frames(source: AsyncIterator[tuple[str, dict[str, Any]]],
-                      *, heartbeat: float = HEARTBEAT_SECONDS) -> AsyncIterator[str]:
+async def _sse_frames(source: AsyncIterator[tuple[Any, ...]],
+                      *, heartbeat: float = HEARTBEAT_SECONDS,
+                      emit_ids: bool = False) -> AsyncIterator[str]:
     """把事件流包成 SSE 帧，并在空闲时插入心跳注释行。
 
     事件生产与帧生成分成两个任务（队列连接）：这样"等下一个事件"可以带超时，
@@ -277,6 +333,7 @@ async def _sse_frames(source: AsyncIterator[tuple[str, dict[str, Any]]],
             await queue.put(("end", None))
 
     task = asyncio.create_task(pump())
+    sequence = 0
     try:
         while True:
             try:
@@ -290,8 +347,15 @@ async def _sse_frames(source: AsyncIterator[tuple[str, dict[str, Any]]],
             if kind == "failure":
                 yield _frame("error", {"message": payload})
                 break
-            name, data = payload
-            yield _frame(name, data)
+            if isinstance(payload, tuple) and len(payload) == 3:
+                name, data, event_id = payload
+            else:
+                name, data = payload
+                event_id = None
+            sequence += 1
+            yield _frame(
+                name, data,
+                event_id=event_id or (str(sequence) if emit_ids else None))
     finally:
         # 客户端断开时也要让生成器收尾（落库那一轮的结果），否则会话里会留下
         # 一条永远空的助手消息，用户自己都不知道发生过什么
@@ -305,5 +369,6 @@ async def _sse_frames(source: AsyncIterator[tuple[str, dict[str, Any]]],
             await source.aclose()
 
 
-def _frame(name: str, data: dict[str, Any]) -> str:
-    return f"event: {name}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+def _frame(name: str, data: dict[str, Any], *, event_id: str | None = None) -> str:
+    prefix = f"id: {event_id}\n" if event_id else ""
+    return f"{prefix}event: {name}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"

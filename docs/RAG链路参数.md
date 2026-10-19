@@ -1,22 +1,25 @@
-# RAG 全链路参数（标准化配置，2026-10-17）
+# RAG 全链路参数（标准化配置，2026-10-18）
 
 这份表回答一个问题：**这条 RAG 链路的每个可调参数现在取什么、为什么取这个、改了要付什么代价。**
-取值的依据是公开做法（Qdrant 官方索引/过滤文档、Azure RAG 检索阶段指南、DashScope 模型文档）
+取值的依据是公开做法（pgvector / ParadeDB 官方索引文档、Azure RAG 检索阶段指南、DashScope 模型文档）
 与本语料上的实测（`evaluation/LEDGER.md` 的「标准化链路」一节），**不做学术式消融**。
 
 ## 一、链路与参数
 
 ```
 转写/纪要 ──切块──▶ 切片（300 字窗口，2 行重叠）
-    ├─ 稠密：qwen3.7-text-embedding（1024 维）
-    ├─ 稀疏：字符 bigram 次线性 TF + Qdrant 服务端 IDF（= BM25 词法口径）
+    ├─ 稠密：qwen3.7-text-embedding（1024 维）→ PostgreSQL pgvector
+    ├─ 词法：ParadeDB BM25（同一 PostgreSQL，jieba 分词）
     ▼
-Qdrant 混合检索（prefetch 24 × 两路，服务端 RRF 融合）
+应用层 RRF 融合（`services/hybrid.py`）
     ▼
 qwen3.7-text-rerank（专用 cross-encoder 类，24 候选打分）
     ▼
 截断 top-3 ──▶ 生成模型
 ```
+
+PG 不可用时两路检索都不可用，本轮没有检索依据；`/chat/status` 报告
+`pg_kb_reachable=false`，由 no_retrieval 闸如实标注。
 
 | 参数 | 当前值 | 位置 | 改它要付什么 |
 |---|---|---|---|
@@ -24,18 +27,19 @@ qwen3.7-text-rerank（专用 cross-encoder 类，24 候选打分）
 | 重叠 | 2 行（约 15%） | 同上（常量） | 同上；重叠太少会切断跨句事实，太多会重复召回 |
 | 切分方式 | 句读边界（`。！？；`）+ 单句上限 800 字硬切 | 同上 | 会议转写是连续口语，没有章节结构；按句读切比固定窗口稳定 |
 | 稠密模型 / 维度 | `qwen3.7-text-embedding` / **1024**（`EMBEDDING_MODEL`、`EMBEDDING_DIM`） | `.env` → bootstrap 同步到 `ai_model_config` | 换模型/维度 = 换向量空间，必须重建（指纹含模型名与维度，自动触发） |
-| 稀疏臂 | 字符 bigram 次线性 TF + **IDF 由 Qdrant 按语料统计** | `services/kb_sparse.py`、`common/qdrant.py` | `modifier=idf` 是**建库时**的声明；换它要换 collection 名重建（代码会 fail-fast 而不是静默退化） |
-| 混合与融合 | 两路各 prefetch 24，服务端 **RRF**（`query.fusion=rrf`） | `common/qdrant.py` | 候选深度影响召回；RRF 免调权重 |
+| 词法后端 | **ParadeDB BM25**（唯一实现；2026-10-18 95 题 A/B 过门禁） | `services/pg_kb.py` / `services/kb_service.py` | PG 不可用时检索不可用；换分词器/重建索引需重跑检索 A/B |
+| BM25 分词 | **jieba**（`KB_BM25_TOKENIZER`） | `services/pg_kb.py` | 换分词器会改变召回分布；必须重跑检索指标 |
+| 候选召回 | PG pgvector dense 与 PG BM25 各取 **24** | `services/kb_service.py`、`services/pg_kb.py` | 候选深度影响召回；调大要同步看 rerank 延迟与成本 |
+| 混合与融合 | 两路排名在应用层做 **RRF**（`services/hybrid.py`） | `services/kb_service.py` | RRF 只看排名、免调权重；同一张表的两路 SQL 仍分别返回排名 |
 | 重排 | `qwen3.7-text-rerank`（`RERANK_MODEL`；`RERANK_BASE_URL` 可指专属端点） | `services/model_factory.rerank_documents` | 每次检索一次 HTTP；24 候选实测 **平均 278.5ms、约 3.9k token/次、0.00195 元/次**（单价 500 微元/千） |
-| 候选深度 | **24**（`RERANK_CANDIDATES`，两路 prefetch 同步） | `services/kb_service.py` | 40 候选实测 precision +0.5pp（检不出），延迟 +36.5%、成本 +65.7%；保持 24 |
+| 候选深度 | **24**（`RERANK_CANDIDATES`，dense/BM25 同步） | `services/kb_service.py` | 40 候选实测 precision +0.5pp（检不出），延迟 +36.5%、成本 +65.7%；保持 24 |
 | 重排开关 | 默认**开**（`KB_RERANK_ENABLED`） | `services/kb_service.py` | 关掉省延迟，但 context_precision 会掉 |
 | 截断 | **top-3**（`RERANK_TOP_K`） | 同上 | k 越大召回越宽、单条精度越低（见第二节四臂标定） |
 | 工具默认条数 | `search_knowledge` **5**（可到 20，重排后仍截到 top-3）；`list_facts` 20（可到 50） | `services/kb_tools.py` | 模型要更多也只会拿到 3 条切片；要更大就调 `RERANK_TOP_K` |
 | get_minutes 选择 | `keywords` 可选、`limit` 可选（默认不截断）、无 `order` | `services/kb_tools.py` | 列表是纪要数组顺序，不等于会议时间顺序；问某主题用 keywords，问最后总结的几条去检索转写。item_index 保留原始下标 |
 | list_facts task | `kind=task` = decisions + pending_items | 同上 | **只用于问某一个人负责的任务**；问行动项/待办清单仍用 pending_item/decision |
 | 摘录预算 | **30 段/轮**（`EXCERPT_SEGMENTS_PER_TURN`；单次上限 60） | `services/kb_tools.py` | 单次上限管不住多次调用（q90 两次 112 段）；预算按轮共享 |
-| 跨录音预检索 | **0=关**（`CROSS_RECORDING_PREFETCH_K`） | `services/chat_service.py` | 入口每段 top-k 注入；k=1/2/3 把 cross8 precision 压到 51–60% |
-| 跨录音条件补搜 | **1**（`CROSS_RECORDING_SUPPLEMENT_K`） | 同上 | 强标记 + 转写覆盖 <2 段时补缺失段 top-1；**首个非检索工具结果也触发**（q91 只调一次清单）；独立 cross8 72.1/93.8 |
+| 覆盖提示 | 图内 `coverage` 节点：跨录音来源缺口 / 槽位缺失时注入**一次**定向提示 | `services/coverage.py`、`services/chat_graph.py` | 确定性、不调模型；只提示不替模型下结论，实际补检索仍走正常工具（引用与事件单一来源） |
 
 ## 二、本语料实测（27 条人工标注题）
 
@@ -137,9 +141,10 @@ cross_meeting **73.0/68.8**。68 条仍是代理起草/单会议/单裁判，不
 
 1. 改 `.env`（块大小/模型/k）→ 重启 backend（bootstrap 会把模型配置同步进库）；
 2. 触发重建索引（三个来源各 POST 一次 `/kb/index`）——**内容指纹覆盖了正文、payload 结构、
-   嵌入模型与 collection**，所以改这些都会自动重建；**稀疏 IDF 与 collection 名绑死**，
-   换它要改 `QDRANT_COLLECTION`；
-3. 重建后用 `make smoke` 看零调用检索指标（recall@k/MRR/nDCG），再决定要不要跑判定。
+   嵌入模型与索引表/维度**，所以改这些都会自动重建；
+3. 换 BM25 分词器不能只改环境变量：`chunk_search_bm25` 索引是 `IF NOT EXISTS` 建的，
+   要先 `DROP INDEX kb.chunk_search_bm25`，再重建索引并跑同一批检索题；
+4. 重建后用 `make smoke` 看零调用检索指标（recall@k/MRR/nDCG），再决定要不要跑判定。
 
 ## 四、明确**没有**做的（避免被当成遗漏）
 
@@ -148,6 +153,6 @@ cross_meeting **73.0/68.8**。68 条仍是代理起草/单会议/单裁判，不
 | 语义切分 / 父子块 / Contextual Retrieval | 都要额外机制（父块表、索引时逐块 LLM 调用）；本语料 128 个片段、61 个切片，收益与成本不成比例。**本轮先做 Contextual Retrieval 的 LLM 版并量收益**（LEDGER 任务 3）；语义切分与父子块仍不做，除非 Contextual Retrieval 的收益证明值得再上一层 |
 | 多向量 / ColBERT | 需要新索引与 GPU 侧能力；当前混合+重排已覆盖"精确串 + 语义"两类召回 |
 | k 的自适应（按问题类型给不同 k） | 需要先有可靠的意图路由；该路由的逐类 F1 目前还有两类不可用（见 LEDGER） |
-| 修改 BM25 的 k1/b | Qdrant 的稀疏 IDF 只暴露 modifier；完整 BM25 参数要自建检索服务，超出本项目范围 |
+| 修改 BM25 的 k1/b | ParadeDB 支持，但本项目没有把它暴露成配置；改索引参数要重建 BM25 索引并重跑同批检索指标，当前默认值在本语料上未检出错配 |
 | 重叠窗口去重（**已实现、默认关**） | 300×3 的零调用反事实：删掉的 10 条全部被判有用，precision 81.0%→78.4%、recall 不变。相邻窗口不是重复噪声，而是各含答案的有用上下文。开关 `KB_DEDUPE_ENABLED=1` 可开，阈值见 `.env.example` |
 | Contextual Retrieval（**已实现、默认关**） | 索引时逐块一次 LLM 调用（`KB_CONTEXTUALIZE`，61 次/0.023M token）；300×3 上 precision 77.3% vs 81.0%，主指标未过成功线。机制保留，`KB_CONTEXTUAL_ENABLED=1` 可开；语义切分与父子块仍不做 |

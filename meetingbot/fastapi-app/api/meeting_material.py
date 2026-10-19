@@ -1,11 +1,11 @@
 import contextlib
 import hashlib
 import zipfile
-from pathlib import Path
 from uuid import uuid4
 
 from common.auth import get_current_user
 from common.exception_handler import CustomException
+from common.paths import MATERIAL_DIR
 from common.result import PageInfo, Result
 from common.times import format_datetime
 from docx import Document
@@ -32,7 +32,6 @@ MATERIAL_MIME_BY_EXT = {
 }
 # docx 在线预览的大小上限（50MB）：全量解析型预览必须有界
 MAX_PREVIEW_BYTES = 50 * 1024 * 1024
-MATERIAL_DIR = Path(__file__).resolve().parent.parent / "files" / "meeting_material"
 MAX_FILE_SIZE = 500 * 1024 * 1024
 AUDIO_EXTENSIONS = {"mp3", "wav", "m4a", "aac", "flac", "ogg", "wma"}
 VIDEO_EXTENSIONS = {"mp4", "mov", "avi", "mkv", "webm", "mpeg", "mpg"}

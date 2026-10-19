@@ -19,7 +19,7 @@ from uuid import uuid4
 
 import httpx
 import openai
-from common import metrics, providers
+from common import metrics, providers, tracing
 from common.model_json import build_schema_instruction, parse_model_json
 from common.tracing import model_attributes, span, usage_attributes
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -33,6 +33,11 @@ from services import pricing
 def _cost_micro(config: AiModelConfig, usage: dict | None) -> int:
     """这次调用的成本（微元）。单价来自当前配置，所以改价不会重估历史调用。"""
     return pricing.cost_of_config(config, usage).micro
+
+
+def cost_micro(config: AiModelConfig, usage: dict | None) -> int:
+    """公开的成本换算入口：问答图里的成本硬闸与调用记账用同一套公式。"""
+    return _cost_micro(config, usage)
 
 
 def _observe_call(config: AiModelConfig, *, call_type: str, status: str, elapsed_ms: int,
@@ -273,6 +278,7 @@ async def invoke_json(
             elapsed_ms = int((perf_counter() - started) * 1000)
             # 成功日志，字段含义见第 17 章 ai_call_log 表结构
             await AiCallLog.create(
+                **tracing.call_fields(),
                 request_id="AIC" + uuid4().hex.upper(),
                 call_type=call_type,
                 biz_id=biz_id,
@@ -321,6 +327,7 @@ async def invoke_json(
             elapsed_ms = int((perf_counter() - started) * 1000)
             # 失败也留一条日志，第 17 章的观测页据此统计失败率
             await AiCallLog.create(
+                **tracing.call_fields(),
                 request_id="AIC" + uuid4().hex.upper(),
                 call_type=call_type,
                 biz_id=biz_id,
@@ -432,8 +439,20 @@ async def stream_chat(
                 accumulated = chunk if accumulated is None else accumulated + chunk
             message = accumulated if accumulated is not None else AIMessage(content="")
             usage = usage_or_estimate(message, prompt_chars)
+            # 网关不返回 usage 时，图里的 token/成本硬闸读的是 usage_metadata；
+            # 把同一份估算回填到消息上，避免“账本有估算、闸门记 0”。
+            if not int((getattr(message, "usage_metadata", None) or {}).get("total_tokens") or 0):
+                input_tokens = int(usage.get("input_tokens") or usage.get("prompt_tokens") or 0)
+                output_tokens = int(usage.get("output_tokens") or usage.get("completion_tokens") or 0)
+                if hasattr(message, "model_copy"):
+                    message = message.model_copy(update={"usage_metadata": {
+                        "input_tokens": input_tokens,
+                        "output_tokens": output_tokens,
+                        "total_tokens": input_tokens + output_tokens,
+                    }})
             elapsed_ms = int((perf_counter() - started) * 1000)
             await AiCallLog.create(
+                **tracing.call_fields(),
                 request_id="AIC" + uuid4().hex.upper(),
                 call_type=call_type, biz_id=biz_id,
                 model_config_id=config.id, model_name=config.model_name,
@@ -452,6 +471,7 @@ async def stream_chat(
             detail = (str(error) or type(error).__name__)[:2000]
             elapsed_ms = int((perf_counter() - started) * 1000)
             await AiCallLog.create(
+                **tracing.call_fields(),
                 request_id="AIC" + uuid4().hex.upper(),
                 call_type=call_type, biz_id=biz_id,
                 model_config_id=config.id, model_name=config.model_name,
@@ -467,6 +487,7 @@ async def stream_chat(
         except BaseException as error:  # noqa: BLE001 - 客户端中断（GeneratorExit 等）
             elapsed_ms = int((perf_counter() - started) * 1000)
             await AiCallLog.create(
+                **tracing.call_fields(),
                 request_id="AIC" + uuid4().hex.upper(),
                 call_type=call_type, biz_id=biz_id,
                 model_config_id=config.id, model_name=config.model_name,
@@ -658,6 +679,7 @@ async def rerank_documents(config: AiModelConfig, query: str, documents: list[st
         rerank_cost = pricing.cost_of_rerank(
             usage, price_micro_per_1k=rerank_price_micro_per_1k())
         await AiCallLog.create(
+            **tracing.call_fields(),
             request_id="AIC" + uuid4().hex.upper(),
             call_type=call_type, biz_id=biz_id,
             model_config_id=config.id, model_name=rerank_model(),
@@ -674,6 +696,7 @@ async def rerank_documents(config: AiModelConfig, query: str, documents: list[st
         elapsed_ms = int((perf_counter() - started) * 1000)
         detail = (str(error) or type(error).__name__)[:1000]
         await AiCallLog.create(
+            **tracing.call_fields(),
             request_id="AIC" + uuid4().hex.upper(),
             call_type=call_type, biz_id=biz_id,
             model_config_id=config.id, model_name=rerank_model(),
@@ -757,6 +780,7 @@ async def embed_texts(
                             raise RuntimeError(f"嵌入维度不符：期望 {dimension}，实际 {len(vector)}")
                     elapsed_ms = int((perf_counter() - started) * 1000)
                     await AiCallLog.create(
+                **tracing.call_fields(),
                         request_id="AIC" + uuid4().hex.upper(),
                         call_type=call_type,
                         biz_id=biz_id,
@@ -778,6 +802,7 @@ async def embed_texts(
                     detail = (str(error) or type(error).__name__)[:2000]
                     elapsed_ms = int((perf_counter() - started) * 1000)
                     await AiCallLog.create(
+                **tracing.call_fields(),
                         request_id="AIC" + uuid4().hex.upper(),
                         call_type=call_type,
                         biz_id=biz_id,

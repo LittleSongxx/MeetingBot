@@ -220,6 +220,63 @@ CREATE TABLE IF NOT EXISTS `user` (
     `create_time` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     `update_time` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
 ) CHARACTER SET utf8mb4;
+CREATE TABLE IF NOT EXISTS `kb_index_task` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `meeting_id` INT NOT NULL,
+    `source_type` VARCHAR(30) NOT NULL,
+    `source_id` INT NOT NULL,
+    `model_config_id` INT NOT NULL,
+    `initiator_id` INT NOT NULL,
+    `status` VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+    `stage` VARCHAR(100) NOT NULL DEFAULT '等待执行',
+    `progress` INT NOT NULL DEFAULT 0,
+    `retry_count` INT NOT NULL DEFAULT 0,
+    `max_retry` INT NOT NULL DEFAULT 3,
+    `document_id` INT,
+    `chunk_count` INT NOT NULL DEFAULT 0,
+    `embedded_count` INT NOT NULL DEFAULT 0,
+    `error_message` LONGTEXT,
+    `started_at` DATETIME(6),
+    `finished_at` DATETIME(6),
+    `create_time` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    `update_time` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    UNIQUE KEY `uk_kb_index_source` (`source_type`, `source_id`)
+) CHARACTER SET utf8mb4;
+CREATE TABLE IF NOT EXISTS `kb_document` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `meeting_id` INT NOT NULL,
+    `source_type` VARCHAR(30) NOT NULL,
+    `source_id` INT NOT NULL,
+    `task_id` INT NOT NULL,
+    `authority` VARCHAR(30) NOT NULL DEFAULT 'RAW',
+    `content_hash` VARCHAR(64) NOT NULL,
+    `chunk_count` INT NOT NULL DEFAULT 0,
+    `embed_model` VARCHAR(100) NOT NULL,
+    `embed_dim` INT NOT NULL DEFAULT 0,
+    `status` VARCHAR(30) NOT NULL DEFAULT 'SUCCEEDED',
+    `error_message` LONGTEXT,
+    `create_time` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+) CHARACTER SET utf8mb4;
+CREATE TABLE IF NOT EXISTS `kb_chunk` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `document_id` INT NOT NULL,
+    `meeting_id` INT NOT NULL,
+    `chunk_no` INT NOT NULL,
+    `chunk_type` VARCHAR(30) NOT NULL,
+    `text` LONGTEXT NOT NULL,
+    `speaker` VARCHAR(50),
+    `start_ms` BIGINT,
+    `end_ms` BIGINT,
+    `field` VARCHAR(30),
+    `item_index` INT,
+    `origin` VARCHAR(30),
+    `evidence_json` JSON,
+    `token_count` INT NOT NULL DEFAULT 0,
+    `embedded` BOOL NOT NULL DEFAULT 0,
+    `create_time` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    UNIQUE KEY `uk_kb_chunk_no` (`document_id`, `chunk_no`),
+    KEY `idx_kb_chunk_meeting` (`meeting_id`)
+) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `aerich` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `version` VARCHAR(255) NOT NULL,

@@ -14,20 +14,19 @@
 
 沿用本仓既有的两层幂等：workflow id 拦"正在跑"，任务行的条件更新拦"重复执行"。
 在此之上多一层**内容指纹**：来源内容没变就直接成功返回，不重嵌、不重写向量；
-内容变了才重建文档版本。嵌入失败重试时只补 `embedded=0` 的切片——
-与纪要的磁盘缓存同款理由：不为已经成功过的部分重复付费。
+内容变了才重建文档版本。瞬时失败不会自动重试到无限次：任务落 FAILED 后由
+`/kb/index` 手动重建，避免 Temporal 重试撞上 FAILED 抢占条件空转。
 """
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import logging
 import os
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any, Iterable, Sequence
 
-from common import qdrant
 from common.times import now, to_local
 from models import (
     AiModelConfig,
@@ -42,8 +41,8 @@ from models import (
 )
 from temporalio.exceptions import ApplicationError
 
+from services import hybrid, model_factory, pg_kb, task_queue
 from services import kb_chunking as chunking
-from services import kb_sparse, model_factory, task_queue
 
 logger = logging.getLogger("meetingbot.kb")
 
@@ -55,10 +54,10 @@ SOURCE_MINUTES = "MINUTES"
 # 状态值（与 kb_index_task.status 取值一致）
 PENDING, PROCESSING, SUCCEEDED, FAILED = "PENDING", "PROCESSING", "SUCCEEDED", "FAILED"
 
-# 单次写入向量库的点数：分批是为了单次请求体不要过大，也让失败重试的粒度更细
+# 单次写入 PG 向量的条数：分批是为了单条 SQL 参数不要过大，也让失败重试的粒度更细
 _UPSERT_BATCH_SIZE = 64
 
-# 向量库 payload 的**结构版本**。加/改/删 payload 字段时必须 +1——它进内容指纹
+# PG 检索行的**结构版本**。加/改/删 metadata 字段时必须 +1——它进内容指纹
 # （见 content_fingerprint），从而让旧切片在下一次索引时自动重建。
 # 历史：1 = 最早的一版（无 meeting_start_epoch）；2 = 加会议开始时间（时间过滤用）。
 PAYLOAD_SCHEMA_VERSION = 2
@@ -104,6 +103,8 @@ class Hit:
     # 来源身份（转写任务 id / 纪要 id）：一场会可能有多段录音，引用要能落到**哪一段**，
     # 过滤要能按它收窄（"下午这场会"）；评测侧的检索指标也要靠它把切片映射回录音
     source_id: int | None = None
+    # 来源类型（TRANSCRIPT / MINUTES）：读侧按 MySQL 状态兜底过滤时用
+    source_type: str | None = None
 
     def as_citation(self) -> dict[str, Any]:
         """转成给前端/工具用的引用结构（时间戳换算成秒，和转写行格式一致）。"""
@@ -200,8 +201,8 @@ def content_fingerprint(texts: Sequence[str], *,
     两次踩坑教出来的：
     1. 指纹只覆盖正文时，"给 payload 加字段"不会触发重建 → 旧 point 缺字段 →
        按它过滤会**静默漏掉**数据（不报错、不告警）；
-    2. 指纹不含**嵌入模型与 collection** 时，换模型/换库之后旧文档被判"内容未变化"
-       → 新库里根本没有它的向量，检索少一整个来源（同样不报错）。
+    2. 指纹不含**嵌入模型与索引表/维度**时，换模型/换表之后旧文档被判"内容未变化"
+       → 新索引里根本没有它的向量，检索少一整个来源（同样不报错）。
     把结构和作用域并进来之后，任一变化 = 换指纹 = 下次索引自动重建。
     """
     digest = hashlib.sha256()
@@ -241,30 +242,23 @@ async def schedule_kb_index(source_type: str, source_id: int, meeting_id: int,
     return task.id
 
 
-def schedule_kb_index_in_background(source_type: str, source_id: int, meeting_id: int,
-                                     initiator_id: int) -> None:
-    """尽力而为地在后台排一个索引任务。
-
-    **索引失败不能影响转写/纪要主流程**：这两条才是产品的核心链路，知识库是增值能力。
-    所以这里不抛异常，失败只记日志；任务行的状态与重试仍然由索引任务自己承担。
-    """
-    async def _run() -> None:
-        try:
-            await schedule_kb_index(source_type, source_id, meeting_id, initiator_id)
-        except Exception:
-            logger.exception("排知识库索引失败（不影响主流程）：%s#%s", source_type, source_id)
-
-    asyncio.get_running_loop().create_task(_run())
-
-
 async def cancel_kb_index(task_id: int) -> None:
     await task_queue.cancel(KIND_KB_INDEX, task_id)
 
 
 async def recover_kb_index_tasks() -> int:
-    """启动兜底：把"行已写但 workflow 未启动"的窄窗口补上（其余交给 Temporal）。"""
+    """启动兜底：回收崩溃留下的 PROCESSING，并补投 PENDING。
+
+    超过一次 activity 超时仍未完成的 PROCESSING 视为进程已经不在；
+    单副本部署下这样做是安全的。多副本时不要依赖这里回收仍在执行的任务。
+    """
+    stale_before = now() - timedelta(minutes=10)
+    await KbIndexTask.filter(
+        status=PROCESSING, started_at__lt=stale_before,
+    ).update(status=PENDING, stage="上次执行中断，等待重试",
+             error_message="检测到未完成的任务，重新入队", finished_at=None)
     recovered = 0
-    for task in await KbIndexTask.filter(status__in=(PENDING, PROCESSING)):
+    for task in await KbIndexTask.filter(status=PENDING):
         await task_queue.enqueue(KIND_KB_INDEX, task.id, (task.id,))
         recovered += 1
     return recovered
@@ -288,9 +282,9 @@ async def execute_kb_index(kb_task_id: int) -> None:
 
         # **索引就绪是基础设施步骤，不挂在"要重嵌"那条路径上**：实测踩过——
         # 它原先只在 `_embed_and_store` 里做，于是"内容未变化，跳过重建"的库
-        # （最常见的情形）永远建不出 payload 索引，过滤一直是慢查询且不报错。
+        # （最常见的情形）永远建不出 PG 过滤/向量索引，查询一直是慢查询且不报错。
         # 官方口径也要求"建索引要在写入之前"（过滤感知的 HNSW 边只在建索引后生成）。
-        await qdrant.ensure_collection(model_factory.embedding_dim())
+        await pg_kb.ensure_schema(model_factory.embedding_dim())
 
         chunks, text_fingerprint = await _load_source_chunks(task)
         meta = await _meeting_meta(task.meeting_id)
@@ -312,8 +306,11 @@ async def execute_kb_index(kb_task_id: int) -> None:
         fingerprint = content_fingerprint(
             [chunk.text for chunk in chunks],
             embed_scope=f"{config.model_name}:{model_factory.embedding_dim()}"
-                        f"@{qdrant.collection_name()}{context_scope}")
+                        f"@{pg_kb.table_name()}{context_scope}")
         if not chunks:
+            # 来源被清空：不能只把任务标成功，否则旧文档/旧切片仍会作为
+            # “当前确认内容”被检索到。
+            await _drop_source_documents(task)
             await _finish(task.id, chunk_count=0, embedded_count=0, stage="来源没有可索引的内容")
             return
 
@@ -322,10 +319,29 @@ async def execute_kb_index(kb_task_id: int) -> None:
         ).order_by("-id").first()
 
         if existing is not None and existing.content_hash == fingerprint:
-            # 内容没变：不重嵌、不重写向量。这就是"重试不为已成功的部分重复付费"
+            # 内容没变：不重嵌、不重写向量。这就是"重试不为已成功的部分重复付费"。
+            # BM25 metadata 仍同步一次；如果 PG 表被清空/恢复，下面的 missing 检查
+            # 会发现向量缺失并补嵌（不能只因正文指纹相同就假定向量还在）。
+            existing_chunks = list(await KbChunk.filter(
+                document_id=existing.id).order_by("chunk_no"))
+            await _sync_pg_kb(task, existing, existing_chunks, meta)
             await KbIndexTask.filter(id=task.id).update(document_id=existing.id)
-            await _finish(task.id, chunk_count=existing.chunk_count,
-                          embedded_count=existing.chunk_count, stage="内容未变化，跳过重建")
+            missing = await pg_kb.missing_embeddings([int(chunk.id) for chunk in existing_chunks])
+            if missing:
+                missing_set = {int(chunk_id) for chunk_id in missing}
+                await KbChunk.filter(id__in=missing_set).update(embedded=False)
+                for chunk in existing_chunks:
+                    if int(chunk.id) in missing_set:
+                        chunk.embedded = False
+                await _embed_and_store(task, config, existing, existing_chunks, meta,
+                                       contextual_config if contextual else None)
+                await _finish(task.id, chunk_count=existing.chunk_count,
+                              embedded_count=existing.chunk_count,
+                              stage="内容未变化，补齐缺失向量", document_id=existing.id)
+            else:
+                await _finish(task.id, chunk_count=existing.chunk_count,
+                              embedded_count=existing.chunk_count, stage="内容未变化，跳过重建")
+            await _cleanup_old_documents(task, keep_id=existing.id)
             return
 
         await KbIndexTask.filter(id=task.id).update(stage="正在切片", progress=15)
@@ -336,6 +352,8 @@ async def execute_kb_index(kb_task_id: int) -> None:
                 task_id=task.id, authority=await _authority_of(task),
                 content_hash=fingerprint, chunk_count=len(chunks),
                 embed_model=config.model_name, embed_dim=model_factory.embedding_dim(),
+                # 嵌入完成前不能对检索侧可见；否则半成品会被 _hits_by_ids 当成有效文档
+                status="BUILDING",
             )
         else:
             # 内容变了：重建同一行（旧切片与其向量先清掉，避免检索到过期版本）
@@ -344,7 +362,7 @@ async def execute_kb_index(kb_task_id: int) -> None:
             await KbDocument.filter(id=document.id).update(
                 task_id=task.id, content_hash=fingerprint, chunk_count=len(chunks),
                 embed_model=config.model_name, embed_dim=model_factory.embedding_dim(),
-                status=SUCCEEDED, error_message=None, create_time=now(),
+                status="BUILDING", error_message=None, create_time=now(),
             )
         await KbIndexTask.filter(id=task.id).update(document_id=document.id)
 
@@ -357,6 +375,8 @@ async def execute_kb_index(kb_task_id: int) -> None:
         ) for chunk in chunks]
         await KbChunk.bulk_create(rows)
         created = await KbChunk.filter(document_id=document.id).order_by("chunk_no")
+        # BM25 metadata 与 dense 向量共用 PG 表：都在这一处同步，避免两条派生链路各写一遍。
+        await _sync_pg_kb(task, document, created, meta)
 
         await KbIndexTask.filter(id=task.id).update(
             chunk_count=len(created), stage=f"正在生成向量（共 {len(created)} 片）", progress=30)
@@ -365,16 +385,20 @@ async def execute_kb_index(kb_task_id: int) -> None:
                                           contextual_config if contextual else None)
         await _finish(task.id, chunk_count=len(created), embedded_count=embedded,
                       stage="索引完成", document_id=document.id)
+        await _cleanup_old_documents(task, keep_id=document.id)
     except KbError as error:
         # 永久性错误（来源不存在 / 状态不对 / 没配嵌入模型）：重试多少次结果都一样，
         # 标成 non_retryable，别让 Temporal 白跑 5 轮又白等退避
         detail = (str(error) or type(error).__name__)[:2000]
         await _mark_failed(kb_task_id, detail)
         raise ApplicationError(detail, non_retryable=True) from error
-    except Exception as error:  # noqa: BLE001 - 统一落状态后再抛，交由 Temporal 重试
+    except Exception as error:  # noqa: BLE001
+        # 失败已经落在任务/文档行上；再抛普通异常只会让 Temporal 重试时撞上
+        # status=FAILED 的抢占条件空转。这里明确 non_retryable，让页面走手动重建。
         detail = (str(error) or type(error).__name__)[:2000]
+        logger.exception("知识库索引失败（task=%s）", kb_task_id)
         await _mark_failed(kb_task_id, detail)
-        raise
+        raise ApplicationError(detail, non_retryable=True) from error
 
 
 async def _mark_failed(kb_task_id: int, detail: str) -> None:
@@ -383,7 +407,12 @@ async def _mark_failed(kb_task_id: int, detail: str) -> None:
         status=FAILED, stage="索引失败", error_message=detail, finished_at=now())
     row = await KbIndexTask.get_or_none(id=kb_task_id)
     if row is not None and row.document_id:
-        await KbDocument.filter(id=row.document_id).update(status="FAILED", error_message=detail)
+        # 只有 BUILDING 版本才是本次失败产生的半成品；已有 SUCCEEDED 版本在
+        # “内容未变化但 PG 瞬时不可用”时不能被降级，否则 PG 恢复后还要重建。
+        document = await KbDocument.get_or_none(id=row.document_id)
+        if document is not None and document.status == "BUILDING":
+            await KbDocument.filter(id=document.id).update(
+                status="FAILED", error_message=detail)
 
 
 async def _load_source_chunks(task: KbIndexTask) -> tuple[list[chunking.Chunk], str]:
@@ -404,23 +433,46 @@ async def _authority_of(task: KbIndexTask) -> str:
     return chunking.AUTHORITY_CONFIRMED if task.source_type == SOURCE_MINUTES else chunking.AUTHORITY_RAW
 
 
+async def _sync_pg_kb(task: KbIndexTask, document: KbDocument,
+                        chunks: Sequence[KbChunk], meta: MeetingMeta) -> int:
+    """把切片 metadata 同步到 PG 检索表；向量由 `_embed_and_store` 随后补齐。"""
+    if not pg_kb.available():
+        raise KbError("PG 检索索引不可用，索引任务失败")
+    rows = [{
+        "chunk_id": int(chunk.id),
+        "meeting_id": int(chunk.meeting_id),
+        "source_type": task.source_type,
+        "source_id": int(task.source_id),
+        "authority": document.authority,
+        "chunk_type": chunk.chunk_type,
+        "field": chunk.field,
+        "item_index": chunk.item_index,
+        "speaker": chunk.speaker,
+        "start_ms": chunk.start_ms,
+        "end_ms": chunk.end_ms,
+        "meeting_start_epoch": meta.start_epoch,
+        "text": chunk.text,
+    } for chunk in chunks]
+    return await pg_kb.upsert_chunks(rows)
+
+
 async def _drop_chunks(document_id: int) -> None:
-    """清掉一个文档版本的切片与其向量。"""
+    """清掉一个文档版本的切片与其 PG 检索行。"""
     ids = await KbChunk.filter(document_id=document_id).values_list("id", flat=True)
     if ids:
-        await qdrant.delete_points(list(ids))
+        await pg_kb.delete_chunks(list(ids))
     await KbChunk.filter(document_id=document_id).delete()
 
 
 async def _embed_and_store(task: KbIndexTask, config: AiModelConfig, document: KbDocument,
                            chunks: Sequence[KbChunk], meta: MeetingMeta,
                            contextual_config: AiModelConfig | None = None) -> int:
-    """嵌入未完成的切片并写入向量库，返回已嵌入的切片数。
+    """嵌入未完成的切片并写入 PG/pgvector，返回已嵌入的切片数。
 
     只处理 `embedded=False`：中途失败重跑时，已写成功的部分不重复付费。
     `embed_text` 已落库的切片直接复用——上下文句是花钱生成的，重试不该再付一次。
     """
-    await qdrant.ensure_collection(model_factory.embedding_dim())
+    await pg_kb.ensure_schema(model_factory.embedding_dim())
     pending = [chunk for chunk in chunks if not chunk.embedded]
     if not pending:
         return len(chunks)
@@ -449,15 +501,13 @@ async def _embed_and_store(task: KbIndexTask, config: AiModelConfig, document: K
             inputs.append(embed_text)
         vectors = await model_factory.embed_texts(
             config, inputs, biz_id=task.id, call_type="KB_EMBEDDING")
-        points = []
-        for chunk, vector, embed_text in zip(batch, vectors, inputs, strict=True):
-            points.append({
-                "id": chunk.id,
-                "dense": vector,
-                "sparse": kb_sparse.encode(embed_text),
-                "payload": _payload_for(task, document, chunk, meta.start_epoch),
-            })
-        await qdrant.upsert_chunks(points)
+        if not pg_kb.available():
+            raise KbError("PG 检索索引不可用，向量写入失败")
+        embeddings = [
+            (chunk.id, vector)
+            for chunk, vector, _embed_text in zip(batch, vectors, inputs, strict=True)
+        ]
+        await pg_kb.upsert_embeddings(embeddings)
         await KbChunk.filter(id__in=[c.id for c in batch]).update(embedded=True)
         done += len(batch)
         progress = 30 + int(60 * done / max(1, len(chunks)))
@@ -521,32 +571,6 @@ async def _contextual_sentence(config: AiModelConfig, meta: MeetingMeta,
         return ""
 
 
-def _payload_for(task: KbIndexTask, document: KbDocument, chunk: KbChunk,
-                 meeting_start_epoch: int | None) -> dict[str, Any]:
-    """写进向量库的载荷：检索阶段不回表就能回答"哪场会、谁、什么时候说的"。
-
-    `meeting_id` 与 `authority` 是过滤字段（权限过滤、权威性过滤），必须在这里带上。
-    `meeting_start_epoch` 是**会议日期**（不是录音内偏移）："最近七天""上周那场会"
-    这类限定按它过滤，缺了它就只能靠语义相似度碰运气（实测：那些限定一律碰不到）。
-    """
-    return {
-        "meeting_id": task.meeting_id,
-        "document_id": document.id,
-        "authority": document.authority,
-        "source_type": task.source_type,
-        "source_id": task.source_id,
-        "chunk_type": chunk.chunk_type,
-        "field": chunk.field,
-        "item_index": chunk.item_index,
-        "origin": chunk.origin,
-        "speaker": chunk.speaker,
-        "start_ms": chunk.start_ms,
-        "end_ms": chunk.end_ms,
-        "meeting_start_epoch": meeting_start_epoch,
-        "text": chunk.text,
-    }
-
-
 async def _finish(kb_task_id: int, *, chunk_count: int, embedded_count: int, stage: str,
                   document_id: int | None = None) -> None:
     values: dict[str, Any] = {
@@ -556,12 +580,124 @@ async def _finish(kb_task_id: int, *, chunk_count: int, embedded_count: int, sta
     }
     if document_id is not None:
         values["document_id"] = document_id
+        await KbDocument.filter(id=document_id).update(
+            status=SUCCEEDED, chunk_count=chunk_count, error_message=None)
     await KbIndexTask.filter(id=kb_task_id).update(**values)
+
+
+async def _drop_source_documents(task: KbIndexTask) -> None:
+    """清掉一个来源的全部文档版本（来源内容变空时使用）。"""
+    documents = await KbDocument.filter(
+        source_type=task.source_type, source_id=task.source_id)
+    for document in documents:
+        await _drop_chunks(document.id)
+    # 再按来源清一次：即使 MySQL 切片行已经丢了，也不能把 PG 残留留给下一次检索。
+    await pg_kb.delete_by_source(task.source_type, task.source_id)
+    await KbDocument.filter(
+        source_type=task.source_type, source_id=task.source_id).delete()
+
+
+async def _cleanup_old_documents(task: KbIndexTask, *, keep_id: int) -> None:
+    """成功后清掉同一来源的失败/半成品版本。
+
+    失败版本在读侧本来就会被状态过滤，但它们的切片和派生索引会一直占空间；
+    当前版本成功之后，旧版本没有保留价值。
+    """
+    rows = await KbDocument.filter(
+        source_type=task.source_type, source_id=task.source_id,
+        status__in=("FAILED", "BUILDING"),
+    ).exclude(id=keep_id)
+    for document in rows:
+        try:
+            await _drop_chunks(document.id)
+            await KbDocument.filter(id=document.id).delete()
+        except Exception:  # noqa: BLE001 - 清理失败不能把已成功的索引改成失败
+            logger.exception("清理旧版本文档失败（document=%s）", document.id)
 
 
 # --------------------------------------------------------------------------- #
 # 检索
 # --------------------------------------------------------------------------- #
+
+async def _hits_by_ids(scores: dict[int, float]) -> list[Hit]:
+    """按 chunk_id 从 MySQL 取回完整 hit。
+
+    BM25 与 dense 都来自 PG 索引，两边只给出 id/score；最终交给生成模型的
+    hit 统一从 MySQL 真源组装，避免索引 payload 与业务数据各说各话。
+    """
+    if not scores:
+        return []
+    chunks = await KbChunk.filter(id__in=list(scores.keys()))
+    document_ids = {int(chunk.document_id) for chunk in chunks}
+    documents = await KbDocument.filter(id__in=list(document_ids))
+    by_document = {int(doc.id): doc for doc in documents}
+    by_chunk = {int(chunk.id): chunk for chunk in chunks}
+    hits: list[Hit] = []
+    for chunk_id in scores:
+        chunk = by_chunk.get(int(chunk_id))
+        if chunk is None:
+            continue
+        document = by_document.get(int(chunk.document_id))
+        if document is None or document.status != SUCCEEDED:
+            continue
+        hits.append(Hit(
+            chunk_id=int(chunk.id), score=float(scores[chunk_id]),
+            text=chunk.text, meeting_id=int(chunk.meeting_id),
+            authority=str(document.authority), chunk_type=chunk.chunk_type,
+            field=chunk.field, item_index=chunk.item_index, speaker=chunk.speaker,
+            start_ms=chunk.start_ms, end_ms=chunk.end_ms,
+            document_id=int(document.id), origin=chunk.origin,
+            source_id=int(document.source_id), source_type=document.source_type,
+        ))
+    return hits
+
+
+async def _filter_valid_sources(hits: list[Hit]) -> list[Hit]:
+    """读侧兜底：派生索引里的旧切片，按 MySQL 当前状态再核一遍。
+
+    outbox/reconcile 是异步的；这里保证即使它落后，已取消确认的纪要、已删除的
+    转写也不会被交给模型。source_type 缺失的旧 payload 不在此处误杀。
+    """
+    document_ids = {int(h.document_id) for h in hits if h.document_id is not None}
+    if document_ids:
+        existing_documents = {
+            int(i) for i in await KbDocument.filter(
+                id__in=list(document_ids)).values_list("id", flat=True)
+        }
+        valid_documents = {
+            int(i) for i in await KbDocument.filter(
+                id__in=list(document_ids), status=SUCCEEDED).values_list("id", flat=True)
+        }
+        # 文档行不存在时无法判状态：保留，交给来源状态兜底（兼容历史 payload）。
+        hits = [
+            hit for hit in hits
+            if hit.document_id is None
+            or int(hit.document_id) not in existing_documents
+            or int(hit.document_id) in valid_documents
+        ]
+    minutes_ids = {int(h.source_id) for h in hits
+                   if h.source_type == SOURCE_MINUTES and h.source_id is not None}
+    transcript_ids = {int(h.source_id) for h in hits
+                      if h.source_type == SOURCE_TRANSCRIPT and h.source_id is not None}
+    valid_minutes: set[int] = set()
+    if minutes_ids:
+        valid_minutes = {
+            int(i) for i in await MeetingMinutes.filter(
+                id__in=list(minutes_ids), status="CONFIRMED").values_list("id", flat=True)
+        }
+    valid_transcripts: set[int] = set()
+    if transcript_ids:
+        valid_transcripts = {
+            int(i) for i in await TranscriptionTask.filter(
+                id__in=list(transcript_ids), status="SUCCEEDED").values_list("id", flat=True)
+        }
+    return [
+        hit for hit in hits
+        if (hit.source_type == SOURCE_MINUTES and hit.source_id in valid_minutes)
+        or (hit.source_type == SOURCE_TRANSCRIPT and hit.source_id in valid_transcripts)
+        or hit.source_type not in (SOURCE_MINUTES, SOURCE_TRANSCRIPT)
+    ]
+
 
 async def search_knowledge(
     query: str,
@@ -571,18 +707,20 @@ async def search_knowledge(
     authority: Iterable[str] | None = None,
     chunk_type: Iterable[str] | None = None,
     source_ids: Iterable[int] | None = None,
+    source_types: Iterable[str] | None = None,
     meeting_time_from: int | None = None,
     meeting_time_to: int | None = None,
     biz_id: int = 0,
 ) -> list[Hit]:
-    """混合检索（可选 rerank）。`allowed_meeting_ids` 由权限层给出，本函数不做权限判断。
+    """dense + BM25 检索（可选 rerank）。`allowed_meeting_ids` 由权限层给出，
+    本函数不做权限判断。
 
     None 表示管理员（不过滤），空集合表示无可见会议（返回空）——两者语义不同，
     由上层的 access 层负责算清楚，这里只如实执行。
 
-    另外三组过滤都是**业务限定**（切片类型、会议时间范围），与权限一样是"必须满足"：
-    它们解决的是"下午这场会""最近七天"这类语义相似度碰不到的限定。
-    时间按**会议开始时间**过滤（epoch 秒），不是录音内偏移。
+    检索只有一条路径：PostgreSQL 里的 pgvector dense + pg_search BM25，
+    应用层 RRF 融合；PG 不可用时本轮没有检索依据，由 no_retrieval 闸如实标注。
+    最终 hit 统一从 MySQL 真源组装，避免两份派生 payload 各说各话。
 
     `biz_id` 只影响 `ai_call_log` 的归属（哪条业务记录引发了这次调用）：
     问答传入那条助手消息的 id，接口预览传 0。0 表示"没有业务归属"，
@@ -595,32 +733,49 @@ async def search_knowledge(
     vectors = await model_factory.embed_texts(config, [text], biz_id=biz_id,
                                               call_type="KB_QUERY_EMBED")
     dense = vectors[0]
-    # rerank 开着时先多召回一批候选，再由模型挑出真正能回答问题的那些。
-    # 候选深度两处必须一致：Qdrant 的 prefetch 深度与融合后的 limit，
-    # 只放大其中一个会被另一个卡住（看起来"候选加了但结果没变"）。
     candidates = rerank_candidates() if rerank_enabled() else 0
     fetch = max(int(limit), candidates) if candidates else int(limit)
-    raw = await qdrant.hybrid_search(
-        dense=dense, sparse=kb_sparse.encode(text), limit=fetch,
-        prefetch_limit=candidates or None,
-        allowed_meeting_ids=allowed_meeting_ids, authority=authority,
-        chunk_type=chunk_type, source_ids=source_ids,
-        meeting_time_from=meeting_time_from, meeting_time_to=meeting_time_to,
-    )
-    hits: list[Hit] = []
-    for item in raw:
-        payload = item["payload"]
-        hits.append(Hit(
-            chunk_id=item["chunk_id"], score=item["score"],
-            text=str(payload.get("text") or ""),
-            meeting_id=int(payload.get("meeting_id") or 0),
-            authority=str(payload.get("authority") or ""),
-            chunk_type=str(payload.get("chunk_type") or ""),
-            field=payload.get("field"), item_index=payload.get("item_index"),
-            speaker=payload.get("speaker"), start_ms=payload.get("start_ms"),
-            end_ms=payload.get("end_ms"), document_id=payload.get("document_id"),
-            origin=payload.get("origin"), source_id=payload.get("source_id"),
-        ))
+    authority_list = list(authority) if authority is not None else None
+    chunk_type_list = list(chunk_type) if chunk_type is not None else None
+    source_id_list = list(source_ids) if source_ids is not None else None
+    source_type_list = list(source_types) if source_types is not None else None
+
+    dense_raw: list[dict[str, Any]] = []
+    bm25_raw: list[pg_kb.PgHit] = []
+    if pg_kb.available():
+        try:
+            dense_raw = await pg_kb.dense_search(
+                dense, limit=fetch,
+                allowed_meeting_ids=allowed_meeting_ids, authority=authority_list,
+                chunk_type=chunk_type_list, source_ids=source_id_list,
+                source_types=source_type_list,
+                meeting_time_from=meeting_time_from, meeting_time_to=meeting_time_to,
+            )
+        except Exception:  # noqa: BLE001 - 单臂失败不阻断另一臂
+            logger.exception("PG dense 检索失败，本轮只用 BM25（query=%s）", text[:120])
+        try:
+            bm25_raw = await pg_kb.bm25_search(
+                text, allowed_meeting_ids=allowed_meeting_ids,
+                limit=max(fetch, pg_kb.top_k(fetch)),
+                authority=authority_list, chunk_type=chunk_type_list,
+                source_ids=source_id_list, source_types=source_type_list,
+                meeting_time_from=meeting_time_from, meeting_time_to=meeting_time_to,
+            )
+        except Exception:  # noqa: BLE001 - 单臂失败不阻断另一臂
+            logger.exception("PG BM25 检索失败，本轮只用 dense（query=%s）", text[:120])
+    else:
+        logger.warning("PG 知识库不可用，本轮没有检索结果（query=%s）", text[:120])
+    scores: dict[int, float] = {}
+    if dense_raw or bm25_raw:
+        fused = hybrid.fuse_dense_and_bm25(
+            [int(item["chunk_id"]) for item in dense_raw],
+            [int(item.chunk_id) for item in bm25_raw],
+            limit=fetch,
+        )
+        scores = {int(item.chunk_id): item.score for item in fused}
+    hits = await _hits_by_ids(scores)
+    # 读侧兜底：派生索引可能落后于 MySQL 状态，先按真源再核一遍
+    hits = await _filter_valid_sources(hits)
     if rerank_enabled() and len(hits) > 1:
         hits = await _rerank(text, hits, biz_id=biz_id, config=config)
     # 去重放在重排之后、截断之前：相邻窗口会同时被召回并同时被重排选中，
@@ -636,9 +791,9 @@ async def search_knowledge(
 
 # 重排的调用类型（新调用类型必须登记 CALL_TYPE_OWNERSHIP，见 observability_service）
 RERANK_CALL_TYPE = "KB_RERANK"
-# 先召回多少候选再重排。默认与 Qdrant 的 PREFETCH_LIMIT 同量级；可用
+# 先召回多少候选再重排。默认与 PG 索引的 PREFETCH_LIMIT 同量级；可用
 # `RERANK_CANDIDATES` 覆盖（任务 6 的 24 vs 40 对照就是只改这一个值）。
-DEFAULT_RERANK_CANDIDATES = qdrant.PREFETCH_LIMIT
+DEFAULT_RERANK_CANDIDATES = pg_kb.PREFETCH_LIMIT
 
 
 def rerank_candidates() -> int:

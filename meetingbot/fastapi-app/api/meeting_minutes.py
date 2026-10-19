@@ -27,10 +27,11 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-from services import contracts
+from services import contracts, kb_outbox, kb_service
 from services.minutes_service import MinutesResult, cancel_minutes, material_name_of_minutes, schedule_minutes
 from starlette.responses import StreamingResponse
 from tortoise.exceptions import IntegrityError
+from tortoise.transactions import in_transaction
 
 from api.meeting import get_accessible_meeting
 
@@ -170,13 +171,19 @@ async def generate(task_id: int, current_user: User = Depends(get_current_user))
             # 唯一索引拦下第二条——按"已在生成"提示，不当系统错误（对齐转写 start）
             raise CustomException("该转写任务的纪要已在生成，请刷新查看") from error
     else:
-        # 旧内容连同确认状态一起清空，重新生成后又是一份待修订的草稿
-        await MeetingMinutes.filter(id=minutes.id).update(
-            model_config_id=config.id, status="GENERATING", stage="等待生成", progress=0,
-            summary=None, topics_json=[], viewpoints_json=[], decisions_json=[],
-            pending_items_json=[], risks_json=[], error_message=None,
-            confirmed_by=None, confirmed_time=None, created_by=current_user.id,
-        )
+        # 旧内容连同确认状态一起清空，重新生成后又是一份待修订的草稿。
+        # 若它曾经确认过，PG 里可能已有权威切片：同一事务写 DELETE 期望状态，
+        # 让 outbox 把派生数据清掉（草稿永远不进知识库）。
+        async with in_transaction():
+            await MeetingMinutes.filter(id=minutes.id).update(
+                model_config_id=config.id, status="GENERATING", stage="等待生成", progress=0,
+                summary=None, topics_json=[], viewpoints_json=[], decisions_json=[],
+                pending_items_json=[], risks_json=[], error_message=None,
+                confirmed_by=None, confirmed_time=None, created_by=current_user.id,
+            )
+            await kb_outbox.mark_source_state(
+                kb_service.SOURCE_MINUTES, minutes.id, minutes.meeting_id,
+                kb_outbox.STATE_DELETE)
         minutes = await MeetingMinutes.get(id=minutes.id)
     # 生成放到后台任务里跑，接口不等它跑完，页面靠轮询看进度
     schedule_minutes(minutes.id)
@@ -188,8 +195,13 @@ async def delete_minutes(minutes: MeetingMinutes, current_user: User):
     # 权限比查看更严：能看到这场会议不代表能删纪要，只有管理员或发起生成的人可以
     if current_user.role != "ADMIN" and minutes.created_by != current_user.id:
         raise CustomException("只有管理员或纪要创建人可以删除", "403")
-    # 按主键删除这份纪要
-    await MeetingMinutes.filter(id=minutes.id).delete()
+    # 按主键删除这份纪要；同一事务写 DELETE，让派生索引跟着清掉。
+    # 来源行删除后已经无法再推导 source_id，所以事件必须先于/随行删除落库。
+    async with in_transaction():
+        await kb_outbox.mark_source_state(
+            kb_service.SOURCE_MINUTES, minutes.id, minutes.meeting_id,
+            kb_outbox.STATE_DELETE)
+        await MeetingMinutes.filter(id=minutes.id).delete()
 
 
 @router.delete("/delete/{minutes_id}")
@@ -303,16 +315,16 @@ async def confirm(minutes_id: int, current_user: User = Depends(get_current_user
     # 确认是归档动作：口径与删除/取消确认对齐
     if current_user.role != "ADMIN" and minutes.created_by != current_user.id:
         raise CustomException("只有管理员或纪要创建人可以确认纪要", "403")
-    # 记下是谁在什么时候确认的，详情弹窗的“确认人”读这两个字段（条件更新防双击）
-    claimed = await MeetingMinutes.filter(id=minutes.id, status="DRAFT").update(
-        status="CONFIRMED", confirmed_by=current_user.id, confirmed_time=now())
-    if not claimed:
-        raise CustomException("纪要状态已经变化，请刷新后查看")
-    # 人确认之后才把它作为权威条目（authority=CONFIRMED）入知识库——草稿永远不进。
-    # 索引失败不影响确认结果，所以走"尽力而为"的后台排程。
-    from services import kb_service
-    kb_service.schedule_kb_index_in_background(
-        kb_service.SOURCE_MINUTES, minutes.id, minutes.meeting_id, current_user.id)
+    # 记下是谁在什么时候确认的，详情弹窗的“确认人”读这两个字段（条件更新防双击）。
+    # 状态变更与 INDEX 期望状态同事务：不会出现"确认成功但索引事件没落库"。
+    async with in_transaction():
+        claimed = await MeetingMinutes.filter(id=minutes.id, status="DRAFT").update(
+            status="CONFIRMED", confirmed_by=current_user.id, confirmed_time=now())
+        if not claimed:
+            raise CustomException("纪要状态已经变化，请刷新后查看")
+        await kb_outbox.mark_source_state(
+            kb_service.SOURCE_MINUTES, minutes.id, minutes.meeting_id,
+            kb_outbox.STATE_INDEX)
     return Result.success()
 
 
@@ -333,8 +345,14 @@ async def assert_can_unconfirm(minutes_id: int, current_user: User) -> MeetingMi
 async def unconfirm(minutes_id: int, current_user: User = Depends(get_current_user)):
     """把已确认的纪要退回草稿，内容才能继续修订或者被自检的修订稿覆盖。"""
     minutes = await assert_can_unconfirm(minutes_id, current_user)
-    # 状态退回 DRAFT，确认人和确认时间一并清掉，等于这次确认从没发生过
-    await MeetingMinutes.filter(id=minutes.id).update(status="DRAFT", confirmed_by=None, confirmed_time=None)
+    # 状态退回 DRAFT，确认人和确认时间一并清掉，等于这次确认从没发生过。
+    # 同一事务写 DELETE：即使 outbox 处理滞后，读侧兜底也不会再返回旧权威切片。
+    async with in_transaction():
+        await MeetingMinutes.filter(id=minutes.id).update(
+            status="DRAFT", confirmed_by=None, confirmed_time=None)
+        await kb_outbox.mark_source_state(
+            kb_service.SOURCE_MINUTES, minutes.id, minutes.meeting_id,
+            kb_outbox.STATE_DELETE)
     return Result.success()
 
 

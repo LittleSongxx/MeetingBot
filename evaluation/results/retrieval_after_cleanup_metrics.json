@@ -1,0 +1,2296 @@
+{
+  "sample": 95,
+  "k_distribution": [
+    3
+  ],
+  "recall_at_k": 0.9570175438596492,
+  "mrr": 0.9228070175438597,
+  "ndcg_at_k": 0.9340916785955128,
+  "recording_coverage": {
+    "sample": 95,
+    "covered_slots": 99,
+    "expected_slots": 103,
+    "rate": 0.9611650485436893,
+    "fully_covered_cases": 91,
+    "reading": "金标每段录音只要有一条带时间窗的检索条目来自它就算覆盖；纪要 fact / MINUTES_ITEM 没有时间窗，不算转写覆盖；来源身份缺失的条目不计覆盖（下限）。"
+  },
+  "per_case": [
+    {
+      "case_id": "q01",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q02",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714575,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q03",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9197207891481876,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q04",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q05",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q06",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q07",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q08",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q09",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q10",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q11",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q12",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 3,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q13",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 3,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q14",
+      "k": 3,
+      "recall": 0.5,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 3,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q15",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q16",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q17",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9197207891481876,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q18",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q19",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q20",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q21",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q22",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9197207891481876,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q23",
+      "k": 3,
+      "recall": 0.5,
+      "mrr": 1.0,
+      "ndcg": 0.9197207891481876,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q24",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q25",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q26",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q27",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9197207891481876,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q28",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q29",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q30",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714575,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q31",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714575,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q32",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6934264036172708,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q33",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q34",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q35",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 3,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q36",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q37",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q38",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q39",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q40",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q41",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 3,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q42",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q43",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q44",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q45",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q46",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q47",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q48",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q49",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714575,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q50",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q51",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q52",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q53",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q54",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q55",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q56",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q57",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q58",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q59",
+      "k": 3,
+      "recall": 0.75,
+      "mrr": 1.0,
+      "ndcg": 0.9197207891481876,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q60",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6934264036172708,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q61",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9197207891481876,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q62",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q63",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q64",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6934264036172708,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q65",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q66",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 3,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q67",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 3,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q68",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q69",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q70",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q71",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9197207891481876,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q72",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q73",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q74",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9197207891481876,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q75",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714575,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q76",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q77",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q78",
+      "k": 3,
+      "recall": 0.0,
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "relevant_count": 0,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q79",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q80",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 0.5,
+      "ndcg": 0.6934264036172708,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q81",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9197207891481876,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q82",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q83",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9197207891481876,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q84",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q85",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q86",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q87",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 1,
+        "covered_count": 1,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q88",
+      "k": 3,
+      "recall": 0.5,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6,
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [
+          6
+        ],
+        "expected_count": 2,
+        "covered_count": 1,
+        "rate": 0.5,
+        "fully_covered": false,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q89",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 3,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6,
+          7
+        ],
+        "covered_sources": [
+          6,
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 2,
+        "covered_count": 2,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q90",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6,
+          7
+        ],
+        "covered_sources": [
+          6,
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 2,
+        "covered_count": 2,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q91",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6,
+          7
+        ],
+        "covered_sources": [
+          6,
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 2,
+        "covered_count": 2,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q92",
+      "k": 3,
+      "recall": 0.5,
+      "mrr": 0.3333333333333333,
+      "ndcg": 0.5,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6,
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [
+          6
+        ],
+        "expected_count": 2,
+        "covered_count": 1,
+        "rate": 0.5,
+        "fully_covered": false,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q93",
+      "k": 3,
+      "recall": 1.0,
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6,
+          7
+        ],
+        "covered_sources": [
+          6,
+          7
+        ],
+        "missing_sources": [],
+        "expected_count": 2,
+        "covered_count": 2,
+        "rate": 1.0,
+        "fully_covered": true,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q94",
+      "k": 3,
+      "recall": 0.5,
+      "mrr": 0.5,
+      "ndcg": 0.6934264036172708,
+      "relevant_count": 2,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6,
+          7
+        ],
+        "covered_sources": [
+          7
+        ],
+        "missing_sources": [
+          6
+        ],
+        "expected_count": 2,
+        "covered_count": 1,
+        "rate": 0.5,
+        "fully_covered": false,
+        "source_identity_known": true
+      }
+    },
+    {
+      "case_id": "q95",
+      "k": 3,
+      "recall": 0.6666666666666666,
+      "mrr": 0.3333333333333333,
+      "ndcg": 0.5,
+      "relevant_count": 1,
+      "sources_known": true,
+      "recording_coverage": {
+        "expected_sources": [
+          6,
+          7
+        ],
+        "covered_sources": [
+          6
+        ],
+        "missing_sources": [
+          7
+        ],
+        "expected_count": 2,
+        "covered_count": 1,
+        "rate": 0.5,
+        "fully_covered": false,
+        "source_identity_known": true
+      }
+    }
+  ],
+  "skipped": [
+    {
+      "case_id": "q96",
+      "reason": "没有这一轮的产物"
+    },
+    {
+      "case_id": "q97",
+      "reason": "没有这一轮的产物"
+    },
+    {
+      "case_id": "q98",
+      "reason": "没有这一轮的产物"
+    },
+    {
+      "case_id": "q99",
+      "reason": "没有这一轮的产物"
+    },
+    {
+      "case_id": "q100",
+      "reason": "没有这一轮的产物"
+    },
+    {
+      "case_id": "n01",
+      "reason": "没有这一轮的产物"
+    },
+    {
+      "case_id": "n02",
+      "reason": "没有这一轮的产物"
+    },
+    {
+      "case_id": "n03",
+      "reason": "没有这一轮的产物"
+    },
+    {
+      "case_id": "n04",
+      "reason": "没有这一轮的产物"
+    },
+    {
+      "case_id": "n05",
+      "reason": "没有这一轮的产物"
+    },
+    {
+      "case_id": "n06",
+      "reason": "没有这一轮的产物"
+    },
+    {
+      "case_id": "n07",
+      "reason": "没有这一轮的产物"
+    },
+    {
+      "case_id": "n08",
+      "reason": "没有这一轮的产物"
+    },
+    {
+      "case_id": "n09",
+      "reason": "没有这一轮的产物"
+    },
+    {
+      "case_id": "n10",
+      "reason": "没有这一轮的产物"
+    },
+    {
+      "case_id": "n11",
+      "reason": "没有这一轮的产物"
+    },
+    {
+      "case_id": "n12",
+      "reason": "没有这一轮的产物"
+    }
+  ],
+  "reading": "recall_at_k = 金标片段被本次检索（全部 k 条）覆盖的比例，**k 是模型自选的条数**，报数必须连 k 一起报；mrr = 第一条相关切片的排名倒数；ndcg_at_k = 二值增益的归一化折损累计增益。三者都由片段时间窗与金标片段号算得，**零模型调用**——判定模型换族/换思考开关都不会动它们。",
+  "not_measured": "切块粒度与金标片段是多对一关系（一个窗口盖住多句），因此这里是「覆盖」口径而不是「精确命中」；不能与判定式的 context recall 相减。recording_coverage 只看「每段录音有没有被检索到」，不评价段内相关性。"
+}

@@ -72,6 +72,48 @@ jobs:
         run: make smoke PY=python
         working-directory: evaluation
 
+  # ParadeDB 实库：BM25 的 DDL/分词/过滤与 PG checkpoint 只在真实扩展上才成立。
+  # 这两个测试没有 DSN 会跳过，所以必须单独给服务并显式传 PG_TEST_DSN；
+  # 合并进 backend job 会让它们继续静默跳过，等于没测。
+  postgres-integration:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-22.04
+    services:
+      postgres:
+        image: paradedb/paradedb:latest-pg17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: meetingbot_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d meetingbot_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            meetingbot/fastapi-app/requirements.txt
+            meetingbot/fastapi-app/requirements-dev.txt
+
+      - name: 安装依赖
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements-dev.txt
+        working-directory: meetingbot/fastapi-app
+
+      - name: PG 实库集成（BM25 + pgvector + checkpoint）
+        run: python -m unittest tests.test_pg_kb_integration tests.test_agent_checkpoint -v
+        working-directory: meetingbot/fastapi-app
+        env:
+          PG_TEST_DSN: postgresql://postgres:postgres@localhost:5432/meetingbot_test
+
   frontend:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'

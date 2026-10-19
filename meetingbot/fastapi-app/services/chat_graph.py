@@ -43,6 +43,8 @@ from langchain_core.messages import HumanMessage
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 
+from services import coverage as coverage_policy
+
 # 停止原因：值是**给页面看的**，不是内部的枚举缩写
 STOP_FINISHED = "finished"
 # 首轮（含一次提醒后）仍没有调用任何工具：这一轮的回答没有任何知识库依据。
@@ -86,14 +88,8 @@ class ChatState(TypedDict, total=False):
     # 是否已经为"没调工具"提醒过一次（只提醒一次，避免与模型的拉锯）
     nudged: bool
 
-    # 下面两个由 chat_service 注入，图只管调用时机
-    # async (messages) -> AIMessage（内部已完成记账）
-    call_model: Any
-    # 可 await 的工具节点（聊天侧注入 LangGraph 的 ToolNode）
-    tools: Any
-    # (usage: dict) -> int，把 token 用量换算成"微元"成本；缺省按 0 算
-    cost_micro_of: Any
-    # 预算，见 budget_from_env
+    # 预算，见 budget_from_env。模型/工具/成本换算由 ChatRuntime 经 contextvar 注入，
+    # 不进入 checkpoint 状态。
     budget: dict
 
 
@@ -145,12 +141,23 @@ def tool_signature(message: Any) -> str:
     return json.dumps(parts, ensure_ascii=False, sort_keys=True, default=str)
 
 
+def runtime_of() -> Any:
+    """取本轮运行对象。唯一注入路径是 contextvar；缺失即编程错误，不静默降级。"""
+    from services.chat_runtime import current
+    runtime = current()
+    if runtime is None:
+        raise RuntimeError("ChatRuntime 未注入：调用方必须 set_current(runtime)")
+    return runtime
+
+
 async def agent_node(state: ChatState) -> ChatState:
     """调一次模型。模型回复带不带工具调用决定下一站去哪（路由函数判断）。"""
-    message = await state["call_model"](list(state.get("messages") or []))
+    runtime = runtime_of()
+    message = await runtime.call_model(list(state.get("messages") or []))
     usage = getattr(message, "usage_metadata", None) or {}
     tokens = int(usage.get("total_tokens") or 0)
-    cost = int(state["cost_micro_of"](usage)) if state.get("cost_micro_of") else 0
+    cost_of = getattr(runtime, "cost_micro_of", None)
+    cost = int(cost_of(usage)) if cost_of else 0
     calls = len(getattr(message, "tool_calls", None) or [])
     signature = tool_signature(message)
     # 停滞累计：签名与上次相同才算一次重复；换了参数或不再调工具就归零
@@ -172,7 +179,41 @@ async def agent_node(state: ChatState) -> ChatState:
 async def tools_node(state: ChatState) -> ChatState:
     """执行工具。注入的是 `async (state) -> 部分状态`——聊天侧用 LangGraph 的
     ToolNode 包一层传进来（`ToolNode.ainvoke` 正好是同一个形状）。"""
-    return await state["tools"](state)
+    return await runtime_of().tools(state)
+
+
+async def coverage_node(state: ChatState) -> ChatState:
+    """工具执行后更新覆盖/证据状态；缺口存在时注入一次定向提示。
+
+    这是确定性节点：不调模型。它只把工具结果里已有的结构化信号
+    （hits/facts/segments/slot_status）翻成“还缺哪段录音/哪个槽位”，
+    再让 Agent 自己决定要不要补检索。
+    """
+    evidence = getattr(runtime_of(), "evidence", None)
+    if evidence is None:
+        return {}
+    for message in state.get("messages") or []:
+        if getattr(message, "type", "") != "tool":
+            continue
+        try:
+            result = json.loads(_text_of(message))
+        except (TypeError, ValueError):
+            continue
+        if isinstance(result, dict):
+            coverage_policy.observe_tool_result(evidence, getattr(message, "name", ""), result)
+    # 恢复一轮时 EvidenceState 是新建的；已经出现在 checkpoint 消息里的提示
+    # 也算“提醒过一次”，不能每个 reconnect 再叠一条。
+    if evidence.attempts == 0 and any(
+            isinstance(message, HumanMessage)
+            and str(getattr(message, "content", "")).startswith(coverage_policy.HINT_PREFIX)
+            for message in state.get("messages") or []):
+        evidence.attempts = 1
+    if evidence.needs_supplement():
+        evidence.attempts += 1
+        hint = coverage_policy.supplement_hint(evidence)
+        if hint:
+            return {"messages": [HumanMessage(content=hint)]}
+    return {}
 
 
 # 提醒模型去检索：写在**用户位置**而不是系统位置——实测同一条问题，
@@ -264,15 +305,19 @@ def stop_node(state: ChatState) -> ChatState:
 
 
 def recursion_limit(budget: dict[str, int]) -> int:
-    """LangGraph 的步数上限。每轮最多「模型 + 工具」两个节点，外加收尾与余量。"""
-    return max(2, int(budget.get("max_rounds", 1)) * 2 + 3)
+    """LangGraph 的步数上限。每轮最多「模型 + 工具 + 覆盖检查」三个节点。"""
+    return max(2, int(budget.get("max_rounds", 1)) * 3 + 3)
 
 
-def build_chat_graph():
-    """组装状态图。流程写在边上、业务写在注入的动作里。"""
+def build_chat_graph(checkpointer: Any = None):
+    """组装状态图。流程写在边上、业务写在注入的动作里。
+
+    `checkpointer` 只影响状态的持久化；不传时行为与旧版一致（测试/开发）。
+    """
     graph = StateGraph(ChatState)
     graph.add_node("agent", agent_node)
     graph.add_node("tools", tools_node)
+    graph.add_node("coverage", coverage_node)
     graph.add_node("nudge", nudge_node)
     graph.add_node("stop", stop_node)
     graph.add_node("finalize", finalize_node)
@@ -282,12 +327,14 @@ def build_chat_graph():
                                {"tools": "tools", "stop": "stop",
                                 "nudge": "nudge", "finished": "finalize"})
     graph.add_conditional_edges("tools", route_after_tools,
-                                {"again": "agent", "stop": "stop"})
+                                {"again": "coverage", "stop": "stop"})
+    # 覆盖节点之后回到模型：有缺口时它已追加一条定向提示，没有缺口时只更新状态
+    graph.add_edge("coverage", "agent")
     # 提醒之后回到模型：这一轮要么调工具，要么给出极短回复（寒暄）
     graph.add_edge("nudge", "agent")
     graph.add_edge("stop", "finalize")
     graph.add_edge("finalize", END)
-    return graph.compile()
+    return graph.compile(checkpointer=checkpointer)
 
 
 # --------------------------------------------------------------------------- #
@@ -405,11 +452,6 @@ def summarize_tool_result(name: str, result_text: str) -> str:
             summary = f"{len(items)} {unit}"
     elif name == "get_minutes" and isinstance(result, dict):
         summary = "六字段纪要"
-    # 条件补搜的条目不在主结果数组里；不把这一笔写进摘要，页面会以为工具只做了
-    # 主检索（q91 的补搜正是回答依据）。
-    supplemental = result.get("coverage_hits") if isinstance(result, dict) else None
-    if isinstance(supplemental, list) and supplemental:
-        summary += f" + 补搜 {len(supplemental)} 条"
     return summary
 
 

@@ -116,6 +116,19 @@
               show-icon
               :title="message.error_message"
             />
+            <el-button
+              v-if="
+                message.role === 'ASSISTANT' &&
+                message.id &&
+                (message.run_status === 'RUNNING' || message.run_status === 'INTERRUPTED')
+              "
+              class="resume-button"
+              size="small"
+              :loading="message.pending"
+              @click="resume(message)"
+            >
+              继续生成
+            </el-button>
           </div>
         </el-scrollbar>
 
@@ -152,7 +165,7 @@
  * - **中断**：AbortController 交给 fetch，停止后后端仍会落库（服务端对断开有收尾）。
  */
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
 import { renderMarkdown, splitCitations } from '@/utils/markdown'
 import CitationCard from '@/components/CitationCard.vue'
@@ -189,6 +202,10 @@ interface PageMessage {
   token_count?: number
   /** 正在生成中（用于显示"正在检索与生成…"） */
   pending?: boolean
+  run_status?: string
+  thread_id?: string | null
+  trace_id?: string | null
+  last_event_id?: string | null
 }
 
 const data = reactive({
@@ -225,7 +242,7 @@ const bannerText = computed(() => {
     return '当前模型供应商未声明支持工具调用，问答不可用；请在 common/providers.KNOWN_TOOL_CALLING 登记后重启后端。'
   if (!status.embedding_configured)
     return '还没有嵌入模型配置，知识库检索会失败；请先启用 EMBEDDING 用途的配置。'
-  if (!status.vector_store_reachable) return '向量库当前不可达，检索会返回空结果。'
+  if (!status.vector_store_reachable) return 'PostgreSQL 检索索引当前不可达，检索会返回空结果。'
   return ''
 })
 
@@ -253,7 +270,14 @@ function loadSessions(): void {
   })
 }
 
+function abortActiveStream(): void {
+  // 切换/新建会话时旧流必须停掉：否则它在后台继续生成并计费，
+  // 页面却已经看不到它了。abort 后由 send/resume 的 finally 收尾。
+  controller?.abort()
+}
+
 function newSession(): void {
+  abortActiveStream()
   createSession(scopeMeetingIds.value.length ? scopeMeetingIds.value : undefined).then((res) => {
     data.sessions.unshift(res.data)
     sessionId.value = res.data.id
@@ -262,6 +286,7 @@ function newSession(): void {
 }
 
 function openSession(id: number): void {
+  abortActiveStream()
   sessionId.value = id
   const session = data.sessions.find((item) => item.id === id)
   scopeMeetingIds.value = session?.scope_meeting_ids || []
@@ -275,6 +300,9 @@ function openSession(id: number): void {
       stop_reason: row.stop_reason,
       error_message: row.error_message,
       notice: row.notice,
+      run_status: row.run_status,
+      thread_id: row.thread_id,
+      trace_id: row.trace_id,
     }))
     scrollToBottom()
   })
@@ -286,6 +314,7 @@ function removeSession(id: number): void {
   })
     .then(() => deleteSession(id))
     .then(() => {
+      if (sessionId.value === id) abortActiveStream()
       data.sessions = data.sessions.filter((item) => item.id !== id)
       if (sessionId.value === id) {
         sessionId.value = null
@@ -311,45 +340,57 @@ function scopeChanged(): boolean {
 async function send(): Promise<void> {
   const text = question.value.trim()
   if (!text || streaming.value) return
-  if (sessionId.value == null || scopeChanged()) {
-    const created = await createSession(
-      scopeMeetingIds.value.length ? scopeMeetingIds.value : undefined,
-    )
-    data.sessions.unshift(created.data)
-    sessionId.value = created.data.id
-  }
-  question.value = ''
-  messages.value.push({ role: 'USER', content: text, citations: [], tools: [] })
-  const assistant: PageMessage = {
-    role: 'ASSISTANT',
-    content: '',
-    citations: [],
-    tools: [],
-    pending: true,
-  }
-  messages.value.push(assistant)
-  const target = messages.value[messages.value.length - 1]
+  // 先置 streaming 再 await createSession：否则首次发送的等待窗口里
+  // 快速双击会创建两个会话、发起两轮生成并双扣 token。
   streaming.value = true
   tokenTip.value = ''
-  controller = new AbortController()
-  scrollToBottom()
-
+  let target: PageMessage | undefined
   try {
+    if (sessionId.value == null || scopeChanged()) {
+      const created = await createSession(
+        scopeMeetingIds.value.length ? scopeMeetingIds.value : undefined,
+      )
+      data.sessions.unshift(created.data)
+      sessionId.value = created.data.id
+    }
+    question.value = ''
+    messages.value.push({ role: 'USER', content: text, citations: [], tools: [] })
+    const assistant: PageMessage = {
+      role: 'ASSISTANT',
+      content: '',
+      citations: [],
+      tools: [],
+      pending: true,
+    }
+    messages.value.push(assistant)
+    const current = messages.value[messages.value.length - 1]
+    target = current
+    controller = new AbortController()
+    scrollToBottom()
+
     await streamChat({
       sessionId: sessionId.value as number,
       question: text,
       signal: controller.signal,
+      onEventId: (id) => {
+        current.last_event_id = id
+      },
       onEvent: (event) => {
         switch (event.type) {
           case 'meta':
-            target.id = event.message_id
+            current.id = event.message_id
+            current.run_status = 'RUNNING'
+            current.thread_id = event.thread_id
+            current.trace_id = event.trace_id
+            // 恢复轮服务端会重放完整答案；先清掉本地半段，避免“前缀+完整答案”重复。
+            if (event.resumed) current.content = event.answer_prefix ?? ''
             break
           case 'token':
             tokenBuffer += event.text
-            scheduleFlush(target)
+            scheduleFlush(current)
             break
           case 'tool_start':
-            target.tools.push({
+            current.tools.push({
               call_id: event.call_id,
               name: event.name,
               arguments: event.arguments,
@@ -358,10 +399,10 @@ async function send(): Promise<void> {
             })
             break
           case 'tool_end': {
-            const entry = target.tools.find((item) => item.call_id === event.call_id)
+            const entry = current.tools.find((item) => item.call_id === event.call_id)
             if (entry) entry.summary = event.summary
             else
-              target.tools.push({
+              current.tools.push({
                 call_id: event.call_id,
                 name: event.name,
                 arguments: {},
@@ -371,17 +412,20 @@ async function send(): Promise<void> {
             break
           }
           case 'citation':
-            if (!target.citations.some((item) => item.ref === event.citation.ref))
-              target.citations.push(event.citation)
+            if (!current.citations.some((item) => item.ref === event.citation.ref))
+              current.citations.push(event.citation)
             break
           case 'done':
-            target.stop_reason = event.stop_reason
-            target.notice = event.notice || ''
-            target.token_count = event.tokens.total_tokens
+            current.stop_reason = event.stop_reason
+            current.notice = event.notice || ''
+            current.run_status = 'FINISHED'
+            current.token_count = event.tokens.total_tokens
+            current.citations = event.citations?.length ? event.citations : current.citations
             tokenTip.value = `本轮 ${event.tokens.total_tokens} token`
             break
           case 'error':
-            target.error_message = event.message
+            current.error_message = event.message
+            current.run_status = 'FAILED'
             break
         }
       },
@@ -389,11 +433,26 @@ async function send(): Promise<void> {
   } catch (error) {
     const message = error instanceof Error ? error.message : '问答失败'
     // 用户主动停止不算错误：后端会把这一轮如实记为"客户端断开"
-    if (message.includes('abort')) target.notice = '已停止生成。'
-    else if (!target.error_message) target.error_message = message
+    if (message.includes('abort')) {
+      if (target) {
+        target.notice = '已停止生成。'
+        target.run_status = 'INTERRUPTED'
+      }
+    } else if (target?.id != null && !target.error_message) {
+      // 已经收到 meta 后断线：服务端通常仍会落库为 INTERRUPTED，保留续传入口。
+      target.notice = '连接中断，可继续生成。'
+      target.run_status = 'INTERRUPTED'
+    } else if (target) {
+      target.error_message = message
+      target.run_status = 'FAILED'
+    } else {
+      ElMessage.error(message)
+    }
   } finally {
-    flushTokens(target)
-    target.pending = false
+    if (target) {
+      flushTokens(target)
+      target.pending = false
+    }
     streaming.value = false
     controller = null
     scrollToBottom()
@@ -402,6 +461,96 @@ async function send(): Promise<void> {
 
 function stop(): void {
   controller?.abort()
+}
+
+/** 从已有 checkpoint 继续一轮中断的回答；服务端用 answer_prefix 对齐已输出部分。 */
+async function resume(message: PageMessage): Promise<void> {
+  if (streaming.value || message.id == null || sessionId.value == null) return
+  streaming.value = true
+  tokenBuffer = ''
+  message.pending = true
+  message.error_message = ''
+  controller = new AbortController()
+  try {
+    await streamChat({
+      sessionId: sessionId.value,
+      question: '',
+      resumeMessageId: message.id,
+      lastEventId: message.last_event_id || undefined,
+      signal: controller.signal,
+      onEventId: (id) => {
+        message.last_event_id = id
+      },
+      onEvent: (event) => {
+        switch (event.type) {
+          case 'meta':
+            message.run_status = 'RUNNING'
+            // 恢复轮以服务端重放的完整答案为准，先清掉本地半段
+            message.content = event.resumed ? (event.answer_prefix ?? '') : message.content
+            break
+          case 'token':
+            tokenBuffer += event.text
+            scheduleFlush(message)
+            break
+          case 'tool_start':
+            message.tools.push({
+              call_id: event.call_id,
+              name: event.name,
+              arguments: event.arguments,
+              summary: '执行中…',
+              ok: null,
+            })
+            break
+          case 'tool_end': {
+            const entry = message.tools.find((item) => item.call_id === event.call_id)
+            if (entry) entry.summary = event.summary
+            else
+              message.tools.push({
+                call_id: event.call_id,
+                name: event.name,
+                arguments: {},
+                summary: event.summary,
+                ok: null,
+              })
+            break
+          }
+          case 'citation':
+            if (!message.citations.some((item) => item.ref === event.citation.ref))
+              message.citations.push(event.citation)
+            break
+          case 'done':
+            message.stop_reason = event.stop_reason
+            message.notice = event.notice || ''
+            message.run_status = 'FINISHED'
+            message.token_count = event.tokens.total_tokens
+            message.citations = event.citations?.length ? event.citations : message.citations
+            tokenTip.value = `本轮 ${event.tokens.total_tokens} token`
+            break
+          case 'error':
+            message.error_message = event.message
+            message.run_status = 'FAILED'
+            break
+          default:
+            break
+        }
+      },
+    })
+  } catch (error) {
+    const text = error instanceof Error ? error.message : '恢复失败'
+    if (text.includes('abort')) message.run_status = 'INTERRUPTED'
+    else if (!message.error_message) {
+      // 恢复请求已经带上 message.id；网络/代理断流时保持可继续生成，
+      // 不要把它误标成 FAILED 把入口藏掉。
+      message.notice = '连接中断，可继续生成。'
+      message.run_status = 'INTERRUPTED'
+    }
+  } finally {
+    flushTokens(message)
+    message.pending = false
+    streaming.value = false
+    controller = null
+    scrollToBottom()
+  }
 }
 
 /** 按帧合并 token：一帧里到达的所有增量一次性写入，减少渲染次数。 */
