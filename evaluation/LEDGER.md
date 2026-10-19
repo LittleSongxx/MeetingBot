@@ -2111,24 +2111,23 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - 结论引用纪律：以上未运行项不得在简历/报告中写成"已提升/已下降"，只能写
   "已实现、已预注册、待测量"。
 
-### 7) 实测结果（2026-10-19，实耗 299/300 调用：产品 293 + 评测 judge 6）
+### 7) 最终实测（2026-10-19，不限调用）
 
-完整报告：`evaluation/reports/2026-10-19_frontier_measured.md`。摘要（样本/区间/口径必须连读）：
+完整报告：`evaluation/reports/2026-10-19_frontier_measured.md`。核心读数：
 
-- **轨迹 27 题（加固前）**：tool_call_f1 **0.5432**；首轮 strict 13/27（48.1%），
-  acceptable 24/27（88.9%），required 覆盖 16/27（59.3%），must_cite 25/25，
-  forbidden 2 次（smalltalk）；state F1=0。
-- **状态工具加固后 4 题 ×3**：pass^3 **3/4（75%，CP 95% 19.4–99.4%）**；
-  required 3/4、must_cite 4/4；样本太小，不能外推。
-- **注入线上红队 10 题**：security 标记 10/10，系统提示泄露 0/10，跨会议外发 0/10。
-- **在线评测 5 条**：avg_faithfulness 0.80、avg_relevance 0.92、pass_rate 1.0。
-- **成本/缓存**：产品 293 次调用、记账 ¥0.1090；实验窗口 token 级缓存命中 61.79%，
-  全历史 API 口径 43.87%（口径不同，不可混用）。
-- **跨会议 draft-gold**：30 题已补 expected_facts/证据，`human_checked=false`；
-  只能报 draft-gold。
-- **查询规划 A/B 试点**：3 题，词法 context 覆盖率两臂均 0.911、answer 覆盖率
-  A 0.917 vs B 0.844；LLM judge 返回 0/6 与词法证据矛盾，判为仪器失败不采纳。
-  结论 inconclusive，不能写“提升/下降”。
-- **未运行/不采纳**：完整 30×2 跨会议 A/B、成本路由 A/B、12 题 pass^3 其余 8 题、
-  人工 kappa（CSV 已生成、未回填）、上述 0/6 judge（仪器失败）。这些项不得写成
-  “已提升/已下降”。
+- **轨迹 27 题（最终）**：tool_call_f1 **0.7469**（加固前 0.5432）；strict 18/27、
+  acceptable 25/27、required 覆盖 23/27、must_cite 25/25、禁止工具 0。
+  这是迭代后读数，不是 held-out 泛化。
+- **pass^3（12×3）**：**10/12 = 83.3%**（CP 95% 51.6–97.9%），strict 10/12、
+  acceptable 12/12、禁止工具 0/36。
+- **跨会议 A/B（30×2，DeepSeek judge，draft-gold）**：recall 68.97% → 74.14%
+  （+5.17pp），但 precision 65.22% → 58.70%（−6.52pp）；未满足预注册门槛，
+  且上一轮同题 A/B 无差异，结论不稳定，保持 `KB_QUERY_PLAN_ENABLED=0`。
+- **注入线上 30 题**：注入标记 10/10、良性误报 0/20、系统提示泄露 0/30、
+  跨会议外发 0/10。
+- **在线评测 30 条**：faithfulness 0.8967、relevance 0.9217、pass_rate 0.9667。
+- **成本路由试点（5 题）**：qwen vs DeepSeek，输入 42,417 vs 47,688 token、
+  输出 1,177 vs 1,898；precision 86.7% vs 77.8%、faithfulness 100% vs 94.9%。
+  两模型均未定价，不能报金额；路由已删除，默认关闭。
+- **累计**：产品 2,106 次调用、¥0.8071；token 级缓存命中 60.46%；外部 judge 约 273 次。
+- **不可引用**：draft-gold 未人工复核、人工 kappa 未回填、单会议语料、无金额 A/B。

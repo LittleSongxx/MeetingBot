@@ -783,8 +783,9 @@ TOOL_SPECS: tuple[ToolSpec, ...] = (
         name="query_meeting_state",
         description="查询系列/个人的已确认状态：先前决策（decision）、结论（conclusion）、"
                     "待办及完成情况（action_item）、个人偏好（preference）。"
-                    "**状态类问题的第一步必须调用本工具**：问「上次定了什么」「还有哪些待办」"
-                    "「谁负责」「协作人是谁」「截止时间」「项目现在什么状态」时都先用它；"
+                    "**状态类问题的第一步必须调用本工具**：问「上次定了什么」「最后复述了哪些结论」"
+                    "「还有哪些待办」「谁负责」「协作人是谁」「截止时间」「项目现在什么状态」"
+                    "时都先用它；"
                     "问某场会时传 meeting_ids，问某系列时传 series_id。"
                     "再用 search_knowledge 补原文；只返回人工确认过的内容，未确认候选不会返回。",
         arguments=QueryMeetingStateArgs,
