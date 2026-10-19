@@ -45,7 +45,7 @@ def _content_of(item: Any) -> str:
 
 def _memory_state(memory: MeetingMemory, *, kind: str, meeting_title: str | None,
                   minutes_id: int | None, field: str | None, item_index: int | None,
-                  series_name: str | None) -> dict:
+                  series_name: str | None, owner_name: str | None = None) -> dict:
     """一条已确认记忆的状态条目。键必须齐（引用层按名取值）。"""
     return {
         "kind": kind,
@@ -57,7 +57,7 @@ def _memory_state(memory: MeetingMemory, *, kind: str, meeting_title: str | None
         "field": field,
         "item_index": item_index,
         "evidence": memory.evidence_json,
-        "owner_name": None,
+        "owner_name": owner_name,
         "deadline_text": None,
         "deadline": None,
         "series_id": memory.scope_id if memory.scope_type == "SERIES" else None,
@@ -107,6 +107,25 @@ async def _allowed_meetings(actor: Any, user: User) -> list[int] | None:
     return await access.visible_meeting_ids(user)
 
 
+def _matches_query(text: str, query: str) -> bool:
+    """状态工具的关键词匹配：容忍同义/改写，不要求逐字子串。
+
+    实测模型会把「移动端附件下载修复」传成 query，而条目正文是「移动端附件
+    下载进度问题须在发布前修复」；只做 SQL `contains` 会返回 0 条，模型就会
+    误判“不存在”。这里在条目量很小的状态表上做规范化包含 + 身份判据兜底。
+    """
+    target = textsim.normalize(query)
+    content = textsim.normalize(text)
+    if not target:
+        return True
+    if target in content or content in target:
+        return True
+    if textsim.is_same_item(target, content):
+        return True
+    grams = textsim.content_grams(query)
+    return bool(grams) and textsim.coverage(grams, textsim.content_grams(text)) >= 0.5
+
+
 def _memory_item_index(minutes: MeetingMinutes | None, content: str) -> int | None:
     """在纪要 decisions 里定位这条记忆对应第几条，用于按 field+item_index 点回原条目。"""
     if minutes is None:
@@ -133,6 +152,9 @@ async def _enrich_memories(rows: list[MeetingMemory]) -> list[dict]:
         id__in=meeting_ids)} if meeting_ids else {}
     series_names = {row.id: row.name for row in await MeetingSeries.filter(
         id__in=series_ids)} if series_ids else {}
+    user_ids = {row.scope_id for row in rows if row.scope_type == "USER"}
+    user_names = {row.id: row.name for row in await User.filter(
+        id__in=user_ids)} if user_ids else {}
     minutes_map = {row.id: row for row in await MeetingMinutes.filter(
         id__in=minutes_ids)} if minutes_ids else {}
     out: list[dict] = []
@@ -148,6 +170,8 @@ async def _enrich_memories(rows: list[MeetingMemory]) -> list[dict]:
             field=field if minutes is not None else None, item_index=item_index,
             series_name=series_names.get(memory.scope_id)
             if memory.scope_type == "SERIES" else None,
+            owner_name=user_names.get(memory.scope_id)
+            if memory.scope_type == "USER" else None,
         ))
     return out
 
@@ -155,6 +179,7 @@ async def _enrich_memories(rows: list[MeetingMemory]) -> list[dict]:
 async def _query_memories(actor: Any, user: User, kind: str, *,
                           query: str | None = None, series_id: int | None = None,
                           meeting_ids: list[int] | None = None,
+                          include_proposed: bool = False,
                           limit: int = 10) -> list[dict]:
     allowed = await _allowed_meetings(actor, user)
     if meeting_ids is not None:
@@ -165,25 +190,26 @@ async def _query_memories(actor: Any, user: User, kind: str, *,
         # 个人偏好只属于本人，和会议可见性无关
         filter_query = MeetingMemory.filter(
             scope_type="USER", scope_id=user.id, kind="PREFERENCE", status="CONFIRMED")
+        rows = await filter_query.order_by("-create_time", "-id").limit(200 if query else limit)
         if query:
-            filter_query = filter_query.filter(content__contains=query)
-        rows = await filter_query.order_by("-create_time", "-id").limit(limit)
+            rows = [row for row in rows if _matches_query(row.content, query)][:limit]
         return await _enrich_memories(rows)
 
     scope = await _series_scope(user, series_id)
     if scope == []:
         return []
+    statuses = ("CONFIRMED", "PROPOSED") if include_proposed else ("CONFIRMED",)
     filter_query = MeetingMemory.filter(
-        scope_type="SERIES", kind=MEMORY_KIND[kind], status="CONFIRMED")
+        scope_type="SERIES", kind=MEMORY_KIND[kind], status__in=statuses)
     if scope is not None:
         filter_query = filter_query.filter(scope_id__in=scope or [-1])
     if allowed is not None:
         # 记忆可见性最终仍收窄到「可见会议」：手工建的、没有来源会议的条目例外
         filter_query = filter_query.filter(
             Q(source_meeting_id__in=allowed or [-1]) | Q(source_meeting_id__isnull=True))
+    rows = await filter_query.order_by("-create_time", "-id").limit(200 if query else limit)
     if query:
-        filter_query = filter_query.filter(content__contains=query)
-    rows = await filter_query.order_by("-create_time", "-id").limit(limit)
+        rows = [row for row in rows if _matches_query(row.content, query)][:limit]
     return await _enrich_memories(rows)
 
 
@@ -211,8 +237,6 @@ async def _query_action_items(actor: Any, user: User, *, query: str | None = Non
         filter_query = filter_query.filter(status="DONE")
     else:
         filter_query = filter_query.exclude(status="CANCELLED")
-    if query:
-        filter_query = filter_query.filter(content__contains=query)
     if owner:
         # owner 是人名参数：先按姓名找出用户 id，再与原文负责人名一起匹配
         owner_ids = [row.id for row in await User.filter(name__contains=owner)]
@@ -220,7 +244,9 @@ async def _query_action_items(actor: Any, user: User, *, query: str | None = Non
         if owner_ids:
             condition |= Q(owner_user_id__in=owner_ids)
         filter_query = filter_query.filter(condition)
-    rows = await filter_query.order_by("-create_time", "-id").limit(limit)
+    rows = await filter_query.order_by("-create_time", "-id").limit(200 if query else limit)
+    if query:
+        rows = [row for row in rows if _matches_query(row.content, query)][:limit]
 
     meeting_ids = {row.meeting_id for row in rows}
     series_ids = {row.series_id for row in rows if row.series_id}
@@ -244,7 +270,8 @@ async def _query_action_items(actor: Any, user: User, *, query: str | None = Non
 async def query_state(actor: Any, kind: str, query: str | None = None,
                       series_id: int | None = None, status: str = "all",
                       owner: str | None = None, limit: int = 10,
-                      meeting_ids: list[int] | None = None) -> list[dict]:
+                      meeting_ids: list[int] | None = None,
+                      include_proposed: bool = False) -> list[dict]:
     """查已确认状态（decision/conclusion/action_item/preference）。
 
     签名固定：`services/kb_tools.py` 的 `query_meeting_state` 直接按位置/关键字调用。
@@ -258,7 +285,7 @@ async def query_state(actor: Any, kind: str, query: str | None = None,
     if kind in {"decision", "conclusion", "preference"}:
         return await _query_memories(
             actor, user, kind, query=query, series_id=series_id,
-            meeting_ids=meeting_ids, limit=size)
+            meeting_ids=meeting_ids, include_proposed=include_proposed, limit=size)
     if kind == "action_item":
         return await _query_action_items(
             actor, user, query=query, series_id=series_id, status=status,

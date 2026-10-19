@@ -1,0 +1,667 @@
+{
+  "reviewer": "independent-reviewer",
+  "reviewed_at": "2026-10-20",
+  "facts": [
+    {
+      "case_id": "cm01",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg51] 赵敏运营团队在9月1日九点前完成发布公告使用指引和部门通知，负责人赵敏，协作人周宁，截止时间为9月1日九点；[minutes 3 decisions_json 第4条] 运营负责人赵敏牵头，协作人周宁，于9月1日9:00前完成发布公告与部门通知。",
+      "proposed_fact": "",
+      "reason": "转写原话与已确认纪要一致，负责人、协作人、截止时间三项均被直接支持。"
+    },
+    {
+      "case_id": "cm01",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task7 seg41] 可以通稿，定稿时间就定在发布前一日下午六点前；[task7 seg50] 刘颖负责通稿定稿；[minutes 4 decisions_json 第3条] 对外通稿及产品公告定稿时间为发布前一日下午6点前。",
+      "proposed_fact": "",
+      "reason": "转写与纪要（DRAFT）口径一致，通稿定稿人与相对截止时间被支持。"
+    },
+    {
+      "case_id": "cm02",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[minutes 3 summary] 识别并定义5项关键风险（含4项高风险）；[minutes 3 risks_json] 模型服务延迟波动(HIGH)、会议资料频繁更新(MEDIUM)、任务负责人分配不合理(HIGH)、删除用户时系统阻止删除(HIGH)、阻断任务未按时完成将触发发布时间调整风险(HIGH)；转写 task6 seg39-46、seg67-70 逐项对应。",
+      "proposed_fact": "",
+      "reason": "5项风险与4项高风险的计数、清单均与已确认纪要和转写一致。"
+    },
+    {
+      "case_id": "cm02",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task7 seg42] 还有个风险我要提一下，异步改造和灰度发布挨得太近，如果改造延期可能会影响到后面的排期；[minutes 4 risks_json] 报表导出异步化改造与灰度发布排期过近。",
+      "proposed_fact": "",
+      "reason": "下午转写与纪要均记录该风险。"
+    },
+    {
+      "case_id": "cm03",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg68] 产品研发、测试、运营和客户支持均同意在9月1日九点按计划发布；[task6 seg72] 第一，9月1日九点发布AI智能会议助手与任务跟踪系统；[minutes 3 decisions_json 第1条] 同意于9月1日9:00正式发布。",
+      "proposed_fact": "",
+      "reason": "上午结论被转写与已确认纪要双重支持；前提条件是移动端与回归两项阻断任务按时完成（seg68），不影响结论本身。"
+    },
+    {
+      "case_id": "cm03",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task7 seg47] 第一，V2.0按期发布，报表导出入口先隐藏；[minutes 4 decisions_json 第1条] V2.0按原计划时间发布，报表导出功能入口在发布时隐藏，待异步改造完成后单独上线。",
+      "proposed_fact": "",
+      "reason": "下午结论被转写与纪要支持；原计划即上午已确认的9月1日9:00，两段口径不矛盾。"
+    },
+    {
+      "case_id": "cm04",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[transcription_task id=6] meeting_id=2 recorded_at=2026-09-10 09:00:00；[task6 seg1] 各位同事上午好，现在开始产品上线复盘与下阶段发布准备会议；[minutes 3] source_task_id=6。",
+      "proposed_fact": "",
+      "reason": "录音墙钟时间与开场原文一致。"
+    },
+    {
+      "case_id": "cm04",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[transcription_task id=7] meeting_id=2 recorded_at=2026-09-10 14:00:00；[task7 seg1] 各位下午好，今天的产品发布评审会现在开始；[task7 seg2] V2.0能不能按期发布。",
+      "proposed_fact": "",
+      "reason": "下午时段与V2.0发布评审主题均有录音字段/原文直接支持。"
+    },
+    {
+      "case_id": "cm05",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg9] 本次灰度从8月20日开始覆盖10%的活跃用户，到8月26日扩大到30%；[minutes 3 topics_json 第1条] 复盘8月20日至26日灰度发布数据，覆盖10%-30%活跃用户。",
+      "proposed_fact": "",
+      "reason": "时间点与覆盖率被转写与纪要一致支持。"
+    },
+    {
+      "case_id": "cm05",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task7 seg24] 灰度方案我建议分三步，第一天放10%观察一天，第二天到50%，第三天全量回滚预案也准备好了，最快五分钟能切回旧版本；[task7 seg48] 灰度按10%、50%全量分三天走；[minutes 4 decisions_json 第2条] 首日10%、次日50%、第三日全量。",
+      "proposed_fact": "",
+      "reason": "三阶段节奏与回滚5分钟均被转写和纪要支持。"
+    },
+    {
+      "case_id": "cm06",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg49] 测试团队将在8月31日中午12点前完成回归；[task6 seg57] 陈琳确认发布回归任务，8月31日中午12点完成；[minutes 3 viewpoints 陈琳] 测试团队将于8月31日12:00前完成回归并提交凭证。",
+      "proposed_fact": "",
+      "reason": "负责人与截止时间被转写和已确认纪要支持。"
+    },
+    {
+      "case_id": "cm06",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task7 seg40] 那我需要在发布前一天定稿留出审核时间；[task7 seg41] 可以通稿，定稿时间就定在发布前一日下午六点前；[task7 seg50] 刘颖负责通稿定稿。",
+      "proposed_fact": "",
+      "reason": "刘颖负责、发布前一日18:00前定稿被支持。"
+    },
+    {
+      "case_id": "cm07",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg12] 移动端在网络较弱时，附件下载进度没有及时刷新；[task6 seg16] 影响发布当天的支持成本，需要在正式发布前完成处理；[task6 seg31] 需要在发布前修复，并在发布说明中写明处理结果；[minutes 3 topics_json 第2条]。",
+      "proposed_fact": "",
+      "reason": "提出时段与处理要求均被支持。"
+    },
+    {
+      "case_id": "cm07",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task7 seg10] 单个用户导出三个月的数据接口要跑四十多秒，超过了网关30秒的超时限制；[task7 seg19] 报表导出这个功能在发布时先隐藏入口，等改造完成再单独放出来；[minutes 4 decisions_json 第1条]。",
+      "proposed_fact": "",
+      "reason": "40+秒超时、发布时隐藏入口、异步改造后单独上线均被支持。"
+    },
+    {
+      "case_id": "cm08",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg27] 还需要在正式发布前补充两组验收数据，第一组是至少30分钟的真实会议录音；[task6 seg28] 第二组是包含多个角色发言的会议内容，用于检查说话人标签与员工身份的匹配效果；[minutes 3 decisions_json 第3条]。",
+      "proposed_fact": "",
+      "reason": "两组补充验收内容被转写和纪要支持。"
+    },
+    {
+      "case_id": "cm08",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task6 seg49] 测试团队将在8月31日中午12点前完成回归；[task7 seg6] V2.0计划内的17个需求已经验收通过15个，剩下两个，一个是报表导出，一个是消息推送的免打扰设置；[task7 seg7] 消息推送这个已经修完了，昨天回归通过。",
+      "proposed_fact": "",
+      "reason": "回归截止与下午验收进度均被转写支持（下午纪要DRAFT，但原文一致）。"
+    },
+    {
+      "case_id": "cm09",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg16] 移动端附件下载的体验问题会影响发布当天的支持成本，需要在正式发布前完成处理；[task6 seg47] 负责人是王工，协作人是陈琳，截止时间为8月30日18点；[task6 seg56] 王工确认移动端附件下载进度任务8月30日18点完成；[db/02-seed.sql action_item id=1] deadline=2026-08-30 18:00:00、status=OPEN。",
+      "proposed_fact": "",
+      "reason": "影响判断、修复要求与截止时间均被支持。"
+    },
+    {
+      "case_id": "cm10",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg53] 周宁客户支持团队在9月1日十点前完成常见问题知识库，负责人周宁，协作人赵敏，截止时间为9月1日十点；[minutes 3 decisions_json 第5条] 客户支持负责人周宁牵头，协作人赵敏，于9月1日10:00前完成常见问题知识库建设。",
+      "proposed_fact": "",
+      "reason": "负责人、协作人、内容与截止时间均被支持。"
+    },
+    {
+      "case_id": "cm10",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task6 seg51] 赵敏运营团队在9月1日九点前完成发布公告使用指引和部门通知；[minutes 3 decisions_json 第4条] 运营负责人赵敏牵头，协作人周宁，于9月1日9:00前完成发布公告与部门通知。",
+      "proposed_fact": "",
+      "reason": "运营支持安排被转写与已确认纪要支持。"
+    },
+    {
+      "case_id": "cs01",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[db/02-seed.sql meeting_memory id=1] scope_type=SERIES、scope_id=1、kind=DECISION、status=CONFIRMED、normalized=9月1日9:00正式发布AI智能会议助手与任务跟踪系统、confirmed_by=1；[minutes 3 decisions_json 第1条] 同意于9月1日9:00正式发布AI智能会议助手与任务跟踪系统。",
+      "proposed_fact": "",
+      "reason": "已确认系列记忆与已确认纪要一致。"
+    },
+    {
+      "case_id": "cs02",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[db/02-seed.sql meeting_memory id=2] kind=DECISION、content=移动端附件下载进度问题须在发布前修复并在发布说明中写明处理结果、status=PROPOSED、confirmed_by=NULL、confirmed_time=NULL；id=1 才是 CONFIRMED。",
+      "proposed_fact": "",
+      "reason": "系列记忆状态明确为 PROPOSED 候选；注意已确认的 minutes 3 decisions 也列了同一条（纪要层/记忆层口径不一致，见 key_findings）。"
+    },
+    {
+      "case_id": "cs02",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[db/02-seed.sql action_item id=1] content=移动端附件下载进度问题须在发布前修复、owner_name=王工、deadline=2026-08-30 18:00:00、status=OPEN。",
+      "proposed_fact": "",
+      "reason": "种子待办状态为 OPEN，被直接支持。"
+    },
+    {
+      "case_id": "cs03",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[db/02-seed.sql action_item id=1] content=移动端附件下载进度问题须在发布前修复、owner_name=王工、deadline=2026-08-30 18:00:00、status=OPEN；[task6 seg47] 负责人是王工，协作人是陈琳，截止时间为8月30日18点。",
+      "proposed_fact": "",
+      "reason": "待办内容、负责人、截止时间与种子表一致。"
+    },
+    {
+      "case_id": "cs03",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[db/02-seed.sql action_item id=2] content=发布前完成两组补充验收：长音频与多角色说话人匹配、owner_name=陈琳、deadline=2026-08-31 12:00:00、status=OPEN；[minutes 3 decisions_json 第3条] 发布前须完成两组补充验收，deadline 2023-08-31T12:00。",
+      "proposed_fact": "",
+      "reason": "两条 OPEN 待办与种子 action_item 表一致。"
+    },
+    {
+      "case_id": "cs04",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[db/02-seed.sql meeting_memory id=3] scope_type=USER、scope_id=1、kind=PREFERENCE、content=回答先给结论，再给依据；没有资料时直接说没有找到、status=CONFIRMED、confirmed_by=1。",
+      "proposed_fact": "",
+      "reason": "偏好归属（用户1）、类型与已确认状态均被种子直接支持。"
+    },
+    {
+      "case_id": "cs05",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[db/02-seed.sql meeting_series id=1] name=产品发布评审系列、status=ACTIVE；meeting 表仅 id=2 一行且 series_id=1，无其他会议属于该系列。",
+      "proposed_fact": "",
+      "reason": "种子中系列1只关联会议2。"
+    },
+    {
+      "case_id": "cs05",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[transcription_task id=6] meeting_id=2 recorded_at=2026-09-10 09:00:00；[transcription_task id=7] meeting_id=2 recorded_at=2026-09-10 14:00:00；[task6 seg1] 上午好；[task7 seg1] 下午好。",
+      "proposed_fact": "",
+      "reason": "会议2下两段录音及上午/下午归属被种子字段与原文支持。"
+    },
+    {
+      "case_id": "cs06",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[minutes 4 summary] 会议最终形成三项结论：V2.0按期发布（报表导出入口隐藏）、灰度分三阶段实施（10%→50%→100%）、对外通稿与产品公告于发布前一日18:00前定稿；[minutes 4 decisions_json 第1条] V2.0按原计划时间发布，报表导出功能入口在发布时隐藏。",
+      "proposed_fact": "",
+      "reason": "minutes 4（DRAFT）summary 明列三项结论，本条对应第一项，其余两项见 fact2/3；三项结论在三条 fact 中分散表述，合并阅读完整。"
+    },
+    {
+      "case_id": "cs06",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task7 seg24] 灰度方案第一天放10%观察一天，第二天到50%，第三天全量；[task7 seg48] 灰度按10%、50%全量分三天走；[minutes 4 decisions_json 第2条] 灰度分三阶段执行：首日10%流量、次日50%、第三日全量。",
+      "proposed_fact": "",
+      "reason": "三阶段灰度被转写与纪要一致支持。"
+    },
+    {
+      "case_id": "cs06",
+      "fact_index": 3,
+      "verdict": "approve",
+      "evidence": "[task7 seg41] 定稿时间就定在发布前一日下午六点前；[task7 seg49] 对外通稿和产品公告在发布前一日下午六点前定稿；[minutes 4 decisions_json 第3条] 对外通稿及产品公告定稿时间为发布前一日下午6点前。",
+      "proposed_fact": "",
+      "reason": "通稿/公告定稿节点被转写与纪要支持。"
+    },
+    {
+      "case_id": "cs07",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[db/02-seed.sql meeting_memory id=1] supersedes_id=NULL；meeting_series id=1 仅关联 meeting 2，种子中没有更晚会议或替代记忆。",
+      "proposed_fact": "",
+      "reason": "字段与系列会议清单支持没有后续替代记录。"
+    },
+    {
+      "case_id": "cs07",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[db/02-seed.sql meeting_memory id=1] supersedes_id=NULL 只能证明无替代记录，且系列内无更晚会议可验证内容是否被改。",
+      "proposed_fact": "",
+      "reason": "该限定性结论与种子数据一致，可避免把无替代记录误读为内容未变化。"
+    },
+    {
+      "case_id": "cs08",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[db/02-seed.sql meeting_minutes id=4] meeting_id=2、source_task_id=7、status=DRAFT；[minutes 4 decisions_json 第1条] 报表导出功能入口在发布时隐藏，待异步改造完成后单独上线。",
+      "proposed_fact": "",
+      "reason": "报表导出相关决定只出现在 DRAFT 纪要，不是 CONFIRMED。"
+    },
+    {
+      "case_id": "cs08",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[db/02-seed.sql meeting_memory] 仅有 id=1（CONFIRMED 发布决策）、id=2（PROPOSED 移动端修复）、id=3（USER 偏好），无报表导出隐藏入口相关条目。",
+      "proposed_fact": "",
+      "reason": "已确认系列记忆中确实没有该条。"
+    },
+    {
+      "case_id": "cs09",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[db/02-seed.sql] meeting_memory 区分 CONFIRMED（id=1、id=3）与 PROPOSED（id=2），action_item id=1、id=2 为 OPEN；[meetingbot/fastapi-app/services/kb_tools.py:700] 只返回 CONFIRMED 记忆与有效待办；未确认候选不得当作事实。README.md:85 同口径。",
+      "proposed_fact": "",
+      "reason": "该条是 query_meeting_state 的产品规则而非会议内容，种子状态设计、工具实现与产品说明共同支持。"
+    },
+    {
+      "case_id": "cs09",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[db/02-seed.sql meeting_memory id=2] status=PROPOSED、confirmed_by=NULL、confirmed_time=NULL；[meetingbot/fastapi-app/services/kb_tools.py:700] 未确认候选不得当作事实。",
+      "proposed_fact": "",
+      "reason": "候选未被确认（confirmed_by/confirmed_time 为空），不得直接当事实。"
+    },
+    {
+      "case_id": "cs10",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[minutes 3 decisions_json 第1条] 同意于9月1日9:00正式发布；[task6 seg68] 均同意在9月1日九点按计划发布；[meeting_memory id=1] status=CONFIRMED。",
+      "proposed_fact": "",
+      "reason": "已确认的发布时间被纪要、转写、记忆三方一致支持。"
+    },
+    {
+      "case_id": "cs10",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[db/02-seed.sql action_item id=1/id=2] 两条 status=OPEN（移动端修复 王工 2026-08-30 18:00；两组补充验收 陈琳 2026-08-31 12:00）；[minutes 3 decisions_json] 移动端修复与两组补充验收均为发布前任务；[task6 seg68] 发布以两项阻断任务按时完成为前提。",
+      "proposed_fact": "",
+      "reason": "未完成事项被种子待办与纪要支持（发布回归出现在纪要 pending_items 的触发条件中，不在 action_item 表）。"
+    },
+    {
+      "case_id": "ct01",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[transcription_task id=6] recorded_at=2026-09-10 09:00:00（schema 注释：用于判断上午/下午）；[task6 seg1] 各位同事上午好。",
+      "proposed_fact": "",
+      "reason": "录音时间字段与开场原文一致。"
+    },
+    {
+      "case_id": "ct01",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[transcription_task id=7] recorded_at=2026-09-10 14:00:00；[task7 seg1] 各位下午好；09:00 早于 14:00，先后顺序成立。",
+      "proposed_fact": "",
+      "reason": "时间戳与先后关系被直接支持。"
+    },
+    {
+      "case_id": "ct02",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg9] 本次灰度从8月20日开始覆盖10%的活跃用户，到8月26日扩大到30%。",
+      "proposed_fact": "",
+      "reason": "灰度开始与扩量时间被转写直接支持。"
+    },
+    {
+      "case_id": "ct02",
+      "fact_index": 2,
+      "verdict": "revise",
+      "evidence": "[task6 seg47/seg56] 附件修复截止8月30日18点；[task6 seg49/seg57] 回归8月31日12点完成；[task6 seg69] 如果任意阻断任务没有完成，由张晨和王工在8月31日下午五点召开专项评审，决定是否调整发布时间；[minutes 3 decisions_json 第1条] 9月1日9:00正式发布。",
+      "proposed_fact": "8月30日18:00移动端附件下载进度修复截止；8月31日12:00发布回归截止；8月31日17:00在阻断任务未按时完成时召开专项评审（条件触发）；9月1日9:00正式发布。",
+      "reason": "17:00 专项评审是阻断任务未完成才触发的条件事项，原表述像固定日程，需补充触发条件。"
+    },
+    {
+      "case_id": "ct03",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg47/seg56] 修复截止8月30日18点；[minutes 3 decisions_json 第1条] 9月1日9:00正式发布；[db/02-seed.sql action_item id=1] deadline=2026-08-30 18:00:00；8/30 18:00 早于 9/1 9:00。",
+      "proposed_fact": "",
+      "reason": "两个时间点及先后关系均被支持。"
+    },
+    {
+      "case_id": "ct04",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg47] 关于移动端下载进度研发计划今天下午完成接口和前端验证，负责人是王工，协作人是陈琳，截止时间为8月30日18点；[task6 seg56] 王工确认移动端附件下载进度任务8月30日18点完成；[action_item id=1] deadline=2026-08-30 18:00:00。",
+      "proposed_fact": "",
+      "reason": "时间点与事项对应关系被支持。"
+    },
+    {
+      "case_id": "ct04",
+      "fact_index": 2,
+      "verdict": "revise",
+      "evidence": "[task6 seg49] 测试团队将在8月31日中午12点前完成回归；[task6 seg50] 完成后，会在发布群提交测试结论和任务完成凭证；[minutes 3 viewpoints 陈琳] 于8月31日12:00前完成回归并提交凭证。",
+      "proposed_fact": "8月31日12:00：发布回归任务截止；测试团队完成回归后需在发布群提交测试结论和任务完成凭证。",
+      "reason": "提交测试结论与凭证是回归完成后的动作，材料未说12:00前提交；原表述把截止事项与交付物混在一起。"
+    },
+    {
+      "case_id": "ct04",
+      "fact_index": 3,
+      "verdict": "approve",
+      "evidence": "[task6 seg69] 如果任意阻断任务没有完成，由张晨和王工在8月31日下午五点召开专项评审，决定是否调整发布时间；[minutes 3 pending_items 第1条]。",
+      "proposed_fact": "",
+      "reason": "条件触发关系被转写与纪要支持。"
+    },
+    {
+      "case_id": "ct05",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task7 seg42] 还有个风险我要提一下，异步改造和灰度发布挨得太近，如果改造延期可能会影响到后面的排期；[minutes 4 risks_json]。",
+      "proposed_fact": "",
+      "reason": "下午提出的风险被转写与纪要支持。"
+    },
+    {
+      "case_id": "ct05",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task7 seg49] 张涛负责报表导出异步化改造，本周五前完成；[task7 seg18] 开发两天，连调一天，测试两天，加起来一周；[task7 seg24] 灰度方案第一天10%、第二天50%、第三天全量；[task7 seg48] 灰度按10%、50%全量分三天走；[minutes 4 decisions_json 第2条]。",
+      "proposed_fact": "",
+      "reason": "两条信息均被支持；但材料未给出本周五与发布日的日历对应关系，题干问的哪个先哪个后无法严格判定（建议改题或补充时序依据）。"
+    },
+    {
+      "case_id": "ct06",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[minutes 3 decisions_json 第1条] 9月1日9:00正式发布；[task6 seg68] 9月1日九点按计划发布；[task6 seg72] 第一，9月1日九点发布。",
+      "proposed_fact": "",
+      "reason": "正式发布时间被支持。"
+    },
+    {
+      "case_id": "ct06",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task7 seg39] 发公告和通告一起都放在发布当天上午十点；[minutes 4 decisions_json 第3条] 对外通稿与产品公告均于发布当天上午10:00同步发布。",
+      "proposed_fact": "",
+      "reason": "发布当天10:00同步发布的安排被支持。"
+    },
+    {
+      "case_id": "ct07",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg60] 张晨负责发布决策复盘与首周数据汇总，截止时间为9月8日18点；[minutes 3 decisions_json 第6条] 于9月8日18:00前提交。",
+      "proposed_fact": "",
+      "reason": "负责人与截止时间被支持。"
+    },
+    {
+      "case_id": "ct07",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[minutes 3 decisions_json 第8条] 发布首周每日17:00前，由王工牵头汇总运行观测中心与质量评价数据，形成《AI会议助手首周运行日报》；[task6 seg75] 发布首周每天查看运行观测和质量评价数据。",
+      "proposed_fact": "",
+      "reason": "日报负责人/频率由已确认纪要支持（转写只说每天查看，具体17:00与王工以纪要为准）。"
+    },
+    {
+      "case_id": "ct08",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task7 seg41] 定稿时间就定在发布前一日下午六点前；[task7 seg49] 对外通稿和产品公告在发布前一日下午六点前定稿；[minutes 4 decisions_json 第3条]。",
+      "proposed_fact": "",
+      "reason": "定稿节点被转写与纪要支持。"
+    },
+    {
+      "case_id": "ct08",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task7 seg36] 还需要根据最终的功能清单调整报表导出；[task7 seg37] 既然要隐藏，那通稿里这一段要删掉；[minutes 4 decisions_json 第3条] 通稿中删除报表导出相关描述。",
+      "proposed_fact": "",
+      "reason": "删除报表导出描述的要求被转写与纪要支持。"
+    },
+    {
+      "case_id": "ct09",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task7 seg7] 消息推送这个已经修完了，昨天回归通过；[minutes 4 topics_json 第1条] 消息推送免打扰设置已修复并通过回归测试。",
+      "proposed_fact": "",
+      "reason": "修复与回归状态被转写与纪要支持。"
+    },
+    {
+      "case_id": "ct09",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task7 seg19] 报表导出这个功能在发布时先隐藏入口，等改造完成再单独放出来；[minutes 4 decisions_json 第1条]。",
+      "proposed_fact": "",
+      "reason": "隐藏入口与异步改造后上线被支持。"
+    },
+    {
+      "case_id": "ct10",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task7 seg24] 灰度方案分三步，第一天放10%，第二天到50%，第三天全量；[task7 seg48] 灰度按10%、50%全量分三天走；[minutes 4 decisions_json 第2条]。",
+      "proposed_fact": "",
+      "reason": "三阶段节奏被转写与纪要支持。"
+    },
+    {
+      "case_id": "ct10",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task7 seg24] 回滚预案也准备好了，数据库改动都是加字段向后兼容，回滚步需要动数据，最快五分钟能切回旧版本；[minutes 4 decisions_json 第2条] 回滚预案已就绪。",
+      "proposed_fact": "",
+      "reason": "回滚最快5分钟被转写直接支持。"
+    }
+  ],
+  "answers": [
+    {
+      "case_id": "cm01",
+      "verdict": "correct",
+      "reason": "发布公告（赵敏牵头/周宁协作、9月1日9:00前）与对外通稿（刘颖、发布前一日18:00前）两条核心事实均正确，且引用命中已确认纪要与转写原文。",
+      "missing_or_wrong": "次要：注中「资料中未给出发布日的具体日期」不成立——minutes 3 已明确9月1日9:00正式发布，通稿截止可换算为8月31日18:00；另把9月1日写成2023-09-01（取自 minutes deadline 字段年份，与录音 recorded_at 2026-09-10 不一致，语料时间线本身有矛盾）。"
+    },
+    {
+      "case_id": "cm02",
+      "verdict": "partial",
+      "reason": "下午风险答对；上午只列4项，漏「阻断任务未按时完成将触发发布时间调整风险」，且未体现「5项含4项高风险」的计数，答案自称「4项风险」。",
+      "missing_or_wrong": "「第一段录音（task_id=6…）提到 4 项风险」应为5项风险、其中4项高风险（minutes 3 summary/risks_json；task6 seg68-70 的阻断任务风险未列入），且答案把张晨/陈琳对话中的风险归为4项。"
+    },
+    {
+      "case_id": "cm03",
+      "verdict": "partial",
+      "reason": "两段录音的发布口径（9月1日9:00 / V2.0按原计划）均引用正确，但对「是否一致」给出「不一致、指向不同发布对象」的判断缺乏依据：minutes 4 明确「V2.0按原计划时间发布」，原计划即上午已确认的9月1日9:00。",
+      "missing_or_wrong": "「两段录音关于“发布时间”的结论不一致，且指向不同的发布对象」与材料不符（同一 meeting_id=2、同一发布计划）；「资料中未提供第二段录音里“按期”所对应的具体日历日期，无法判断两者是否实际指向同一天」——minutes 3 已明确9月1日9:00，按原计划可对应到该日期。"
+    },
+    {
+      "case_id": "cm04",
+      "verdict": "correct",
+      "reason": "时段判定（09:00/14:00、上午/下午原文）与两段主题均正确。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "cm05",
+      "verdict": "correct",
+      "reason": "上午8/20起10%→8/26 30%复盘与下午三阶段（10%/50%/全量、回滚5分钟）均覆盖，且正确区分两段录音是不同轮次的灰度讨论。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "cm06",
+      "verdict": "correct",
+      "reason": "测试回归（陈琳、8月31日12:00前）与对外通稿（刘颖、发布前一日18:00前）两条事实正确。",
+      "missing_or_wrong": "次要：「资料中未给出发布日的具体日期」不成立（minutes 3 明确9月1日9:00正式发布）；其余无误。"
+    },
+    {
+      "case_id": "cm07",
+      "verdict": "correct",
+      "reason": "移动端附件下载（上午提出、发布前修复）与报表导出（下午提出、40+秒超时、发布时隐藏入口、异步改造后上线）分属两段录音的判断正确，且第二段确实未再讨论移动端问题。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "cm08",
+      "verdict": "correct",
+      "reason": "上午回归要求（8月31日12:00前、两组补充验收、角色覆盖与交付物）与下午验收进度（17→15、剩余报表导出与消息推送免打扰）均正确。",
+      "missing_or_wrong": "次要：把回归覆盖项数说成9项（原文列举实为10项：登录注册、部门员工权限、会议资料上传下载、长音频转写、纪要导出、任务确认、逾期提醒、知识索引重建、跨会议问答、agent人工确认），不影响结论。"
+    },
+    {
+      "case_id": "cm09",
+      "verdict": "correct",
+      "reason": "上午阻断事项/负责人/截止时间与下午未提及移动端下载均正确。",
+      "missing_or_wrong": "次要：说「8月30日18:00前完成接口与前端验证」不够贴原文——task6 seg47 说研发计划今天下午完成接口和前端验证、任务截止时间为8月30日18点，两者被混为一谈。"
+    },
+    {
+      "case_id": "cm10",
+      "verdict": "correct",
+      "reason": "客服（周宁、9月1日10:00前知识库）与运营（赵敏、9月1日9:00前公告与部门通知）两条安排正确，第二段不涉及使用指引/答疑的说明也符合原文。",
+      "missing_or_wrong": "次要：「第二段录音中“发布前一日”对应的具体日历日期未知」——若结合上午已确认纪要（9月1日9:00发布）可换算为8月31日，该“未知”说法不准确。"
+    },
+    {
+      "case_id": "cs01",
+      "verdict": "partial",
+      "reason": "9月1日9:00正式发布这一核心已确认决策答对；但把已确认纪要 decisions 的6条全部称为「已人工确认的发布决策」，其中「补充验收要求」按系列记忆仍是 PROPOSED 候选，且答案自承 query_meeting_state(series_id=2) 用错系列 id。",
+      "missing_or_wrong": "「已人工确认的发布相关决策共6条」：按系列记忆口径，种子中仅 meeting_memory id=1 为 CONFIRMED DECISION；「发布前须完成两组补充验收」在种子中只是 action_item、在运行库记忆中为 PROPOSED，不是已确认决策；另外「query_meeting_state(kind=decision, series_id=2) 返回空结果」暴露 series_id 传成了会议 id（应为1）。"
+    },
+    {
+      "case_id": "cs02",
+      "verdict": "wrong",
+      "reason": "答案直接给出「已人工确认的决策，不是未确认候选」，与该题 gold/种子状态（meeting_memory id=2=PROPOSED、confirmed_by/confirmed_time 为空）相反；其依据是 minutes 3 decisions 与 viewpoints，而非系列记忆状态。",
+      "missing_or_wrong": "「“移动端附件下载进度修复”…属于已人工确认的决策，不是未确认候选」：种子系列记忆中该条 status=PROPOSED、未确认，应回答「是未确认候选，不能当已确认事实」。（注意：当前运行库该记忆已为 CONFIRMED，答案与运行库一致——评测环境未按 seed 初始化，见 key_findings，需清库重灌 seed 后重跑。）"
+    },
+    {
+      "case_id": "cs03",
+      "verdict": "wrong",
+      "reason": "答案给出的是运行库中「专项评审触发条件」这一条 pending item，不是 seed/gold 的 OPEN 待办集合；漏掉「移动端附件下载修复（王工，8月30日18:00）」与「发布前两组补充验收（陈琳，8月31日12:00）」两条，且称「仅有1条」。",
+      "missing_or_wrong": "「产品发布评审系列当前仅有 1条 已人工确认且状态为“未完成（OPEN）”的待办：当移动端附件下载进度任务或发布回归任务任一未按时完成时，触发专项评审…」：按 gold/种子应有两条 OPEN 待办（移动端修复 王工 8/30 18:00；两组补充验收 陈琳 8/31 12:00）；「专项评审」是 minutes 3 pending_items 的条件项，运行库把它当成了 action_item（环境/数据问题）。"
+    },
+    {
+      "case_id": "cs04",
+      "verdict": "partial",
+      "reason": "确认了该偏好状态为 CONFIRMED（正确），但归属判断错误：该条是 USER 级个人偏好（scope_id=用户1），不是「产品发布评审会议」上下文，答案称「无法归到具体人员」。",
+      "missing_or_wrong": "「归属于产品发布评审会议（meeting_id=2）这一会议上下文；工具返回中未标注具体个人姓名（owner_name 为空），因此无法归到某一位具体人员名下」：种子/运行库中均为 scope_type=USER、scope_id=1 的个人偏好，应回答「属于用户1（个人偏好）」。"
+    },
+    {
+      "case_id": "cs05",
+      "verdict": "correct",
+      "reason": "系列只关联会议2、会议2下两段录音（task6 上午/task7 下午）及先后顺序均答对。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "cs06",
+      "verdict": "wrong",
+      "reason": "问题问最近一次会议（下午场/DRAFT 纪要4）形成的三项结论，答案答「没有已确认的结论条目」，并用上午已确认纪要 summary 代替，完全未给出 V2.0按期发布（隐藏报表导出入口）、灰度三阶段、通稿/公告发布前一日18:00前定稿这三项结论。",
+      "missing_or_wrong": "「产品发布评审系列最近一次会议…没有已人工确认的“结论（conclusion）”条目」+ 用上午纪要 summary 作答：漏 minutes 4 summary/decisions 中的三项结论（V2.0按原计划发布、报表导出入口隐藏；灰度首日10%/次日50%/第三日全量；对外通稿与产品公告发布前一日18:00前定稿）；「最近一次」应为 14:00 的下午场。"
+    },
+    {
+      "case_id": "cs07",
+      "verdict": "correct",
+      "reason": "核心结论（系列内没有更晚会议/替代记录可查，无法判断发布决策是否被替代或修改）与 gold 一致；由单一会议数推理而非直接引用 supersedes_id 字段，但不影响结论。",
+      "missing_or_wrong": "次要：「该会议形成了2条已人工确认的发布相关决策」与种子不符（种子中系列 CONFIRMED 决策只有 id=1 一条，运行库有两条），属状态源不一致。"
+    },
+    {
+      "case_id": "cs08",
+      "verdict": "partial",
+      "reason": "结论方向（不能按已确认事实使用）大体正确，但未找到 minutes 4（DRAFT）中「报表导出功能入口在发布时隐藏」的决定，反而称「未检索到关于报表导出功能本身的发布决策」，没有答出「决定来自 DRAFT 纪要、尚未确认生效」。",
+      "missing_or_wrong": "「未检索到关于“报表导出功能”本身（如入口开放、异步改造、性能优化等）的发布决策或生效状态记录」：minutes 4 decisions_json 明确有该决定（minutes 4 status=DRAFT，非 CONFIRMED），应回答「该决定来自草稿纪要，未确认生效；系列已确认记忆中无此条」。"
+    },
+    {
+      "case_id": "cs09",
+      "verdict": "partial",
+      "reason": "给出了「未确认候选不能直接当事实回答」的正确原则，但称「未找到关于…的明确规则」，漏掉关键产品规则「query_meeting_state 只返回 CONFIRMED 记忆与有效待办」，且把确认级别判断压在会议材料上。",
+      "missing_or_wrong": "「但未找到关于“未确认候选记忆应如何处理、能否作为事实引用”的明确规则或决策」：该规则是 query_meeting_state 的既定口径（只返回 CONFIRMED 记忆与有效待办，PROPOSED 不进工具；kb_tools.py:700、README:85），不是会议议题；应直接按规则回答。"
+    },
+    {
+      "case_id": "cs10",
+      "verdict": "partial",
+      "reason": "项目状态（已确认9月1日9:00发布、移动端修复须发布前完成）答对；「下一步」只列了运行库里的1条专项评审触发项，漏掉 gold/种子中的两条 OPEN 待办（移动端修复、两组补充验收）及其负责人/截止时间。",
+      "missing_or_wrong": "「当前仅有1条未完成（OPEN）待办，即监控关键任务完成情况并视情触发专项评审」：按 gold/种子还应有「移动端附件下载修复（王工，8月30日18:00）」与「发布前两组补充验收（陈琳，8月31日12:00）」两条 OPEN 待办；运行库与种子不一致（见 key_findings）。"
+    },
+    {
+      "case_id": "ct01",
+      "verdict": "correct",
+      "reason": "两段录音的 recorded_at（2026-09-10 09:00/14:00）与上午/下午归属、先后顺序均正确。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "ct02",
+      "verdict": "partial",
+      "reason": "8/20→8/26 的灰度节点与发布前各截止时间大体正确，但漏掉「8月31日17:00专项评审（条件触发）」节点，并把年份统一写成2023（与录音2026-09-10矛盾）。",
+      "missing_or_wrong": "「资料仅明确了上述5个节点…」：缺 8月31日17:00 专项评审节点（minutes 3 pending_items；task6 seg69，条件为阻断任务未完成）；另 2023-08-20/2023-08-26/2023-09-01 等年份与录音 recorded_at 2026-09-10 不一致（2023取自 minutes deadline 字段）；「8月26日至8月30日之间是否存在中间检查点」的说法基于漏检。"
+    },
+    {
+      "case_id": "ct03",
+      "verdict": "correct",
+      "reason": "修复截止8月30日18:00早于9月1日9:00发布，先后关系与约39小时的计算正确。",
+      "missing_or_wrong": "次要：日期年份写成2023（取自 minutes deadline 字段），与录音 recorded_at 2026-09-10 不一致。"
+    },
+    {
+      "case_id": "ct04",
+      "verdict": "correct",
+      "reason": "三个时间点分别对应移动端修复截止、发布回归截止、专项评审（条件触发）均正确。",
+      "missing_or_wrong": "次要：8月31日12:00一项未提「回归完成后在发布群提交测试结论和任务完成凭证」。"
+    },
+    {
+      "case_id": "ct05",
+      "verdict": "partial",
+      "reason": "灰度三阶段与「改造本周五前完成」均引用正确，但「灰度发布排期在先、异步改造完成在后」的先后结论在材料中没有直接依据：材料同时说改造本周五前完成、发布按期，又说报表导出发布时先隐藏、改造完成后再上线，日历口径矛盾/缺失。",
+      "missing_or_wrong": "「会议明确决定V2.0按期发布并启动灰度…改造完成时间点位于发布/灰度启动之后」：材料未给出「本周五」与发布日的对应关系，也没有明确「改造完成在发布后」；task7 同时存在「发布时先隐藏入口，等改造完成再单独放出来」与「本周五前完成」，题干先后顺序在现有材料中不可严格判定（gold 的 expected_fact 也未编码先后关系，题目需补充依据）。"
+    },
+    {
+      "case_id": "ct06",
+      "verdict": "correct",
+      "reason": "9:00正式发布与发布当天10:00同步发通稿/公告两个时间点均正确。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "ct07",
+      "verdict": "correct",
+      "reason": "首周复盘（张晨、9月8日18:00前）与首周运行日报（王工、发布首周每日17:00前）均答对。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "ct08",
+      "verdict": "partial",
+      "reason": "只回答了「通稿与公告定稿」一项，漏掉同场明确的「通稿中删除报表导出相关描述」这一必做内容（task7 seg37；minutes 4 decisions 第3条）。",
+      "missing_or_wrong": "「该时间点仅对应通稿与公告定稿这一事项」：还应包含「通稿中删除报表导出相关描述」（因报表导出入口隐藏），这是 minutes 4 decisions 第3条与 task7 seg36-37 的要求。"
+    },
+    {
+      "case_id": "ct09",
+      "verdict": "correct",
+      "reason": "消息推送免打扰已修复/昨日回归通过，报表导出发布时隐藏入口、异步改造后单独上线，两条时间线均正确。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "ct10",
+      "verdict": "partial",
+      "reason": "三阶段节奏与回滚5分钟均答对，但把上午「上一轮灰度复盘（10%→30%）」与下午「V2.0新灰度方案（10%→50%→全量）」误判为「两套不一致、明显矛盾」的同一轮数据；两者是不同轮次（cm05 答案本身已正确区分）。",
+      "missing_or_wrong": "「会议中实际存在两套不一致的灰度节奏表述…两套节奏在比例节点（30% vs 50%）和时间跨度上明显矛盾」：上午为上一轮灰度复盘（8月20-26日），下午是V2.0新方案，不是同一轮次，不构成矛盾；该误读不影响「三阶段10%/50%/全量、回滚最快5分钟」两条答案。"
+    }
+  ],
+  "summary": {
+    "facts_approve": 56,
+    "facts_revise": 2,
+    "facts_reject": 0,
+    "answers_correct": 16,
+    "answers_partial": 11,
+    "answers_wrong": 3,
+    "key_findings": [
+      "【最严重：评测环境状态与种子不一致】db/02-seed.sql（提交于 2026-10-19 17:41 的 ee18cbd）声明 meeting_memory id=2（移动端修复）为 PROPOSED、action_item 有两条 OPEN（移动端修复/补充验收）；但当前运行库（MySQL 容器，仅在空卷初始化时执行 seed）中 meeting_memory 共4条、id2 与 id4 已 CONFIRMED、id3（补充验收）为 PROPOSED、action_item 只有1条“专项评审”（deadline 2023-08-31 17:00），均为 2026-10-19 19:18 创建。AI 答案（19:57/20:06 生成）与 reviewed_cross_on_packet 的 contexts 正是按运行库状态作答。因此 cs02/cs03/cs07/cs10 的答案与 gold（按 seed 起草）系统性冲突，本质是环境未按 seed 重建，不能算纯模型能力问题；须清库重灌 seed 后重跑 30 题再使用这批人工标签。（cs04 的偏好归属缺失属于另一问题：query_meeting_state 返回的 USER 偏好条目未携带 scope/owner 字段，产品侧需补字段，否则答案无法给出归属人。）",
+      "【seed 与纪要的口径/来源不一致】已确认的 minutes 3 decisions 列有“移动端附件下载进度问题须在发布前修复”，但系列记忆 id=2 在 seed 中为 PROPOSED；seed 的 action_item 标注 source_field=pending_items、source_index=0/1，而 minutes 3 的 pending_items 实际只有“专项评审触发条件”一条，种子待办并非由当前纪要生成。建议统一“纪要→记忆/待办”的生成口径并在 seed 中修正来源字段，否则 cs02/cs03 这类系列状态题会有两套都“有据”的答案。",
+      "【语料时间线自相矛盾】录音 recorded_at=2026-09-10，但转写内容中的截止/发布日期为 8/30、8/31、9/1，而 minutes 的 deadline 字段又写成 2023-09-01/2023-08-30 等。AI 答案 cm01/ct02/ct03/cs01 等因此出现 2023 年日期。gold 事实未含年份规避了部分问题，但答案判分与引用可信度受影响，建议统一语料时间线（或明确“内容日期即会议内相对日期”）。",
+      "【gold 事实需修订2处 + ct05 题目不可严格作答】ct02-2：8月31日17:00 专项评审是“阻断任务未完成才触发”的条件事项，事实中缺条件；ct04-2：材料是“8月31日12:00前完成回归，完成后在发布群提交测试结论与凭证”，事实写成“12:00：提交结论与凭证”。另 ct05 的题干问“异步改造与灰度排期哪个先哪个后”，但材料同时有“改造本周五前完成”和“发布时先隐藏、改造完成后再上线”，日历口径缺失/矛盾，gold 的两条 expected_fact 也未编码先后关系，建议改题或补充时序依据。",
+      "【答案质量集中在 series_state 与个别 cross/temporal 题】3条 wrong 全在 series_state：cs02 把 PROPOSED 说成已确认、cs03 把“专项评审触发项”当唯一 OPEN 待办并漏两条、cs06 答“无结论条目”并用上午 summary 代替下午三项结论。partial 中较重的有 cm02（漏第5项风险）、cm03（把两段一致的发布口径判成“不一致”）、cs04（偏好归属错）、cs08（漏 DRAFT 纪要决定）、cs09（漏“只返回CONFIRMED”规则）、cs10（漏两条 OPEN 待办）、ct02（漏17:00节点）、ct05（先后结论无依据）、ct08（漏“通稿删报表导出”）、ct10（把两轮灰度误读为矛盾）。其余 cross_meeting/temporal 答案基本正确。"
+    ]
+  }
+}

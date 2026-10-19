@@ -369,7 +369,12 @@ def _from_state(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation]]
             deadline_text=item.get("deadline_text"),
             series_id=item.get("series_id"),
             series_name=item.get("series_name"),
-            source_text=content or quote,
+            source_text="；".join(part for part in (
+                content or quote,
+                f"负责人：{item.get('owner_name')}" if item.get("owner_name") else "",
+                f"截止：{item.get('deadline_text')}" if item.get("deadline_text") else "",
+                f"状态：{item.get('status')}" if item.get("status") else "",
+            ) if part),
         )))
     return pairs
 

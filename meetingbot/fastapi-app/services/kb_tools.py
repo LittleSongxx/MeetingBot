@@ -299,6 +299,11 @@ class GetMinutesArgs(BaseModel):
                     "不保证会议时间顺序；问「会议最后总结的几条」不要用它猜，"
                     "改用 search_knowledge 检索总结段。field_meta 会标 total/returned/truncated。",
     )
+    include_draft: bool = Field(
+        default=False,
+        description="是否允许返回草稿纪要。默认优先人工确认版；问「最近一次会议的结论」"
+                    "但 state 查不到已确认结论时，用 true 读最近草稿，并必须在回答里标注草稿。",
+    )
 
     @field_validator("fields", "keywords", mode="before")
     @classmethod
@@ -341,7 +346,9 @@ class QueryMeetingStateArgs(BaseModel):
                     "会议 id 可从 list_facts(kind=meeting) 或上下文拿到）")
     series_id: int | None = Field(
         default=None,
-        description="限定系列；系列 id 可从会议详情或会议列表确认")
+        description="限定系列主键。**系列 id 与会议 id 是不同命名空间**："
+                    "例如系列1包含会议2时，series_id=1、meeting_id=2；"
+                    "不确定就先不传范围或先 list_facts(kind=meeting)")
     status: Literal["open", "done", "all"] = Field(
         default="open",
         description="仅对 action_item 有意义：open 未完成 / done 已完成 / all 全部")
@@ -349,6 +356,10 @@ class QueryMeetingStateArgs(BaseModel):
         default=None,
         description="仅对 action_item 有意义：按负责人姓名过滤")
     limit: int = Field(default=10, ge=1, le=30, description="返回条数上限")
+    include_proposed: bool = Field(
+        default=False,
+        description="是否包含 PROPOSED 候选记忆。仅在问题问「是已确认还是未确认候选」"
+                    "时设为 true；候选只能陈述状态，不得当作事实。")
 
     @field_validator("series_id", "limit", mode="before")
     @classmethod
@@ -554,6 +565,8 @@ async def _list_facts(actor: Actor, args: ListFactsArgs) -> dict[str, Any]:
             notice += "如果问题需要原文依据，可以按需检索转写；不要仅仅为了覆盖而额外检索。"
         notice += ("如果问题问到的槽位（负责人/协作人/截止时间）在条目里缺失，"
                    "用 search_knowledge 到转写原话补查——这是补缺，不是为覆盖而检索。")
+        notice += (f" 本次返回 {len(facts)} 条事实；问完整清单时必须逐条覆盖，"
+                   "不得省略或只列前几项。")
         result["notice"] = notice
     return result
 
@@ -564,6 +577,10 @@ async def _get_minutes(actor: Actor, args: GetMinutesArgs) -> dict[str, Any]:
     minutes = None
     if args.minutes_id is not None:
         minutes = await MeetingMinutes.get_or_none(id=args.minutes_id)
+    elif args.include_draft:
+        # 明确要草稿：取最新一版（即使有确认版），用于「最近一次会议结论」这类
+        # 只在草稿里的信息；authority=DRAFT 会在结果里如实标注。
+        minutes = await MeetingMinutes.filter(meeting_id=args.meeting_id).order_by("-id").first()
     else:
         # 同一场会可能有多版纪要：优先取人工确认过的，没有确认版才退回最新草稿
         minutes = (await MeetingMinutes.filter(meeting_id=args.meeting_id, status="CONFIRMED")
@@ -615,6 +632,8 @@ async def _get_minutes(actor: Actor, args: GetMinutesArgs) -> dict[str, Any]:
                "也要检索总结段，不要用字段顺序猜。")
     if any(meta["truncated"] for meta in field_meta.values()):
         notice += " 还有更多条目未返回，需要时缩小 keywords 或调整 limit。"
+    notice += (" 若用户问完整清单（所有风险/全部待办/全部决策），逐条覆盖字段内全部条目，"
+               "不要只列前几项；不要用关键词截断完整清单。")
     if args.keywords and field_meta and not any(meta["total"] for meta in field_meta.values()):
         notice += " keywords 没有命中任何列表条目；可换关键词或去掉 keywords。"
     return {
@@ -693,11 +712,22 @@ async def _query_meeting_state(actor: Actor, args: QueryMeetingStateArgs) -> dic
     # 延迟导入：工具模块先于领域服务存在时也能被 import（MCP/能力探测不依赖它）
     from services import state_service
 
+    if args.series_id is not None:
+        visible = await access.visible_series_ids(actor.user, requested=[args.series_id])
+        if not visible:
+            all_visible = await access.visible_series_ids(actor.user) or []
+            names = await MeetingSeries.filter(id__in=all_visible or [-1]).values("id", "name")
+            hint = "、".join(f"{row['name']}(id={row['id']})" for row in names) or "无"
+            raise ToolError(
+                f"系列 id={args.series_id} 不存在或无权访问；系列 id 与会议 id 不同。"
+                f"当前可见系列：{hint}")
     items = await state_service.query_state(
         actor, kind=args.kind, query=args.query, series_id=args.series_id,
         status=args.status, owner=args.owner, limit=args.limit,
-        meeting_ids=args.meeting_ids)
+        meeting_ids=args.meeting_ids, include_proposed=args.include_proposed)
     notice = ("只返回 CONFIRMED 记忆与有效待办；未确认候选不得当作事实。"
+              "空结果表示当前没有已确认条目，不等于会议没发生过；需要原文或草稿时"
+              "继续用 search_knowledge 或 get_minutes(include_draft=true) 查，并在回答里说明。"
               "引用时写清来源会议/纪要；待办状态以工具返回为准，不要按上下文猜。")
     return {"kind": args.kind, "items": items, "notice": notice}
 
@@ -762,6 +792,8 @@ TOOL_SPECS: tuple[ToolSpec, ...] = (
     ToolSpec(
         name="get_minutes",
         description="取某场会的纪要字段（摘要、议题、观点、决策、待办、风险，含证据）。"
+                    "问「最近一次会议的结论」而 query_meeting_state 没有已确认结论时，"
+                    "用 include_draft=true 读最近草稿并标注草稿。"
                     "**按需传 fields**：问时长/议题只取 summary/topics，问待办只取 "
                     "pending_items；不确定才取全部。一次取六字段会把无关条目塞满上下文。"
                     "**问某主题/发布范围/功能时传 keywords**（从问题取名词）。"
@@ -786,7 +818,9 @@ TOOL_SPECS: tuple[ToolSpec, ...] = (
                     "**状态类问题的第一步必须调用本工具**：问「上次定了什么」「最后复述了哪些结论」"
                     "「还有哪些待办」「谁负责」「协作人是谁」「截止时间」「项目现在什么状态」"
                     "时都先用它；"
-                    "问某场会时传 meeting_ids，问某系列时传 series_id。"
+                    "问某场会时传 meeting_ids，问某系列时传 series_id；"
+                    "两者是不同 id，不要混用。问「是已确认还是未确认候选」时传 include_proposed=true，"
+                    "候选只能陈述状态、不得当事实。"
                     "再用 search_knowledge 补原文；只返回人工确认过的内容，未确认候选不会返回。",
         arguments=QueryMeetingStateArgs,
         handler=_query_meeting_state,
