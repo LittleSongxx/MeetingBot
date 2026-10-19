@@ -2111,23 +2111,22 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - 结论引用纪律：以上未运行项不得在简历/报告中写成"已提升/已下降"，只能写
   "已实现、已预注册、待测量"。
 
-### 7) 最终实测（2026-10-19，不限调用）
+### 7) AI 复核 + 优化复测（2026-10-20）
 
-完整报告：`evaluation/reports/2026-10-19_frontier_measured.md`。核心读数：
+完整报告：`evaluation/reports/2026-10-20_ai_review_and_optimization.md`。
+人工审核包：`evaluation/reports/cross_gold_human_review_30.csv`。
 
-- **轨迹 27 题（最终）**：tool_call_f1 **0.7469**（加固前 0.5432）；strict 18/27、
-  acceptable 25/27、required 覆盖 23/27、must_cite 25/25、禁止工具 0。
-  这是迭代后读数，不是 held-out 泛化。
-- **pass^3（12×3）**：**10/12 = 83.3%**（CP 95% 51.6–97.9%），strict 10/12、
-  acceptable 12/12、禁止工具 0/36。
-- **跨会议 A/B（30×2，DeepSeek judge，draft-gold）**：recall 68.97% → 74.14%
-  （+5.17pp），但 precision 65.22% → 58.70%（−6.52pp）；未满足预注册门槛，
-  且上一轮同题 A/B 无差异，结论不稳定，保持 `KB_QUERY_PLAN_ENABLED=0`。
-- **注入线上 30 题**：注入标记 10/10、良性误报 0/20、系统提示泄露 0/30、
-  跨会议外发 0/10。
-- **在线评测 30 条**：faithfulness 0.8967、relevance 0.9217、pass_rate 0.9667。
-- **成本路由试点（5 题）**：qwen vs DeepSeek，输入 42,417 vs 47,688 token、
-  输出 1,177 vs 1,898；precision 86.7% vs 77.8%、faithfulness 100% vs 94.9%。
-  两模型均未定价，不能报金额；路由已删除，默认关闭。
-- **累计**：产品 2,106 次调用、¥0.8071；token 级缓存命中 60.46%；外部 judge 约 273 次。
-- **不可引用**：draft-gold 未人工复核、人工 kappa 未回填、单会议语料、无金额 A/B。
+- **AI 复核 gold**：轨迹 4 条启发式标签按证据修正；跨会议 58 条事实
+  55 supported、3 partial 改写、0 unsupported；两者 `human_checked=false`。
+- **轨迹 27 题**：pre-review gold F1 0.7469（strict 18/27、required 23/27）；
+  AI-reviewed gold F1 0.8951（strict 22/27、required 27/27、forbidden 0）。
+  **差异含 gold 修正，不能写成产品提升**。
+- **pass^3（12×3）**：pre-review 10/12 = 83.3%；AI-reviewed 12/12 = 100%。
+  后者直接来自 2 条 aggregation 标签修正，不是独立泛化证据。
+- **跨会议 A/B（30×2，AI-reviewed draft-gold）**：recall 68.97% → 75.86%（+6.90pp），
+  precision 66.07% → 59.42%（−6.65pp）；未满足预注册门槛，保持规划关闭。
+- **注入/在线评测/成本路由**：注入 10/10、良性误报 0/20；在线评测 30 条
+  faithfulness 0.8967、relevance 0.9217、pass_rate 0.9667；成本路由 5 题试点
+  两模型均未定价、token 反而更高，路由已删除。
+- **累计**：产品 2,237 次调用、¥0.8634；token 级缓存命中 60.34%；外部 judge/审核约 450 次。
+- **人工审核前**：0.8951/100% 只能作为待复核草稿；确认 `human_checked=true` 后才可引用。
