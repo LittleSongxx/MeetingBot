@@ -154,8 +154,13 @@ async def _enrich_memories(rows: list[MeetingMemory]) -> list[dict]:
 
 async def _query_memories(actor: Any, user: User, kind: str, *,
                           query: str | None = None, series_id: int | None = None,
+                          meeting_ids: list[int] | None = None,
                           limit: int = 10) -> list[dict]:
     allowed = await _allowed_meetings(actor, user)
+    if meeting_ids is not None:
+        # 参数只能收窄：与 Actor 的可见集合取交集，空交集保持空（不是"不过滤"）
+        requested = {int(item) for item in meeting_ids}
+        allowed = sorted(requested if allowed is None else (set(allowed) & requested))
     if kind == "preference":
         # 个人偏好只属于本人，和会议可见性无关
         filter_query = MeetingMemory.filter(
@@ -184,8 +189,13 @@ async def _query_memories(actor: Any, user: User, kind: str, *,
 
 async def _query_action_items(actor: Any, user: User, *, query: str | None = None,
                               series_id: int | None = None, status: str = "all",
-                              owner: str | None = None, limit: int = 10) -> list[dict]:
+                              owner: str | None = None,
+                              meeting_ids: list[int] | None = None,
+                              limit: int = 10) -> list[dict]:
     allowed = await _allowed_meetings(actor, user)
+    if meeting_ids is not None:
+        requested = {int(item) for item in meeting_ids}
+        allowed = sorted(requested if allowed is None else (set(allowed) & requested))
     scope = await _series_scope(user, series_id)
     if scope == []:
         return []
@@ -233,7 +243,8 @@ async def _query_action_items(actor: Any, user: User, *, query: str | None = Non
 
 async def query_state(actor: Any, kind: str, query: str | None = None,
                       series_id: int | None = None, status: str = "all",
-                      owner: str | None = None, limit: int = 10) -> list[dict]:
+                      owner: str | None = None, limit: int = 10,
+                      meeting_ids: list[int] | None = None) -> list[dict]:
     """查已确认状态（decision/conclusion/action_item/preference）。
 
     签名固定：`services/kb_tools.py` 的 `query_meeting_state` 直接按位置/关键字调用。
@@ -246,11 +257,12 @@ async def query_state(actor: Any, kind: str, query: str | None = None,
     size = max(1, min(size, MAX_LIMIT))
     if kind in {"decision", "conclusion", "preference"}:
         return await _query_memories(
-            actor, user, kind, query=query, series_id=series_id, limit=size)
+            actor, user, kind, query=query, series_id=series_id,
+            meeting_ids=meeting_ids, limit=size)
     if kind == "action_item":
         return await _query_action_items(
             actor, user, query=query, series_id=series_id, status=status,
-            owner=owner, limit=size)
+            owner=owner, meeting_ids=meeting_ids, limit=size)
     raise ValueError(f"不支持的状态类型：{kind}")
 
 

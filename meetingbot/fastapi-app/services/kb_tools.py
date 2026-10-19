@@ -335,6 +335,10 @@ class QueryMeetingStateArgs(BaseModel):
     query: str | None = Field(
         default=None,
         description="可选的检索词（如项目名、事项名）；留空取最近的条目")
+    meeting_ids: list[int] | None = Field(
+        default=None,
+        description="限定在这些会议里查（问「下午这场会/上次那场会」时用；"
+                    "会议 id 可从 list_facts(kind=meeting) 或上下文拿到）")
     series_id: int | None = Field(
         default=None,
         description="限定系列；系列 id 可从会议详情或会议列表确认")
@@ -350,6 +354,11 @@ class QueryMeetingStateArgs(BaseModel):
     @classmethod
     def _loose_ids(cls, value: Any) -> Any:
         return _loose(value, (int, type(None)))
+
+    @field_validator("meeting_ids", mode="before")
+    @classmethod
+    def _loose_meeting_ids(cls, value: Any) -> Any:
+        return _loose(value, (list, type(None)))
 
 
 # --------------------------------------------------------------------------- #
@@ -686,7 +695,8 @@ async def _query_meeting_state(actor: Actor, args: QueryMeetingStateArgs) -> dic
 
     items = await state_service.query_state(
         actor, kind=args.kind, query=args.query, series_id=args.series_id,
-        status=args.status, owner=args.owner, limit=args.limit)
+        status=args.status, owner=args.owner, limit=args.limit,
+        meeting_ids=args.meeting_ids)
     notice = ("只返回 CONFIRMED 记忆与有效待办；未确认候选不得当作事实。"
               "引用时写清来源会议/纪要；待办状态以工具返回为准，不要按上下文猜。")
     return {"kind": args.kind, "items": items, "notice": notice}
@@ -773,8 +783,10 @@ TOOL_SPECS: tuple[ToolSpec, ...] = (
         name="query_meeting_state",
         description="查询系列/个人的已确认状态：先前决策（decision）、结论（conclusion）、"
                     "待办及完成情况（action_item）、个人偏好（preference）。"
-                    "问「上次定了什么」「还有哪些待办」「谁负责」「项目现在什么状态」"
-                    "时**先用它**，再用 search_knowledge 补原文；只返回人工确认过的内容。",
+                    "**状态类问题的第一步必须调用本工具**：问「上次定了什么」「还有哪些待办」"
+                    "「谁负责」「协作人是谁」「截止时间」「项目现在什么状态」时都先用它；"
+                    "问某场会时传 meeting_ids，问某系列时传 series_id。"
+                    "再用 search_knowledge 补原文；只返回人工确认过的内容，未确认候选不会返回。",
         arguments=QueryMeetingStateArgs,
         handler=_query_meeting_state,
     ),

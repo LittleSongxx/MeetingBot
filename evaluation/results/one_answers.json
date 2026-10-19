@@ -1,0 +1,122 @@
+{
+  "artifact_version": 1,
+  "captured_from": {
+    "base_url": "http://127.0.0.1:19091",
+    "session_id": 80,
+    "meeting_id": null,
+    "captured_at": "2026-10-19T11:19:00Z",
+    "product_model": "",
+    "product_switches": {
+      "model": "qwen3.8-max-0902",
+      "kb_rerank_enabled": true,
+      "kb_query_plan_enabled": false,
+      "kb_chunk_target_chars": 300,
+      "rerank_top_k": 3,
+      "rerank_candidates": 24,
+      "rerank_input_price_micro_per_1k": 500,
+      "kb_dedupe_enabled": false,
+      "kb_dedupe_overlap_seconds": 30,
+      "kb_contextual_enabled": false,
+      "pg_kb_table": "kb.chunk_search",
+      "vector_dim": null
+    }
+  },
+  "source_texts": {},
+  "turns": [
+    {
+      "case_id": "q01",
+      "meeting_id": null,
+      "question": "这次灰度发布从什么时候开始、覆盖了多少用户？",
+      "answer": "**结论**\n本次灰度发布从 **8月20日** 开始，初始覆盖 **10%** 的活跃用户，至8月26日扩大至 **30%** 活跃用户 [1][2]。\n\n**依据**\n- 在「产品发布评审会议」（meeting_id=2）中，张晨介绍：“本次灰度从8月20日开始覆盖10%的活跃用户，到8月26日扩大到30%” [1]（转写原话，start_second=51）。\n- 该会议已确认纪要的议题条目也记录：“复盘8月20日至26日灰度发布数据，覆盖10%-30%活跃用户” [2]。\n\n**资料说明**\n- 当前检索到的内容仅明确了8月20日–26日的灰度节奏与比例；若你问的是“这次”指另一轮更新或8月26日之后的最新扩量节点，现有资料未包含，需补充对应会议或录音范围后再查。",
+      "message_id": 3068,
+      "stop_reason": "finished",
+      "citations": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[36s][张晨] 请大家围绕事实数据和可执行动作发言，会议结束后会形成纪要和任务清单。\n[46s][张晨] 先请产品负责人张晨介绍灰度发布情况。\n[51s][张晨] 张晨本次灰度从8月20日开始覆盖10%的活跃用户，到8月26日扩大到30%，整体登录成功率为99.8%，核心下单链路成功率为99.2%。\n[74s][张晨] 新版本的会议任务看板访问量比旧入口提升了24%，任务完成凭证上传率提升了18%。\n[86s][张晨] 用户反馈最集中的问题有两个，第一部分用户不知道如何从会议纪要进入任务草稿。\n[96s][张晨] 第二，移动端在网络较弱时，附件下载进度没有及时刷新。",
+          "speaker": "张晨",
+          "chunk_id": 579,
+          "authority": "RAW",
+          "source_id": 6,
+          "end_second": 103,
+          "meeting_id": 2,
+          "start_second": 36,
+          "meeting_title": "产品发布评审会议"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "[topics] 上一轮产品灰度发布的数据复盘 复盘8月20日至26日灰度发布数据，覆盖10%-30%活跃用户，评估登录成功率、核心下单链路成功率、新功能访问与转化提升、用户反馈高频问题、权限控制验证及数据安全性。",
+          "speaker": null,
+          "chunk_id": 617,
+          "authority": "CONFIRMED",
+          "source_id": 3,
+          "end_second": null,
+          "meeting_id": 2,
+          "start_second": null,
+          "meeting_title": "产品发布评审会议"
+        }
+      ],
+      "tools": [
+        {
+          "ok": true,
+          "name": "search_knowledge",
+          "call_id": "call_2ae7bb85f50b42098ad36da2",
+          "summary": "3 条切片",
+          "arguments": {
+            "limit": 5,
+            "query": "灰度发布开始时间 覆盖用户数"
+          }
+        }
+      ],
+      "allowed_meeting_ids": null,
+      "used_refs": [
+        1,
+        2
+      ],
+      "unknown_refs": [],
+      "retrieved": [
+        {
+          "ref": 1,
+          "kind": "chunk",
+          "quote": "[36s][张晨] 请大家围绕事实数据和可执行动作发言，会议结束后会形成纪要和任务清单。\n[46s][张晨] 先请产品负责人张晨介绍灰度发布情况。\n[51s][张晨] 张晨本次灰度从8月20日开始覆盖10%的活跃用户，到8月26日扩大到30%，整体登录成功率为99.8%，核心下单链路成功率为99.2%。\n[74s][张晨] 新版本的会议任务看板访问量比旧入口提升了24%，任务完成凭证上传率提升了18%。\n[86s][张晨] 用户反馈最集中的问题有两个，第一部分用户不知道如何从会议纪要进入任务草稿。\n[96s][张晨] 第二，移动端在网络较弱时，附件下载进度没有及时刷新。",
+          "speaker": "张晨",
+          "chunk_id": 579,
+          "authority": "RAW",
+          "source_id": 6,
+          "end_second": 103,
+          "meeting_id": 2,
+          "start_second": 36,
+          "meeting_title": "产品发布评审会议"
+        },
+        {
+          "ref": 2,
+          "kind": "chunk",
+          "quote": "[topics] 上一轮产品灰度发布的数据复盘 复盘8月20日至26日灰度发布数据，覆盖10%-30%活跃用户，评估登录成功率、核心下单链路成功率、新功能访问与转化提升、用户反馈高频问题、权限控制验证及数据安全性。",
+          "speaker": null,
+          "chunk_id": 617,
+          "authority": "CONFIRMED",
+          "source_id": 3,
+          "end_second": null,
+          "meeting_id": 2,
+          "start_second": null,
+          "meeting_title": "产品发布评审会议"
+        },
+        {
+          "ref": 3,
+          "kind": "chunk",
+          "quote": "[116s][李悦] 容量这块没问题。\n[118s][李悦] 现在的机器配置扛刀日活8万枚压力我们预估发布后日或是5万左右。\n[124s][李悦] 灰度方案我建议分三步，第一天放10%观察一天，第二天到50%，第三天全量回滚预案也准备好了，数据库改动都是加字段向后兼容，回滚步需要动数据，最快五分钟能切回旧版本。\n[142s][系统管理员] 第一天10%是按什么维度切？\n[145s][李悦] 挨用户ID取魔，保证同一个用户每次都落在同一边，不会一会儿新版。\n[151s][张晨] 一会儿旧版。\n[153s][张晨] 灰度期间我们需要盯哪些指标？",
+          "speaker": "李悦",
+          "chunk_id": 611,
+          "authority": "RAW",
+          "source_id": 7,
+          "end_second": 156,
+          "meeting_id": 2,
+          "start_second": 116,
+          "meeting_title": "产品发布评审会议"
+        }
+      ]
+    }
+  ]
+}
