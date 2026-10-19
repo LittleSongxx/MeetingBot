@@ -1,0 +1,56 @@
+{
+  "ab_baseline_packet.json": {
+    "context_keyword_coverage": 0.9111111111111111,
+    "answer_keyword_coverage": 0.9166666666666666,
+    "cases": [
+      {
+        "case_id": "cm01",
+        "context_keyword_coverage": 0.8333333333333333,
+        "answer_keyword_coverage": 1.0,
+        "contexts": 6,
+        "tools": []
+      },
+      {
+        "case_id": "cm03",
+        "context_keyword_coverage": 1.0,
+        "answer_keyword_coverage": 0.75,
+        "contexts": 8,
+        "tools": []
+      },
+      {
+        "case_id": "cm05",
+        "context_keyword_coverage": 0.9,
+        "answer_keyword_coverage": 1.0,
+        "contexts": 6,
+        "tools": []
+      }
+    ]
+  },
+  "ab_plan_packet.json": {
+    "context_keyword_coverage": 0.9111111111111111,
+    "answer_keyword_coverage": 0.8444444444444444,
+    "cases": [
+      {
+        "case_id": "cm01",
+        "context_keyword_coverage": 0.8333333333333333,
+        "answer_keyword_coverage": 0.8333333333333333,
+        "contexts": 5,
+        "tools": []
+      },
+      {
+        "case_id": "cm03",
+        "context_keyword_coverage": 1.0,
+        "answer_keyword_coverage": 1.0,
+        "contexts": 8,
+        "tools": []
+      },
+      {
+        "case_id": "cm05",
+        "context_keyword_coverage": 0.9,
+        "answer_keyword_coverage": 0.7,
+        "contexts": 6,
+        "tools": []
+      }
+    ]
+  }
+}

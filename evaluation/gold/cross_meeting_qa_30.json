@@ -1,9 +1,9 @@
 {
   "name": "系列 / 跨会议 / 时间推理问答骨架 30 题（代理起草，未人工复核）",
-  "purpose": "P0 系列/长期记忆能力的问答骨架：先固定问题与 provenance，expected_facts/证据片段留空并标 todo，由人工对照转写与纪要补齐后再进判定。",
-  "label_source": "agent_draft",
+  "purpose": "P0 系列/跨会议/时间推理问答的**AI 草稿金标**：expected_facts 与证据已由代理对照种子转写/纪要/记忆补齐；human_checked=false，人工复核前只能作为 draft-gold 报告 context recall，不能当正式金标。",
+  "label_source": "agent_draft_enriched",
   "human_checked": false,
-  "discipline": "全部问题由代理起草、未经人工复核；expected_facts 一律为空，禁止把骨架当金标直接报准确率。人工补齐 expected_facts 与证据段落后，按 judges/rag.py 或 trajectory 口径评测。",
+  "discipline": "expected_facts 由代理根据实际种子内容起草并做来源核对，但未人工复核；引用任何 context recall 必须同时报 sample=30、human_checked=false、draft-gold。",
   "corpus": {
     "seed": "db/02-seed.sql 的产品发布评审会：meeting_id=2，两段录音（transcription_task 6=上午场、7=下午场）；系列 meeting_series id=1（产品发布评审系列）",
     "series": [
@@ -34,7 +34,7 @@
     "series_state": "查系列/个人已确认状态（决策/待办/偏好），应先用 query_meeting_state",
     "temporal": "需要按时间顺序/先后关系推理（可跨两段录音）"
   },
-  "todo": "每一题：人工对照转写与纪要补 expected_facts 与证据片段号（evidence_segments），确认 required_meetings/required_series 后把 human_checked 置 true；在此之前本集不能作为金标报准确率。",
+  "todo": "逐题人工复核 expected_facts 与 evidence_segments，确认后把 human_checked 置 true；在此之前不得把本集写成人工金标。",
   "counts": {
     "cross_meeting": 10,
     "series_state": 10,
@@ -56,14 +56,25 @@
         "search_knowledge"
       ],
       "min_tool_calls": 2,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "运营公告由赵敏牵头、周宁协作，9月1日9:00前完成",
+        "对外通稿由刘颖负责，发布前一日18:00前定稿"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：上午录音（task 6）定运营公告责任人，下午录音（task 7）定对外通稿责任人；两段各检索一次才能答全。"
+      "note": "依据：上午录音（task 6）定运营公告责任人，下午录音（task 7）定对外通稿责任人；两段各检索一次才能答全。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        51,
+        41
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cm02",
@@ -80,14 +91,22 @@
         "search_knowledge"
       ],
       "min_tool_calls": 2,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "上午会议识别5项风险（含4项高风险）：模型服务延迟、资料频繁更新、负责人分配不合理、删除用户受限、阻断任务延期",
+        "下午会议补充报表导出异步改造与灰度排期过近的风险"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：上午纪要的风险清单（含 4 项高风险）与下午纪要的报表导出改造风险。"
+      "note": "依据：上午纪要的风险清单（含 4 项高风险）与下午纪要的报表导出改造风险。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": false
     },
     {
       "case_id": "cm03",
@@ -104,14 +123,25 @@
         "search_knowledge"
       ],
       "min_tool_calls": 2,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "上午会议结论：9月1日9:00按计划正式发布",
+        "下午会议结论：V2.0按原计划发布，报表导出入口在发布时隐藏"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：上午录音明确 9 月 1 日 9:00 发布；下午录音说 V2.0 按原计划时间发布（需核对两处口径）。"
+      "note": "依据：上午录音明确 9 月 1 日 9:00 发布；下午录音说 V2.0 按原计划时间发布（需核对两处口径）。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        68,
+        47
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cm04",
@@ -128,14 +158,24 @@
         "search_knowledge"
       ],
       "min_tool_calls": 2,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "task 6 是上午的产品上线复盘与下阶段发布准备会议",
+        "task 7 是下午的V2.0产品发布评审会"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：task 6 上午「产品上线复盘与下阶段发布准备」；task 7 下午「V2.0 产品发布评审」。"
+      "note": "依据：task 6 上午「产品上线复盘与下阶段发布准备」；task 7 下午「V2.0 产品发布评审」。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        1
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cm05",
@@ -152,14 +192,25 @@
         "search_knowledge"
       ],
       "min_tool_calls": 2,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "上午复盘：8月20日开始灰度、覆盖10%活跃用户，8月26日扩大到30%",
+        "下午确定灰度三阶段：首日10%、次日50%、第三日全量，回滚最快5分钟"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：上午灰度数据复盘（8/20 起、10%→30%、成功率）；下午灰度三阶段与回滚方案。"
+      "note": "依据：上午灰度数据复盘（8/20 起、10%→30%、成功率）；下午灰度三阶段与回滚方案。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        9,
+        24
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cm06",
@@ -176,14 +227,25 @@
         "search_knowledge"
       ],
       "min_tool_calls": 2,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "发布回归测试由陈琳负责，8月31日12:00前完成",
+        "对外通稿由刘颖负责，发布前一日18:00前定稿"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：上午回归测试负责人（陈琳，8/31 12:00 前）；下午对外通稿负责人（刘颖）。"
+      "note": "依据：上午回归测试负责人（陈琳，8/31 12:00 前）；下午对外通稿负责人（刘颖）。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        49,
+        41
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cm07",
@@ -200,14 +262,25 @@
         "search_knowledge"
       ],
       "min_tool_calls": 2,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "移动端附件下载问题在上午录音提出，要求发布前修复并写入发布说明",
+        "报表导出问题在下午录音提出：40+秒超时，发布时隐藏入口，异步改造后单独上线"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：移动端附件下载问题在上午录音（灰度反馈 + 发布前修复要求）；报表导出压测问题与异步改造方案在下午录音。两段各检索一次才能答全。"
+      "note": "依据：移动端附件下载问题在上午录音（灰度反馈 + 发布前修复要求）；报表导出压测问题与异步改造方案在下午录音。两段各检索一次才能答全。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        31,
+        19
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cm08",
@@ -224,14 +297,25 @@
         "search_knowledge"
       ],
       "min_tool_calls": 2,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "上午要求两组补充验收：至少30分钟真实录音、多角色说话人内容",
+        "回归测试8月31日12:00前完成；下午确认17个需求验收通过15个，剩余报表导出与消息推送免打扰"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：上午两组补充验收（≥30 分钟真实录音、多角色说话人）与回归测试；下午 15/17 需求验收状态。"
+      "note": "依据：上午两组补充验收（≥30 分钟真实录音、多角色说话人）与回归测试；下午 15/17 需求验收状态。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        27,
+        6
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cm09",
@@ -248,14 +332,24 @@
         "search_knowledge"
       ],
       "min_tool_calls": 2,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "上午会议指出移动端附件下载进度问题影响发布当天支持成本，要求发布前修复（截止8月30日18:00）"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：上午灰度反馈问题 + 发布前修复要求；下午纪要未见该问题的后续更新（作答时应如实说未提）。"
+      "note": "依据：上午灰度反馈问题 + 发布前修复要求；下午纪要未见该问题的后续更新（作答时应如实说未提）。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        16,
+        47
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cm10",
@@ -272,14 +366,25 @@
         "search_knowledge"
       ],
       "min_tool_calls": 2,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "客服支持：周宁负责，9月1日10:00前完成常见问题知识库",
+        "运营支持：赵敏负责，9月1日9:00前完成发布公告与部门通知"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：上午客服知识库/运营公告与观察指标；下午对外通稿与产品公告协同。"
+      "note": "依据：上午客服知识库/运营公告与观察指标；下午对外通稿与产品公告协同。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        53,
+        51
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cs01",
@@ -300,14 +405,20 @@
         "search_knowledge"
       ],
       "min_tool_calls": 1,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "系列1已确认的发布决策：9月1日9:00正式发布AI智能会议助手与任务跟踪系统"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：种子数据的 series 1 有一条 CONFIRMED 的 DECISION（9 月 1 日 9:00 发布）；expected_facts 待人工补全。"
+      "note": "依据：种子数据的 series 1 有一条 CONFIRMED 的 DECISION（9 月 1 日 9:00 发布）；expected_facts 待人工补全。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [],
+      "evidence_refs": [
+        "memory:1"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cs02",
@@ -327,14 +438,22 @@
         "query_meeting_state"
       ],
       "min_tool_calls": 1,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "移动端附件下载修复在系列记忆中是PROPOSED候选，不是已确认决策",
+        "对应待办为OPEN状态"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：种子里该条 memory 状态为 PROPOSED（候选），不得当作已确认事实；对应待办 action_item 为 OPEN。"
+      "note": "依据：种子里该条 memory 状态为 PROPOSED（候选），不得当作已确认事实；对应待办 action_item 为 OPEN。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [],
+      "evidence_refs": [
+        "memory:2",
+        "action_item:1"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cs03",
@@ -354,14 +473,22 @@
         "query_meeting_state"
       ],
       "min_tool_calls": 1,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "OPEN待办：移动端附件下载修复（王工，8月30日18:00）",
+        "OPEN待办：发布前两组补充验收（陈琳，8月31日12:00）"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：种子里两条 OPEN action_item（王工 8/30 18:00、陈琳 8/31 12:00）。"
+      "note": "依据：种子里两条 OPEN action_item（王工 8/30 18:00、陈琳 8/31 12:00）。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [],
+      "evidence_refs": [
+        "action_item:1",
+        "action_item:2"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cs04",
@@ -381,14 +508,20 @@
         "query_meeting_state"
       ],
       "min_tool_calls": 1,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "scope=USER、kind=PREFERENCE，属于用户1，状态CONFIRMED"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：种子里 scope=USER 的 PREFERENCE（CONFIRMED）；答题应说明来源与确认状态。"
+      "note": "依据：种子里 scope=USER 的 PREFERENCE（CONFIRMED）；答题应说明来源与确认状态。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [],
+      "evidence_refs": [
+        "memory:4"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cs05",
@@ -409,14 +542,22 @@
         "search_knowledge"
       ],
       "min_tool_calls": 1,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "系列1只包含会议2",
+        "会议2下有两段录音：task 6（上午）与task 7（下午）"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：系列 1 只有会议 2，会议 2 下两段录音：task 6（上午）、task 7（下午）。"
+      "note": "依据：系列 1 只有会议 2，会议 2 下两段录音：task 6（上午）、task 7（下午）。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cs06",
@@ -436,14 +577,22 @@
         "query_meeting_state"
       ],
       "min_tool_calls": 1,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "下午纪要三项结论：V2.0按期发布、报表导出入口隐藏",
+        "灰度三阶段：10%、50%、全量",
+        "对外通稿与产品公告在发布前一日18:00前定稿"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：下午纪要（task 7）的三项结论；时间先后按录音/纪要时间判定。"
+      "note": "依据：下午纪要（task 7）的三项结论；时间先后按录音/纪要时间判定。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [],
+      "evidence_refs": [
+        "meeting_minutes:4"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cs07",
@@ -463,14 +612,21 @@
         "query_meeting_state"
       ],
       "min_tool_calls": 1,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "该DECISION的supersedes_id为空，没有后续替代记录",
+        "只能说明没有替代记录，不能推断内容一定没有变化"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：种子里该 DECISION 的 supersedes_id 为空、无替代记录；答题应区分「没有替代记录」与「确认没有变化」。"
+      "note": "依据：种子里该 DECISION 的 supersedes_id 为空、无替代记录；答题应区分「没有替代记录」与「确认没有变化」。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [],
+      "evidence_refs": [
+        "memory:1"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cs08",
@@ -491,14 +647,21 @@
         "search_knowledge"
       ],
       "min_tool_calls": 1,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "报表导出隐藏入口的决定来自DRAFT纪要，不是CONFIRMED",
+        "系列已确认记忆中目前没有该条，不能当作已确认事实"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：下午纪要（DRAFT）决定发布时隐藏报表导出入口；系列已确认记忆里目前没有该条，答题应如实说「未确认」并补原文出处。"
+      "note": "依据：下午纪要（DRAFT）决定发布时隐藏报表导出入口；系列已确认记忆里目前没有该条，答题应如实说「未确认」并补原文出处。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [],
+      "evidence_refs": [
+        "meeting_minutes:4"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cs09",
@@ -518,14 +681,21 @@
         "query_meeting_state"
       ],
       "min_tool_calls": 1,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "只返回CONFIRMED记忆与有效待办",
+        "PROPOSED候选不得直接当事实回答"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：产品规则「只返回 CONFIRMED 记忆」；此为行为约束题，expected_facts 留空。"
+      "note": "依据：产品规则「只返回 CONFIRMED 记忆」；此为行为约束题，expected_facts 留空。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [],
+      "evidence_refs": [
+        "policy:confirmed_only"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "cs10",
@@ -546,14 +716,22 @@
         "search_knowledge"
       ],
       "min_tool_calls": 1,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "已确认：9月1日9:00正式发布",
+        "未完成：移动端附件下载修复与发布回归/补充验收待办"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：系列已确认发布决策 + 两条 OPEN 待办；答题应分「已确认」「未完成」两类陈述。"
+      "note": "依据：系列已确认发布决策 + 两条 OPEN 待办；答题应分「已确认」「未完成」两类陈述。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [],
+      "evidence_refs": [
+        "memory:1",
+        "action_item:1"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "ct01",
@@ -570,14 +748,22 @@
         "search_knowledge"
       ],
       "min_tool_calls": 2,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "task 6录音时间为2026-09-10 09:00（上午）",
+        "task 7录音时间为2026-09-10 14:00（下午），task 7在task 6之后"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：task 6 录音时间 2026-09-10 09:00；task 7 录音时间 2026-09-10 14:00。"
+      "note": "依据：task 6 录音时间 2026-09-10 09:00；task 7 录音时间 2026-09-10 14:00。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": false
     },
     {
       "case_id": "ct02",
@@ -594,14 +780,25 @@
         "search_knowledge"
       ],
       "min_tool_calls": 2,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "8月20日灰度开始，8月26日扩大到30%",
+        "8月30日18:00附件修复截止，8月31日12:00回归截止，8月31日17:00专项评审，9月1日9:00发布"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：8/20 灰度开始→8/26 扩到 30%→8/30 附件修复截止→8/31 回归/专项评审→9/1 9:00 发布。"
+      "note": "依据：8/20 灰度开始→8/26 扩到 30%→8/30 附件修复截止→8/31 回归/专项评审→9/1 9:00 发布。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        9,
+        47
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "ct03",
@@ -619,14 +816,24 @@
         "search_knowledge"
       ],
       "min_tool_calls": 1,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "附件修复截止8月30日18:00，早于9月1日9:00正式发布"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：附件修复截止 8/30 18:00，早于 9/1 9:00 发布；需要同时用待办状态与原文核对。"
+      "note": "依据：附件修复截止 8/30 18:00，早于 9/1 9:00 发布；需要同时用待办状态与原文核对。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        47,
+        72
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "ct04",
@@ -643,14 +850,27 @@
         "search_knowledge"
       ],
       "min_tool_calls": 2,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "8月30日18:00：移动端附件下载修复截止",
+        "8月31日12:00：发布回归提交测试结论与凭证",
+        "8月31日17:00：阻断任务未完成时的专项评审"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：附件修复截止、回归测试提交凭证、阻断任务未完成时的专项评审。"
+      "note": "依据：附件修复截止、回归测试提交凭证、阻断任务未完成时的专项评审。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        47,
+        49,
+        69
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "ct05",
@@ -667,14 +887,25 @@
         "search_knowledge"
       ],
       "min_tool_calls": 1,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "下午会议提出异步改造与灰度排期过近的风险",
+        "报表导出异步改造计划本周五前完成，灰度首日10%、次日50%、第三日全量"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：下午纪要「改造与灰度排期过近」的风险陈述与三项行动项期限；需按原文说明相对顺序，不按字段顺序猜。"
+      "note": "依据：下午纪要「改造与灰度排期过近」的风险陈述与三项行动项期限；需按原文说明相对顺序，不按字段顺序猜。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        42,
+        44
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "ct06",
@@ -692,14 +923,25 @@
         "search_knowledge"
       ],
       "min_tool_calls": 2,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "9:00正式发布",
+        "10:00对外通稿与产品公告同步发布"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：9:00 正式发布（上午决策/系列已确认记忆）；10:00 对外通稿与产品公告同步发布（下午）。"
+      "note": "依据：9:00 正式发布（上午决策/系列已确认记忆）；10:00 对外通稿与产品公告同步发布（下午）。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        72,
+        39
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "ct07",
@@ -716,14 +958,22 @@
         "search_knowledge"
       ],
       "min_tool_calls": 1,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "首周复盘由张晨负责，9月8日18:00前提交",
+        "首周运行日报由王工负责，发布首周每日17:00前汇总"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：首周复盘 9/8 18:00 前（张晨）；首周运行日报发布首周每日 17:00 前（王工）。"
+      "note": "依据：首周复盘 9/8 18:00 前（张晨）；首周运行日报发布首周每日 17:00 前（王工）。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": false
     },
     {
       "case_id": "ct08",
@@ -740,14 +990,25 @@
         "search_knowledge"
       ],
       "min_tool_calls": 1,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "发布前一日18:00前完成对外通稿与产品公告定稿",
+        "通稿中删除报表导出相关描述"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：下午纪要：对外通稿及产品公告定稿（删除报表导出描述）。"
+      "note": "依据：下午纪要：对外通稿及产品公告定稿（删除报表导出描述）。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        41,
+        37
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "ct09",
@@ -764,14 +1025,25 @@
         "search_knowledge"
       ],
       "min_tool_calls": 1,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "消息推送免打扰设置已修复并通过回归测试",
+        "报表导出在发布时隐藏入口，异步改造完成后单独上线"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：消息推送免打扰已修复并回归通过；报表导出异步改造 5 个工作日、发布时隐藏入口、改造完成后单独上线。"
+      "note": "依据：消息推送免打扰已修复并回归通过；报表导出异步改造 5 个工作日、发布时隐藏入口、改造完成后单独上线。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        7,
+        19
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     },
     {
       "case_id": "ct10",
@@ -788,14 +1060,25 @@
         "search_knowledge"
       ],
       "min_tool_calls": 1,
-      "expected_facts": [],
-      "label_source": "agent_draft",
+      "expected_facts": [
+        "灰度分三阶段：首日10%、次日50%、第三日全量",
+        "回滚最快5分钟内切回旧版本"
+      ],
+      "label_source": "agent_draft_enriched",
       "human_checked": false,
       "todo": [
-        "expected_facts",
-        "evidence_segments"
+        "human_review"
       ],
-      "note": "依据：下午纪要：首日 10%、次日 50%、第三日全量；回滚 5 分钟内切回旧版。"
+      "note": "依据：下午纪要：首日 10%、次日 50%、第三日全量；回滚 5 分钟内切回旧版。 事实已由代理对照转写/纪要/种子数据补齐；证据段号为录音内 segment_no，系列状态题标注 memory/action ref；仍需人工复核。",
+      "evidence_segments": [
+        24,
+        49
+      ],
+      "evidence_refs": [
+        "transcription_task:6",
+        "transcription_task:7"
+      ],
+      "source_verified": true
     }
   ]
 }

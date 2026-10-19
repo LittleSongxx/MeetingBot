@@ -1,0 +1,78 @@
+{
+  "qa_set_version": "cross_draft_v1",
+  "name": "ab_4_cross_meeting",
+  "cases": [
+    {
+      "id": "cm01",
+      "question": "发布公告与对外通稿分别由谁负责、什么时候完成？",
+      "expected_facts": [
+        "运营公告由赵敏牵头、周宁协作，9月1日9:00前完成",
+        "对外通稿由刘颖负责，发布前一日18:00前定稿"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ],
+        "task_ids": [
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "id": "cm03",
+      "question": "发布时间的结论在两段录音里一致吗？分别怎么说？",
+      "expected_facts": [
+        "上午会议结论：9月1日9:00按计划正式发布",
+        "下午会议结论：V2.0按原计划发布，报表导出入口在发布时隐藏"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ],
+        "task_ids": [
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "id": "cm05",
+      "question": "灰度这件事在两段录音里分别讨论到什么？",
+      "expected_facts": [
+        "上午复盘：8月20日开始灰度、覆盖10%活跃用户，8月26日扩大到30%",
+        "下午确定灰度三阶段：首日10%、次日50%、第三日全量，回滚最快5分钟"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ],
+        "task_ids": [
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "id": "cm07",
+      "question": "移动端附件下载与报表导出这两个问题，分别在哪段录音里讨论、怎么处理？",
+      "expected_facts": [
+        "移动端附件下载问题在上午录音提出，要求发布前修复并写入发布说明",
+        "报表导出问题在下午录音提出：40+秒超时，发布时隐藏入口，异步改造后单独上线"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ],
+        "task_ids": [
+          6,
+          7
+        ]
+      }
+    }
+  ]
+}
