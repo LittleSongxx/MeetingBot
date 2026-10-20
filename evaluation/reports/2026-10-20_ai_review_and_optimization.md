@@ -64,3 +64,31 @@ ct02（漏 3 个中间节点）、cm03、ct06、cm07、ct08、ct09（各 1 项�
 - 单会议语料；成本路由只有 5 题试点且两模型未定价，不能报金额降幅。
 - 语料时间线仍矛盾：录音 2026-09-10、minutes deadline 2023、seed action 2026；
   cm01 等答案会沿用源字段年份。
+
+## 8. 泛化 holdout（未用于调参，一次性读数）
+
+为避免继续在调参集上打补丁，本轮另建 `evaluation/gold/holdout_generalization_20.json`：
+- 20 个**此前未出现**的问题，32 条 expected_fact，覆盖两段录音/纪要/待办的不同侧面；
+- 事实经独立子 Agent 复核：**30 approve / 2 revise / 0 reject**；2 条已修订；
+- `label_source=independent_agent_reviewed`、`human_checked=false`、`do_not_tune=true`；
+- 产品 prompt 先移除具体案例式表述（如具体时点/具体事项），再**只跑一次** holdout，未据其结果调 prompt。
+
+| 指标 | 读数 |
+|---|---:|
+| context_recall | 31/32 = **96.88%**（CP 95% 83.78–99.92%） |
+| context_precision | 37/61 = 60.66% |
+| faithfulness | 106/118 = **89.83%**（CP 95% 82.91–94.63%） |
+| answer_relevancy | 19/20 = 95.0% |
+
+解读：在这组未参与调参的问题上，召回与忠实度都高，说明前面修的系列 id、草稿回退、
+模糊查询、偏好归属等是**通用机制**，不只是对 27/30 题过拟合；precision 60.66% 说明
+仍会带回一些边缘上下文，但回答忠实度没有随之下降。该读数只报一次，不再据此改产品。
+
+## 9. 最终结论
+
+- 查询规划：两轮 A/B 无稳定收益，保持关闭。
+- 通用机制：series/meeting id 校验、include_proposed、草稿回退、状态模糊匹配、
+  偏好归属、完整清单提示，均保留。
+- 泛化：holdout 20 题 context_recall 96.88%、faithfulness 89.83%，未用于调参。
+- 剩余限制：9 条调参集 partial 未逐条修；独立 Agent 代审不是人工签名；
+  单会议语料、语料时间线仍有矛盾。

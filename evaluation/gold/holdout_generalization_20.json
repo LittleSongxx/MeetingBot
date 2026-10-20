@@ -1,0 +1,697 @@
+{
+  "name": "泛化 holdout 20 题（未用于调参）",
+  "purpose": "从同一会议语料中另取 20 个未在调参中出现的问题，检验通用性；本集只用于读一次，不得据此改 prompt。",
+  "label_source": "independent_agent_reviewed",
+  "human_checked": false,
+  "discipline": "holdout 只报绝对读数，不据此调 prompt；事实经独立 Agent 复核、human_checked=false；任何后续修改必须另建 dev 集。",
+  "cases": [
+    {
+      "case_id": "h01",
+      "question": "上午会的主持人是谁？",
+      "intent": "generalization",
+      "expected_facts": [
+        "主持人李月"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h01",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task6 seg2] 我是本次会议主持人李月；[task6 seg17] 主持人李月请后端负责人王工补充服务和数据情况；[task6 seg23] 主持人李月，请测试负责人陈琳介绍质量验证情况。",
+            "proposed_fact": "",
+            "reason": "开场自述与后续多次主持人称谓一致，主持人身份可直接确认。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h02",
+      "question": "下午会是谁汇报功能验收情况？",
+      "intent": "generalization",
+      "expected_facts": [
+        "王敏汇报V2.0功能验收"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h02",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task7 seg5] 先请王敏说一下功能验收的情况；[task7 seg6] 好的，V2.0计划内的17个需求已经验收通过15个……；[minutes 4 viewpoints_json 王敏] V2.0计划内17个需求已验收通过15个，剩余报表导出和消息推送免打扰设置两项。",
+            "proposed_fact": "",
+            "reason": "转写问答与 DRAFT 纪要 viewpoints 均把功能验收汇报归于王敏。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h03",
+      "question": "报表导出压测暴露了哪两个关键数字？",
+      "intent": "generalization",
+      "expected_facts": [
+        "单用户导出三个月数据耗时40+秒",
+        "500并发下失败率12%"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h03",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task7 seg10] 单个用户导出三个月的数据接口要跑四十多秒，超过了网关30秒的超时限制；[minutes 4 viewpoints_json 张涛] 单用户导出三个月数据耗时40+秒、超网关30秒限制。",
+            "proposed_fact": "",
+            "reason": "40+秒与原文“四十多秒”一致，纪要复述同口径。"
+          },
+          {
+            "case_id": "h03",
+            "fact_index": 2,
+            "verdict": "approve",
+            "evidence": "[task7 seg11] 我们压了500并发，这个接口的失败率到了12%，其他接口都是正常的；[minutes 4 viewpoints_json 张涛] 500并发失败率12%。",
+            "proposed_fact": "",
+            "reason": "并发数与失败率均为转写原话，纪要一致。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h04",
+      "question": "灰度回滚为什么能最快5分钟切回旧版本？",
+      "intent": "generalization",
+      "expected_facts": [
+        "数据库改动是加字段、向后兼容",
+        "回滚不需要动数据，最快五分钟切回旧版"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h04",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task7 seg24] 数据库改动都是加字段向后兼容……最快五分钟能切回旧版本；[minutes 4 decisions_json 第2条 basis] 数据库改动均向后兼容，回滚成本低、速度快（5分钟）。",
+            "proposed_fact": "",
+            "reason": "“加字段、向后兼容”为转写原句，纪要以 decision basis 复述。"
+          },
+          {
+            "case_id": "h04",
+            "fact_index": 2,
+            "verdict": "approve",
+            "evidence": "[task7 seg24] 回滚步需要动数据，最快五分钟能切回旧版本（“回滚步”系 ASR 断句噪声，语义为回滚不需要动数据）；[minutes 4 viewpoints_json 陈磊] 数据库改动向后兼容，5分钟内可切回旧版。",
+            "proposed_fact": "",
+            "reason": "“回滚不动数据+5分钟切回”的因果链被上下文与纪要共同支持，个别字为 ASR 噪声。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h05",
+      "question": "V2.0的17个需求验收结果如何？",
+      "intent": "generalization",
+      "expected_facts": [
+        "17个需求验收通过15个",
+        "剩余报表导出与消息推送免打扰两项"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h05",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task7 seg6] V2.0计划内的17个需求已经验收通过15个；[minutes 4 viewpoints_json 王敏] 17个需求已验收通过15个。",
+            "proposed_fact": "",
+            "reason": "验收总数与通过数在转写和纪要中完全一致。"
+          },
+          {
+            "case_id": "h05",
+            "fact_index": 2,
+            "verdict": "approve",
+            "evidence": "[task7 seg6] 剩下两个，一个是报表导出，一个是消息推送的免打扰设置；[minutes 4 topics_json 第1条] 剩余两个未闭环问题（报表导出、消息推送免打扰）。",
+            "proposed_fact": "",
+            "reason": "剩余两项名称与转写/纪要一致。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h06",
+      "question": "消息推送免打扰设置最后是什么状态？",
+      "intent": "generalization",
+      "expected_facts": [
+        "已修复并通过回归测试"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h06",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task7 seg7] 消息推送这个已经修完了，昨天回归通过（后半句“报表导出”起转入另一问题）；[minutes 4 topics_json 第1条] 消息推送免打扰设置已修复并通过回归测试。",
+            "proposed_fact": "",
+            "reason": "“修复完成+回归通过”两要素均有转写原文与纪要支持。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h07",
+      "question": "灰度期间的值班排班表由谁提交、什么时候？",
+      "intent": "generalization",
+      "expected_facts": [
+        "陈磊负责",
+        "明天下班前提交排班表"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h07",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task7 seg21] 陈磊说一下灰度和容量；[task7 seg33] 还没排，我明天下班前把排班表发到群里；[task7 seg50] 陈磊明天下班前提交灰度值班排班表；[minutes 4 pending_items_json 第1条] owner_suggestion=陈磊。",
+            "proposed_fact": "",
+            "reason": "对话上下文、主持人 recap 与纪要三方都把排班表责任指向陈磊。"
+          },
+          {
+            "case_id": "h07",
+            "fact_index": 2,
+            "verdict": "approve",
+            "evidence": "[task7 seg33] 还没排，我明天下班前把排班表发到群里；[task7 seg50] 陈磊明天下班前提交灰度值班排班表；[minutes 4 pending_items_json 第1条] deadline_suggestion=明天下班前。",
+            "proposed_fact": "",
+            "reason": "“明天下班前”被转写原话与纪要同口径支持。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h08",
+      "question": "首周运行日报由谁负责、什么时候发？",
+      "intent": "generalization",
+      "expected_facts": [
+        "王工牵头",
+        "发布首周每日17:00前汇总"
+      ],
+      "source_task_ids": [
+        3
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h08",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[minutes 3 decisions_json 第8条] 发布首周每日17:00前，由王工牵头汇总运行观测中心与质量评价数据，形成《AI会议助手首周运行日报》；[task6 seg75] 发布首周，每天查看运行观测和质量评价数据……（转写未点名负责人）。",
+            "proposed_fact": "",
+            "reason": "已确认纪要明确“王工牵头”，转写仅支持“首周每日查看”的频度。"
+          },
+          {
+            "case_id": "h08",
+            "fact_index": 2,
+            "verdict": "approve",
+            "evidence": "[minutes 3 decisions_json 第8条] 发布首周每日17:00前……形成《AI会议助手首周运行日报》；[task6 seg75] 发布首周，每天查看运行观测和质量评价数据。",
+            "proposed_fact": "",
+            "reason": "“每日17:00前汇总”由已确认纪要直接给出，转写只支持“首周每日”。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h09",
+      "question": "发布公告需要包含哪些入口？",
+      "intent": "generalization",
+      "expected_facts": [
+        "会议创建、录音上传、纪要确认、任务跟踪、知识库问答入口"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h09",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task6 seg51] 公告中需要包含会议创建入口、录音上传入口，纪要确认入口、任务跟踪入口和知识库问答入口。",
+            "proposed_fact": "",
+            "reason": "五类入口与转写原句逐项对应，无缺项或多出。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h10",
+      "question": "客服常见问题知识库需要覆盖哪些问题类型？",
+      "intent": "generalization",
+      "expected_facts": [
+        "账号登录、会议权限、资料上传、格式转写失败、重试、纪要导出、任务负责人调整、知识索引状态、Agent人工确认"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h10",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task6 seg54] 内容包括账号登录、会议权限、资料上传、格式转写失败、重试纪要导出任务负责人调整知识索引状态和agent人工确认；[minutes 3 viewpoints_json 周宁] 覆盖账号登录、会议权限、资料上传、格式转写失败、重试、纪要导出、任务负责人调整、知识索引状态、Agent人工确认。",
+            "proposed_fact": "",
+            "reason": "九类问题类型与转写/纪要列举一致，转写连读处由纪要断句补齐。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h11",
+      "question": "为什么删除关联过业务记录的用户会被阻止？",
+      "intent": "generalization",
+      "expected_facts": [
+        "需先调整负责人/创建人/协作人关系，保证人员信息可追溯"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h11",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task6 seg45] 删除用户时，如果该账号已经关联会议任务转写纪要知识问答，agent运行或质量评价记录，系统不会执行删除；[task6 seg46] 管理员需要先调整业务记录中的负责人、创建人或协作人关系，这样可以保证历史会议和任务记录仍能正确展示人员信息；[minutes 3 risks_json 第4条] 管理员须先调整相关业务记录中的负责人、创建人或协作人关系，确保人员信息可追溯。",
+            "proposed_fact": "",
+            "reason": "“先调整负责人/创建人/协作人关系”+“人员信息可追溯”均被原文与纪要支持。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h12",
+      "question": "任务负责人分配风险有什么可操作建议？",
+      "intent": "generalization",
+      "expected_facts": [
+        "创建任务页展示负责人当前待办数与负载提示",
+        "Agent 仅提供建议，创建正式任务前仍由用户确认（无技术强制校验机制）。"
+      ],
+      "source_task_ids": [
+        3
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h12",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[minutes 3 risks_json 第3条 suggestion] 前端在任务创建页增加‘负责人负载提示’，展示建议人选当前待办任务数及平均处理时长，辅助用户决策；[task6 seg43] 第三项风险是任务负责人分配不合理；[task6 seg44] Agent可以结合员工当前任务负载提出负责人建议。",
+            "proposed_fact": "",
+            "reason": "可操作建议在已确认纪要 risks.suggestion 中逐字存在，转写支持其风险背景。"
+          },
+          {
+            "case_id": "h12",
+            "fact_index": 2,
+            "verdict": "revise",
+            "evidence": "[task6 seg44] Agent可以结合员工当前任务负载提出负责人建议，但创建正式任务前仍由用户确认；[minutes 3 risks_json 第3条] Agent仅提供建议，最终由用户确认，存在人为误配可能；无技术强制校验机制。三份材料中均无“置信度”字样（db/02-seed.sql 的 agent_step 11 复核记录亦把“推荐置信度展示”判为原文无据、属编造并要求删除）。",
+            "proposed_fact": "Agent 仅提供建议，创建正式任务前仍由用户确认（无技术强制校验机制）。",
+            "reason": "“最终由用户确认”有据，但“展示建议置信度”在转写/纪要/seed 中均不存在，属无材料依据的追加。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h13",
+      "question": "灰度期间需要重点监控哪些指标？",
+      "intent": "generalization",
+      "expected_facts": [
+        "接口错误率、平均响应时间、核心链路转化率"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h13",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task7 seg29] 主要看接口错误率、平均响应时间，还有核心链路的转化率；[minutes 4 viewpoints_json 陈磊] 监控核心指标为接口错误率、平均响应时间、核心链路转化率。",
+            "proposed_fact": "",
+            "reason": "三项监控指标与转写原句、纪要完全一致。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h14",
+      "question": "容量评估的结论是什么？",
+      "intent": "generalization",
+      "expected_facts": [
+        "当前机器可支撑8万DAU",
+        "预计发布后日活约5万"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h14",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task7 seg23] 现在的机器配置扛刀日活8万枚压力（ASR 噪声，语义为可扛日活8万）；[minutes 4 viewpoints_json 陈磊] 系统容量充足（可支撑8万DAU）。",
+            "proposed_fact": "",
+            "reason": "8万DAU 容量结论被转写（含 ASR 噪声）与纪要共同支持。"
+          },
+          {
+            "case_id": "h14",
+            "fact_index": 2,
+            "verdict": "approve",
+            "evidence": "[task7 seg23] 我们预估发布后日或是5万左右（ASR 噪声，应为“日活约5万”）；[minutes 4 viewpoints_json 陈磊] 预估发布后5万。",
+            "proposed_fact": "",
+            "reason": "发布后日活约5万的预估被转写与纪要同口径支持。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h15",
+      "question": "对外通稿由谁定稿、什么时候定稿？",
+      "intent": "generalization",
+      "expected_facts": [
+        "刘颖负责",
+        "发布前一日18:00前定稿"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h15",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task7 seg35] 刘颖市场这边呢；[task7 seg50] 刘颖负责通稿定稿；[minutes 4 decisions_json 第3条] 对外通稿及产品公告定稿……（owner_suggestion=刘颖）。",
+            "proposed_fact": "",
+            "reason": "定稿责任人刘颖在转写 recap 与纪要 owner 字段中一致。"
+          },
+          {
+            "case_id": "h15",
+            "fact_index": 2,
+            "verdict": "approve",
+            "evidence": "[task7 seg41] 可以通稿，定稿时间就定在发布前一日下午六点前；[minutes 4 decisions_json 第3条] 对外通稿及产品公告定稿时间为发布前一日下午6点前。",
+            "proposed_fact": "",
+            "reason": "“发布前一日18:00前”的定稿时点在转写与纪要中一致。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h16",
+      "question": "发布当天上午10点安排什么？",
+      "intent": "generalization",
+      "expected_facts": [
+        "对外通稿与产品公告同步发布"
+      ],
+      "source_task_ids": [
+        7
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h16",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task7 seg38] 另外我想确认发布当天要不要同步发一条产品公告；[task7 seg39] 发公告和通告一起都放在发布当天上午十点；[minutes 4 decisions_json 第3条] 对外通稿与产品公告均于发布当天上午10:00同步发布。",
+            "proposed_fact": "",
+            "reason": "“对外通稿+产品公告”上午10点同步发布被原文与纪要双重支持。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h17",
+      "question": "移动端附件下载修复任务的协作人是谁？",
+      "intent": "generalization",
+      "expected_facts": [
+        "陈琳是协作人"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h17",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task6 seg47] 关于移动端下载进度研发计划今天下午完成接口和前端验证，负责人是王工，协作人是陈琳，截止时间为8月30日18点。",
+            "proposed_fact": "",
+            "reason": "“协作人是陈琳”为转写原句直接给出。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h18",
+      "question": "首周复盘要分析哪几类数据？",
+      "intent": "generalization",
+      "expected_facts": [
+        "会议创建数量与总时长、转写任务成功率与平均耗时",
+        "已确认纪要/任务草稿/正式任务数量、任务完成率与逾期率",
+        "RAG问答调用量、Agent运行次数、工具调用成功率、人工确认次数"
+      ],
+      "source_task_ids": [
+        3
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h18",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task6 seg61] 第一，会议创建数量和总时长；[task6 seg62] 第二，转写任务成功率和平均耗时；[minutes 3 decisions_json 第6条] 重点分析会议创建数量与总时长、转写任务成功率与平均耗时。",
+            "proposed_fact": "",
+            "reason": "首周复盘前两类数据在转写与纪要中逐项一致。"
+          },
+          {
+            "case_id": "h18",
+            "fact_index": 2,
+            "verdict": "approve",
+            "evidence": "[task6 seg63] 第三，已确认纪要数量、任务草稿数量和正式任务数量；[task6 seg64] 第四，任务完成率和逾期率；[minutes 3 decisions_json 第6条] 已确认纪要/任务草稿/正式任务数量、任务完成率与逾期率。",
+            "proposed_fact": "",
+            "reason": "第三、四类数据在转写与纪要中逐项一致。"
+          },
+          {
+            "case_id": "h18",
+            "fact_index": 3,
+            "verdict": "revise",
+            "evidence": "[task6 seg65] 第五，rap问答调用量、agent运行次数、工具调用成功率和人工确认次数；[minutes 3 decisions_json 第6条] RAG问答调用量/Agent运行次数/工具调用成功率/人工确认次数。",
+            "proposed_fact": "RAG问答调用量、Agent运行次数、工具调用成功率、人工确认次数",
+            "reason": "四类数据齐全，但“工具调用”在材料中是成功率而非次数，原表述把四类统一写成“次数”，指标口径失真。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h19",
+      "question": "知识索引构建期间如果资料更新，应该怎么处理？",
+      "intent": "generalization",
+      "expected_facts": [
+        "由资料维护人整理完成后统一发起重建",
+        "保证索引一致性"
+      ],
+      "source_task_ids": [
+        3
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h19",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task6 seg42] 如果用户在知识索引构建过程中上传新附件或修订转写文本，索引状态会保持需要重建，建议资料整理完成后再发起构建；[task6 seg74] 知识索引构建期间资料变化时，由资料维护人完成整理后重新构建；[minutes 3 decisions_json 第7条] 须由资料维护人完成全部整理后，统一发起重建流程。",
+            "proposed_fact": "",
+            "reason": "“资料维护人整理完成后统一重建”在转写与已确认纪要中双重出现。"
+          },
+          {
+            "case_id": "h19",
+            "fact_index": 2,
+            "verdict": "approve",
+            "evidence": "[minutes 3 decisions_json 第7条] 统一发起重建流程，确保索引一致性；[task6 seg42] 索引状态会保持需要重建；[task6 seg74] 由资料维护人完成整理后重新构建。",
+            "proposed_fact": "",
+            "reason": "“保证索引一致性”为纪要原文目的表述，转写支持重建动作但无“一致性”字样。"
+          }
+        ],
+        "human_checked": false
+      }
+    },
+    {
+      "case_id": "h20",
+      "question": "阻断任务未按时完成会触发什么？",
+      "intent": "generalization",
+      "expected_facts": [
+        "8月31日17:00由张晨与王工召开专项评审",
+        "决定是否调整发布时间"
+      ],
+      "source_task_ids": [
+        6
+      ],
+      "label_source": "independent_agent_reviewed",
+      "human_checked": false,
+      "do_not_tune": true,
+      "independent_review": {
+        "reviewed_by": "independent-reviewer-5",
+        "reviewed_at": "2026-10-20",
+        "facts": [
+          {
+            "case_id": "h20",
+            "fact_index": 1,
+            "verdict": "approve",
+            "evidence": "[task6 seg69] 如果任意阻断任务没有完成，由张晨和王工在8月31日下午五点召开专项评审，决定是否调整发布时间；[minutes 3 pending_items_json 第1条] 由张晨与王工于8月31日17:00召开专项评审。",
+            "proposed_fact": "",
+            "reason": "触发条件、责任人、时点均被转写与纪要支持。"
+          },
+          {
+            "case_id": "h20",
+            "fact_index": 2,
+            "verdict": "approve",
+            "evidence": "[task6 seg69] ……召开专项评审，决定是否调整发布时间；[minutes 3 pending_items_json 第1条] 决定是否调整发布时间。",
+            "proposed_fact": "",
+            "reason": "评审目的“决定是否调整发布时间”为转写原句，纪要一致。"
+          }
+        ],
+        "human_checked": false
+      }
+    }
+  ]
+}

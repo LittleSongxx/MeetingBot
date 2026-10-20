@@ -1,0 +1,278 @@
+{
+  "qa_set_version": "holdout_v1",
+  "name": "holdout_generalization_20",
+  "cases": [
+    {
+      "id": "h01",
+      "question": "上午会的主持人是谁？",
+      "expected_facts": [
+        "主持人李月"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          6
+        ]
+      }
+    },
+    {
+      "id": "h02",
+      "question": "下午会是谁汇报功能验收情况？",
+      "expected_facts": [
+        "王敏汇报V2.0功能验收"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          7
+        ]
+      }
+    },
+    {
+      "id": "h03",
+      "question": "报表导出压测暴露了哪两个关键数字？",
+      "expected_facts": [
+        "单用户导出三个月数据耗时40+秒",
+        "500并发下失败率12%"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          7
+        ]
+      }
+    },
+    {
+      "id": "h04",
+      "question": "灰度回滚为什么能最快5分钟切回旧版本？",
+      "expected_facts": [
+        "数据库改动是加字段、向后兼容",
+        "回滚不需要动数据，最快五分钟切回旧版"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          7
+        ]
+      }
+    },
+    {
+      "id": "h05",
+      "question": "V2.0的17个需求验收结果如何？",
+      "expected_facts": [
+        "17个需求验收通过15个",
+        "剩余报表导出与消息推送免打扰两项"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          7
+        ]
+      }
+    },
+    {
+      "id": "h06",
+      "question": "消息推送免打扰设置最后是什么状态？",
+      "expected_facts": [
+        "已修复并通过回归测试"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          7
+        ]
+      }
+    },
+    {
+      "id": "h07",
+      "question": "灰度期间的值班排班表由谁提交、什么时候？",
+      "expected_facts": [
+        "陈磊负责",
+        "明天下班前提交排班表"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          7
+        ]
+      }
+    },
+    {
+      "id": "h08",
+      "question": "首周运行日报由谁负责、什么时候发？",
+      "expected_facts": [
+        "王工牵头",
+        "发布首周每日17:00前汇总"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "h09",
+      "question": "发布公告需要包含哪些入口？",
+      "expected_facts": [
+        "会议创建、录音上传、纪要确认、任务跟踪、知识库问答入口"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          6
+        ]
+      }
+    },
+    {
+      "id": "h10",
+      "question": "客服常见问题知识库需要覆盖哪些问题类型？",
+      "expected_facts": [
+        "账号登录、会议权限、资料上传、格式转写失败、重试、纪要导出、任务负责人调整、知识索引状态、Agent人工确认"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          6
+        ]
+      }
+    },
+    {
+      "id": "h11",
+      "question": "为什么删除关联过业务记录的用户会被阻止？",
+      "expected_facts": [
+        "需先调整负责人/创建人/协作人关系，保证人员信息可追溯"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          6
+        ]
+      }
+    },
+    {
+      "id": "h12",
+      "question": "任务负责人分配风险有什么可操作建议？",
+      "expected_facts": [
+        "创建任务页展示负责人当前待办数与负载提示",
+        "展示建议置信度，最终仍由用户确认"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "h13",
+      "question": "灰度期间需要重点监控哪些指标？",
+      "expected_facts": [
+        "接口错误率、平均响应时间、核心链路转化率"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          7
+        ]
+      }
+    },
+    {
+      "id": "h14",
+      "question": "容量评估的结论是什么？",
+      "expected_facts": [
+        "当前机器可支撑8万DAU",
+        "预计发布后日活约5万"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          7
+        ]
+      }
+    },
+    {
+      "id": "h15",
+      "question": "对外通稿由谁定稿、什么时候定稿？",
+      "expected_facts": [
+        "刘颖负责",
+        "发布前一日18:00前定稿"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          7
+        ]
+      }
+    },
+    {
+      "id": "h16",
+      "question": "发布当天上午10点安排什么？",
+      "expected_facts": [
+        "对外通稿与产品公告同步发布"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          7
+        ]
+      }
+    },
+    {
+      "id": "h17",
+      "question": "移动端附件下载修复任务的协作人是谁？",
+      "expected_facts": [
+        "陈琳是协作人"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          6
+        ]
+      }
+    },
+    {
+      "id": "h18",
+      "question": "首周复盘要分析哪几类数据？",
+      "expected_facts": [
+        "会议创建数量与总时长、转写任务成功率与平均耗时",
+        "已确认纪要/任务草稿/正式任务数量、任务完成率与逾期率",
+        "RAG问答/Agent运行/工具调用/人工确认次数"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "h19",
+      "question": "知识索引构建期间如果资料更新，应该怎么处理？",
+      "expected_facts": [
+        "由资料维护人整理完成后统一发起重建",
+        "保证索引一致性"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "h20",
+      "question": "阻断任务未按时完成会触发什么？",
+      "expected_facts": [
+        "8月31日17:00由张晨与王工召开专项评审",
+        "决定是否调整发布时间"
+      ],
+      "intent": "generalization",
+      "source": {
+        "task_ids": [
+          6
+        ]
+      }
+    }
+  ]
+}
