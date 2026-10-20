@@ -2139,3 +2139,16 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
   answer_relevancy 95.0%。
 - 纪律：holdout 不用于选择 prompt/模型/参数；后续修改必须另建 dev 集，否则该读数作废。
 - 解读边界：单会议语料、AI 起草并独立复核的事实、`human_checked=false`；不能当人工金标。
+
+### 9) 检索质量调研与阻塞（2026-10-20）
+
+- 调研：RAGAS context precision（rank-aware，惩罚无用切片）、Anthropic Contextual
+  Retrieval（官方报告 top-20 失败率 -49%，+rerank -67%）、CRAG（检索评估器自适应）。
+- top-k 截断实验（cross30 dev）：top_k=2 vs 3 → precision 67.27%→69.41%（+2.14pp），
+  但 recall 80.36%→65.52%（-14.84pp）、faithfulness 79.10%→73.36%（-5.74pp）；
+  **拒绝**，恢复 top_k=3。
+- Contextual Retrieval：开启并重建失败，错误为 DashScope `Arrearage`；索引文档状态
+  已恢复 SUCCEEDED，旧切片未删除；**无有效读数，不声称收益**。
+- 系统修复：查询嵌入失败时 `search_knowledge` 降级 BM25-only，不再 500；新增单测。
+- 阻塞：DashScope 账户欠费，产品侧 qwen/embedding 付费调用停止；本轮不再跑质量评测，
+  需充值后才能验证 contextual retrieval / 更精细的 rerank 策略。

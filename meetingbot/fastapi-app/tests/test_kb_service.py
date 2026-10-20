@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import unittest
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 from models import (
@@ -327,6 +328,29 @@ class SearchKnowledgeTest(_KbBase):
             await kb_service.search_knowledge("报表导出", allowed_meeting_ids=[], limit=3)
         self.assertEqual(search.await_args.kwargs["allowed_meeting_ids"], [],
                          "空权限集合必须原样传递，不能变成 None（那会变成越权）")
+
+    async def test_embedding_failure_falls_back_to_bm25(self):
+        minutes = await MeetingMinutes.create(
+            meeting_id=self.meeting.id, source_task_id=100, model_config_id=self.config.id,
+            status="CONFIRMED", created_by=self.user.id, summary="摘要")
+        document = await KbDocument.create(
+            meeting_id=self.meeting.id, source_type=kb_service.SOURCE_MINUTES,
+            source_id=minutes.id, task_id=1, authority="CONFIRMED",
+            content_hash="y", chunk_count=1, embed_model="m", embed_dim=8)
+        chunk = await KbChunk.create(
+            document_id=document.id, meeting_id=self.meeting.id, chunk_no=1,
+            chunk_type="MINUTES_ITEM", field="decisions", item_index=0,
+            origin="stated", text="[decisions] 隐藏报表导出入口")
+        with patch.object(kb_service.model_factory, "embed_texts",
+                          AsyncMock(side_effect=RuntimeError("arrears"))), \
+             patch.object(kb_service.pg_kb, "dense_search", AsyncMock()) as dense, \
+             patch.object(kb_service.pg_kb, "available", return_value=True), \
+             patch.object(kb_service.pg_kb, "bm25_search",
+                          AsyncMock(return_value=[SimpleNamespace(chunk_id=chunk.id)])), \
+             patch.object(kb_service, "rerank_enabled", return_value=False):
+            hits = await kb_service.search_knowledge("报表导出", allowed_meeting_ids=None, limit=3)
+        self.assertEqual(dense.await_count, 0, "嵌入失败时不应再调 dense")
+        self.assertEqual([hit.chunk_id for hit in hits], [chunk.id])
 
     async def test_missing_embedding_config_is_a_readable_error(self):
         await AiModelConfig.filter(model_type="EMBEDDING").update(enabled=False)
