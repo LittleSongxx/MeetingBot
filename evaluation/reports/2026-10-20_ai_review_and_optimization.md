@@ -233,3 +233,16 @@ DeepSeek judge 独立重判过滤后的 context precision / recall；不改产�
 - 原因：过滤加在“每次 search”上，每次只看到部分候选，容易删掉后续子查询/合并时要用的上下文；
   正确做法应是**按 turn 合并后的最终上下文过滤一次**，或用更便宜的评估器。
 - `KB_RELEVANCE_FILTER_ENABLED` 默认保持 **0**；代码保留为可选实验开关，便于后续按最终上下文重做。
+
+## 16. 泛化 / 过拟合自查
+
+完整审计：`evaluation/reports/2026-10-20_generalization_audit.md`。
+
+- 清理了产品工具描述/注释里的语料特定示例（报表导出、发布范围、移动端附件等），
+  改为通用表述；未按单题写产品规则。
+- 高风险机制全部默认关闭：top_k=2、contextual、rerank floor、CRAG filter。
+- 发现：holdout C/D 未做独立事实复核、gold 部分 AI 复核、同语料多 holdout，
+  只能当 sanity check，不能宣称强泛化。
+- prompt 去案例化后 cross30 单轮：recall 76.79%、precision 68.87%、
+  faithfulness 81.86%、relevance 100%；与改动前互有升降，不声称提升。
+- 下一步只做架构级：turn 级最终上下文过滤 / 更强检索评估器 / 真实单价成本。

@@ -2221,3 +2221,13 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
   precision 67.27%→68.87%（+1.60pp）；过滤调用平均 **3,687ms/次**、28 次、99,729 tokens。
 - 判断：产品级 recall 损失 + 延迟/成本上升，否决；`KB_RELEVANCE_FILTER_ENABLED=0`。
 - 后续正确形态：按 turn 合并后的最终上下文过滤一次，或更便宜的评估器；不在 search 内过滤。
+
+### 15) 泛化 / 过拟合自查（2026-10-20）
+
+- 审计报告：`evaluation/reports/2026-10-20_generalization_audit.md`。
+- 清理产品 prompt/描述中的语料特定示例；高风险特判（top_k=2、contextual、
+  rerank floor、CRAG filter）全部默认关闭。
+- 风险：holdout C/D 无独立事实复核、gold 部分 AI 复核、同语料多 holdout；
+  只能当 sanity check。
+- prompt 去案例化后 cross30 单轮 recall 76.79%、precision 68.87%、faithfulness 81.86%；
+  与改动前互有升降，不声称提升。
