@@ -2311,3 +2311,11 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - child 引用不变、另加 parent_text（±30s）仍全面退化：recall 97.22→50.00%、
   precision 64.23→15.30%、faithfulness 90.75→77.60%、relevancy 100→66.67%。
 - 默认 0；parent 上下文不能塞进 citation/tool payload，需独立阅读层。
+
+### 24) P3 claim/citation 审计原型（2026-10-21）
+
+- `evaluation/analysis/claim_citation_audit.py`：零模型调用，检查带引用句的数字/日期。
+- cross30：188 个数字断言，25.5% 不在被引上下文、22.9% 不在任何上下文；
+  holdout E：50 个，2% 不在任何上下文。
+- cross30 高值需人工/LLM 判定（派生数字/会议日期/多上下文），不能直接当幻觉率；
+  产品默认不变，P3 未集成。
