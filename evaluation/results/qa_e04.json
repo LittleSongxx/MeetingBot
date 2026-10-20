@@ -1,0 +1,19 @@
+{
+  "qa_set_version": "e04_v1",
+  "name": "e04",
+  "cases": [
+    {
+      "id": "e04",
+      "question": "权限验证覆盖哪几类账号？",
+      "expected_facts": [
+        "管理员、会议创建人、主持人、普通参会人员四类账号"
+      ],
+      "intent": "targeted",
+      "source": {
+        "task_ids": [
+          6
+        ]
+      }
+    }
+  ]
+}

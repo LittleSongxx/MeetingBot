@@ -2253,3 +2253,12 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - 独立盲评 v2：两臂 19 correct / 1 partial / 0 wrong；18 tie、2 偏好 filter_on；
   无系统性答案质量差异；e04 两臂同错（seg14 四类账号未召回）。
 - 决定：`KB_TURN_FILTER_ENABLED` **默认 0**；judge precision/faith 提升可能含上下文集合效应。
+
+### 17) 独立盲评与 e04 具体性实验（2026-10-20）
+
+- holdout E 事实独立复核：32 approve / 2 revise（e04 账号类别、e09 口径），已修。
+- holdout E 答案独立盲评 v2：两臂均 19 correct / 1 partial / 0 wrong；18 tie、
+  2 偏好 filter_on；无系统性质量差异；e04 两臂同错（seg14 四类账号未被采用）。
+- 修复 turn 过滤内部 labels JSON 污染（此前 turn-on 答案带标签）。
+- “具体性”全局提示实验：e04 单题修好，但 cross30 recall −6.1pp、precision −5.6pp、
+  faithfulness −5.7pp → 拒绝并回滚；不再用全局 prompt 修单题。
