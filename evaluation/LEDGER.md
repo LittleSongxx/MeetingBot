@@ -2262,3 +2262,13 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - 修复 turn 过滤内部 labels JSON 污染（此前 turn-on 答案带标签）。
 - “具体性”全局提示实验：e04 单题修好，但 cross30 recall −6.1pp、precision −5.6pp、
   faithfulness −5.7pp → 拒绝并回滚；不再用全局 prompt 修单题。
+
+### 18) 优化策略复盘与测量纠偏（2026-10-20）
+
+- 新增配对 bootstrap：`evaluation/analysis/paired_bootstrap.py`。
+- 关键结论：turn filter 在 cross30 的 precision +6.1pp CI 跨 0；具体性提示
+  precision −5.3pp CI [−0.111,−0.006] 为真实回归；独立盲评显示 turn filter
+  两臂答案质量无系统差异。
+- 策略报告：`evaluation/reports/2026-10-20_optimization_strategy.md`。
+- 后续：先扩 unseen-meeting holdout + 多轮 + 盲评；再做条件化 evidence 校验/
+  parent-child/query decomposition；不再用全局 prompt 修单题。
