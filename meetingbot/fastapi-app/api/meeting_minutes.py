@@ -14,7 +14,6 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from starlette.responses import StreamingResponse
-from tortoise.exceptions import IntegrityError
 from tortoise.expressions import Q
 
 from api.meeting import get_accessible_meeting
@@ -135,6 +134,11 @@ async def delete_minutes(minutes: MeetingMinutes, current_user: User):
     # 权限比查看更严：能看到这场会议不代表能删纪要，只有管理员或发起生成的人可以
     if current_user.role != "ADMIN" and minutes.created_by != current_user.id:
         raise CustomException("只有管理员或纪要创建人可以删除", "403")
+    # 纪要直接关联的自检运行与步骤一并删除；ai_call_log 保留作为审计记录
+    run_ids = await AgentRun.filter(minutes_id=minutes.id).values_list("id", flat=True)
+    if run_ids:
+        await AgentStep.filter(run_id__in=run_ids).delete()
+        await AgentRun.filter(id__in=run_ids).delete()
     # 按主键删除这份纪要
     await MeetingMinutes.filter(id=minutes.id).delete()
 
@@ -290,7 +294,18 @@ def build_docx(data: dict) -> BytesIO:
 
 def find_chinese_font() -> str:
     # 按顺序找系统里可能存在的中文字体，Windows 上是黑体和微软雅黑，Linux 上是思源黑体
-    candidates = [Path("C:/Windows/Fonts/simhei.ttf"), Path("C:/Windows/Fonts/msyh.ttc"), Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")]
+    candidates = [
+        # Windows 本地开发
+        Path("C:/Windows/Fonts/simhei.ttf"),
+        Path("C:/Windows/Fonts/msyh.ttc"),
+        # Docker 镜像（Dockerfile 安装 fonts-wqy-zenhei）
+        Path("/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"),
+        Path("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"),
+        # 其它发行版常见的 Noto CJK
+        Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"),
+        Path("/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc"),
+        Path("/usr/share/fonts/opentype/noto/NotoSansCJK.ttc"),
+    ]
     for path in candidates:
         if path.is_file():
             return str(path)
