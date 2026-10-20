@@ -2204,3 +2204,20 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
   mean 629.5→543.3ms、p95 820→617ms（小样本，不作稳定收益承诺）。
 - 未启用 CRAG 过滤：多一次模型调用、延迟/成本上升；holdout C recall 未达门槛。
 - 脚本：`evaluation/benchmarks/latency_cost.py`。
+
+### 13) 预注册：CRAG 3-way 过滤（2026-10-20）
+
+- 机制：评估器把每条上下文判为 needed / maybe / no，保留 needed+maybe、只删 no；
+  目的：比二分类更保守，降低 recall 损失。
+- cross30 开发集：precision 67.57%→76.29%（+8.72pp），recall 77.59%→75.86%（−1.72pp）。
+- 全新 holdout D（20 题/26 事实，未调参）一次性验证；门槛 precision ≥+5pp、
+  recall 下降 ≤2pp。通过才考虑实现为可选开关；失败则拒绝。
+
+### 14) CRAG 3-way 检索级通过 / 产品级否决（2026-10-20）
+
+- holdout D（20 题/33 事实，未调参）：det precision 72.13%→**84.91%**（+12.78pp），
+  recall **90.91%→90.91%**（0）→ 检索级达到预注册门槛。
+- 产品级（cross30，过滤在每次 search 内）：recall 80.36%→74.14%（−6.22pp）、
+  precision 67.27%→68.87%（+1.60pp）；过滤调用平均 **3,687ms/次**、28 次、99,729 tokens。
+- 判断：产品级 recall 损失 + 延迟/成本上升，否决；`KB_RELEVANCE_FILTER_ENABLED=0`。
+- 后续正确形态：按 turn 合并后的最终上下文过滤一次，或更便宜的评估器；不在 search 内过滤。

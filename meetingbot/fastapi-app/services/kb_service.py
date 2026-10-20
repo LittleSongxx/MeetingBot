@@ -808,6 +808,8 @@ async def search_knowledge(
             if top_score > 0:
                 kept = [hit for hit in hits if hit.score >= top_score * floor]
                 hits = kept or hits[:1]
+    if relevance_filter_enabled() and len(hits) > 1:
+        hits = await _filter_relevant(text, hits, biz_id=biz_id)
     # 去重放在重排之后、截断之前：相邻窗口会同时被召回并同时被重排选中，
     # 它们占的是同一段话，交两段给生成模型只会让 context_precision 的分母虚高。
     # 保留排序更靠前（重排分数更高）的一条，再按漏斗口径截断。
@@ -821,6 +823,60 @@ async def search_knowledge(
 
 # 重排的调用类型（新调用类型必须登记 CALL_TYPE_OWNERSHIP，见 observability_service）
 RERANK_CALL_TYPE = "KB_RERANK"
+# 检索质量评估器（CRAG 式过滤）的调用类型
+RELEVANCE_FILTER_CALL_TYPE = "KB_RELEVANCE_FILTER"
+RELEVANCE_FILTER_SYSTEM = """你是检索质量评估器。给你一个问题、若干条候选上下文，逐条判定：
+- needed：包含回答问题所需的关键信息；
+- maybe：包含部分信息、线索或原文片段，可能有帮助；
+- no：完全无关，或只是纯背景/寒暄。
+保守原则：不确定时判 maybe，不要判 no；不要因为上下文长或表述绕就判 no。
+只依据上下文，不要用外部知识补全。输出 JSON：
+{"labels": [{"index": 1, "label": "needed", "why": "一句话"}]}
+至少保留 1 条（若全部 no，则保留第 1 条）。"""
+
+
+def relevance_filter_enabled() -> bool:
+    """CRAG 式上下文过滤开关。默认**关**：多一次生成模型调用，质量收益需先验证。"""
+    return os.getenv("KB_RELEVANCE_FILTER_ENABLED", "0").strip().lower() not in {"0", "false", "no", "off"}
+
+
+async def _filter_relevant(query: str, hits: list[Hit], *, biz_id: int) -> list[Hit]:
+    """保留 needed/maybe，删掉 no；模型/解析失败按原结果返回（增强不弄挂主链路）。"""
+    from services import model_config
+
+    try:
+        config = await model_config.resolve_route("KB_RELEVANCE_FILTER", "AGENT")
+        listing = "\n".join(f"[{index}] {hit.text[:1200]}" for index, hit in enumerate(hits, 1))
+        prompt = f"【问题】\n{query}\n\n【候选上下文】\n{listing}\n\n请逐条判定并输出 JSON。"
+        schema = {
+            "type": "object",
+            "properties": {
+                "labels": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "index": {"type": "integer"},
+                            "label": {"type": "string", "enum": ["needed", "maybe", "no"]},
+                        },
+                        "required": ["index", "label"],
+                    },
+                }
+            },
+            "required": ["labels"],
+        }
+        parsed = await model_factory.invoke_json(
+            config, RELEVANCE_FILTER_SYSTEM, prompt, schema,
+            call_type=RELEVANCE_FILTER_CALL_TYPE, biz_id=biz_id, label=config.model_name)
+        keep = {int(item["index"]) for item in (parsed.get("labels") or [])
+                if item.get("label") in ("needed", "maybe")}
+        kept = [hit for index, hit in enumerate(hits, 1) if index in keep]
+        return kept or hits[:1]
+    except Exception:  # noqa: BLE001 - 过滤是增强，失败不阻断检索
+        logger.exception("检索质量过滤失败，按原结果返回（query=%s）", query[:120])
+        return hits
+
+
 # 先召回多少候选再重排。默认与 PG 索引的 PREFETCH_LIMIT 同量级；可用
 # `RERANK_CANDIDATES` 覆盖（任务 6 的 24 vs 40 对照就是只改这一个值）。
 DEFAULT_RERANK_CANDIDATES = pg_kb.PREFETCH_LIMIT

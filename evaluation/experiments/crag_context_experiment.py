@@ -29,6 +29,16 @@ EVALUATOR_SYSTEM = """你是检索质量评估器。给你一个问题、若干�
 keep 只放至少可能包含所需信息的上下文编号；至少保留 1 条。"""
 
 
+EVALUATOR_SYSTEM_3WAY = """你是检索质量评估器。给你一个问题、若干条候选上下文，逐条判定：
+- needed：包含回答问题所需的**关键信息**；
+- maybe：包含部分信息、线索或原文片段，可能有帮助；
+- no：完全无关，或只是纯背景/寒暄。
+保守原则：不确定时判 maybe，不要判 no；不要因为上下文长或表述绕就判 no。
+只依据上下文，不要用外部知识补全。输出 JSON：
+{"labels": [{"index": 1, "label": "needed", "why": "一句话"}]}
+至少保留 1 条（若全部 no，则保留第 1 条）。"""
+
+
 def _load_env() -> None:
     for line in (EVAL.parent / "meetingbot/fastapi-app/.env").read_text(encoding="utf-8").splitlines():
         line = line.strip()
@@ -65,15 +75,20 @@ def _judge_contexts(judge, question, facts, contexts):
     return useful, found
 
 
-def _evaluate(question, facts, contexts):
+def _evaluate(question, facts, contexts, mode="binary"):
     url, model, key = model_client.endpoint("qwen")
     listing = "\n".join(f"[{ref}] {text[:1200]}" for ref, text in contexts)
     prompt = (f"【问题】\n{question}\n\n【候选上下文】\n{listing}\n\n"
               "请逐条判断并输出 JSON。")
-    parsed = model_client.call_json(url, model, key, EVALUATOR_SYSTEM, prompt,
+    system = EVALUATOR_SYSTEM_3WAY if mode == "3way" else EVALUATOR_SYSTEM
+    parsed = model_client.call_json(url, model, key, system, prompt,
                                     timeout=120, total_deadline=240, thinking=False)
     parsed = parsed.get("parsed") if isinstance(parsed.get("parsed"), dict) else parsed
-    keep = {int(item) for item in parsed.get("keep") or []}
+    if mode == "3way":
+        keep = {int(item["index"]) for item in parsed.get("labels") or []
+                if item.get("label") in ("needed", "maybe")}
+    else:
+        keep = {int(item) for item in parsed.get("keep") or []}
     kept = [(ref, text) for ref, text in contexts if ref in keep]
     return kept or contexts[:1], parsed
 
@@ -83,6 +98,7 @@ def main() -> int:
     parser.add_argument("--packet", type=Path, default=PACKET)
     parser.add_argument("--qa", type=Path, default=QA)
     parser.add_argument("--out", type=Path, default=OUT)
+    parser.add_argument("--mode", choices=("binary", "3way"), default="binary")
     parser.add_argument("--keep-top", type=int, default=0,
                         help="无论评估器怎么判，强制保留排序最前的 N 条上下文（安全底线）")
     args = parser.parse_args()
@@ -95,7 +111,7 @@ def main() -> int:
     for index, case in enumerate(packet["cases"], 1):
         facts = facts_by_id.get(case["case_id"]) or case.get("expected_facts") or []
         contexts = _contexts(case)
-        evaluated, evaluator = _evaluate(case["question"], facts, contexts)
+        evaluated, evaluator = _evaluate(case["question"], facts, contexts, args.mode)
         kept = list(evaluated)
         if args.keep_top > 0:
             # 安全底线：评估器可能误删唯一支撑；强制保留重排最前的 N 条。

@@ -208,3 +208,28 @@ DeepSeek judge 独立重判过滤后的 context precision / recall；不改产�
 - 未启用 CRAG 过滤：多一次生成模型调用，延迟与成本上升，且 holdout C
   recall 未达预注册门槛。
 - 下一步成本杠杆：补模型单价；评估 summary 用更便宜模型/降频/限 token。
+
+## 15. CRAG 3-way 过滤：检索级通过，产品级否决
+
+### 检索级（离线，holdout D 一次性验证）
+- 方案：needed/maybe/no 三分类，只删 no，保留 needed+maybe。
+- holdout D（20 题/33 事实，未调参）：
+
+| 配置 | context_precision | context_recall |
+|---|---:|---:|
+| 基线 | 72.13% | **90.91%** |
+| 3-way 过滤 | **84.91%（+12.78pp）** | **90.91%（0）** |
+
+检索级达到预注册门槛（precision +5pp、recall 不降）。
+
+### 产品级（cross30，过滤在每次 search 内执行）
+| 配置 | recall | precision | faithfulness | relevancy |
+|---|---:|---:|---:|---:|
+| 基线 | **80.36%** | 67.27% | 79.10% | 100% |
+| 产品过滤 on | 74.14%（−6.22pp） | 68.87%（+1.60pp） | 79.26% | 96.67% |
+
+- 过滤调用本身：**28 次、平均 3,687ms、99,729 tokens、全部 unpriced**
+- 结论：产品级 recall 明显下降、precision 只 +1.6pp，延迟/成本却显著上升 → **否决**。
+- 原因：过滤加在“每次 search”上，每次只看到部分候选，容易删掉后续子查询/合并时要用的上下文；
+  正确做法应是**按 turn 合并后的最终上下文过滤一次**，或用更便宜的评估器。
+- `KB_RELEVANCE_FILTER_ENABLED` 默认保持 **0**；代码保留为可选实验开关，便于后续按最终上下文重做。
