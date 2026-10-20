@@ -23,7 +23,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import timedelta
 from typing import Any, Iterable, Sequence
 
@@ -791,6 +791,12 @@ async def search_knowledge(
     hits = await _filter_valid_sources(hits)
     if rerank_enabled() and len(hits) > 1:
         hits = await _rerank(text, hits, biz_id=biz_id, config=config)
+        floor = rerank_score_floor()
+        if floor > 0 and hits:
+            top_score = max(hit.score for hit in hits)
+            if top_score > 0:
+                kept = [hit for hit in hits if hit.score >= top_score * floor]
+                hits = kept or hits[:1]
     # 去重放在重排之后、截断之前：相邻窗口会同时被召回并同时被重排选中，
     # 它们占的是同一段话，交两段给生成模型只会让 context_precision 的分母虚高。
     # 保留排序更靠前（重排分数更高）的一条，再按漏斗口径截断。
@@ -831,6 +837,19 @@ def rerank_top_k() -> int:
         raise ValueError("RERANK_TOP_K 必须为正整数") from error
 
 
+def rerank_score_floor() -> float:
+    """重排后的相对分数下限：低于 `top_score * floor` 的切片直接丢弃。
+
+    默认 0（关闭）。它是对"重排后仍有同主题噪声"的通用过滤，不按题目写规则；
+    是否启用由开发集实验决定，不能凭直觉开。
+    """
+    raw = os.getenv("RERANK_SCORE_FLOOR", "0").strip()
+    try:
+        return max(0.0, min(1.0, float(raw)))
+    except ValueError:
+        return 0.0
+
+
 def rerank_enabled() -> bool:
     """rerank 开关。默认**开**：专用重排是 RAG 的标准组件（recall 之后必然要收 precision），
     延迟与成本的代价可测（`ai_call_log` 里有每次的 elapsed 与用量）。
@@ -859,10 +878,12 @@ async def _rerank(query: str, hits: list[Hit], *, biz_id: int,
     except Exception:  # noqa: BLE001 - 重排失败不该让检索失败
         logger.exception("重排失败，按原顺序返回候选（biz_id=%s）", biz_id)
         return hits
-    ordered = [hits[index] for index, _score in ranked if 0 <= index < len(hits)]
+    score_by_index = {int(index): float(score) for index, score in ranked
+                      if 0 <= int(index) < len(hits)}
+    ordered = [replace(hits[index], score=score_by_index[index])
+               for index in score_by_index]
     # 模型只回前 top_n 条时，剩下的按原顺序接在后面（它们本来就被召回了）
-    seen = {index for index, _score in ranked}
-    ordered.extend(hit for index, hit in enumerate(hits) if index not in seen)
+    ordered.extend(hit for index, hit in enumerate(hits) if index not in score_by_index)
     return ordered
 
 

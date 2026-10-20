@@ -2152,3 +2152,25 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - 系统修复：查询嵌入失败时 `search_knowledge` 降级 BM25-only，不再 500；新增单测。
 - 阻塞：DashScope 账户欠费，产品侧 qwen/embedding 付费调用停止；本轮不再跑质量评测，
   需充值后才能验证 contextual retrieval / 更精细的 rerank 策略。
+
+### 10) 预注册：相对 rerank 分数下限（2026-10-20）
+
+- 机制：`RERANK_SCORE_FLOOR`，保留 `score >= top_score * floor` 的重排结果，默认 0（关闭）。
+- 开发集（cross30）floor=0.5：precision 67.27%→71.57%（+4.29pp）、recall 80.36%→82.14%、
+  faithfulness 79.10%→80.75%；方向为正，但需在**全新 holdout B 20 题**上验证。
+- 门槛：context_precision 相对 0 臂 **≥ +3pp**，recall 与 faithfulness 不下降 **>2pp**。
+- 样本：`holdout_generalization_b20.json` 20 题/28 事实；0 vs 0.5 各跑一次，DeepSeek judge；
+  一次性读数，之后不再据该集调 floor。
+- 不达标则保持 0，不启用；达标才把默认改为 0.5。
+
+### 10b) rerank floor 预注册结果（2026-10-20）
+
+- cross30 开发集 floor=0.5：precision 67.27%→71.57%（+4.29pp），recall 80.36%→82.14%，
+  faithfulness 79.10%→80.75% —— 方向为正。
+- 全新 holdout B（20 题/28 事实，未调参）：floor=0 recall 96.43% / precision 68.85% /
+  faithfulness 93.33%；floor=0.5 recall 96.43% / precision **65.57%（−3.28pp）** /
+  faithfulness 93.15%。
+- 预注册门槛（precision ≥+3pp）**未达标** → floor 保持 0，不启用；记录为 anti-overfit
+  反例：开发集 +4.29pp 在 holdout 反转。
+- Contextual Retrieval 结果：cross30 recall 80.36%→72.41%、precision 67.27%→68.00%、
+  faithfulness 79.10%→73.64% → 拒绝，已关闭并重建基线索引。

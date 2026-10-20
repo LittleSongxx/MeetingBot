@@ -115,13 +115,33 @@ ct02（漏 3 个中间节点）、cm03、ct06、cm07、ct08、ct09（各 1 项�
 结论：precision 只 +2.14pp，recall 掉 14.84pp、faithfulness 掉 5.74pp；
 **拒绝用截断换 precision**，恢复 top_k=3。
 
-### 实验 2：Contextual Retrieval（未完成）
-- 开启 `KB_CONTEXTUAL_ENABLED=1` 并重建 KB；索引 worker 报错：
-  `嵌入模型调用失败：Arrearage / Access denied, account not in good standing`
-- 失败的索引任务把 `kb_document.status` 置为 FAILED；已恢复为 SUCCEEDED，
-  旧切片与 PG 向量未删除。
-- 因此 contextual retrieval **没有有效读数**，不能声称收益；根因是供应商账户欠费，
-  不是方法本身失败。
+### 实验 2：Contextual Retrieval（已跑，拒绝）
+- 账户恢复后开启 `KB_CONTEXTUAL_ENABLED=1`，重建 6/7 号录音与 minutes 3；
+  切片 `embed_text` 已带 `[会议/日期/时间/说话人] + [上下文]` 前缀。
+- cross30 开发集对比：
+
+| 配置 | context_recall | context_precision | faithfulness | answer_relevancy |
+|---|---:|---:|---:|---:|
+| 关闭（当前） | **80.36%** | 67.27% | **79.10%** | 100% |
+| Contextual | 72.41% | 68.00% | 73.64% | 93.33% |
+
+recall −7.95pp、faithfulness −5.46pp，precision 仅 +0.73pp → **拒绝**，已关闭并重建
+回无上下文的基线索引。Anthropic 的收益依赖更大语料/更强嵌入；本单会议小语料上
+没有复现。
+
+### 实验 3：相对 rerank 分数下限（开发集为正，holdout B 拒绝）
+- 机制：保留 `score >= top_score * RERANK_SCORE_FLOOR` 的重排结果；默认 0。
+- cross30 开发集 floor=0.5：recall 80.36%→82.14%、precision 67.27%→71.57%（+4.29pp）、
+  faithfulness 79.10%→80.75%；看起来很好。
+- 在**全新 holdout B 20 题**（未用于调参）上：
+
+| 配置 | context_recall | context_precision | faithfulness | answer_relevancy |
+|---|---:|---:|---:|---:|
+| floor=0 | **96.43%** | **68.85%** | **93.33%** | 95% |
+| floor=0.5 | 96.43% | 65.57% | 93.15% | 95% |
+
+precision **−3.28pp**，预注册“+3pp”不达标 → **拒绝**，默认保持 0。
+这是本轮最重要的 anti-overfit 证据：开发集 +4.29pp 在 holdout 上反转为 −3.28pp。
 
 ### 系统性修复：嵌入故障降级
 - `search_knowledge` 在查询嵌入失败时不再 500，自动降级为 **BM25-only**，
@@ -135,3 +155,11 @@ ct02（漏 3 个中间节点）、cm03、ct06、cm07、ct08、ct09（各 1 项�
   无法继续；**本轮之后不能再跑质量评测**，需要账户充值。
 - DeepSeek judge 是独立账户，仍可用；但它只能判已有产物，不能修复产品检索。
 - 因此本轮不再声称任何新的质量提升；top-k/contextual retrieval 实验均按“未通过/未完成”记录。
+
+## 12. 结论：本轮没有启用任何新检索默认
+
+- top-k 截断：拒绝（recall −14.84pp）
+- Contextual Retrieval：拒绝（recall −7.95pp、faithfulness −5.46pp）
+- rerank 相对 floor：开发集 +4.29pp，但 holdout B precision −3.28pp，拒绝
+- 唯一保留的新增能力：**嵌入故障时 BM25-only 降级**（可靠性，不是质量提升）
+- 所有默认恢复：top_k=3、contextual off、rerank floor=0、planning off
