@@ -10,7 +10,7 @@ from uuid import uuid4
 
 from common import tracing
 from common.times import now
-from langchain_core.messages import SystemMessage, ToolMessage
+from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langgraph.prebuilt import ToolNode
 from models import ChatMessage, ChatSession, Meeting, MeetingSeries, TranscriptionTask, User
 from tortoise.expressions import F
@@ -274,6 +274,26 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
             return turn_filter.apply_keep(messages, entries, keep, registry)
 
         prepare_messages = _prepare_messages
+
+    # 条件化证据冲突提示：只在“问题问数量/类别 + 上下文出现多个计数口径”时追加一句；
+    # 不满足条件完全不改消息，避免全局提示造成的回归。与 turn filter 相互独立。
+    if turn_filter.evidence_hint_enabled():
+        conflict_hinted: set[tuple[int, ...]] = set()
+        base_prepare = prepare_messages
+
+        async def _prepare_with_conflict_hint(messages: list[Any]) -> list[Any]:
+            prepared = await base_prepare(messages) if base_prepare is not None else messages
+            entries = turn_filter.collect_entries(messages)
+            key = tuple(entry["ref"] for entry in entries)
+            if key in conflict_hinted:
+                return prepared
+            hint = turn_filter.conflict_hint(question, messages)
+            if hint:
+                conflict_hinted.add(key)
+                return list(prepared) + [HumanMessage(content=hint)]
+            return prepared
+
+        prepare_messages = _prepare_with_conflict_hint
 
     runtime = ChatRuntime(
         call_model=model_factory.make_model_caller(

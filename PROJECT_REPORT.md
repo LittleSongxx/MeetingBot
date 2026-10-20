@@ -61,7 +61,7 @@ v3 下 baseline 核心点覆盖 0.781（deepseek 裁判）/ 0.869（qwen 裁判�
 
 ## 三、工程质量
 
-- **测试**：产品 623 项 + 评测 330 项 + 前端 65 项单元测试（全部零模型调用）；
+- **测试**：产品 624 项 + 评测 330 项 + 前端 65 项单元测试（全部零模型调用）；
   命令与实跑数字见 `DEPLOYMENT.md`，CI（`.github/workflows/ci.yml`）每次推送重跑并复算。
   CI 含前端四道门：`vue-tsc --noEmit`（全量 TS）、ESLint、Prettier `--check`、vitest。
 - **安全**：bcrypt 密码哈希、JWT 密码指纹（改密即吊销）、服务端 MIME 映射 +

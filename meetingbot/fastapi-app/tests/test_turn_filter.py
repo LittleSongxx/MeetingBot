@@ -26,6 +26,17 @@ class TurnFilterTest(unittest.TestCase):
         self.assertEqual([hit["ref"] for hit in data["hits"]], [1, 3])
         self.assertEqual([item.ref for item in registry.all()], [1, 3])
 
+    def test_conflict_hint_only_for_count_question_with_multiple_counts(self):
+        first = ToolMessage(content=json.dumps({"ok": True, "hits": [
+            {"ref": 1, "quote": "抽样检查了管理员、会议创建人、主持人、普通参会人员四类账号"}]}),
+            tool_call_id="t1", name="search_knowledge")
+        second = ToolMessage(content=json.dumps({"ok": True, "hits": [
+            {"ref": 2, "quote": "覆盖管理员和员工两种角色"}]}),
+            tool_call_id="t2", name="search_knowledge")
+        hint = turn_filter.conflict_hint("权限验证覆盖哪几类账号？", [first, second])
+        self.assertIsNotNone(hint)
+        self.assertIsNone(turn_filter.conflict_hint("发布范围是什么？", [first, second]))
+
     def test_single_entry_is_left_alone(self):
         payload = {"ok": True, "hits": [{"ref": 1, "quote": "a"}]}
         message = ToolMessage(content=json.dumps(payload), tool_call_id="t1",

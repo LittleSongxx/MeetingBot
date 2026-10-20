@@ -1,0 +1,185 @@
+{
+  "qa_set_version": "cross10",
+  "name": "cross10",
+  "cases": [
+    {
+      "id": "cm01",
+      "question": "发布公告与对外通稿分别由谁负责、什么时候完成？",
+      "expected_facts": [
+        "运营公告由赵敏牵头、周宁协作，9月1日9:00前完成",
+        "对外通稿由刘颖负责，发布前一日18:00前定稿"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ],
+        "task_ids": [
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "id": "cm02",
+      "question": "两段录音里分别提到了哪些风险？",
+      "expected_facts": [
+        "上午会议识别5项风险（含4项高风险）：模型服务延迟、资料频繁更新、负责人分配不合理、删除用户受限、阻断任务延期",
+        "下午会议补充报表导出异步改造与灰度排期过近的风险"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ],
+        "task_ids": [
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "id": "cm03",
+      "question": "发布时间的结论在两段录音里一致吗？分别怎么说？",
+      "expected_facts": [
+        "上午会议结论：9月1日9:00按计划正式发布",
+        "下午会议结论：V2.0按原计划发布，报表导出入口在发布时隐藏"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ],
+        "task_ids": [
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "id": "cm04",
+      "question": "两段录音分别是上午还是下午的会、主题分别是什么？",
+      "expected_facts": [
+        "task 6 是上午的产品上线复盘与下阶段发布准备会议",
+        "task 7 是下午的V2.0产品发布评审会"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ],
+        "task_ids": [
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "id": "cm05",
+      "question": "灰度这件事在两段录音里分别讨论到什么？",
+      "expected_facts": [
+        "上午复盘：8月20日开始灰度、覆盖10%活跃用户，8月26日扩大到30%",
+        "下午确定灰度三阶段：首日10%、次日50%、第三日全量，回滚最快5分钟"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ],
+        "task_ids": [
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "id": "cm06",
+      "question": "测试回归与对外通稿分别由谁负责？",
+      "expected_facts": [
+        "发布回归测试由陈琳负责，8月31日12:00前完成",
+        "对外通稿由刘颖负责，发布前一日18:00前定稿"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ],
+        "task_ids": [
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "id": "cm07",
+      "question": "移动端附件下载与报表导出这两个问题，分别在哪段录音里讨论、怎么处理？",
+      "expected_facts": [
+        "移动端附件下载问题在上午录音提出，要求发布前修复并写入发布说明",
+        "报表导出问题在下午录音提出：40+秒超时，发布时隐藏入口，异步改造后单独上线"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ],
+        "task_ids": [
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "id": "cm08",
+      "question": "两段录音里的验收/回归要求分别是什么？",
+      "expected_facts": [
+        "上午要求两组补充验收：至少30分钟真实录音、多角色说话人内容",
+        "回归测试8月31日12:00前完成；下午确认17个需求验收通过15个，剩余报表导出与消息推送免打扰"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ],
+        "task_ids": [
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "id": "cm09",
+      "question": "移动端附件下载问题在两段录音里分别是什么状态和安排？",
+      "expected_facts": [
+        "上午会议指出移动端附件下载进度问题影响发布当天支持成本，要求发布前修复（截止8月30日18:00）"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ],
+        "task_ids": [
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "id": "cm10",
+      "question": "客服支持与运营支持在两段录音里分别有什么安排？",
+      "expected_facts": [
+        "客服支持：周宁负责，9月1日10:00前完成常见问题知识库",
+        "运营支持：赵敏负责，9月1日9:00前完成发布公告与部门通知"
+      ],
+      "intent": "cross_meeting",
+      "source": {
+        "meeting_ids": [
+          2
+        ],
+        "task_ids": [
+          6,
+          7
+        ]
+      }
+    }
+  ]
+}
