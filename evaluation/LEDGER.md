@@ -2194,3 +2194,13 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - 预注册门槛“precision +5pp 且 recall 下降 ≤3pp”未达标 → **未启用**。
 - 结论：CRAG 过滤是最有希望提升 precision 的通用方法，但需安全底线（保留 rerank top-k/
   歧义上下文）并在新 holdout D 验证；不得把 +26pp 单独写成收益。
+
+### 12) 延迟 / 成本基线与并发优化（2026-10-20）
+
+- 累计 13,723 次调用、44.46M token、平均 1.89s；全部调用 unpriced，
+  记账 ¥5.124651 只是 rerank 部分，不能当真实账单。
+- 主要延迟：CHAT 平均 2.45s、CHAT_SUMMARY 平均 20.7s；embed 310ms、rerank 274ms。
+- 优化：dense 与 BM25 改 `asyncio.gather` 并发；10 query 临时实测
+  mean 629.5→543.3ms、p95 820→617ms（小样本，不作稳定收益承诺）。
+- 未启用 CRAG 过滤：多一次模型调用、延迟/成本上升；holdout C recall 未达门槛。
+- 脚本：`evaluation/benchmarks/latency_cost.py`。

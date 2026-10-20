@@ -193,3 +193,18 @@ DeepSeek judge 独立重判过滤后的 context precision / recall；不改产�
 - 但当前评估器会误删 1 条部分相关的上下文；需要增加“安全底线”（例如强制保留
   rerank top-k 或歧义上下文）并在**新的 holdout D** 上重验，不能直接上线
 - 所有产品默认保持不变：top_k=3、contextual off、rerank floor=0、planning off
+
+## 14. 延迟 / 成本基线与优化
+
+详细表：`evaluation/reports/2026-10-20_latency_cost.md`；脚本：
+`evaluation/benchmarks/latency_cost.py`。
+
+- 累计 13,723 次调用、44.46M token、平均 1.89s；全部调用标记 unpriced，
+  ¥5.124651 只是 rerank 的记账，**不能当真实账单**。
+- 主要延迟不在检索：CHAT 平均 2.4s、CHAT_SUMMARY 平均 20.7s；
+  embed 310ms + rerank 274ms。
+- 已做优化：dense 与 BM25 由串行改 `asyncio.gather` 并发；临时 10 query
+  实测 mean 629.5→543.3ms、p95 820→617ms（小样本，不作稳定收益承诺）。
+- 未启用 CRAG 过滤：多一次生成模型调用，延迟与成本上升，且 holdout C
+  recall 未达预注册门槛。
+- 下一步成本杠杆：补模型单价；评估 summary 用更便宜模型/降频/限 token。
