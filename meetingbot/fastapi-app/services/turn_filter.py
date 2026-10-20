@@ -17,7 +17,7 @@ _ITEM_KEYS = {"hits": "hits", "facts": "facts", "items": "items"}
 
 
 def enabled() -> bool:
-    return os.getenv("KB_TURN_FILTER_ENABLED", "1").strip().lower() not in {"0", "false", "no", "off"}
+    return os.getenv("KB_TURN_FILTER_ENABLED", "0").strip().lower() not in {"0", "false", "no", "off"}
 
 
 def _text_of(message: Any) -> str:

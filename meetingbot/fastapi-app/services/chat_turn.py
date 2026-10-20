@@ -254,7 +254,9 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
             parsed = await model_factory.invoke_json(
                 config, kb_service.RELEVANCE_FILTER_SYSTEM, prompt, schema,
                 call_type=turn_filter.TURN_FILTER_CALL_TYPE,
-                biz_id=assistant_row.id, label=config.model_name)
+                biz_id=assistant_row.id, label=config.model_name,
+                invoke_config={"callbacks": [],
+                               "tags": ["internal_context_filter"]})
             return {int(item["index"]) for item in (parsed.get("labels") or [])
                     if item.get("label") in ("needed", "maybe")}
 
@@ -312,6 +314,10 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
                 state_in, config=graph_config, version="v2"):
             name = event.get("event")
             node = (event.get("metadata") or {}).get("langgraph_node")
+            # turn 过滤的内部结构化调用也会触发 chat model 事件；它不是答案，
+            # 绝不能把它的 labels JSON 拼进给用户的流式正文。
+            if "internal_context_filter" in (event.get("tags") or []):
+                continue
             if name == "on_chat_model_end" and node == "agent":
                 model_round += 1
                 message = event.get("data", {}).get("output")

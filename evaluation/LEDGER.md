@@ -2244,10 +2244,12 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 
 ### 16b) Turn 级过滤结果（2026-10-20）
 
-- cross30：recall 76.79%→77.59%、precision 68.87%→77.55%、
-  faithfulness 81.86%→81.06%、relevance 100%→93.33%。
-- holdout E（off/on）：recall 97.06%→97.06%、precision 73.33%→**90.38%**、
-  faithfulness 93.00%→**97.80%**、relevance 100%→100% → 预注册全部通过。
+- cross30（污染修复后）：recall 76.79%→82.14%、precision 68.87%→78.82%、
+  faithfulness 81.86%→**74.55%（下降）**、relevance 100%→96.67%。
+- holdout E（修订/污染修复后）：off 88.24/73.02/89.58/90；on **97.06/89.80/97.56/100**。
+  按 judge 门槛通过，但独立盲评 v2 两臂均 19/1/0、18 tie，无系统性答案质量差异。
+- 修复了 turn 过滤内部 labels JSON 流式混入答案的问题；修复前指标不可用。
 - 成本：60 次、平均 1,471.77ms、59,577 tokens；约 1.2 次/题、+1.8s/题。
-- 决定：`KB_TURN_FILTER_ENABLED` 默认改为 1；holdout E 仍为 AI 起草/单语料，
-  不能声称强泛化。
+- 独立盲评 v2：两臂 19 correct / 1 partial / 0 wrong；18 tie、2 偏好 filter_on；
+  无系统性答案质量差异；e04 两臂同错（seg14 四类账号未召回）。
+- 决定：`KB_TURN_FILTER_ENABLED` **默认 0**；judge precision/faith 提升可能含上下文集合效应。

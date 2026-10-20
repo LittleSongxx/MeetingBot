@@ -233,6 +233,7 @@ async def invoke_json(
     biz_id: int,
     label: str,
     validator: Callable[[dict], Any] | None = None,
+    invoke_config: dict | None = None,
 ) -> Any:
     """调一次模型并解析返回的 JSON，成功和失败都写一条 AI 调用日志。
 
@@ -256,17 +257,21 @@ async def invoke_json(
         response_size = 0
         try:
             # schema 名称用调用类型的小写形式，例如 agent_review
+            messages = [
+                # 系统指令来自 Prompt 模板的 system_prompt 字段
+                SystemMessage(system_prompt),
+                # 结构要求附在用户提示词末尾，内容由调用方传入的 SCHEMA 生成
+                HumanMessage(user_prompt + build_schema_instruction(schema) + reask_note),
+            ]
+            invoke_kwargs = {}
+            if invoke_config is not None:
+                # 内部结构化调用（如 turn 过滤）显式传空 callbacks/tags，
+                # 避免其流式事件被外层问答的 astream_events 当成答案片段。
+                invoke_kwargs["config"] = invoke_config
             message = await build_chat_model(
                 config, schema, call_type.lower(),
                 prompt_chars=len(system_prompt) + len(user_prompt),
-            ).ainvoke(
-                [
-                    # 系统指令来自 Prompt 模板的 system_prompt 字段
-                    SystemMessage(system_prompt),
-                    # 结构要求附在用户提示词末尾，内容由调用方传入的 SCHEMA 生成
-                    HumanMessage(user_prompt + build_schema_instruction(schema) + reask_note),
-                ]
-            )
+            ).ainvoke(messages, **invoke_kwargs)
             # ainvoke 返回 LangChain 的 AIMessage，text 是模型回复的正文
             text = str(message.text)
             # 响应大小按模型返回文本的 UTF-8 字节数算，写进 ai_call_log.response_size

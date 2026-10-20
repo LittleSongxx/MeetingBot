@@ -1,0 +1,290 @@
+{
+  "reviewer": "independent-reviewer-5",
+  "reviewed_at": "2026-10-20",
+  "facts": [
+    {
+      "case_id": "e01",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg3] 今天会议预计持续45分钟，主要讨论三个议题。",
+      "proposed_fact": "",
+      "reason": "时长45分钟为转写原句直接给出。"
+    },
+    {
+      "case_id": "e01",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task6 seg7] 请大家围绕事实数据和可执行动作发言，会议结束后会形成纪要和任务清单。",
+      "proposed_fact": "",
+      "reason": "“会形成纪要和任务清单”为转写原句，无需推断。"
+    },
+    {
+      "case_id": "e02",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg9] 本次灰度从8月20日开始覆盖10%的活跃用户；[minutes 3 topics_json 第1条] 复盘8月20日至26日灰度发布数据，覆盖10%-30%活跃用户。",
+      "proposed_fact": "",
+      "reason": "起始日期与初始覆盖比例被转写与已确认纪要一致支持。"
+    },
+    {
+      "case_id": "e02",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task6 seg9] 到8月26日扩大到30%；[minutes 3 topics_json 第1条] 复盘8月20日至26日灰度发布数据，覆盖10%-30%活跃用户。",
+      "proposed_fact": "",
+      "reason": "扩大日期与比例与转写、纪要一致。"
+    },
+    {
+      "case_id": "e03",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg9] 整体登录成功率为99.8%；[minutes 3 viewpoints_json 张晨] 灰度期间整体登录成功率为99.8%。",
+      "proposed_fact": "",
+      "reason": "登录成功率99.8%被转写与纪要双重支持。"
+    },
+    {
+      "case_id": "e03",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task6 seg9] 核心下单链路成功率为99.2%；[minutes 3 viewpoints_json 张晨] 核心下单链路成功率为99.2%。",
+      "proposed_fact": "",
+      "reason": "下单链路成功率99.2%被转写与纪要双重支持。"
+    },
+    {
+      "case_id": "e04",
+      "fact_index": 1,
+      "verdict": "revise",
+      "evidence": "[task6 seg14] 我们已经抽样检查了管理员、会议创建人、主持人、普通参会人员四类账号；[task6 seg29] 今天的会议录音将作为演示素材之一，内容会包含产品研发、测试、运营和客户支持角色的发言（此处四类为演示录音的发言角色，不是被权限验证的账号类别）；[minutes 3 viewpoints_json 张晨] 四类账号权限控制符合预期（未列具体类别）。",
+      "proposed_fact": "管理员、会议创建人、主持人、普通参会人员四类账号",
+      "reason": "把演示录音的四类发言角色误当成权限验证的账号类别，材料明确账号类别为管理员/会议创建人/主持人/普通参会人员。"
+    },
+    {
+      "case_id": "e05",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg17] 王工，后端接口在灰度期间没有出现500错误；[minutes 3 viewpoints_json 王工] 灰度期间后端接口无500错误。",
+      "proposed_fact": "",
+      "reason": "“无500错误”在转写与纪要中一致。"
+    },
+    {
+      "case_id": "e06",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg18] 最近七天的会议纪要模型调用成功率为98.6%；[minutes 3 viewpoints_json 王工] 会议纪要模型调用成功率为98.6%（平均耗时7.8秒）。",
+      "proposed_fact": "",
+      "reason": "纪要模型成功率98.6%被转写与纪要双重支持。"
+    },
+    {
+      "case_id": "e06",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task6 seg18] 平均耗时为7.8秒；[minutes 3 viewpoints_json 王工] 会议纪要模型调用成功率为98.6%（平均耗时7.8秒）。",
+      "proposed_fact": "",
+      "reason": "平均耗时7.8秒被转写与纪要双重支持。"
+    },
+    {
+      "case_id": "e07",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg18] agent工具调用成功率为97.9%；[minutes 3 viewpoints_json 王工] Agent工具调用成功率为97.9%。",
+      "proposed_fact": "",
+      "reason": "Agent工具调用成功率97.9%在转写与纪要中一致。"
+    },
+    {
+      "case_id": "e08",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg11] 用户反馈最集中的问题有两个，第一部分用户不知道如何从会议纪要进入任务草稿；[minutes 3 viewpoints_json 张晨] 部分用户不知如何从会议纪要进入任务草稿。",
+      "proposed_fact": "",
+      "reason": "第一个高频问题被转写与纪要一致支持。"
+    },
+    {
+      "case_id": "e08",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task6 seg12] 第二，移动端在网络较弱时，附件下载进度没有及时刷新；[minutes 3 viewpoints_json 张晨] 移动端弱网下附件下载进度未及时刷新。",
+      "proposed_fact": "",
+      "reason": "第二个高频问题被转写与纪要一致支持。"
+    },
+    {
+      "case_id": "e09",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg61] 张晨首周复盘将重点看五项数据，第一，会议创建数量和总时长；[minutes 3 decisions_json 第6条] 重点分析会议创建数量与总时长……（注：该数据属“首周复盘”口径，minutes 3 decisions 第8条“首周运行日报”口径为运行观测中心与质量评价数据）。",
+      "proposed_fact": "",
+      "reason": "会议创建数量与总时长为张晨首周复盘第一类数据，转写与纪要直接给出；题面“首周运行日报”口径不同，见 key_findings。"
+    },
+    {
+      "case_id": "e09",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task6 seg62] 第二，转写任务成功率和平均耗时；[minutes 3 decisions_json 第6条] 重点分析……转写任务成功率与平均耗时……（属“首周复盘”口径）。",
+      "proposed_fact": "",
+      "reason": "转写成功率与平均耗时为首周复盘第二类数据，转写与纪要一致。"
+    },
+    {
+      "case_id": "e09",
+      "fact_index": 3,
+      "verdict": "approve",
+      "evidence": "[task6 seg64] 第四，任务完成率和逾期率；[minutes 3 decisions_json 第6条] 重点分析……任务完成率与逾期率……（属“首周复盘”口径）。",
+      "proposed_fact": "",
+      "reason": "任务完成率与逾期率为首周复盘第四类数据，转写与纪要一致。"
+    },
+    {
+      "case_id": "e09",
+      "fact_index": 4,
+      "verdict": "revise",
+      "evidence": "[task6 seg65] 第五，rap问答调用量、agent运行次数、工具调用成功率和人工确认次数；[minutes 3 decisions_json 第6条] RAG问答调用量/Agent运行次数/工具调用成功率/人工确认次数（材料无“RAG问答质量”此表述）。",
+      "proposed_fact": "RAG问答调用量、Agent运行次数、工具调用成功率、人工确认次数",
+      "reason": "材料给的是调用量/次数/成功率清单，原表述概括为“RAG问答与Agent运行质量”，口径失真且漏掉工具调用成功率与人工确认次数。"
+    },
+    {
+      "case_id": "e10",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg51] 公告中需要包含会议创建入口、录音上传入口，纪要确认入口、任务跟踪入口和知识库问答入口；[minutes 3 decisions_json 第4条] 赵敏牵头于9月1日9:00前完成发布公告与部门通知。",
+      "proposed_fact": "",
+      "reason": "五类入口与转写原句逐项对应，无缺项或多出。"
+    },
+    {
+      "case_id": "e11",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task7 seg38] 另外我想确认发布当天要不要同步发一条产品公告；[task7 seg39] 发公告和通告一起都放在发布当天上午十点；[minutes 4 decisions_json 第3条] 对外通稿与产品公告均于发布当天上午10:00同步发布。",
+      "proposed_fact": "",
+      "reason": "对外通稿与产品公告于发布当天10:00同步发布，转写与纪要双重支持。"
+    },
+    {
+      "case_id": "e12",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task7 seg19] 报表导出这个功能在发布时先隐藏入口；[minutes 4 decisions_json 第1条] 报表导出功能入口在发布时隐藏。",
+      "proposed_fact": "",
+      "reason": "“发布时隐藏入口”为转写原句，纪要决策同口径。"
+    },
+    {
+      "case_id": "e12",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task7 seg19] 等改造完成再单独放出来；[minutes 4 decisions_json 第1条] 待异步改造完成后单独上线。",
+      "proposed_fact": "",
+      "reason": "“异步改造完成后再单独上线”被转写与纪要一致支持。"
+    },
+    {
+      "case_id": "e13",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task7 seg18] 开发两天，连调一天，测试两天，加起来一周；[minutes 4 viewpoints_json 张涛] 需开发2天+联调1天+测试2天共5个工作日。",
+      "proposed_fact": "",
+      "reason": "开发/联调/测试三天数与合计5个工作日与转写原话及纪要一致。"
+    },
+    {
+      "case_id": "e14",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task7 seg13] 一是加缓存，把常用的时间范围预生成，但覆盖不全，用户选个冷门区间还是慢；[minutes 4 viewpoints_json 张涛] 缓存方案因无法覆盖冷门时间区间被否决。",
+      "proposed_fact": "",
+      "reason": "缓存覆盖不全、冷门区间仍慢的否决理由被转写与纪要一致支持。"
+    },
+    {
+      "case_id": "e15",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task7 seg26] 挨用户ID取魔（ASR 同音误写，应为“按用户ID取模”），保证同一个用户每次都落在同一边；[minutes 4 decisions_json 第2条] 按用户ID取模分流，确保用户一致性。",
+      "proposed_fact": "",
+      "reason": "分流维度“用户ID取模”被转写（含同音误写）与纪要一致支持。"
+    },
+    {
+      "case_id": "e16",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task7 seg24] 数据库改动都是加字段向后兼容，回滚步需要动数据（“回滚步需要”与“回滚不需要”同音，属 ASR 同音误写），最快五分钟能切回旧版本；[minutes 4 decisions_json 第2条 basis] 数据库改动均向后兼容，回滚成本低、速度快（5分钟）。",
+      "proposed_fact": "",
+      "reason": "“加字段+向后兼容→回滚不动数据→5分钟切回”的因果链由转写（含同音噪声）与纪要共同支持。"
+    },
+    {
+      "case_id": "e17",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg69] 如果任意阻断任务没有完成，由张晨和王工在8月31日下午五点召开专项评审；[minutes 3 pending_items_json 第1条] 由张晨与王工于8月31日17:00召开专项评审。",
+      "proposed_fact": "",
+      "reason": "触发条件、责任人与8月31日17:00时点均被转写与纪要支持。"
+    },
+    {
+      "case_id": "e17",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task6 seg69] ……召开专项评审，决定是否调整发布时间；[minutes 3 pending_items_json 第1条] 决定是否调整发布时间。",
+      "proposed_fact": "",
+      "reason": "评审目的“决定是否调整发布时间”为转写原句，纪要一致。"
+    },
+    {
+      "case_id": "e18",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task7 seg47] 论我复述一遍，第一，V2.0按期发布，报表导出入口先隐藏；[minutes 4 decisions_json 第1条] V2.0按原计划时间发布，报表导出功能入口在发布时隐藏。",
+      "proposed_fact": "",
+      "reason": "第一项结论（按期发布+报表导出入口隐藏）被转写复述与纪要一致支持。"
+    },
+    {
+      "case_id": "e18",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task7 seg48] 第二，灰度按10%、50%全量分三天走；[minutes 4 decisions_json 第2条] 灰度分三阶段执行：首日10%流量、次日50%、第三日全量。",
+      "proposed_fact": "",
+      "reason": "灰度三步节奏（10%/50%/全量、三天）被转写与纪要一致支持。"
+    },
+    {
+      "case_id": "e18",
+      "fact_index": 3,
+      "verdict": "approve",
+      "evidence": "[task7 seg49] 第三，对外通稿和产品公告在发布前一日下午六点前定稿；[minutes 4 decisions_json 第3条] 对外通稿及产品公告定稿时间为发布前一日下午6点前。",
+      "proposed_fact": "",
+      "reason": "通稿与公告的定稿时点被转写与纪要一致支持。"
+    },
+    {
+      "case_id": "e19",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg53] 周宁客户支持团队在9月1日十点前完成常见问题知识库，负责人周宁，协作人赵敏；[minutes 3 decisions_json 第5条] 客户支持负责人周宁牵头，协作人赵敏。",
+      "proposed_fact": "",
+      "reason": "客服知识库负责人周宁被转写与纪要一致支持。"
+    },
+    {
+      "case_id": "e19",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task6 seg53] 截止时间为9月1日十点；[task6 seg59] 周宁确认常见问题知识库任务9月1日十点完成；[minutes 3 decisions_json 第5条] 于9月1日10:00前完成常见问题知识库建设。",
+      "proposed_fact": "",
+      "reason": "9月1日10:00前完成被转写与纪要一致支持。"
+    },
+    {
+      "case_id": "e20",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task6 seg32] 运营负责人赵敏，运营册建议增加两个发布后的观察指标，第一个是员工从会议纪要创建正式任务的转化率；[minutes 3 viewpoints_json 赵敏] 员工从会议纪要创建正式任务的转化率。",
+      "proposed_fact": "",
+      "reason": "第一个运营观察指标被转写与纪要一致支持。"
+    },
+    {
+      "case_id": "e20",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task6 seg32] 第二个是任务逾期率；[minutes 3 viewpoints_json 赵敏] 任务逾期率。",
+      "proposed_fact": "",
+      "reason": "第二个运营观察指标被转写与纪要一致支持。"
+    }
+  ],
+  "summary": {
+    "approve": 32,
+    "revise": 2,
+    "reject": 0,
+    "key_findings": [
+      "【最严重：e04 权限验证账号类别写错】材料 task6 seg14 明确为“管理员、会议创建人、主持人、普通参会人员四类账号”，holdout 写成“产品研发、测试、运营、客户支持四类账号”，实际把 task6 seg29 演示录音的四类发言角色当成了账号类别；minutes 3 只写“四类账号权限控制符合预期”未列类别。已 revise 为“管理员、会议创建人、主持人、普通参会人员四类账号”。",
+      "【e09 题面与事实口径不一致（4 条）】题面问“首周运行日报要汇总哪些数据”，但 e09 四条事实取自张晨“首周复盘”五项数据（task6 seg61-65 / minutes 3 decisions_json 第6条）；minutes 3 decisions_json 第8条“首周运行日报”的实际口径是“运行观测中心与质量评价数据，重点标注任务逾期率突增、模型失败率>2%、员工集中反馈TOP3”，且 e09 未覆盖“已确认纪要/任务草稿/正式任务数量”一类。四条事实内容本身在材料中可查（故 1-3 判 approve），但建议把题面改为“首周复盘要分析哪几类数据”，或把事实换成日报口径。",
+      "【e09-4 表述失真】“RAG问答与Agent运行质量”在材料中是“RAG问答调用量/Agent运行次数/工具调用成功率/人工确认次数”（task6 seg65、minutes 3 decisions 第6条），无“RAG问答质量”表述，已 revise 为后一口径。",
+      "【材料噪声与字段问题】task7 seg24“回滚步需要动数据”（与“回滚不需要”同音）、seg26“取魔”（取模）、seg18“连调”（联调）均为 ASR 噪声，e15/e16 按上下文与 minutes 4 判 approve，严格字面匹配会误判；另 seed 的 transcript_segment.speaker_user_id 与文本不符（task6 全部标为张晨等），“李月/赵敏说”类题面（e01/e20）只能以原文与纪要判定，不能依赖该字段。",
+      "【总体一致性】34 条中 32 approve / 2 revise / 0 reject；CSV 与 evaluation/gold/holdout_generalization_e20.json 逐条一致（20 题/34 条，题干、顺序、source_task_ids 全同，0 处不一致，无标签搬运错误）；db 的 series/memory/action 行与这 34 条无直接对应，逐条证据均引 task+segment_no 或 minutes 字段。"
+    ]
+  }
+}
