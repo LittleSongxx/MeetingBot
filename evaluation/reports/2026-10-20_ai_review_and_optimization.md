@@ -407,3 +407,26 @@ cross3，3 轮：
 - 该审计只做可判定部分，下一步应加 claim-level LLM 校验，并只对“多证据冲突/引用缺失”
   的句子触发；不能全量拦截。
 - 产品默认不变；P3 尚未集成。
+
+## 25. P3 下一步：claim 校验结果（cross30 48 个缺口）
+
+新增 `evaluation/experiments/claim_verify.py`，用 DeepSeek 对每个“数字不在被引上下文”的断言
+做 5 类判定（supported_by_cited / supported_by_other_context / derived / citation_mapping / unsupported）。
+
+48 个缺口的判定：
+
+| 类别 | 数量 |
+|---|---:|
+| citation_mapping（引用编号/时间定位/会议日期元数据，不是事实断言） | 18 |
+| supported_by_cited（文本核对误报/被引实际支持） | 11 |
+| **unsupported（真不支撑）** | **18** |
+| derived（由上下文计算/合并） | 1 |
+
+解读：
+- 规则审计的 25.5% 明显高估；LLM 校验后真 unsupported 为 18 个（占 188 个数字断言的
+  **9.6%**），仍不可忽略。
+- 例子集中在 ct06/ct08 的“9月1日/9:00/18:00”等时间归属错误，属于**引用/时间绑定**问题，
+  不是数字编造。
+- 这支持 P3 的下一步：只对“引用缺失/数字不在被引上下文”的句子做 claim 校验，
+  并且区分 citation_mapping 与 unsupported，不能全量拦截。
+- 产品默认不变；P3 尚未集成。
