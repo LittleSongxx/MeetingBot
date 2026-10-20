@@ -109,6 +109,8 @@ CALL_TYPE_OWNERSHIP: dict[str, str] = {
     "KB_RERANK": "CHAT",
     # CRAG 式上下文过滤：同一条助手消息发起，归到该问答
     "KB_RELEVANCE_FILTER": "CHAT",
+    # turn 级上下文过滤：同一条助手消息发起
+    "KB_TURN_FILTER": "CHAT",
     # 查询规划（相对时间/指代改写 + 意图）：同样归到这条问答
     "KB_QUERY_PLAN": "CHAT",
     # 在线评测判定：管理员手动触发，biz_id 是运行ID；员工不可见

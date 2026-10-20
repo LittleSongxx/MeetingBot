@@ -246,3 +246,26 @@ DeepSeek judge 独立重判过滤后的 context precision / recall；不改产�
 - prompt 去案例化后 cross30 单轮：recall 76.79%、precision 68.87%、
   faithfulness 81.86%、relevance 100%；与改动前互有升降，不声称提升。
 - 下一步只做架构级：turn 级最终上下文过滤 / 更强检索评估器 / 真实单价成本。
+
+## 17. Turn 级上下文过滤：holdout E 通过，默认开启
+
+### cross30 开发集
+| 配置 | recall | precision | faithfulness | relevancy |
+|---|---:|---:|---:|---:|
+| 无过滤 | 76.79% | 68.87% | 81.86% | 100% |
+| turn 级过滤 | **77.59%** | **77.55%** | 81.06% | 93.33% |
+
+### holdout E（20 题，未调参，off/on 两臂）
+| 配置 | recall | precision | faithfulness | relevancy |
+|---|---:|---:|---:|---:|
+| off | 97.06% | 73.33% | 93.00% | 100% |
+| **on** | **97.06%** | **90.38%（+17.05pp）** | **97.80%（+4.80pp）** | **100%** |
+
+- 预注册门槛（precision ≥+5pp、recall/faithfulness 不降 >2pp、relevance 不降 >5pp）
+  **全部通过**。
+- 这是本轮唯一达到“precision 大幅提升、recall/faithfulness 不降”的通用机制。
+- 机制：模型调用前对本轮**累积工具结果**做一次 needed/maybe/no 过滤；不是每次 search 内过滤。
+- 成本/延迟：`KB_TURN_FILTER` 60 次、平均 **1,471.77ms/次**、59,577 tokens；
+  约 1.2 次/题，折合每题约 **+1.8s**；比 per-search 过滤（3.7s/次）便宜一半以上。
+- 决定：`KB_TURN_FILTER_ENABLED` 默认改为 **1**；可用环境变量关闭。
+- 仍不声称通用泛化：holdout E 是 AI 起草、同语料、单次读数；需要人工/第三方复验。

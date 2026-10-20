@@ -20,12 +20,14 @@ from services import (
     chat_graph,
     citations,
     coverage,
+    kb_service,
     kb_tools,
     model_factory,
     moderation,
     prompt_injection,
     query_plan,
     smalltalk,
+    turn_filter,
 )
 from services.agent_runtime import GuardrailChain
 from services.chat_memory import build_memory, maybe_summarize
@@ -222,6 +224,55 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     else:
         # 恢复：消息与计划已在 checkpoint 里，传 None 让 LangGraph 从最近 checkpoint 继续
         state_in = None
+    prepare_messages = None
+    if turn_filter.enabled():
+        label_cache: dict[tuple[int, ...], set[int]] = {}
+
+        async def _evaluate_contexts(question_text: str, contexts: list[str]) -> set[int]:
+            schema = {
+                "type": "object",
+                "properties": {
+                    "labels": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "index": {"type": "integer"},
+                                "label": {"type": "string",
+                                          "enum": ["needed", "maybe", "no"]},
+                            },
+                            "required": ["index", "label"],
+                        },
+                    }
+                },
+                "required": ["labels"],
+            }
+            listing = "\n".join(f"[{index}] {text[:1200]}"
+                                 for index, text in enumerate(contexts, 1))
+            prompt = (f"【问题】\n{question_text}\n\n【本轮累积的候选上下文】\n{listing}\n\n"
+                      "请逐条判定并输出 JSON。")
+            parsed = await model_factory.invoke_json(
+                config, kb_service.RELEVANCE_FILTER_SYSTEM, prompt, schema,
+                call_type=turn_filter.TURN_FILTER_CALL_TYPE,
+                biz_id=assistant_row.id, label=config.model_name)
+            return {int(item["index"]) for item in (parsed.get("labels") or [])
+                    if item.get("label") in ("needed", "maybe")}
+
+        async def _prepare_messages(messages: list[Any]) -> list[Any]:
+            entries = turn_filter.collect_entries(messages)
+            if len(entries) <= 1:
+                return messages
+            key = tuple(entry["ref"] for entry in entries)
+            keep = label_cache.get(key)
+            if keep is None:
+                keep = await _evaluate_contexts(question, [entry["text"] for entry in entries])
+                label_cache[key] = keep
+            if not keep:
+                keep = {1}
+            return turn_filter.apply_keep(messages, entries, keep, registry)
+
+        prepare_messages = _prepare_messages
+
     runtime = ChatRuntime(
         call_model=model_factory.make_model_caller(
             config, tools=model_tools, call_type=CHAT_CALL_TYPE,
@@ -233,6 +284,7 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         tools=_tool_node(tools),
         cost_micro_of=lambda usage: model_factory.cost_micro(config, usage),
         evidence=evidence_state,
+        prepare_messages=prepare_messages,
     )
     # callables 不进 checkpoint：只把可序列化的 messages/budget 交给图；
     # 运行对象由 set_current(runtime) 注入，恢复时按当前用户/权限重建。
@@ -385,7 +437,8 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
     tokens = await turn_tokens(
         assistant_row.id,
         call_types=(CHAT_CALL_TYPE, SUMMARY_CALL_TYPE, "KB_QUERY_EMBED",
-                    "KB_RERANK", "KB_QUERY_PLAN", "KB_RELEVANCE_FILTER"))
+                    "KB_RERANK", "KB_QUERY_PLAN", "KB_RELEVANCE_FILTER",
+                    turn_filter.TURN_FILTER_CALL_TYPE))
     checkpoint_id = None
     if chat_checkpoint.get_checkpointer() is not None:
         try:

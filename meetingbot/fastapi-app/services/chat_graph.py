@@ -153,7 +153,11 @@ def runtime_of() -> Any:
 async def agent_node(state: ChatState) -> ChatState:
     """调一次模型。模型回复带不带工具调用决定下一站去哪（路由函数判断）。"""
     runtime = runtime_of()
-    message = await runtime.call_model(list(state.get("messages") or []))
+    messages = list(state.get("messages") or [])
+    prepare = getattr(runtime, "prepare_messages", None)
+    if prepare is not None:
+        messages = await prepare(messages)
+    message = await runtime.call_model(messages)
     usage = getattr(message, "usage_metadata", None) or {}
     tokens = int(usage.get("total_tokens") or 0)
     cost_of = getattr(runtime, "cost_micro_of", None)

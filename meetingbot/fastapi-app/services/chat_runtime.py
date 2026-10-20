@@ -23,6 +23,9 @@ class ChatRuntime:
     cost_micro_of: Callable | None = None
     # CoveragePlan/EvidenceState：由 coverage 节点更新，不写入 checkpoint
     evidence: Any = None
+    # 可选：模型调用前对“本轮累积工具结果”做 turn 级过滤（不写 checkpoint）。
+    # 签名 async (messages) -> messages；None 表示不过滤。
+    prepare_messages: Any = None
 
 
 _current: ContextVar[ChatRuntime | None] = ContextVar("meetingbot_chat_runtime", default=None)
