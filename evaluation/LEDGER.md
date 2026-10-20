@@ -2305,3 +2305,9 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
   faithfulness 90.75→78.33%、relevancy 100→66.67% → 否决，默认 0。
 - 原因：直接拼长文本破坏 citation/ref 与上下文分母；parent 只能作阅读上下文，
   不能替换 child 引用身份。
+
+### 23) P2 parent_text 第二版（2026-10-21）
+
+- child 引用不变、另加 parent_text（±30s）仍全面退化：recall 97.22→50.00%、
+  precision 64.23→15.30%、faithfulness 90.75→77.60%、relevancy 100→66.67%。
+- 默认 0；parent 上下文不能塞进 citation/tool payload，需独立阅读层。
