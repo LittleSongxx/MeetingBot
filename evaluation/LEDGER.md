@@ -2174,3 +2174,23 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
   反例：开发集 +4.29pp 在 holdout 反转。
 - Contextual Retrieval 结果：cross30 recall 80.36%→72.41%、precision 67.27%→68.00%、
   faithfulness 79.10%→73.64% → 拒绝，已关闭并重建基线索引。
+
+### 11) 预注册：CRAG 式上下文过滤（2026-10-20）
+
+- 机制：对 rerank 后的候选上下文逐条判“是否包含回答所需信息”，过滤无用项；
+  qwen 做评估器、DeepSeek 做独立 judge，不改产品默认。
+- 开发集 cross30：context precision 67.57%→85.19%（+17.62pp），
+  recall 77.59%→75.86%（−1.72pp）；方向强，但必须在全新 holdout C 验证。
+- holdout C：20 题/26 事实，未用于调参；每 case 保留至少 1 条上下文。
+- 门槛：precision 相对基线 **≥ +5pp**，recall 下降不超过 **3pp**；
+  一次性读数，通过后才实现为可选开关（默认关），失败则记录并停止。
+
+### 11b) CRAG 过滤验证结果（2026-10-20）
+
+- cross30 开发集：precision 67.57%→85.19%，recall 77.59%→75.86%（初版）；
+  保守提示后 83.53%/75.86%。
+- 全新 holdout C（20 题/22 事实）：precision 66.67%→**92.86%**（+26.19pp），
+  recall 100%→**95.45%**（−4.55pp，丢 1 条支撑上下文）。
+- 预注册门槛“precision +5pp 且 recall 下降 ≤3pp”未达标 → **未启用**。
+- 结论：CRAG 过滤是最有希望提升 precision 的通用方法，但需安全底线（保留 rerank top-k/
+  歧义上下文）并在新 holdout D 验证；不得把 +26pp 单独写成收益。
