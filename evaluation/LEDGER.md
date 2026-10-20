@@ -2111,23 +2111,22 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - 结论引用纪律：以上未运行项不得在简历/报告中写成"已提升/已下降"，只能写
   "已实现、已预注册、待测量"。
 
-### 7) 独立 Agent 代审 + 最终优化（2026-10-20，停止复现）
+### 7) 独立 Agent 代审 + A/B 复现（2026-10-20）
 
 完整报告：`evaluation/reports/2026-10-20_ai_review_and_optimization.md`。
 独立审核：`evaluation/reports/independent_review_2026-10-20.json`、
 `independent_answer_review_final4_2026-10-20.json`。
 
-- **gold 事实**：58 条 56 approve / 2 revise / 0 reject；修订已入 gold，
-  `label_source=independent_agent_reviewed`、`human_checked=false`。
-- **答案独立复核**：修复前 20 correct / 6 partial / 4 wrong；修复后
-  **21 correct / 9 partial / 0 wrong**。wrong 从 4 清零。
-- **修复**：series_id/meeting_id 混淆、include_proposed、get_minutes 草稿回退、
-  状态模糊匹配、偏好 owner_name、运行库与 seed 对齐。
-- **轨迹 27 题**：F1 **0.8272**、strict 19/27、acceptable 25/27、
-  required 25/27、forbidden 0。
-- **pass^3（12×3）**：12/12（AI 复核 gold；含标签修正，不能当独立泛化）。
-- **跨会议 A/B（单轮）**：recall 75.86% → 82.76%（+6.90pp），precision
-  69.81% → 68.38%（−1.43pp），单轮达阈值；但复现只跑臂 A，保持关闭。
-- **注入**：10/10、良性误报 0/20、泄露 0。
-- **累计**：产品 3,976 次调用、¥1.5422；不设调用上限。
-- **未完成**：A/B 复现臂 B、9 条 partial 答案、人工签名。
+- **gold 事实**：58 条 56 approve / 2 revise / 0 reject；`human_checked=false`。
+- **答案**：修复前 20 correct / 6 partial / 4 wrong；最终 **21 / 9 / 0**。
+- **修复**：series_id 校验、include_proposed、get_minutes 草稿回退、状态模糊匹配、
+  偏好 owner_name、运行库对齐 seed。
+- **轨迹 27 题**：F1 **0.8272**、strict 19/27、acceptable 25/27、required 25/27。
+- **pass^3（12×3）**：12/12（AI 复核 gold，含标签修正）。
+- **跨会议 A/B（两轮）**：
+  - 第一轮 recall 75.86%→82.76%、precision 69.81%→68.38%；
+  - 复现轮 recall 82.14%→82.76%、precision 66.37%→68.94%；
+  - 规划臂 recall 均为 82.76%，关臂波动；**无稳定收益，保持关闭**。
+- **注入**：10/10、良性 0/20、泄露 0。
+- **累计**：产品 4,319 次调用、¥1.6624；不设上限。
+- **未完成**：9 条 partial、人工签名；独立 Agent 代审不是人工。
