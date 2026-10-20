@@ -126,3 +126,10 @@
 - cross3 ×3 已完成；precision 波动 10.5pp，说明小样本单轮不可作为上线依据。
 - 后续 P0 固定 6 题×3 轮，用该 runner 跑；P2 parent-child / P3 claim verification
   在 P0 口径稳定后再比较。
+
+## 7. P0 6×3 与 P2 结果（2026-10-21）
+
+- P0 6 题×3：precision mean 64.23%（58.54–68.29），faithfulness mean 90.75%；
+  噪声带已量化，后续改动需超过该范围。
+- P2 parent-context 首版（直接拼相邻窗口）全面退化，否决；正确做法是 child 引用身份不变、
+  parent 只作阅读上下文，需改架构后再试。

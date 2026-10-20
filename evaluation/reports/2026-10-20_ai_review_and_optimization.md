@@ -350,3 +350,30 @@ cross3，3 轮：
 - recall/relevancy 稳定；**precision 一轮就波动 10.5pp**，faithfulness 波动 10.8pp。
 - 这证明了之前“单轮 +17pp 就上线”的风险：小样本指标噪声很大，必须看多轮和 CI。
 - 仍只有 3 题，不能当总体方差；下一步应扩到 6 题×3 轮。
+
+## 22. P0 扩到 6×3 + P2 parent-context 实验
+
+### P0 6 题 ×3 轮（fresh session）
+| trial | recall | precision | faithfulness | relevancy |
+|---|---:|---:|---:|---:|
+| 1 | 100% | 58.54% | 91.80% | 100% |
+| 2 | 91.67% | 65.85% | 86.21% | 100% |
+| 3 | 100% | 68.29% | 94.23% | 100% |
+| **mean** | **97.22%** | **64.23%** | **90.75%** | **100%** |
+
+- precision range **58.54–68.29%（9.75pp）**、faithfulness range **86.21–94.23%（8pp）**
+- 这组是后续默认判断的基线与噪声带；单轮小差异不能当收益。
+
+### P2 parent-context（相邻 transcript 窗口扩展）— 否决
+- 机制：child 检索/重排后，把 ±30s 相邻窗口拼回 hit.text。
+- cross6 单轮 vs P0 mean：
+
+| 配置 | recall | precision | faithfulness | relevancy |
+|---|---:|---:|---:|---:|
+| P0 mean | 97.22% | 64.23% | 90.75% | 100% |
+| parent-context | **33.33%** | **13.80%** | 78.33% | 66.67% |
+
+- 严重退化：扩展后的长上下文破坏了引用/证据定位，judge 与答案都变差。
+- 默认关闭 `KB_PARENT_CONTEXT_ENABLED=0`；代码保留为实验开关。
+- 结论：parent-child 不能只拼长文本，必须保留 child 引用身份、parent 仅作阅读上下文，
+  否则 citation/ref 与上下文分母都会失真。
