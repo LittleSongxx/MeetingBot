@@ -20,6 +20,7 @@ from services import (
     chat_graph,
     citations,
     coverage,
+    intent_router,
     kb_service,
     kb_tools,
     model_factory,
@@ -152,6 +153,16 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         tools = []
     graph = chat_graph.build_chat_graph(chat_checkpoint.get_checkpointer())
     budget = chat_graph.budget_from_env()
+    intent_decision: dict[str, Any] | None = None
+    route_message: SystemMessage | None = None
+    if intent_router.enabled() and resume_row is None:
+        intent_decision = intent_router.policy_for(text)
+        max_tools = int(intent_decision.get("max_tool_calls") or 0)
+        if max_tools > 0:
+            budget["max_tool_calls"] = min(int(budget["max_tool_calls"]), max_tools)
+        route_message = SystemMessage(
+            f"【意图路由】本轮意图={intent_decision['intent']}。"
+            f"{intent_decision['hint']}")
     recursion_limit = chat_graph.recursion_limit(budget)
     if resume_row is None:
         values: dict[str, Any] = {
@@ -200,6 +211,7 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
         "question": text,
         # 规划结果也进 meta：抓取侧据此能判断"这一轮到底有没有开规划、改写成什么"
         "plan": plan,
+        "intent": intent_decision,
         "trace_id": trace_id,
         "thread_id": thread_id,
         # 恢复时前端用前缀替换本地部分答案；正常轮为空串
@@ -217,7 +229,7 @@ async def stream_answer(session: ChatSession, question: str, *, user: User,
             if security_flags else None)
         messages = ContextAssembler().assemble(
             history,
-            extras=[plan_message, security_message],
+            extras=[plan_message, route_message, security_message],
             question=await question_message(text),
         )
         state_in = {"messages": messages, "budget": budget}
