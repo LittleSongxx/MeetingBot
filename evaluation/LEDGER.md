@@ -2325,3 +2325,20 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - 深判：citation_mapping 18、supported_by_cited 11、unsupported 18、derived 1。
 - 规则审计 25.5% 高估；真 unsupported 约为 188 个数字断言的 9.6%。
 - 例子集中在时间归属/引用绑定（ct06/ct08），支持做条件化 claim 校验，不做全量拦截。
+
+### 26) 深度复盘：多轮评测口径混淆（2026-10-21）
+
+- 多轮 cross30 的 claim audit 不在任何上下文 22.9%；fresh session 降到 9.4%，
+  约一半“引用缺口”是历史引用/评测口径假阴性。
+- fresh cross30：recall 75.86%、precision 63.64%、faithfulness 88.63%、relevance 93.33%。
+- 真 unsupported 集中在引用/时间绑定（ct06/ct08/ct03），不是数字编造。
+- 完整报告：`evaluation/reports/2026-10-21_deep_dive.md`。
+
+### 27) Agent 全链路质量深研（2026-10-21）
+
+- 报告：`evaluation/reports/2026-10-21_agent_quality_deep_dive.md`。
+- 意图/工具：single_fact F1 0.967、aggregation 0.778、cross_meeting 0.733（strict 20%、过度调用1.8×）、
+  state 0.583（strict 50%、过度调用1.75×）、smalltalk 1.0。
+- LLM intent 分类 27 题 accuracy 81.5%，混淆集中在 cross/state/aggregation。
+- 优化：先补 intent/tool/citation/pass^k 指标；再做混合意图路由（规则+分类器+置信度回退）；
+  然后做工具预算与引用/时间绑定；检索 precision 最后调。

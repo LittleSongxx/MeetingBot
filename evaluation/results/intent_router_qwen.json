@@ -1,0 +1,208 @@
+{
+  "model": "qwen3.8-max-0902",
+  "n": 27,
+  "accuracy": 0.8148148148148148,
+  "confusion": {
+    "single_fact->single_fact": 8,
+    "single_fact->cross_meeting": 1,
+    "single_fact->state": 1,
+    "aggregation->aggregation": 5,
+    "aggregation->state": 1,
+    "cross_meeting->state": 1,
+    "cross_meeting->cross_meeting": 4,
+    "smalltalk->smalltalk": 2,
+    "state->state": 3,
+    "state->aggregation": 1
+  },
+  "rows": [
+    {
+      "case_id": "t01",
+      "question": "这次灰度发布从什么时候开始、覆盖了多少用户？",
+      "gold": "single_fact",
+      "predicted": "single_fact",
+      "reason": "询问灰度发布的开始时间和覆盖用户数，属于针对单一事件的具体事实查询。"
+    },
+    {
+      "case_id": "t02",
+      "question": "灰度期间登录和核心下单链路的成功率是多少？",
+      "gold": "single_fact",
+      "predicted": "single_fact",
+      "reason": "询问灰度期间特定指标（成功率）的具体数值，属于查询单一事实。"
+    },
+    {
+      "case_id": "t03",
+      "question": "移动端附件下载的问题为什么必须在发布前处理？",
+      "gold": "single_fact",
+      "predicted": "single_fact",
+      "reason": "询问某个问题必须在发布前处理的具体原因，属于查找单一事实或结论。"
+    },
+    {
+      "case_id": "t04",
+      "question": "两次模型调用失败的原因是什么？用户能做什么？",
+      "gold": "single_fact",
+      "predicted": "cross_meeting",
+      "reason": "问题明确提到“两次”模型调用失败，需要比较多段录音或分别说明各自内容。"
+    },
+    {
+      "case_id": "t05",
+      "question": "会议纪要处于什么状态时可以导出？",
+      "gold": "single_fact",
+      "predicted": "single_fact",
+      "reason": "询问会议纪要导出的前提条件，属于查询单一事实/规则。"
+    },
+    {
+      "case_id": "t06",
+      "question": "正式发布的时间是什么？前提条件是什么？",
+      "gold": "single_fact",
+      "predicted": "single_fact",
+      "reason": "询问正式发布的具体时间和前提条件，属于对特定事实的查询。"
+    },
+    {
+      "case_id": "t07",
+      "question": "知识索引构建期间资料变化，按会议决策应该怎么处理？",
+      "gold": "single_fact",
+      "predicted": "state",
+      "reason": "问题明确询问针对特定场景的会议决策处理方式，属于查询已确认的决策或流程规范。"
+    },
+    {
+      "case_id": "t08",
+      "question": "报表导出在压测里暴露了什么问题？",
+      "gold": "single_fact",
+      "predicted": "single_fact",
+      "reason": "询问报表导出在压测中暴露的具体问题，属于查找单一事实/结论。"
+    },
+    {
+      "case_id": "t09",
+      "question": "逾期的任务负责人会在哪里看到提醒？",
+      "gold": "single_fact",
+      "predicted": "single_fact",
+      "reason": "询问逾期任务负责人接收提醒的具体位置，属于单一事实类问题。"
+    },
+    {
+      "case_id": "t10",
+      "question": "容量评估结论是什么？现有机器能扛多少日活、预计发布后多少？",
+      "gold": "single_fact",
+      "predicted": "single_fact",
+      "reason": "询问容量评估的具体结论及日活数据，属于查找特定事实/结论。"
+    },
+    {
+      "case_id": "t11",
+      "question": "用户反馈最集中的两个问题是什么？",
+      "gold": "aggregation",
+      "predicted": "aggregation",
+      "reason": "需要汇总用户反馈并筛选出最集中的两项，属于对多项事实的聚合提取。"
+    },
+    {
+      "case_id": "t12",
+      "question": "最近七天纪要和 agent 的调用成功率、平均耗时是多少？",
+      "gold": "aggregation",
+      "predicted": "aggregation",
+      "reason": "问题要求统计最近七天的调用成功率和平均耗时，属于对多项指标数据的汇总查询。"
+    },
+    {
+      "case_id": "t13",
+      "question": "正式发布前还要补充哪两组验收数据？",
+      "gold": "aggregation",
+      "predicted": "aggregation",
+      "reason": "问题询问需要补充的'哪两组'验收数据，属于要求汇总列出具体清单项。"
+    },
+    {
+      "case_id": "t14",
+      "question": "发布公告任务包含哪些入口？负责人和截止时间是什么？",
+      "gold": "aggregation",
+      "predicted": "state",
+      "reason": "问题询问特定任务的负责人、截止时间及包含的入口，属于查询待办任务状态与具体信息。"
+    },
+    {
+      "case_id": "t15",
+      "question": "首周复盘要看哪五项数据？",
+      "gold": "aggregation",
+      "predicted": "aggregation",
+      "reason": "问题询问具体是哪五项数据，需要汇总列出清单中的多个结构化事实。"
+    },
+    {
+      "case_id": "t16",
+      "question": "灰度分几步走？回滚能力如何？",
+      "gold": "aggregation",
+      "predicted": "aggregation",
+      "reason": "问题要求列出灰度发布的多个步骤并说明回滚能力，需要汇总多项结构化事实。"
+    },
+    {
+      "case_id": "t17",
+      "question": "发布公告与对外通稿分别由谁负责、什么时候完成？",
+      "gold": "cross_meeting",
+      "predicted": "state",
+      "reason": "询问具体任务的负责人和完成时间，属于待办事项与项目状态查询。"
+    },
+    {
+      "case_id": "t18",
+      "question": "发布时间的结论在两段录音里一致吗？分别怎么说？",
+      "gold": "cross_meeting",
+      "predicted": "cross_meeting",
+      "reason": "问题明确要求比较两段录音中关于发布时间的结论，并分别说明各自内容。"
+    },
+    {
+      "case_id": "t19",
+      "question": "两段录音分别是上午还是下午的会、主题是什么？",
+      "gold": "cross_meeting",
+      "predicted": "cross_meeting",
+      "reason": "问题明确要求分别说明两段录音各自的时间和主题，属于跨会议比较。"
+    },
+    {
+      "case_id": "t20",
+      "question": "灰度这件事在两段录音里分别讨论到什么？",
+      "gold": "cross_meeting",
+      "predicted": "cross_meeting",
+      "reason": "问题明确要求比较两段录音中关于灰度的讨论内容，属于跨会议对比。"
+    },
+    {
+      "case_id": "t21",
+      "question": "两段录音里的验收/回归要求分别是什么？",
+      "gold": "cross_meeting",
+      "predicted": "cross_meeting",
+      "reason": "问题明确要求分别说明两段录音中的验收/回归要求，属于跨会议比较。"
+    },
+    {
+      "case_id": "t22",
+      "question": "你好，你能帮我做什么？",
+      "gold": "smalltalk",
+      "predicted": "smalltalk",
+      "reason": "这是寒暄问候，询问助手能力，不涉及具体会议内容检索。"
+    },
+    {
+      "case_id": "t23",
+      "question": "帮我看看今天天气怎么样？",
+      "gold": "smalltalk",
+      "predicted": "smalltalk",
+      "reason": "询问天气属于日常寒暄，不需要会议资料。"
+    },
+    {
+      "case_id": "t24",
+      "question": "移动端附件下载任务的负责人、协作人和截止时间是什么？",
+      "gold": "state",
+      "predicted": "state",
+      "reason": "问题询问特定任务的负责人、协作人和截止时间，属于查询待办任务状态信息。"
+    },
+    {
+      "case_id": "t25",
+      "question": "报表导出问题最后决定怎么处理？",
+      "gold": "state",
+      "predicted": "state",
+      "reason": "询问某个问题最终确认的决策或处理方案，属于已确认决策类。"
+    },
+    {
+      "case_id": "t26",
+      "question": "下午这场会定了哪些行动项和负责人？",
+      "gold": "state",
+      "predicted": "state",
+      "reason": "询问会议中已确认的待办行动项及对应负责人，属于项目状态/待办类问题。"
+    },
+    {
+      "case_id": "t27",
+      "question": "下午的会最后复述了哪三条结论？",
+      "gold": "state",
+      "predicted": "aggregation",
+      "reason": "问题要求列出下午会议最后复述的三条结论，属于需要汇总多项结构化事实的请求。"
+    }
+  ]
+}
