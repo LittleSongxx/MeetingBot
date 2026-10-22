@@ -64,7 +64,7 @@ MySQL 仅在 Compose 网络内开放，网页及后端仅绑定宿主机回环�
 ## 验证
 
 ```bash
-./scripts/compose.sh exec -T backend python -m unittest discover -s tests -v   # 产品 633 项
+./scripts/compose.sh exec -T backend python -m unittest discover -s tests -v   # 产品 634 项
 make -C evaluation test && make -C evaluation smoke                            # 评测 330 项 + 零调用回归
 cd meetingbot/vue && npm ci && npm run type-check && npm run lint && npm run test   # 前端 65 项
 ```
@@ -180,7 +180,7 @@ uv pip install --python .venv/bin/python -r requirements.txt
 .venv/bin/python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-当前实测：**收集 633 项，627 项通过，6 项条件跳过**（5 个 PG 实库测试无 `PG_TEST_DSN`，1 个评测产物不在本工作区；CI 的 `postgres-integration` 作业会执行前五个）。
+当前实测：**收集 634 项，628 项通过，6 项条件跳过**（5 个 PG 实库测试无 `PG_TEST_DSN`，1 个评测产物不在本工作区；CI 的 `postgres-integration` 作业会执行前五个）。
 评测侧 330 项、前端 65 项，命令见下文「验证」一节；数字以 CI 实跑为准。
 其中 74 项是契约层测试（`tests/test_contracts.py`），只依赖 pydantic、不碰数据库。
 数字以 CI（`.github/workflows/ci.yml` 的 backend 作业）每次实跑为准。

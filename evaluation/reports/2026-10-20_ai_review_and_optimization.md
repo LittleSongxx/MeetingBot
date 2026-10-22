@@ -503,3 +503,11 @@ cross3，3 轮：
 - 修正系列题 scope 后：recall 91.02%、precision 71.83%、faithfulness 89.21%、relevancy 97.00%。
 - cross30 仍是主短板（recall 81.7%、faith 78.6%）；quality_gate 已加入 mixed100 阈值，
   当前 PASS。
+
+## 37. 100 题抽样盲评
+
+报告：`evaluation/reports/2026-10-22_blind20_review.md`。
+
+- 20 条无 expected facts 盲评：14 correct / 6 partial / 0 wrong。
+- 主要问题是引语/字段超出被引上下文、时间对象过度解读、复述顺序当时间顺序。
+- 新增 `rag_quality.quote_not_in_cited` 运行时检查。
