@@ -2428,3 +2428,11 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - 未采纳 state 元数据与压 over-call 的默认改动；mixed100 仍是组装集、new meeting 仍为合成。
 - 报告：`evaluation/reports/2026-10-22_generalization_audit_v2.md`。
 
+### 39) P0 盲评扩到 40 条 + P2 证据边界 prompt 实验（2026-10-22）
+
+- 40 条无 expected facts 盲评：34 correct / 6 partial / 0 wrong（85%/15%/0）。
+- 问题仍集中在“上下文未出现的细节写成确定事实”：权限、FAQ细目、引语归属、minutes_id。
+- 通用证据边界 prompt（默认关）：cross30 faith 78.6→84.8、relevancy 96.7→100，
+  但 precision 74.6→66.4；不是双赢，默认 0。
+- 报告：`evaluation/reports/2026-10-22_blind40_review.md`、
+  `evaluation/reports/2026-10-22_evidence_prompt.md`。
