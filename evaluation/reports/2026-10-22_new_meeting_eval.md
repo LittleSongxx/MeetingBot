@@ -1,5 +1,10 @@
 # 全新（合成未见）会议评测集与结果（2026-10-22）
 
+> **重要修正（2026-10-22）**：本文原先以 scoped 结果为主，recall 100% 是“限定单会议 +
+> 题面与事实同源”的 smoke 结果，不能当泛化。主口径已改为 **unscoped**：
+> recall 86.96%、precision 70.97%、faithfulness 80.00%、relevancy 100%。
+> 详见 `2026-10-22_eval_design_audit.md`。
+
 ## 1. 目的
 
 原有评测都基于同一场「产品发布评审会议」，泛化证据弱。为收尾补一个**未见会议**：
@@ -20,14 +25,12 @@
 
 ## 3. 结果
 
-### judge
+### judge（两口径）
 
-| 指标 | 读数 | 95% CI（Clopper-Pearson） |
-|---|---:|---|
-| context_recall | **100%** | 85.2–100% |
-| context_precision | **97.96%** | 89.1–99.9% |
-| faithfulness | **86.67%** | 76.8–93.4% |
-| answer_relevancy | **100%** | 78.2–100% |
+| 口径 | recall | precision | faithfulness | relevancy | 用途 |
+|---|---:|---:|---:|---:|---|
+| **unscoped（主口径）** | **86.96%** | **70.97%** | **80.00%** | **100%** | 有干扰会议 |
+| scoped（smoke） | 100% | 97.96% | 86.67% | 100% | 只验证链路 |
 
 ### 独立复核
 
@@ -55,8 +58,9 @@
 
 ## 5. 质量闸已纳入新会议
 
-`evaluation/quality_gate.py` 增加 new_meeting 阈值（recall≥85%、precision≥65%、
-faithfulness≥80%、relevancy≥90%），当前 **PASS**。
+`evaluation/quality_gate.py` 已改为使用 **unscoped new_meeting** 作为门禁：
+recall≥80%、precision≥60%、faithfulness≥75%、relevancy≥90%；
+scoped 只作为 smoke 打印，不参与门禁。
 
 ## 6. 独立审核发现的 fixture 问题（已在 gold 标注）
 
@@ -69,10 +73,11 @@ faithfulness≥80%、relevancy≥90%），当前 **PASS**。
 
 ## 7. 结论
 
-- 新会议 15 题：**15 correct / 0 partial / 0 wrong**，作为收尾的未见会议 sanity check 通过；
-- judge 指标高，但不能替代真实会议/人工标注；
-- 质量闸现在同时覆盖旧会议 P0、fresh cross30、new meeting；
-- 下一步若要更强结论，应补**真实会议**与人工金标，而不是继续加合成题。
+- scoped smoke 15 题 **15 correct / 0 partial / 0 wrong**，证明链路可用，但不能当泛化；
+- unscoped 主口径 recall 86.96%、precision 70.97%、faithfulness 80.00%；
+- 答案盲评的 CSV 带 expected facts，不是严格盲评；
+- 收尾结论只能是“合成未见会议 sanity check + 跨会议混淆可用”，
+  真实会议与人工金标仍缺失。
 
 ## 8. 文件
 

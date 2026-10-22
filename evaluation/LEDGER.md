@@ -2393,3 +2393,12 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - quality_gate 已纳入 new_meeting 阈值，当前 PASS。
 - 限制：合成语料、题目较直接；需真实会议/人工金标，不能声称真实泛化 98%。
 - 报告：`evaluation/reports/2026-10-22_new_meeting_eval.md`。
+
+### 35) 评测集规模/公正性审计（2026-10-22）
+
+- 全目录约 40 个 QA/gold 文件、1032 原始 case、259 唯一题面，但大量是 reviewed/independent
+  副本与重复 holdout；人工金标为 0。
+- 新会议 scoped 100% recall 是“限定单会议 + 题面与事实同源”的 smoke；
+  unscoped 主口径为 recall 86.96%、precision 70.97%、faith 80.00%、relevancy 100%。
+- quality_gate 已切换为 unscoped new_meeting；scoped 仅展示。
+- 报告：`evaluation/reports/2026-10-22_eval_design_audit.md`。
