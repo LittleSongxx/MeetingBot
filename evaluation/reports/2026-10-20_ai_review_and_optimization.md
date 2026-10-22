@@ -493,3 +493,13 @@ cross3，3 轮：
 - 新会议 scoped 100% recall 只是 smoke；unscoped 主口径 recall 86.96%、precision 70.97%、
   faith 80.00%、relevancy 100%。
 - quality_gate 已切换为 unscoped new_meeting；不再把 scoped 100% 当泛化。
+
+## 36. 100 题规模评测集
+
+报告：`evaluation/reports/2026-10-22_eval100_scale.md`。
+
+- 100 题/167 facts：cross30 30、holdoutA 20、D 20、new meeting 15、B 15；
+  每题 fresh session 且限定会议。
+- recall 88.62%、precision 71.06%、faithfulness 90.24%、relevancy 96.00%。
+- cross30 仍是主短板（recall 78.3%、faith 80.8%）；quality_gate 已加入 mixed100 阈值，
+  当前 PASS。
