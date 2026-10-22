@@ -187,7 +187,7 @@ TOOL_CHOICE_REQUIRED = "required"
 
 
 def build_tool_model(config: AiModelConfig, tools: list[dict[str, Any]], call_type: str,
-                     prompt_chars: int = 0, *, tool_choice: str = TOOL_CHOICE_AUTO) -> Runnable:
+                     prompt_chars: int = 0, *, tool_choice: Any = TOOL_CHOICE_AUTO) -> Runnable:
     """构造**绑定工具**的对话模型。`tools` 是 OpenAI function calling 形状的声明。
 
     供应商能力先查声明表（`providers.supports_tool_calling`）：未声明的供应商
@@ -408,7 +408,7 @@ async def stream_chat(
     biz_id: int = 0,
     label: str = "问答模型",
     model: Any = None,
-    tool_choice: str = TOOL_CHOICE_AUTO,
+    tool_choice: Any = TOOL_CHOICE_AUTO,
 ) -> AsyncIterator[tuple[str, Any]]:
     """流式调一次对话模型，逐个 token 产出，最后产出完整消息。
 
@@ -563,6 +563,7 @@ def make_model_caller(
     label: str = "问答模型",
     model: Any = None,
     first_round_tool_choice: str = TOOL_CHOICE_AUTO,
+    forced_first_tool: str | None = None,
 ) -> Callable[[list[Any]], Awaitable[Any]]:
     """把一次流式调用包成状态图要的"调模型"动作：进去是消息列表，出来是 AIMessage。
 
@@ -574,9 +575,12 @@ def make_model_caller(
     之后自动回到 `auto`（模型已经查到东西了，再强制它继续调工具是错的）。
     """
     async def call_model(messages: list[Any]) -> Any:
-        choice = TOOL_CHOICE_AUTO
-        if first_round_tool_choice != TOOL_CHOICE_AUTO and not has_tool_result(messages):
-            choice = first_round_tool_choice
+        choice: Any = TOOL_CHOICE_AUTO
+        if not has_tool_result(messages):
+            if forced_first_tool:
+                choice = {"type": "function", "function": {"name": forced_first_tool}}
+            elif first_round_tool_choice != TOOL_CHOICE_AUTO:
+                choice = first_round_tool_choice
         message: Any = None
         async for kind, payload in stream_chat(config, messages, tools=tools, call_type=call_type,
                                                biz_id=biz_id, label=label, model=model,

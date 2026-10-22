@@ -97,3 +97,23 @@
 - 默认仍是 rerank on、top_k=3；
 - 工具 F1 0.7309 是当前稳定基线；它衡量的是“最小工具集精确匹配”，
   不能直接等价为“5 个工具选不对”。
+
+## 8. 强制首工具实验结果（新增）
+
+不做 hint/budget，只按意图用 tool_choice 强制首工具（cross/state 选择性）：
+
+| 配置 | tool F1 | strict | acceptable | coverage |
+|---|---:|---:|---:|---:|
+| router off | 0.7309 | 14/27 | 22/27 | 24/27 |
+| 强制首工具 | 0.7901 | **19/27** | 21/27 | 23/27 |
+
+fresh cross30：
+| 配置 | recall | precision | faithfulness | relevancy |
+|---|---:|---:|---:|---:|
+| off | 75.86% | 63.64% | **88.63%** | 93.33% |
+| 强制首工具 | 68.97% | 57.14% | 82.05% | 93.33% |
+
+结论：
+- 强制首工具把 strict 提到 19/27，但 coverage 下降、cross30 recall/precision/faithfulness 全降；
+- 仍然不是无损优化；
+- 与全量/选择性/hint/budget 一起，证明“减少 over-call”必须按**贡献**而不是按数量做。
