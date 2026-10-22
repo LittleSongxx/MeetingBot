@@ -511,3 +511,12 @@ cross3，3 轮：
 - 20 条无 expected facts 盲评：14 correct / 6 partial / 0 wrong。
 - 主要问题是引语/字段超出被引上下文、时间对象过度解读、复述顺序当时间顺序。
 - 新增 `rag_quality.quote_not_in_cited` 运行时检查。
+
+## 38. 通用性/泛化自查 v2
+
+报告：`evaluation/reports/2026-10-22_generalization_audit_v2.md`。
+
+- 默认产品链路未发现 case 硬编码；意图/过滤实验默认关闭。
+- quality_gate 改为冻结基线 + 2pp 容忍 + 绝对下限，避免贴当前分数设阈值。
+- 未采纳 state 元数据实验与压 over-call 默认改动。
+
