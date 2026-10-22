@@ -1,0 +1,202 @@
+{
+  "reviewer": "independent-reviewer-5",
+  "reviewed_at": "2026-10-22",
+  "facts": [
+    {
+      "case_id": "n01",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task8 seg1] 李娜：各位上午好，今天评审客户支持知识库和智能客服灰度的准备情况，先对齐目标和风险；[task8 seg8] 李娜：今天先确认知识库补齐和灰度前检查两项决策，具体行动项下午继续对齐；[task9 seg1] 李娜：下午继续，先复盘上午确定的知识库和灰度目标；[task9 seg6] 李娜：确认行动项……；[task9 seg8] 李娜：今天的决定是……（fixture 转写/纪要均无“主持人”字样，meeting 3 的 host_id=1 也未映射姓名，主持身份由全程主持行为判定）",
+      "proposed_fact": "",
+      "reason": "材料未显式写“主持人”，但两段录音均由李娜开场、安排议程、确认行动项并总结决定，主持身份可由行为判定（非显式陈述）。"
+    },
+    {
+      "case_id": "n02",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task8 seg2] 王磊：当前知识库覆盖率为82%……；[minutes 5 summary] 当前覆盖率82%、目标90%。",
+      "proposed_fact": "",
+      "reason": "当前覆盖率82%被转写原句与 minutes 5 summary 一致支持。"
+    },
+    {
+      "case_id": "n02",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task8 seg2] 目标是把覆盖率提升到90%；[minutes 5 summary] 当前覆盖率82%、目标90%。",
+      "proposed_fact": "",
+      "reason": "目标覆盖率90%被转写原句与 minutes 5 summary 一致支持。"
+    },
+    {
+      "case_id": "n03",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task8 seg2] 重点补齐两个未覆盖主题：账单纠纷和权限申请；[minutes 5 topics_json 第1条] 补齐账单纠纷和权限申请。",
+      "proposed_fact": "",
+      "reason": "“账单纠纷”为未覆盖主题之一，转写与纪要一致。"
+    },
+    {
+      "case_id": "n03",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task8 seg2] 重点补齐两个未覆盖主题：账单纠纷和权限申请；[minutes 5 topics_json 第1条] 补齐账单纠纷和权限申请。",
+      "proposed_fact": "",
+      "reason": "“权限申请”为未覆盖主题之一，转写与纪要一致。"
+    },
+    {
+      "case_id": "n04",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task8 seg3] 王磊：我计划新增120条FAQ……；[minutes 5 pending_items_json 第1条] 新增120条FAQ。",
+      "proposed_fact": "",
+      "reason": "新增120条FAQ被转写原句与 minutes 5 pending 一致支持。"
+    },
+    {
+      "case_id": "n04",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task8 seg3] 王磊：我计划新增120条FAQ，负责人是我；[minutes 5 pending_items_json 第1条] owner_suggestion=王磊。",
+      "proposed_fact": "",
+      "reason": "王磊自述“负责人是我”，且 minutes 5 pending 的 owner 为王磊。"
+    },
+    {
+      "case_id": "n04",
+      "fact_index": 3,
+      "verdict": "approve",
+      "evidence": "[task8 seg3] 截止10月25日；[minutes 5 pending_items_json 第1条] deadline_suggestion=2026-10-25T18:00:00。",
+      "proposed_fact": "",
+      "reason": "截止10月25日被转写原句与 minutes 5 pending deadline 一致支持。"
+    },
+    {
+      "case_id": "n05",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task8 seg4] 陈雪：智能客服灰度定在11月1日，先放量10%……；[task9 seg3] 11月1日灰度10%……；[minutes 5 decisions_json 第2条] 11月1日先放量10%。",
+      "proposed_fact": "",
+      "reason": "灰度开始日期11月1日被两段转写与 minutes 5 decision 一致支持。"
+    },
+    {
+      "case_id": "n05",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task8 seg4] 智能客服灰度定在11月1日，先放量10%；[task9 seg3] 11月1日灰度10%；[minutes 5 decisions_json 第2条] 11月1日先放量10%。",
+      "proposed_fact": "",
+      "reason": "放量比例10%被两段转写与 minutes 5 decision 一致支持。"
+    },
+    {
+      "case_id": "n06",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task8 seg4] 回滚预案要求15分钟内切回旧版；[task9 seg4] 回滚15分钟；[minutes 5 decisions_json 第2条] 回滚15分钟。",
+      "proposed_fact": "",
+      "reason": "回滚时限15分钟（要求15分钟内完成）被两段转写与 minutes 5 decision 一致支持。"
+    },
+    {
+      "case_id": "n07",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task9 seg8] 李娜：……全量上线不早于11月15日；[task9 seg4] 全量上线暂定11月15日，前提是灰度期没有P1问题；[minutes 5 decisions_json 第3条] 全量上线不早于11月15日。",
+      "proposed_fact": "",
+      "reason": "“不早于11月15日”被 task9 总结与 minutes 5 decision 直接支持。"
+    },
+    {
+      "case_id": "n08",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task8 seg5] 账单API的稳定性验证要在10月30日前完成，否则灰度顺延；[task9 seg3] 如果账单API在10月30日前没有通过稳定性验证，就推迟灰度；[minutes 5 pending_items_json 第2条] deadline_suggestion=2026-10-30T18:00:00（task9 seg6 recap 误作“陈雪API检查10月28日”，与上述三处及 minutes 冲突）。",
+      "proposed_fact": "",
+      "reason": "10月30日前被两段转写与 minutes 5 三处一致支持；task9 seg6 recap 的10月28日属材料内部矛盾，不足以推翻该事实。"
+    },
+    {
+      "case_id": "n09",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task8 seg6] 张敏：客户满意度CSAT目前4.3，目标提升到4.5；[minutes 5 summary] CSAT目标4.5。",
+      "proposed_fact": "",
+      "reason": "CSAT目标4.5被转写原句与 minutes 5 summary 一致支持。"
+    },
+    {
+      "case_id": "n10",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task8 seg6] 这个季度支持预算8万元；[minutes 5 summary] 季度预算8万元。",
+      "proposed_fact": "",
+      "reason": "季度客户支持预算8万元被转写原句与 minutes 5 summary 一致支持。"
+    },
+    {
+      "case_id": "n11",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task9 seg8] 李娜：今天的决定是：知识库补齐后再评估灰度；[minutes 5 decisions_json 第1条] 知识库补齐后再评估智能客服灰度。",
+      "proposed_fact": "",
+      "reason": "“知识库补齐后再评估智能客服灰度”为 task9 总结与 minutes 5 decision 原句。"
+    },
+    {
+      "case_id": "n12",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task9 seg5] 张敏：退款政策文档10月28日前由我更新，客服话术也同步调整；[minutes 5 pending_items_json 第3条] owner_suggestion=张敏。",
+      "proposed_fact": "",
+      "reason": "退款政策文档更新责任人张敏由转写自述与 minutes 5 pending owner 一致支持。"
+    },
+    {
+      "case_id": "n12",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task9 seg5] 退款政策文档10月28日前由我更新；[minutes 5 pending_items_json 第3条] deadline_suggestion=2026-10-28T18:00:00。",
+      "proposed_fact": "",
+      "reason": "完成时间10月28日被转写原句与 minutes 5 pending deadline 一致支持。"
+    },
+    {
+      "case_id": "n13",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task8 seg7] 张敏：主要风险是退款政策已过期，知识库如果继续引用旧政策会误导客户；[minutes 5 risks_json 第1条] 退款政策已过期……（HIGH）。",
+      "proposed_fact": "",
+      "reason": "“退款政策已过期”被转写原句与 minutes 5 risks 一致支持，且为 HIGH 风险。"
+    },
+    {
+      "case_id": "n13",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task8 seg5] 灰度依赖账单API，账单API的稳定性验证要在10月30日前完成，否则灰度顺延；[task9 seg3] 如果账单API在10月30日前没有通过稳定性验证，就推迟灰度；[minutes 5 risks_json 第2条] 账单API未在10月30日前通过稳定性验证会导致灰度顺延（MEDIUM）。",
+      "proposed_fact": "",
+      "reason": "“账单API稳定性影响灰度”被两段转写与 minutes 5 risks 一致支持。"
+    },
+    {
+      "case_id": "n14",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task9 seg6] 李娜：……10月22日再开一次检查会。",
+      "proposed_fact": "",
+      "reason": "下一次检查会10月22日为转写原句直接给出，minutes 5 未单列不影响事实成立。"
+    },
+    {
+      "case_id": "n15",
+      "fact_index": 1,
+      "verdict": "approve",
+      "evidence": "[task8 seg1] 李娜：今天评审客户支持知识库和智能客服灰度的准备情况；[task8 seg2-3] 知识库覆盖率82%→90%、补齐账单纠纷和权限申请、新增120条FAQ；[task8 seg4-5] 智能客服灰度11月1日10%、回滚15分钟、依赖账单API（10月30日前验证）（注：CSV/gold 的 source_task_ids 列为 9，与 morning=task8 不符，见 key_findings）。",
+      "proposed_fact": "",
+      "reason": "上午场（task8，recorded_at 2026-10-15 09:00）主题为知识库覆盖与灰度准备，属概括性表述，材料可完整支持。"
+    },
+    {
+      "case_id": "n15",
+      "fact_index": 2,
+      "verdict": "approve",
+      "evidence": "[task9 seg1] 李娜：下午继续，先复盘上午确定的知识库和灰度目标；[task9 seg4] 全量上线暂定11月15日；[task9 seg6] 确认行动项……10月22日再开检查会；[task9 seg8] 今天的决定是……全量上线不早于11月15日。",
+      "proposed_fact": "",
+      "reason": "下午场（task9，recorded_at 2026-10-15 14:00）主题为行动项对齐与上线时间，属概括性表述，材料可完整支持。"
+    }
+  ],
+  "summary": {
+    "approve": 23,
+    "revise": 0,
+    "reject": 0,
+    "key_findings": [
+      "【结论：未发现事实级错误】23 条 expected_fact 均能在 fixture 中找到直接依据（转写原句或 minutes 5 字段），判 approve 23 / revise 0 / reject 0；题干与事实一一对应，未出现此前 holdout 中的编造细节或题面错配。",
+      "【最需注意：n01 主持人无显式标注】fixture 的转写与纪要都没有“主持人”字样，meeting 3 的 host_id=1 也未在 fixture 内映射到姓名；“李娜”只能由 task8 seg1/seg8 与 task9 seg1/seg6/seg8 的开场、议程安排、确认行动项与总结决定等主持行为判定。建议在 fixture 补用户/主持人映射（或让李娜自述），否则该题属于行为推断而非显式事实。",
+      "【source_task_ids 少数与最直接证据不一致（建议修标签元数据，不影响事实本身）】n15-1“上午讨论……”应属 task8，但 CSV/gold 均列 9（task9 为下午，无上午内容）；n06“15分钟内”的准确措辞在 task8 seg4（task9 为“回滚15分钟”）；n11 决策原句只在 task9 seg8 与 minutes 5 decisions 第1条 出现（source 列 8，靠 minutes source_task_id=8 覆盖）。若按 source 范围投喂/检索，n15-1 会缺证据。",
+      "【fixture 内部不一致】task9 seg6 李娜 recap 说“陈雪API检查10月28日”，但 task8 seg5、task9 seg3 与 minutes 5 pending/deadline 均为“10月30日前”（n08 取后者：3 处支持 vs 1 处冲突，事实成立但建议修 recap）；另 minutes id=5 的 source_task_id=8（上午录音），但 summary/decisions 混入下午录音内容（退款政策10/28、全量上线、知识库补齐后再评估灰度），跨两段录音的纪要归属需明确。",
+      "【总体一致性】CSV 与 evaluation/gold/new_meeting_15.json 逐条一致（15 题/23 条，题干、顺序、source_task_ids 全同，0 处不一致）；本次材料仅 fixture（未见 meeting 3 其他转写/纪要文件），逐条证据均引 task+segment 或 minutes 5 字段。"
+    ]
+  }
+}

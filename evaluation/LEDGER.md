@@ -2383,3 +2383,13 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - 运行时 `services/rag_quality.py`：逐句检查引用数字/日期，标注
   number_not_in_cited/uncited_number/missing_citation，不拦截；默认开启。
 - 报告：`evaluation/reports/2026-10-22_rag_quality_gate.md`。
+
+### 34) 全新未见会议评测集（2026-10-22）
+
+- 合成新会议 meeting_id=3（客户支持知识库与智能客服灰度评审会），两段录音+已确认纪要；
+  15 题/23 事实，fresh session 且限定 meeting_ids=[3]。
+- judge：recall 100%、precision 97.96%、faithfulness 86.67%、relevancy 100%。
+- 独立复核：事实 23 approve/0 revise/0 reject；答案 15 correct/0 partial/0 wrong。
+- quality_gate 已纳入 new_meeting 阈值，当前 PASS。
+- 限制：合成语料、题目较直接；需真实会议/人工金标，不能声称真实泛化 98%。
+- 报告：`evaluation/reports/2026-10-22_new_meeting_eval.md`。

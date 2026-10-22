@@ -473,3 +473,13 @@ cross3，3 轮：
   当前 PASS。
 - 运行时新增确定性 `rag_quality` 审计：引用数字/日期不在被引上下文时标注
   （不拦截），补上生成后的质量兜底。
+
+## 34. 全新未见会议评测集
+
+完整报告：`evaluation/reports/2026-10-22_new_meeting_eval.md`。
+
+- 合成新会议 meeting 3，15 题/23 事实，fresh session 限定 meeting 3；
+- judge recall 100%、precision 97.96%、faithfulness 86.67%、relevancy 100%；
+- 独立事实 23/0/0，答案盲评 15/0/0；
+- quality_gate 纳入 new_meeting 阈值，当前 PASS；
+- 限制：合成语料、题面较直接，需真实会议/人工金标。

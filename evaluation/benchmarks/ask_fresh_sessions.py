@@ -29,6 +29,7 @@ def main() -> int:
     parser.add_argument("--qa-set", type=Path, required=True)
     parser.add_argument("--answers", type=Path, required=True)
     parser.add_argument("--base-url", default="http://127.0.0.1:19091")
+    parser.add_argument("--meeting-id", type=int, default=None)
     args = parser.parse_args()
     env = _env()
     login = _http_json(f"{args.base_url}/login", method="POST", token="",
@@ -40,18 +41,19 @@ def main() -> int:
     turns = []
     for case in qa["cases"]:
         created = _http_json(f"{args.base_url}/chat/session",
-                             payload={"meeting_ids": None}, token=token)
+                             payload={"meeting_ids": [args.meeting_id] if args.meeting_id else None},
+                             token=token)
         session_id = (created.get("data") or {}).get("id")
         if not session_id:
             raise RuntimeError(f"建会话失败：{created.get('msg') or created}")
         message = _ask(args.base_url, token, session_id, case["question"])
         turns.append({
-            "case_id": case["id"], "meeting_id": None, "question": case["question"],
+            "case_id": case["id"], "meeting_id": args.meeting_id, "question": case["question"],
             "answer": message.get("content") or "", "message_id": message.get("id"),
             "stop_reason": message.get("stop_reason"),
             "citations": message.get("citations") or [],
             "tools": message.get("tools") or [],
-            "allowed_meeting_ids": None,
+            "allowed_meeting_ids": [args.meeting_id] if args.meeting_id else None,
             "used_refs": _refs_from_answer(message),
             "unknown_refs": _unknown_refs(message),
             "retrieved": message.get("retrieved") or [],

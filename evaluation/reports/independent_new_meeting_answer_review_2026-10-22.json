@@ -1,0 +1,109 @@
+{
+  "reviewer": "independent-reviewer-4",
+  "reviewed_at": "2026-10-22",
+  "answers": [
+    {
+      "case_id": "n01",
+      "verdict": "correct",
+      "reason": "答「主持人是李娜」，引开场「各位上午好，今天评审客户支持知识库和智能客服灰度的准备情况，先对齐目标和风险」，并用「下午继续，先复盘上午确定的知识库和灰度目标……确认行动项……」与「今天的决定是……」证明李娜控场。命中 expected「李娜」。",
+      "missing_or_wrong": "次要（材料侧）：结论依据转写中李娜的开场/总结主持行为；fixture 的 meeting 3 行 host_id=1、creator_id=1（seed 中 user 1=系统管理员），若产品以会议元数据为准会给出不同答案。建议核对合成 fixture 的 host 字段；本题按 gold 判 correct。"
+    },
+    {
+      "case_id": "n02",
+      "verdict": "correct",
+      "reason": "答「当前知识库覆盖率82%、目标覆盖率90%」，引王磊原话「当前知识库覆盖率为82%，我们的目标是把覆盖率提升到90%」及已确认纪要摘要/观点。命中 expected「当前82% / 目标90%」。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "n03",
+      "verdict": "correct",
+      "reason": "答未覆盖主题为「账单纠纷」「权限申请」，引纪要摘要「未覆盖主题为账单纠纷和权限申请」与王磊原话「重点补齐两个未覆盖主题：账单纠纷和权限申请」。命中 expected 两项。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "n04",
+      "verdict": "correct",
+      "reason": "答「新增120条FAQ、负责人王磊、2026-10-25完成」，引纪要待办「新增120条FAQ，覆盖账单纠纷和权限申请；王磊；2026-10-25」与王磊原话「我计划新增120条FAQ，负责人是我，截止10月25日」。命中 expected「120条FAQ / 王磊负责 / 10月25日」。",
+      "missing_or_wrong": "次要：称「该待办在 query_meeting_state 中未返回已确认 action_item」——fixture 只插入 meeting_minutes、未建 action_item，故与测试环境一致；若复现库中已生成 action_item 需复核该句。"
+    },
+    {
+      "case_id": "n05",
+      "verdict": "correct",
+      "reason": "答「11月1日开始、初始放量10%」，引陈雪原话「智能客服灰度定在11月1日，先放量10%」与纪要 topics「11月1日灰度10%，回滚15分钟；依赖账单API，10月30日前验证」。命中 expected「11月1日 / 10%」。",
+      "missing_or_wrong": "次要：引用纪要 topics 时截断了「全量不早于11月15日」分句且未加省略号，属引用格式瑕疵。"
+    },
+    {
+      "case_id": "n06",
+      "verdict": "correct",
+      "reason": "答「15分钟内完成切回旧版」，引陈雪「回滚预案要求15分钟内切回旧版」与纪要 viewpoints「回滚15分钟」。命中 expected「15分钟内」。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "n07",
+      "verdict": "correct",
+      "reason": "答「全量上线最早不早于11月15日」，引决策「全量上线不早于11月15日」及陈雪观点/纪要摘要「全量上线不早于11月15日」。命中 expected「不早于11月15日」。",
+      "missing_or_wrong": "次要：「最早不早于」表述略绕；且称「资料未给出具体年份」，却同时引「决策条目中的时间戳显示为 2026-11-15」，自相矛盾（仅年份表述瑕疵，不影响核心答案）。"
+    },
+    {
+      "case_id": "n08",
+      "verdict": "correct",
+      "reason": "答「账单API稳定性验证截止10月30日」，引陈雪原话「账单API的稳定性验证要在10月30日前完成，否则灰度顺延」及下午复盘「如果账单API在10月30日前没有通过稳定性验证，就推迟灰度」。命中 expected「10月30日前」。",
+      "missing_or_wrong": "次要：称「资料未给出年份」，但 minutes 的待办/决策 deadline 为 2026-10-30；另 fixture 下午行动项有「陈雪API检查10月28日」（SEG_B 第6段），与「稳定性验证10月30日前」存在口径差异，答案未提及，建议确认是否需披露该冲突。"
+    },
+    {
+      "case_id": "n09",
+      "verdict": "correct",
+      "reason": "答「CSAT目标是4.5」，引张敏原话「客户满意度CSAT目前4.3，目标提升到4.5」及纪要摘要/观点。命中 expected「4.5」。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "n10",
+      "verdict": "correct",
+      "reason": "答「本季度客户支持预算为8万元」，引张敏原话「这个季度支持预算8万元」及纪要摘要/观点。命中 expected「8万元」。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "n11",
+      "verdict": "correct",
+      "reason": "答「先完成知识库补齐，再评估智能客服灰度」，引已确认决策条目「知识库补齐后再评估智能客服灰度」，并引转写证据（覆盖率82%→90%、退款政策过期风险、李娜「今天先确认知识库补齐和灰度前检查两项决策」）。命中 expected。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "n12",
+      "verdict": "correct",
+      "reason": "答「退款政策文档由张敏负责更新，需在2026-10-28前完成」，引纪要待办「更新退款政策文档和客服话术 张敏 2026-10-28」与张敏原话「退款政策文档10月28日前由我更新」及李娜行动项复述。命中 expected「张敏 / 10月28日」。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "n13",
+      "verdict": "correct",
+      "reason": "答两项风险：高风险「退款政策已过期，知识库若继续引用旧政策会误导客户」、中风险「账单API未在10月30日前通过稳定性验证会导致灰度顺延」，并给出对应建议。命中 expected「退款政策已过期 / 账单API稳定性影响灰度」。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "n14",
+      "verdict": "correct",
+      "reason": "答「下一次检查会定在10月22日」，引李娜原话「10月22日再开一次检查会」，并说明该信息来自 RAW 转写、未见已确认纪要条目。命中 expected「10月22日」。",
+      "missing_or_wrong": ""
+    },
+    {
+      "case_id": "n15",
+      "verdict": "correct",
+      "reason": "答上午录音（task_id=8）主要讨论评审目标与风险对齐（知识库覆盖率计划、智能客服灰度时间与回滚、账单API依赖、退款政策过期风险），下午录音（task_id=9）复盘并落实行动项与决策（FAQ交付、API检查、退款政策截止时间、全量不早于11月15日），并核对两段 recorded_at 09:00/14:00。命中 expected 两项。",
+      "missing_or_wrong": ""
+    }
+  ],
+  "summary": {
+    "correct": 15,
+    "partial": 0,
+    "wrong": 0,
+    "key_findings": [
+      "15/15 命中 expected_facts，未见核心事实错误或编造：两段录音（task 8 上午 / task 9 下午）、已确认纪要（decisions/pending_items/risks/viewpoints）均被正确取用，数字（82%/90%、120条FAQ、10月25日、11月1日10%、15分钟、11月15日、10月30日、4.5、8万元）、负责人（王磊/张敏/陈雪/李娜）与日期均与 fixture 一致，新会议泛化表现良好。",
+      "材料侧瑕疵（非答案错误）：fixture 中 meeting 3 的 host_id=1、creator_id=1（seed 中 user 1=系统管理员），但转写里由李娜开场/控场/总结；n01 依据转写给「李娜」（与 gold 一致），若产品改用 meeting 元数据会得到不同答案，建议核对合成 fixture 的 host 字段。",
+      "n08 相关 fixture 口径冲突：下午行动项写「陈雪API检查10月28日」（SEG_B 第6段），而上午/下午转写与 minutes 均为「账单API稳定性验证10月30日前」；答案采用10月30日（与 gold 一致）但未披露该冲突，建议确认语料是否把「API检查」与「稳定性验证」设计成两个不同事项。",
+      "年份口径不统一：n04/n12 写 2026-10-25/2026-10-28（取自 minutes deadline），n07/n08 则称「资料未给出年份」（n07 还同时引「决策条目中的时间戳显示为 2026-11-15」，自相矛盾）；均为表述瑕疵，不影响 expected 命中。",
+      "n04 称「query_meeting_state 未返回已确认 action_item」：fixture 仅插入 minutes、未建 action_item，与测试环境一致；若复现库中已生成 action_item 需复核。",
+      "其余答案（n02/n03/n05/n06/n09/n10/n11/n13/n14/n15）事实、数字、负责人、日期均与 fixture 一致，无缺失；仅 n05 引用纪要时截断分句未加省略号，属引用格式小瑕疵。"
+    ]
+  }
+}
