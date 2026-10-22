@@ -57,6 +57,10 @@ trajectory:
 	@echo "裁判抽检回填表（零调用）: $(PY) gold/judge_spotcheck.py --artifact results/chat_answers.json --sample 20 --output results/judge_spotcheck_20.csv"
 	@echo "回填后算 Cohen's kappa: $(PY) gold/judge_spotcheck.py --score results/judge_spotcheck_20.csv --output results/judge_spotcheck_20.score.json"
 
+# RAG 全链路质量闸（零模型调用）
+quality-gate:
+	$(PY) quality_gate.py
+
 # 评测代码自身单测（零调用）
 test:
 	cd . && $(PY) -m unittest discover -s tests -p 'test_*.py'

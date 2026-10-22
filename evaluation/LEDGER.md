@@ -2375,3 +2375,11 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
   但 coverage 24→23；cross30 recall 75.86→68.97、precision 63.64→57.14、
   faithfulness 88.63→82.05。
 - 拒绝默认；结论：over-call 抑制必须按“是否有贡献”，不能按数量。
+
+### 33) RAG 全链路质量闸（2026-10-22）
+
+- 评测侧 `evaluation/quality_gate.py`：P0 6×3 + fresh cross30 + claim audit 阈值；
+  当前 PASS（P0 recall97.2/precision64.2/faith90.7；cross30 75.9/63.6/88.6）。
+- 运行时 `services/rag_quality.py`：逐句检查引用数字/日期，标注
+  number_not_in_cited/uncited_number/missing_citation，不拦截；默认开启。
+- 报告：`evaluation/reports/2026-10-22_rag_quality_gate.md`。
