@@ -500,6 +500,6 @@ cross3，3 轮：
 
 - 100 题/167 facts：cross30 30、holdoutA 20、D 20、new meeting 15、B 15；
   每题 fresh session 且限定会议。
-- recall 88.62%、precision 71.06%、faithfulness 90.24%、relevancy 96.00%。
-- cross30 仍是主短板（recall 78.3%、faith 80.8%）；quality_gate 已加入 mixed100 阈值，
+- 修正系列题 scope 后：recall 91.02%、precision 71.83%、faithfulness 89.21%、relevancy 97.00%。
+- cross30 仍是主短板（recall 81.7%、faith 78.6%）；quality_gate 已加入 mixed100 阈值，
   当前 PASS。
