@@ -40,6 +40,14 @@ def enabled() -> bool:
     return os.getenv("INTENT_ROUTER_ENABLED", "0").strip().lower() not in {"0", "false", "no", "off"}
 
 
+def hint_enabled() -> bool:
+    return os.getenv("INTENT_ROUTER_HINT", "1").strip().lower() not in {"0", "false", "no", "off"}
+
+
+def budget_enabled() -> bool:
+    return os.getenv("INTENT_ROUTER_BUDGET", "1").strip().lower() not in {"0", "false", "no", "off"}
+
+
 def selective() -> bool:
     """只对 cross_meeting/state 注入路由，避免影响 single/aggregation 的答案忠实度。"""
     return os.getenv("INTENT_ROUTER_SELECTIVE", "1").strip().lower() not in {"0", "false", "no", "off"}
@@ -67,4 +75,4 @@ def policy_for(question: str) -> dict:
     return {"intent": intent, **POLICY[intent]}
 
 
-__all__ = ["INTENTS", "POLICY", "classify", "enabled", "selective", "policy_for"]
+__all__ = ["INTENTS", "POLICY", "classify", "enabled", "hint_enabled", "budget_enabled", "selective", "policy_for"]

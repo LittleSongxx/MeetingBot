@@ -2359,3 +2359,12 @@ MRR **0.9228**、nDCG@k **0.9341**、recording coverage **96.12%**，
 - fresh cross30：off recall75.86/precision63.64/faith88.63；选择性 recall77.59/precision73.33/
   faith73.53；全量 faith83.06。
 - precision 提升但 faithfulness 明显下降，默认仍 0；需盲评+新 holdout。
+
+### 31) 工具 F1 深研：over-call 混合，不能硬压（2026-10-22）
+
+- fresh trajectory：12 完全匹配、12 只多调、3 既漏又多；只漏 required 仅 3。
+- 18 次 extra call 中，7 次无 citation 贡献、11 次有贡献。
+- 直接压 over-call：全量/选择性/仅 hint/仅 budget 都改善部分 F1，但 cross30
+  faithfulness 均下降（88.63→73.53~83.69%）。
+- 结论：F1 是“最小工具集”口径，不能当唯一目标；先补 over-call utility/faithfulness/
+  pass^k 指标，只压无贡献调用。报告：`evaluation/reports/2026-10-22_tool_f1_deep_dive.md`。
