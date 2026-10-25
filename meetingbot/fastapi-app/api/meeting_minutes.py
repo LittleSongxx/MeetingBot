@@ -466,8 +466,15 @@ def find_chinese_font() -> str:
     # 容器安装文泉驿 TrueType 字体；保留原有 Windows/Linux 字体回退。
     candidates = [Path("C:/Windows/Fonts/simhei.ttf"), Path("C:/Windows/Fonts/msyh.ttc"), Path("/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc"), Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")]
     for path in candidates:
-        if path.is_file():
-            return str(path)
+        if not path.is_file():
+            continue
+        try:
+            # .ttc/.otf 集合可能装的是 CFF 轮廓（如 Noto CJK），reportlab 只支持 TrueType 轮廓；
+            # 这里以"能否被 reportlab 解析"为准跳过不可用字体，避免换机器后导出直接 500。
+            TTFont("font-probe", str(path))
+        except Exception:  # noqa: BLE001 - 字体可用性是运行环境属性，探测失败就换下一个
+            continue
+        return str(path)
     # 一个都没找到时导出会变成方块，所以直接抛业务异常告诉用户
     raise CustomException("未找到可用的中文PDF字体")
 
