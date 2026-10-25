@@ -36,6 +36,7 @@
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from typing import Any, Literal, Mapping, Sequence
 
@@ -96,6 +97,29 @@ ISSUE_EVIDENCE_POLICY: dict[str, str] = {
     "UNSUPPORTED": EVIDENCE_NEGATIVE,
     "NOT_ACTIONABLE": EVIDENCE_NONE,
     "VAGUE": EVIDENCE_NONE,
+}
+
+# 缺失类规则的**前提语义**校验：光有"能定位的 span"不够，span 还必须证明该槽位在原文里
+# 讨论过。否则 MISSING_DEADLINE 会拿任何一句原文当依据、无条件触发（评测账本里那条
+# 77.8%/85.7% 的误报就是这种形态）。这是"条件化规则"的数据结构版本，不是提示词补丁。
+#
+# 只对 **MISSING_DEADLINE** 做前提语义校验。MISSING_OWNER 不做：独立验证用真实产物回放发现
+# "谁来做"常常隐含在口语里（如"我一会跟学生跟那个家长聊"），按线索词判会把合法意见全丢掉
+# （19/19 被丢）——误伤比误报更贵；owner 的误报率也没有被实测成问题。
+DEADLINE_CUE_PATTERN = re.compile(
+    r"月底|月初|季度末|季末|年底|年前|本周|下周|周五|周[一二三四五六日天]|星期|工作日|"
+    r"下班前|上线前|发布前|会议前|节前|截止|期限|之前|以后|之内|deadline")
+
+
+def _premise_has_time(span: str) -> bool:
+    """时间语义：精确/相对时间（timex）或常见软期限表达。"""
+    if timex.looks_like_a_time(span):
+        return True
+    return bool(DEADLINE_CUE_PATTERN.search(span))
+
+
+ISSUE_PREMISE_CHECKS: dict[str, tuple[str, Any]] = {
+    "MISSING_DEADLINE": ("missing_rule_premise_has_no_time", _premise_has_time),
 }
 
 
@@ -323,6 +347,14 @@ def issue_evidence_verdicts(
                     path=f"issues[{index}]({issue_type})",
                     detail=f"所给原文依据无法在转写中定位：{span[:40]!r}",
                 ))
+            else:
+                premise = ISSUE_PREMISE_CHECKS.get(issue_type)
+                if premise is not None and not premise[1](span):
+                    kinds, _check = premise
+                    problems.append(Violation(
+                        kind=kinds, path=f"issues[{index}]({issue_type})",
+                        detail=f"原文依据里没有该槽位的语义（{issue_type}）：{span[:40]!r}",
+                    ))
         elif policy == EVIDENCE_NEGATIVE:
             # 无依据类：必须先指明被判定的文本，且该文本**不在**原文里
             if not target.strip():

@@ -310,8 +310,8 @@ class HttpEngineTest(unittest.IsolatedAsyncioTestCase):
             async def post(self, *args, **kwargs):
                 return self._post(*args, **kwargs)
 
-        def fake_post(url, files=None):
-            fake_post.calls.append(url)
+        def fake_post(url, files=None, data=None):
+            fake_post.calls.append((url, data))
             return FakeResponse()
         fake_post.calls = []
 
@@ -328,6 +328,7 @@ class HttpEngineTest(unittest.IsolatedAsyncioTestCase):
                     "ASR_HTTP_URL": "http://127.0.0.1:9970/transcribe"}),
                   unittest.mock.patch.object(svc.httpx, "AsyncClient",
                                              lambda timeout: FakeClient(fake_post)),
+                  unittest.mock.patch.object(svc, "_audio_duration_seconds", lambda path: 600.0),
                   unittest.mock.patch.object(
                           svc, "create_call_log",
                           AsyncMock(side_effect=lambda *a, **k: logs.append((a, k))))):
@@ -338,8 +339,95 @@ class HttpEngineTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(result["segments"]), 2)
         self.assertEqual(result["segments"][0]["speaker"], 0)
         self.assertEqual(result["duration"], 12.5)
-        self.assertTrue(fake_post.calls[0].endswith("/transcribe"))
+        self.assertTrue(fake_post.calls[0][0].endswith("/transcribe"))
+        # 显式生成预算：600s × 16 tok/s + 6144
+        self.assertEqual(fake_post.calls[0][1], {"max_new_tokens": str(600 * 16 + 6144)})
         self.assertEqual(logs[0][1].get("model_name"), svc.LOCAL_ASR_MODEL_NAME)
+
+    async def test_http_engine_rejects_incomplete_sidecar_output(self):
+        """侧车覆盖率不足/截断时不能当成功落库（产品链路实测过 5120 token 静默截断）。"""
+        from services import transcription_service as svc
+
+        class FakeResponse:
+            status_code = 200
+            def __init__(self, contract):
+                self._contract = contract
+            def json(self):
+                return self._contract
+
+        class FakeClient:
+            def __init__(self, contract):
+                self._contract = contract
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                return False
+            async def post(self, *args, **kwargs):
+                return FakeResponse(self._contract)
+
+        task = types.SimpleNamespace(id=1)
+        config = types.SimpleNamespace(model_name="qwen-audio-x", api_key="k",
+                                       base_url="http://ds", timeout_seconds=30,
+                                       model_type="TRANSCRIPTION", id=7)
+        audio = Path(tempfile.mkstemp(suffix=".mp3")[1])
+        audio.write_bytes(b"fake-audio")
+        contract = {"text": "甲说了。", "duration": 516.0,
+                    "segments": [{"start": 0.0, "end": 5.0, "speaker": 0, "text": "甲说了。"}],
+                    "audio_seconds": 1861.5, "covered_seconds": 516.0, "truncated": True}
+        try:
+            with (unittest.mock.patch.dict("os.environ", {
+                    "TRANSCRIPTION_ENGINE": "http",
+                    "ASR_HTTP_URL": "http://127.0.0.1:9970/transcribe"}),
+                  unittest.mock.patch.object(svc.httpx, "AsyncClient",
+                                             lambda timeout: FakeClient(contract)),
+                  unittest.mock.patch.object(svc, "create_call_log", AsyncMock()),
+                  unittest.mock.patch.object(svc, "_audio_duration_seconds", lambda path: 1861.5),
+                  self.assertRaisesRegex(RuntimeError, "覆盖率")):
+                await svc.call_transcription_model(task, config, audio)
+        finally:
+            audio.unlink(missing_ok=True)
+
+    async def test_http_engine_tolerates_short_tail_silence(self):
+        """短音频尾部静音（≤2s 缺口）不算截断；否则 1 分钟录音会被误判失败。"""
+        from services import transcription_service as svc
+
+        class FakeResponse:
+            status_code = 200
+            def __init__(self, contract):
+                self._contract = contract
+            def json(self):
+                return self._contract
+
+        class FakeClient:
+            def __init__(self, contract):
+                self._contract = contract
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                return False
+            async def post(self, *args, **kwargs):
+                return FakeResponse(self._contract)
+
+        contract = {"text": "甲说了。", "duration": 59.5,
+                    "segments": [{"start": 0.0, "end": 59.5, "speaker": 0, "text": "甲说了。"}],
+                    "audio_seconds": 60.0, "covered_seconds": 59.5, "truncated": False}
+        task = types.SimpleNamespace(id=1)
+        config = types.SimpleNamespace(model_name="qwen", api_key="k", base_url="http://ds",
+                                       timeout_seconds=30, model_type="TRANSCRIPTION", id=1)
+        audio = Path(tempfile.mkstemp(suffix=".mp3")[1])
+        audio.write_bytes(b"fake-audio")
+        try:
+            with (unittest.mock.patch.dict("os.environ", {
+                    "TRANSCRIPTION_ENGINE": "http",
+                    "ASR_HTTP_URL": "http://127.0.0.1:9970/transcribe"}),
+                  unittest.mock.patch.object(svc.httpx, "AsyncClient",
+                                             lambda timeout: FakeClient(contract)),
+                  unittest.mock.patch.object(svc, "create_call_log", AsyncMock()),
+                  unittest.mock.patch.object(svc, "_audio_duration_seconds", lambda path: 60.0)):
+                result = await svc.call_transcription_model(task, config, audio)
+        finally:
+            audio.unlink(missing_ok=True)
+        self.assertEqual(len(result["segments"]), 1)
 
     async def test_http_engine_requires_url(self):
         from services import transcription_service as svc

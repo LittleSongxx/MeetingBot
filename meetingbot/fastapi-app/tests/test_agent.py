@@ -70,7 +70,7 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
         self.task = await TranscriptionTask.create(
             task_no="TSK-AGENT-001", meeting_id=self.meeting.id, material_id=1,
             model_config_id=self.config.id, initiator_id=self.owner.id, status="SUCCEEDED",
-            full_text="王敏说报表导出要改成异步，张涛负责。",
+            full_text="王敏说报表导出要改成异步，张涛负责，9月5日前完成。",
         )
         self.minutes = await MeetingMinutes.create(
             meeting_id=self.meeting.id, source_task_id=self.task.id,
@@ -168,7 +168,7 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_refine_receives_same_bounded_transcript_as_review(self):
         """审查和修订都看到同一份节选，超限尾部不能被当作已提供的证据。"""
-        transcript = "已提供的事实：张涛负责。" + "甲" * 40 + "未提供的尾部证据"
+        transcript = "已提供的事实：张涛负责，9月5日前完成。" + "甲" * 40 + "未提供的尾部证据"
         await TranscriptionTask.filter(id=self.task.id).update(full_text=transcript)
         run = await self.create_run(max_rounds=1)
         model = AsyncMock(side_effect=[self.failing_review(), self.support_ok(), self.refined()])
@@ -309,9 +309,11 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
         # 意见必须带证据才过门控（真实模型 100% 会给 source_span/target_text）：
         # 缺失类给"原文里确实有"的前提，否则会被证据门控挡下、这一轮直接判通过。
         return {"passed": False, "score": 50, "conclusion": "仍有问题", "issues": [
+            # 缺失类意见的前提必须承载该槽位语义（2026-10-22 起由 contracts 校验）：
+            # MISSING_DEADLINE 的 source_span 里必须真的有时间表达，否则意见被丢弃。
             {"field": "decisions", "index": 0, "issue_type": "MISSING_DEADLINE",
              "detail": "没写时间", "suggestion": "补上日期",
-             "source_span": "张涛负责", "target_text": "张涛负责"}
+             "source_span": "9月5日前完成", "target_text": "9月5日前完成"}
         ]}
 
     async def test_single_round_is_review_then_refine(self):

@@ -135,5 +135,17 @@ class TracingTest(unittest.TestCase):
         self.assertEqual(usage["meetingbot.cost_micro"], 3)
 
 
+class PercentileTest(unittest.TestCase):
+    def test_percentile_nearest_rank(self):
+        from services.observability_service import percentile
+
+        self.assertEqual(percentile([], 95), 0)
+        self.assertEqual(percentile([10], 95), 10)
+        self.assertEqual(percentile([1, 2, 3, 4, 5], 50), 3)
+        self.assertEqual(percentile([1, 2, 3, 4, 5], 95), 5)
+        self.assertEqual(percentile([5, 1, 3], 50), 3)
+
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -336,9 +336,36 @@ class IssueEvidenceGateTest(unittest.TestCase):
         )
         self.assertEqual([v.kind for v in violations], ["missing_rule_with_unsupported_premise"])
 
+    def test_soft_deadline_premise_is_accepted(self):
+        """相对/软期限（月底前、上线前）没有具体日期，但显然是期限语义，不能被丢掉。"""
+        transcript = "讨论：月底前完成灰度，上线前补齐文档。"
+        for span in ("月底前完成灰度", "上线前补齐文档"):
+            violations = contracts.check_issue_evidence(
+                [{"issue_type": "MISSING_DEADLINE", "source_span": span, "target_text": ""}],
+                transcript,
+            )
+            self.assertEqual(violations, [], msg=span)
+
     def test_missing_rule_with_a_real_premise_passes(self):
         violations = contracts.check_issue_evidence(
             [{"issue_type": "MISSING_DEADLINE", "source_span": "2026 年 9 月 28 日", "target_text": ""}],
+            TRANSCRIPT,
+        )
+        self.assertEqual(violations, [])
+
+    def test_missing_deadline_premise_without_time_semantics_is_rejected(self):
+        """缺失类前提本身必须承载该槽位语义：一句能定位的普通原文不能证明“原文讨论过期限”。"""
+        violations = contracts.check_issue_evidence(
+            [{"issue_type": "MISSING_DEADLINE", "source_span": "只在产品组试点", "target_text": ""}],
+            TRANSCRIPT,
+        )
+        self.assertEqual([v.kind for v in violations], ["missing_rule_premise_has_no_time"])
+
+    def test_missing_owner_premise_is_not_over_filtered(self):
+        """MISSING_OWNER 不做前提语义校验：口语里"谁来做"经常没有负责人线索词，
+        强行按线索词过滤会把合法意见丢掉（独立验证：真实产物 19/19 被误伤）。"""
+        violations = contracts.check_issue_evidence(
+            [{"issue_type": "MISSING_OWNER", "source_span": "只在产品组试点", "target_text": ""}],
             TRANSCRIPT,
         )
         self.assertEqual(violations, [])

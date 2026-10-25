@@ -337,14 +337,38 @@ async def call_transcription_model(
             if not endpoint:
                 raise RuntimeError("TRANSCRIPTION_ENGINE=http 需要设置 ASR_HTTP_URL")
             log_model_name = LOCAL_ASR_MODEL_NAME
+            # 显式把生成预算传给侧车：长音频默认 5120 token 会在 ~5.7 分钟处静默截断
+            # （本地链路实测的失败形态）。按 16 tok/s + 6144 余量估算，侧车仍会按上下文封顶。
+            audio_seconds = _audio_duration_seconds(audio_path) or 0.0
+            local_form: dict[str, str] = {}
+            if audio_seconds > 0:
+                local_form["max_new_tokens"] = str(int(audio_seconds * 16) + 6144)
             async with httpx.AsyncClient(timeout=config.timeout_seconds) as client:
                 with audio_path.open("rb") as audio_file:
                     response = await client.post(
-                        endpoint, files={"file": (audio_path.name, audio_file, "audio/mpeg")})
+                        endpoint, files={"file": (audio_path.name, audio_file, "audio/mpeg")},
+                        data=local_form or None)
             if response.status_code >= 400:
                 raise RuntimeError(f"本地ASR服务请求失败：{response.text[:500]}")
             detail = response.json()
             response_size = len(str(detail))
+            # 覆盖率/截断守卫：不允许把"只转了一部分"的输出当 SUCCEEDED 落库。
+            # 容忍短音频尾部静音（缺口 ≤2s 或 ≤1% 不判截断），长音频缺口大一律失败。
+            covered_seconds = detail.get("covered_seconds")
+            total_seconds = float(detail.get("audio_seconds") or audio_seconds or 0)
+            coverage = (float(covered_seconds) / total_seconds
+                        if covered_seconds is not None and total_seconds > 0 else None)
+            deficit = (total_seconds - float(covered_seconds)
+                       if covered_seconds is not None else 0.0)
+            incomplete = (detail.get("truncated")
+                          or (coverage is not None
+                              and deficit > max(2.0, 0.01 * total_seconds)))
+            if incomplete:
+                raise RuntimeError(
+                    "本地ASR输出不完整：覆盖率 "
+                    f"{(coverage if coverage is not None else 0) * 100:.1f}%"
+                    f"（缺口 {deficit:.1f}s，疑似 max_new_tokens 不足/模型截断），"
+                    "按失败处理，请检查侧车版本与生成预算")
             result = {"text": str(detail.get("text") or ""),
                       "duration": float(detail.get("duration") or 0),
                       "segments": [

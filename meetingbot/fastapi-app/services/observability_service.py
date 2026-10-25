@@ -1,5 +1,6 @@
 from collections import Counter
 from datetime import date, datetime, time, timedelta
+from math import ceil
 
 from common.exception_handler import CustomException
 from common.times import LOCAL_TZ, format_datetime, now, to_local
@@ -36,6 +37,15 @@ def parse_date_range(date_from: str | None, date_to: str | None) -> tuple[date, 
     start_time = datetime.combine(start_date, time.min, tzinfo=LOCAL_TZ)
     end_time = datetime.combine(end_date + timedelta(days=1), time.min, tzinfo=LOCAL_TZ)
     return start_date, end_date, start_time, end_time
+
+
+def percentile(values: list[int], p: float) -> int:
+    """最近秩百分位（与基线报告口径一致；空样本返回 0）。"""
+    if not values:
+        return 0
+    ordered = sorted(values)
+    index = max(0, min(len(ordered) - 1, ceil(p / 100 * len(ordered)) - 1))
+    return ordered[index]
 
 
 def token_usage(usage: dict | None) -> tuple[int, int, int]:
@@ -206,9 +216,10 @@ async def build_observability(current_user: User, date_from: str | None, date_to
                 day["failed_count"] += 1
 
         # 按调用类型累计次数、耗时、Token 和失败数，调用类型分布图用
-        call_type = call_type_map.setdefault(log.call_type, {"call_type": log.call_type, "call_count": 0, "failed_count": 0, "elapsed_ms": 0, "total_tokens": 0, "cost_micro": 0})
+        call_type = call_type_map.setdefault(log.call_type, {"call_type": log.call_type, "call_count": 0, "failed_count": 0, "elapsed_ms": 0, "total_tokens": 0, "cost_micro": 0, "elapsed_samples": []})
         call_type["call_count"] += 1
         call_type["elapsed_ms"] += log.elapsed_ms
+        call_type["elapsed_samples"].append(int(log.elapsed_ms or 0))
         call_type["total_tokens"] += current_total
         call_type["cost_micro"] += cost_micro
         if log.status == "FAILED":
@@ -227,8 +238,11 @@ async def build_observability(current_user: User, date_from: str | None, date_to
     for item in call_type_map.values():
         # 成功率保留两位小数
         item["success_rate"] = round((item["call_count"] - item["failed_count"]) * 100 / item["call_count"], 2)
-        # 累计耗时换成平均耗时，累计值从返回结构里去掉
+        # 累计耗时换成平均耗时；样本同时算 p50/p95（最近秩，空样本为 0）
         item["average_elapsed_ms"] = round(item.pop("elapsed_ms") / item["call_count"], 2)
+        samples = item.pop("elapsed_samples")
+        item["p50_elapsed_ms"] = percentile(samples, 50)
+        item["p95_elapsed_ms"] = percentile(samples, 95)
         call_types.append(item)
     # 调用次数多的排前面，次数相同按类型名排
     call_types.sort(key=lambda item: (-item["call_count"], item["call_type"]))
@@ -244,7 +258,7 @@ async def build_observability(current_user: User, date_from: str | None, date_to
     # 反思环没有工具，能按类型统计的是审查、重写、汇总这三种步骤
     step_map = {}
     for step in steps:
-        item = step_map.setdefault(step.step_type, {"step_type": step.step_type, "call_count": 0, "succeeded_count": 0, "failed_count": 0, "elapsed_total_ms": 0, "elapsed_samples": 0})
+        item = step_map.setdefault(step.step_type, {"step_type": step.step_type, "call_count": 0, "succeeded_count": 0, "failed_count": 0, "elapsed_total_ms": 0, "elapsed_samples": 0, "elapsed_values": []})
         item["call_count"] += 1
         # RUNNING 的步骤只计入总数，不计成功也不计失败
         if step.status == "SUCCEEDED":
@@ -255,17 +269,22 @@ async def build_observability(current_user: User, date_from: str | None, date_to
         if step.elapsed_ms:
             item["elapsed_total_ms"] += step.elapsed_ms
             item["elapsed_samples"] += 1
+            item["elapsed_values"].append(int(step.elapsed_ms))
     step_ranking = []
     for item in step_map.values():
         item["success_rate"] = round(item["succeeded_count"] * 100 / item["call_count"], 2)
         # 累计值和样本数只用来算平均，算完就从返回结构里去掉
         elapsed_total_ms = item.pop("elapsed_total_ms")
         elapsed_samples = item.pop("elapsed_samples")
+        values = item.pop("elapsed_values")
         item["average_elapsed_ms"] = round(elapsed_total_ms / elapsed_samples, 2) if elapsed_samples else 0
+        item["p50_elapsed_ms"] = percentile(values, 50)
+        item["p95_elapsed_ms"] = percentile(values, 95)
         step_ranking.append(item)
     # 步骤多的排前面，条数相同时按类型名排
     step_ranking.sort(key=lambda item: (-item["call_count"], item["step_type"]))
 
+    all_elapsed = [int(log.elapsed_ms or 0) for log in logs]
     failed_count = sum(log.status == "FAILED" for log in logs)
     succeeded_runs = sum(run.status == "SUCCEEDED" for run in runs)
     failed_steps = sum(step.status == "FAILED" for step in steps)
@@ -301,7 +320,9 @@ async def build_observability(current_user: User, date_from: str | None, date_to
             "call_count": len(logs),
             "failed_call_count": failed_count,
             "call_success_rate": round((len(logs) - failed_count) * 100 / len(logs), 2) if logs else 0,
-            "average_elapsed_ms": round(sum(log.elapsed_ms for log in logs) / len(logs), 2) if logs else 0,
+            "average_elapsed_ms": round(sum(all_elapsed) / len(all_elapsed), 2) if all_elapsed else 0,
+            "p50_elapsed_ms": percentile(all_elapsed, 50),
+            "p95_elapsed_ms": percentile(all_elapsed, 95),
             "input_tokens": total_input_tokens,
             "output_tokens": total_output_tokens,
             "total_tokens": total_tokens,
@@ -309,6 +330,7 @@ async def build_observability(current_user: User, date_from: str | None, date_to
             "cost_micro": total_cost_micro,
             "cost_text": pricing.format_micro(total_cost_micro),
             "unpriced_call_count": unpriced_count,
+            "unpriced_ratio": round(unpriced_count * 100 / len(logs), 2) if logs else 0,
             "agent_run_count": len(runs),
             "agent_success_rate": round(succeeded_runs * 100 / len(runs), 2) if runs else 0,
             "average_agent_elapsed_ms": round(sum(finished_run_durations) / len(finished_run_durations), 2) if finished_run_durations else 0,

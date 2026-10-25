@@ -17,6 +17,7 @@ services:
       # 表结构的真源是 models.py，schema.sql 必须与它一致（有零调用的漂移测试兜底）。
       - ./db/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./db/02-seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+      - ./db/03-model-prices.sql:/docker-entrypoint-initdb.d/03-model-prices.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h 127.0.0.1 -u $$MYSQL_USER -D $$MYSQL_DATABASE -Nse 'SELECT 1 FROM prompt_template LIMIT 1' >/dev/null 2>&1"]
       interval: 5s
@@ -44,6 +45,47 @@ services:
       timeout: 5s
       retries: 30
       start_period: 20s
+
+
+  # MOSS 本地 SA-ASR 侧车（可选，profile: moss）。
+  # 启用：在 .env 设 TRANSCRIPTION_ENGINE=http / ASR_HTTP_URL=http://asr-sidecar:9971/transcribe
+  # + MOSS_MODEL_HOST_DIR=<含 MOSS-Transcribe-Diarize 权重的目录>，然后
+  #   ./scripts/compose.sh --profile moss up -d asr-sidecar backend
+  # 侧车在 compose 网络内，不需要映射宿主端口（调试时可取消 ports 注释）。
+  asr-sidecar:
+    build:
+      context: ./scripts
+      dockerfile: asr_sidecar/Dockerfile
+    profiles: ["moss"]
+    restart: unless-stopped
+    gpus: all
+    environment:
+      MOSS_MODEL: /models
+      MOSS_DEVICE: cuda:0
+      MOSS_DTYPE: bf16
+      TZ: Asia/Shanghai
+    volumes:
+      - ${MOSS_MODEL_HOST_DIR:?请在 .env 设置 MOSS_MODEL_HOST_DIR 指向 MOSS 权重目录}:/models:ro
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request;urllib.request.urlopen('http://127.0.0.1:9971/health',timeout=2)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 40
+      start_period: 180s
+    # ports:
+    #   - "127.0.0.1:9973:9971"
+
+  # Jaeger：OTLP 链路追踪后端（P1 可观测性）。
+  # 默认随 compose 启动；不需要时可在 .env 设 OTEL_EXPORTER_OTLP_ENDPOINT= 并停掉本服务。
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    profiles: ["observability"]
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "127.0.0.1:16686:16686"
+      - "127.0.0.1:4318:4318"
 
   backend:
     build: ./meetingbot/fastapi-app

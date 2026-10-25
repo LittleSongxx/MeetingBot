@@ -21,7 +21,7 @@ from common.times import format_datetime
 from models import ActionItem, Meeting, MeetingMemory, MeetingMinutes, MeetingSeries, User
 from tortoise.expressions import Q
 
-from services import contracts
+from services import contracts, tool_metadata
 
 # 工具参数里的 kind → 记忆表里的 kind
 MEMORY_KIND = {
@@ -157,6 +157,9 @@ async def _enrich_memories(rows: list[MeetingMemory]) -> list[dict]:
         id__in=user_ids)} if user_ids else {}
     minutes_map = {row.id: row for row in await MeetingMinutes.filter(
         id__in=minutes_ids)} if minutes_ids else {}
+    series_scope: dict[int, dict[str, Any]] = {}
+    if tool_metadata.enrichment_enabled():
+        series_scope = await tool_metadata.series_scope_metadata(series_ids)
     out: list[dict] = []
     for memory in rows:
         kind = {value: key for key, value in MEMORY_KIND.items()}[memory.kind]
@@ -164,7 +167,7 @@ async def _enrich_memories(rows: list[MeetingMemory]) -> list[dict]:
         minutes = minutes_map.get(minutes_id) if minutes_id else None
         field = "decisions" if memory.kind in {"DECISION", "CONCLUSION"} else None
         item_index = _memory_item_index(minutes, memory.content) if minutes else None
-        out.append(_memory_state(
+        state = _memory_state(
             memory, kind=kind, meeting_title=titles.get(memory.source_meeting_id),
             minutes_id=minutes_id if minutes is not None else None,
             field=field if minutes is not None else None, item_index=item_index,
@@ -172,7 +175,18 @@ async def _enrich_memories(rows: list[MeetingMemory]) -> list[dict]:
             if memory.scope_type == "SERIES" else None,
             owner_name=user_names.get(memory.scope_id)
             if memory.scope_type == "USER" else None,
-        ))
+        )
+        if tool_metadata.enrichment_enabled():
+            if minutes is not None:
+                # 来源纪要状态（DRAFT/CONFIRMED）：回答“决定是否已确认生效”需要它
+                state["minutes_status"] = minutes.status
+            state["supersedes_id"] = memory.supersedes_id
+            if memory.scope_type == "SERIES":
+                meta = series_scope.get(int(memory.scope_id)) or {}
+                state.update({key: value for key, value in meta.items()
+                              if key != "series_id"})
+                state["series_id"] = memory.scope_id
+        out.append(state)
     return out
 
 

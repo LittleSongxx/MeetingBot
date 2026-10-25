@@ -8,6 +8,7 @@ from common.result import PageInfo, Result
 from common.times import format_datetime, now
 from fastapi import APIRouter, Depends
 from models import (
+    AiCallLog,
     AiModelConfig,
     Department,
     Meeting,
@@ -21,7 +22,13 @@ from models import (
 from pydantic import BaseModel
 from services import kb_outbox, kb_service
 from services.speaker_service import suggest_speakers
-from services.transcription_service import cancel_transcription, reject_overlong_audio, schedule_transcription
+from services.transcription_service import (
+    LOCAL_ASR_MODEL_NAME,
+    _active_engine,
+    cancel_transcription,
+    reject_overlong_audio,
+    schedule_transcription,
+)
 from tortoise.exceptions import IntegrityError
 from tortoise.transactions import in_transaction
 
@@ -73,7 +80,7 @@ async def get_accessible_task(task_id: int, current_user: User) -> Transcription
     return task
 
 
-async def task_dict(task: TranscriptionTask) -> dict:
+async def task_dict(task: TranscriptionTask, actual_model: str | None = None) -> dict:
     # 会议、资料、发起人、模型配置四张表各查一次，补齐列表要显示的名称
     meeting = await Meeting.get_or_none(id=task.meeting_id)
     material = await MeetingMaterial.get_or_none(id=task.material_id)
@@ -93,8 +100,11 @@ async def task_dict(task: TranscriptionTask) -> dict:
         "material_name": material.file_name if material else None,
         "material_type": material.file_type if material else None,
         "model_config_id": task.model_config_id,
-        # 详情弹窗“转写模型”
-        "model_name": config.model_name if config else None,
+        # 详情弹窗“转写模型”：优先显示**实际执行**的那次调用的模型名（ai_call_log 落盘事实），
+        # 没有调用日志时才按当前引擎/配置推断。避免“后端 env=http、实际 worker 走云端”这类错标。
+        "model_name": (actual_model
+                       or (LOCAL_ASR_MODEL_NAME if _active_engine() == "http"
+                           else (config.model_name if config else None))),
         "initiator_id": task.initiator_id,
         # 列表“发起人”列
         "initiator_name": initiator.name if initiator else None,
@@ -375,8 +385,15 @@ async def select_page(
         (pageNum - 1) * pageSize
     ).limit(pageSize)
     total = await query.count()
+    # 批量取本页任务的最近一次 TRANSCRIPTION 调用日志，避免 N+1；列表“转写模型”显示实际执行模型
+    task_ids = [task.id for task in tasks]
+    actual_models: dict[int, str] = {}
+    if task_ids:
+        for log in await AiCallLog.filter(call_type="TRANSCRIPTION", biz_id__in=task_ids).order_by("id"):
+            actual_models[log.biz_id] = log.model_name
     return Result.success(
-        PageInfo(total=total, list=[await task_dict(task) for task in tasks])
+        PageInfo(total=total, list=[
+            await task_dict(task, actual_model=actual_models.get(task.id)) for task in tasks])
     )
 
 
@@ -385,7 +402,8 @@ async def select_by_id(task_id: int, current_user: User = Depends(get_current_us
     # 按任务ID取任务，内部走第 5 章的会议权限判断
     task = await get_accessible_task(task_id, current_user)
     # 先放第 8 章讲过的任务基本信息
-    data = await task_dict(task)
+    last_call = await AiCallLog.filter(call_type="TRANSCRIPTION", biz_id=task.id).order_by("-id").first()
+    data = await task_dict(task, actual_model=last_call.model_name if last_call else None)
     # 按时间轴顺序号升序取全部片段，页面表格直接按这个顺序渲染
     segments = await TranscriptSegment.filter(task_id=task.id).order_by("segment_no")
     data["segments"] = [await segment_dict(segment) for segment in segments]

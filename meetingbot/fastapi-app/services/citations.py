@@ -297,6 +297,10 @@ def _from_facts(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation]]
                 parts.append(title)
             if start_time:
                 parts.append(str(start_time))
+            if fact.get("series_name"):
+                parts.append(f"系列：{fact.get('series_name')}（系列内会议 "
+                             f"{fact.get('series_meeting_count')} 场："
+                             + "、".join(fact.get("series_meeting_titles") or []) + "）")
             quote = " · ".join(parts)
             pairs.append((fact, Citation(
                 ref=0, kind=KIND_FACT, meeting_id=int(fact.get("meeting_id") or 0),
@@ -308,8 +312,20 @@ def _from_facts(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation]]
             continue
         if result.get("kind") == "recording":
             source_id = fact.get("task_id")
-            quote = (f"录音 task {source_id} · {fact.get('recorded_at') or '时间未标注'} · "
-                     f"{fact.get('period') or '未标注'}")
+            # 工具已经返回了 duration_minutes，但引用快照过去只留 task/time/period——
+            # 判定与用户点回都看不到"这段录音多长"；答案里合法的时长断言因此被当成
+            # 无依据（2026-10-22 盲评/100 题 cross30 的低 faithfulness 部分来自这里）。
+            duration = fact.get("duration_minutes")
+            parts = [f"录音 task {source_id}",
+                     str(fact.get("recorded_at") or "时间未标注"),
+                     str(fact.get("period") or "未标注")]
+            if duration:
+                parts.append(f"时长 {duration} 分钟")
+            if fact.get("series_name"):
+                parts.append(f"系列：{fact.get('series_name')}（系列内会议 "
+                             f"{fact.get('series_meeting_count')} 场："
+                             + "、".join(fact.get("series_meeting_titles") or []) + "）")
+            quote = " · ".join(parts)
             pairs.append((fact, Citation(
                 ref=0, kind=KIND_FACT, meeting_id=int(fact.get("meeting_id") or 0),
                 quote=quote, meeting_title=str(fact.get("meeting_title") or ""),
@@ -362,6 +378,7 @@ def _from_state(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation]]
                     quote = str(entry["quote"]).strip()
                     break
         content = str(item.get("content") or "").strip()
+        notice = str(result.get("notice") or "").strip()
         pairs.append((item, Citation(
             ref=0, kind=KIND_STATE,
             meeting_id=int(item.get("source_meeting_id") or item.get("meeting_id") or 0),
@@ -376,11 +393,27 @@ def _from_state(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation]]
             deadline_text=item.get("deadline_text"),
             series_id=item.get("series_id"),
             series_name=item.get("series_name"),
+            # 证据快照要带上**工具自己声明的用法约束**（notice）与状态类型/系列：
+            # 答案里“只返回 CONFIRMED / PROPOSED 不得当事实”这类断言直接来自 notice，
+            # 过去 notice 不进任何引用快照，判定只能按“上下文没写”打成不支撑（m019 类）。
+            # 只补 notice：类型/负责人/截止/状态/系列已是引用卡片上的独立字段（前端芯片显示），
+            # 再塞进 source_text 会让卡片内容重复、payload 变大。notice 是唯一原先无处承载、
+            # 又会被答案引用的信息（"只返回 CONFIRMED…"）。
             source_text="；".join(part for part in (
                 content or quote,
                 f"负责人：{item.get('owner_name')}" if item.get("owner_name") else "",
                 f"截止：{item.get('deadline_text')}" if item.get("deadline_text") else "",
                 f"状态：{item.get('status')}" if item.get("status") else "",
+                f"来源纪要状态：{item.get('minutes_status')}" if item.get("minutes_status") else "",
+                ("替代关系：无（supersedes_id 为空）" if item.get("supersedes_id") is None
+                 else f"替代关系：supersedes_id={item.get('supersedes_id')}")
+                if ("supersedes_id" in item
+                    and item.get("state_type") in {"DECISION", "CONCLUSION"}) else "",
+                (f"系列：{item.get('series_name')}（系列内会议 "
+                 f"{item.get('series_meeting_count')} 场："
+                 + "、".join(item.get("series_meeting_titles") or []) + "）")
+                if item.get("series_meeting_count") else "",
+                f"工具说明：{notice}" if notice else "",
             ) if part),
         )))
     return pairs
@@ -483,6 +516,11 @@ def _item_text(item: dict[str, Any]) -> str:
         text = str(value or "").strip()
         if text:
             parts.append(f"{label}：{text}")
+    # 证据原句也是判定者需要看到的上下文：答案里的引语/字段往往直接来自它，
+    # 只给正文+槽位会让“有证据的断言”被判成“上下文没写”。
+    quote = _fact_quote(item)
+    if quote and quote not in "；".join(parts):
+        parts.append(f"证据：{quote}")
     return "；".join(part for part in parts if part)
 
 
