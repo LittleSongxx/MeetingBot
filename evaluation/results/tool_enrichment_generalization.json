@@ -1,0 +1,129 @@
+{
+  "new_meeting": {
+    "policy": "LEDGER §53c：new_meeting 3 次/臂；faith 均值差 ≤2pp 且 recall 不降",
+    "runs": {
+      "off": [
+        {
+          "recall_v2": 0.782608695652174,
+          "total": 23,
+          "context_precision": 0.5492957746478874,
+          "faithfulness_content": 0.8533333333333334,
+          "answer_relevancy": 0.9333333333333333
+        },
+        {
+          "recall_v2": 0.782608695652174,
+          "total": 23,
+          "context_precision": 0.5675675675675675,
+          "faithfulness_content": 0.7922077922077922,
+          "answer_relevancy": 1.0
+        },
+        {
+          "recall_v2": 0.782608695652174,
+          "total": 23,
+          "context_precision": 0.5135135135135135,
+          "faithfulness_content": 0.868421052631579,
+          "answer_relevancy": 1.0
+        }
+      ],
+      "on": [
+        {
+          "recall_v2": 0.782608695652174,
+          "total": 23,
+          "context_precision": 0.5714285714285714,
+          "faithfulness_content": 0.8271604938271605,
+          "answer_relevancy": 1.0
+        },
+        {
+          "recall_v2": 0.782608695652174,
+          "total": 23,
+          "context_precision": 0.581081081081081,
+          "faithfulness_content": 0.8658536585365854,
+          "answer_relevancy": 1.0
+        },
+        {
+          "recall_v2": 0.782608695652174,
+          "total": 23,
+          "context_precision": 0.5147058823529411,
+          "faithfulness_content": 0.8354430379746836,
+          "answer_relevancy": 0.8666666666666667
+        }
+      ]
+    },
+    "means": {
+      "off": {
+        "recall_v2": 0.7826,
+        "context_precision": 0.5435,
+        "faithfulness_content": 0.838,
+        "answer_relevancy": 0.9778
+      },
+      "on": {
+        "recall_v2": 0.7826,
+        "context_precision": 0.5557,
+        "faithfulness_content": 0.8428,
+        "answer_relevancy": 0.9556
+      }
+    },
+    "delta_pp": {
+      "recall_v2": 0.0,
+      "context_precision": 1.22,
+      "faithfulness_content": 0.48,
+      "answer_relevancy": -2.22
+    },
+    "pass": true
+  },
+  "mixed20": {
+    "off": {
+      "n": 20,
+      "recall_v2": {
+        "successes": 27,
+        "total": 30,
+        "rate": 0.9,
+        "excluded": 8,
+        "by_class": {
+          "retrievable": 30,
+          "metadata": 8
+        },
+        "skipped_cases": 0,
+        "set": "eval_100_mixed",
+        "manifest_human_checked": false,
+        "manifest_generated_at": "2026-10-22T10:09:12Z"
+      },
+      "context_precision": 0.6161616161616161,
+      "faithfulness_content": 0.8742138364779874,
+      "answer_relevancy": 1.0
+    },
+    "on": {
+      "n": 20,
+      "recall_v2": {
+        "successes": 30,
+        "total": 30,
+        "rate": 1.0,
+        "excluded": 8,
+        "by_class": {
+          "retrievable": 30,
+          "metadata": 8
+        },
+        "skipped_cases": 0,
+        "set": "eval_100_mixed",
+        "manifest_human_checked": false,
+        "manifest_generated_at": "2026-10-22T10:09:12Z"
+      },
+      "context_precision": 0.696969696969697,
+      "faithfulness_content": 0.9038461538461539,
+      "answer_relevancy": 1.0
+    },
+    "delta_pp": {
+      "recall_v2": 10.0,
+      "context_precision": 8.08,
+      "faithfulness_content": 2.96,
+      "answer_relevancy": 0.0
+    },
+    "neutral_or_better": true
+  },
+  "policy": "LEDGER §53/§53c：cross30 主集 + new_meeting 15 题（3 次/臂）+ mixed100 子集 20 题；泛化集必须同向或中性",
+  "pass": true,
+  "per_set_pass": {
+    "new_meeting": true,
+    "mixed20": true
+  }
+}

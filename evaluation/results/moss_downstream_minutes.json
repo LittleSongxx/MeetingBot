@@ -1,0 +1,25 @@
+{
+  "task_id": 15,
+  "minutes_id": 6,
+  "status": "DRAFT",
+  "stage": "纪要已生成",
+  "summary_chars": 225,
+  "counts": {
+    "topics": 7,
+    "viewpoints": 4,
+    "decisions": 0,
+    "pending_items": 6,
+    "risks": 9
+  },
+  "checks": {
+    "status_is_draft_or_confirmed": true,
+    "summary_nonempty": true,
+    "has_decisions_or_pending": true,
+    "topics_nonempty": true,
+    "no_error_message": true
+  },
+  "checks_pass": true,
+  "model": "qwen3.8-max-0902",
+  "note": "MOSS 基板下游链路完整性检查；没有 MOSS 基板 gold 纪要，不判正确率",
+  "captured_at": "2026-10-23T09:50:23.546943+08:00"
+}

@@ -1,0 +1,43 @@
+{
+  "arms": {
+    "same_answers": {
+      "attribution": {
+        "checked": 166,
+        "cited": 31,
+        "any": 16,
+        "cited_gap": 0.1867,
+        "any_gap": 0.0964
+      },
+      "metrics": {
+        "context_precision": 0.6733333333333333,
+        "context_recall": 0.8448275862068966,
+        "faithfulness": 0.8783783783783784,
+        "faithfulness_content": 0.8984771573604061,
+        "answer_relevancy": 1.0
+      }
+    },
+    "same_answers_bound": {
+      "attribution": {
+        "checked": 166,
+        "cited": 16,
+        "any": 16,
+        "cited_gap": 0.0964,
+        "any_gap": 0.0964
+      },
+      "metrics": {
+        "context_precision": 0.6666666666666666,
+        "context_recall": 0.8448275862068966,
+        "faithfulness": 0.9054054054054054,
+        "faithfulness_content": 0.9090909090909091,
+        "answer_relevancy": 1.0
+      }
+    }
+  },
+  "delta_pp": {
+    "context_precision": -0.67,
+    "context_recall": 0.0,
+    "faithfulness": 2.7,
+    "faithfulness_content": 1.06,
+    "answer_relevancy": 0.0
+  }
+}

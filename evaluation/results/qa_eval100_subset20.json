@@ -1,0 +1,307 @@
+{
+  "name": "eval100 mixed 子集 20 题（泛化检查用，预注册 §53）",
+  "purpose": "P0-2 单次 100 题运行，替换组装集；预注册见 LEDGER §43",
+  "label_source": "mixed_existing_golds",
+  "human_checked": false,
+  "discipline": "单次运行、每题新建 session、per-case scope；与组装集不可混算",
+  "cases": [
+    {
+      "id": "m001",
+      "question": "发布公告与对外通稿分别由谁负责、什么时候完成？",
+      "expected_facts": [
+        "运营公告由赵敏牵头、周宁协作，9月1日9:00前完成",
+        "对外通稿由刘颖负责，发布前一日18:00前定稿"
+      ],
+      "meeting_ids": [
+        2
+      ],
+      "series_ids": null,
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cm01"
+    },
+    {
+      "id": "m002",
+      "question": "两段录音里分别提到了哪些风险？",
+      "expected_facts": [
+        "上午会议识别5项风险（含4项高风险）：模型服务延迟、资料频繁更新、负责人分配不合理、删除用户受限、阻断任务延期",
+        "下午会议补充报表导出异步改造与灰度排期过近的风险"
+      ],
+      "meeting_ids": [
+        2
+      ],
+      "series_ids": null,
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cm02"
+    },
+    {
+      "id": "m003",
+      "question": "发布时间的结论在两段录音里一致吗？分别怎么说？",
+      "expected_facts": [
+        "上午会议结论：9月1日9:00按计划正式发布",
+        "下午会议结论：V2.0按原计划发布，报表导出入口在发布时隐藏"
+      ],
+      "meeting_ids": [
+        2
+      ],
+      "series_ids": null,
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cm03"
+    },
+    {
+      "id": "m004",
+      "question": "两段录音分别是上午还是下午的会、主题分别是什么？",
+      "expected_facts": [
+        "task 6 是上午的产品上线复盘与下阶段发布准备会议",
+        "task 7 是下午的V2.0产品发布评审会"
+      ],
+      "meeting_ids": [
+        2
+      ],
+      "series_ids": null,
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cm04"
+    },
+    {
+      "id": "m005",
+      "question": "灰度这件事在两段录音里分别讨论到什么？",
+      "expected_facts": [
+        "上午复盘：8月20日开始灰度、覆盖10%活跃用户，8月26日扩大到30%",
+        "下午确定灰度三阶段：首日10%、次日50%、第三日全量，回滚最快5分钟"
+      ],
+      "meeting_ids": [
+        2
+      ],
+      "series_ids": null,
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cm05"
+    },
+    {
+      "id": "m006",
+      "question": "测试回归与对外通稿分别由谁负责？",
+      "expected_facts": [
+        "发布回归测试由陈琳负责，8月31日12:00前完成",
+        "对外通稿由刘颖负责，发布前一日18:00前定稿"
+      ],
+      "meeting_ids": [
+        2
+      ],
+      "series_ids": null,
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cm06"
+    },
+    {
+      "id": "m007",
+      "question": "移动端附件下载与报表导出这两个问题，分别在哪段录音里讨论、怎么处理？",
+      "expected_facts": [
+        "移动端附件下载问题在上午录音提出，要求发布前修复并写入发布说明",
+        "报表导出问题在下午录音提出：40+秒超时，发布时隐藏入口，异步改造后单独上线"
+      ],
+      "meeting_ids": [
+        2
+      ],
+      "series_ids": null,
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cm07"
+    },
+    {
+      "id": "m008",
+      "question": "两段录音里的验收/回归要求分别是什么？",
+      "expected_facts": [
+        "上午要求两组补充验收：至少30分钟真实录音、多角色说话人内容",
+        "回归测试8月31日12:00前完成；下午确认17个需求验收通过15个，剩余报表导出与消息推送免打扰"
+      ],
+      "meeting_ids": [
+        2
+      ],
+      "series_ids": null,
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cm08"
+    },
+    {
+      "id": "m009",
+      "question": "移动端附件下载问题在两段录音里分别是什么状态和安排？",
+      "expected_facts": [
+        "上午会议指出移动端附件下载进度问题影响发布当天支持成本，要求发布前修复（截止8月30日18:00）"
+      ],
+      "meeting_ids": [
+        2
+      ],
+      "series_ids": null,
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cm09"
+    },
+    {
+      "id": "m010",
+      "question": "客服支持与运营支持在两段录音里分别有什么安排？",
+      "expected_facts": [
+        "客服支持：周宁负责，9月1日10:00前完成常见问题知识库",
+        "运营支持：赵敏负责，9月1日9:00前完成发布公告与部门通知"
+      ],
+      "meeting_ids": [
+        2
+      ],
+      "series_ids": null,
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cm10"
+    },
+    {
+      "id": "m011",
+      "question": "产品发布评审系列里，已经人工确认的发布决策是什么？",
+      "expected_facts": [
+        "系列1已确认的发布决策：9月1日9:00正式发布AI智能会议助手与任务跟踪系统"
+      ],
+      "meeting_ids": null,
+      "series_ids": [
+        1
+      ],
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cs01"
+    },
+    {
+      "id": "m012",
+      "question": "系列里移动端附件下载进度修复这件事，现在是已确认的决策还是未确认的候选？",
+      "expected_facts": [
+        "移动端附件下载修复在系列记忆中是PROPOSED候选，不是已确认决策",
+        "对应待办为OPEN状态"
+      ],
+      "meeting_ids": null,
+      "series_ids": [
+        1
+      ],
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cs02"
+    },
+    {
+      "id": "m013",
+      "question": "系列当前还开着哪些待办？负责人和截止时间分别是什么？",
+      "expected_facts": [
+        "OPEN待办：移动端附件下载修复（王工，8月30日18:00）",
+        "OPEN待办：发布前两组补充验收（陈琳，8月31日12:00）"
+      ],
+      "meeting_ids": null,
+      "series_ids": [
+        1
+      ],
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cs03"
+    },
+    {
+      "id": "m014",
+      "question": "系列里「回答先给结论，再给依据」这条偏好是谁的、是否已确认？",
+      "expected_facts": [
+        "scope=USER、kind=PREFERENCE，属于用户1，状态CONFIRMED"
+      ],
+      "meeting_ids": null,
+      "series_ids": [
+        1
+      ],
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cs04"
+    },
+    {
+      "id": "m015",
+      "question": "这个系列包含哪几段录音？它们的时间顺序是什么？",
+      "expected_facts": [
+        "系列1只包含会议2",
+        "会议2下有两段录音：task 6（上午）与task 7（下午）"
+      ],
+      "meeting_ids": null,
+      "series_ids": [
+        1
+      ],
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cs05"
+    },
+    {
+      "id": "m016",
+      "question": "系列里最近一次会议形成的结论是什么？",
+      "expected_facts": [
+        "下午纪要三项结论：V2.0按期发布、报表导出入口隐藏",
+        "灰度三阶段：10%、50%、全量",
+        "对外通稿与产品公告在发布前一日18:00前定稿"
+      ],
+      "meeting_ids": null,
+      "series_ids": [
+        1
+      ],
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cs06"
+    },
+    {
+      "id": "m017",
+      "question": "系列里发布决策有没有被后续会议替代或修改？",
+      "expected_facts": [
+        "该DECISION的supersedes_id为空，没有后续替代记录",
+        "只能说明没有替代记录，不能推断内容一定没有变化"
+      ],
+      "meeting_ids": null,
+      "series_ids": [
+        1
+      ],
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cs07"
+    },
+    {
+      "id": "m018",
+      "question": "系列里报表导出相关的决定是否已经确认生效？",
+      "expected_facts": [
+        "报表导出隐藏入口的决定来自DRAFT纪要，不是CONFIRMED",
+        "系列已确认记忆中目前没有该条，不能当作已确认事实"
+      ],
+      "meeting_ids": null,
+      "series_ids": [
+        1
+      ],
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cs08"
+    },
+    {
+      "id": "m019",
+      "question": "系列里未确认的候选记忆应该怎么处理、能不能直接当作事实回答？",
+      "expected_facts": [
+        "只返回CONFIRMED记忆与有效待办",
+        "PROPOSED候选不得直接当事实回答"
+      ],
+      "meeting_ids": null,
+      "series_ids": [
+        1
+      ],
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cs09"
+    },
+    {
+      "id": "m020",
+      "question": "项目现在处于什么状态？下一步要做什么？",
+      "expected_facts": [
+        "已确认：9月1日9:00正式发布",
+        "未完成：移动端附件下载修复与发布回归/补充验收待办"
+      ],
+      "meeting_ids": null,
+      "series_ids": [
+        1
+      ],
+      "unanswerable": false,
+      "source_set": "cross30",
+      "original_id": "cs10"
+    }
+  ]
+}

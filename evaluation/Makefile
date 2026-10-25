@@ -1,7 +1,7 @@
 # MeetingBot 评测入口（四层，见 README.md 的评测宪法）
 PY ?= ../meetingbot/fastapi-app/.venv/bin/python
 
-.PHONY: smoke deep gate gold rag test trajectory
+.PHONY: smoke deep gate gold rag test trajectory recall quality-gate
 
 # L0 零调用回归：契约不变量、证据可定位率、可靠性复算。每次改动必跑。
 smoke:
@@ -57,7 +57,11 @@ trajectory:
 	@echo "裁判抽检回填表（零调用）: $(PY) gold/judge_spotcheck.py --artifact results/chat_answers.json --sample 20 --output results/judge_spotcheck_20.csv"
 	@echo "回填后算 Cohen's kappa: $(PY) gold/judge_spotcheck.py --score results/judge_spotcheck_20.csv --output results/judge_spotcheck_20.score.json"
 
-# RAG 全链路质量闸（零模型调用）
+# 可检索事实召回 recall-v2 报告（零模型调用；仪器口径见 reports/2026-10-22_recall_instrument_fix.md）
+recall:
+	$(PY) analysis/recall_report.py
+
+# RAG 全链路质量闸（零模型调用；旧口径 + recall-v2 双行 + CI + 产物校验和）
 quality-gate:
 	$(PY) quality_gate.py
 

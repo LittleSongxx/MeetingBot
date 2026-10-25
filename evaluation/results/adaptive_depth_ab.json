@@ -1,0 +1,229 @@
+{
+  "cross30": {
+    "n_off": 4,
+    "n_on": 4,
+    "off_runs": [
+      {
+        "recall_v2": 0.8793103448275862,
+        "total": 58,
+        "context_precision": 0.6197183098591549,
+        "faithfulness_content": 0.918918918918919,
+        "answer_relevancy": 0.9666666666666667
+      },
+      {
+        "recall_v2": 0.896551724137931,
+        "total": 58,
+        "context_precision": 0.6071428571428571,
+        "faithfulness_content": 0.9142857142857143,
+        "answer_relevancy": 1.0
+      },
+      {
+        "recall_v2": 0.896551724137931,
+        "total": 58,
+        "context_precision": 0.6285714285714286,
+        "faithfulness_content": 0.8904109589041096,
+        "answer_relevancy": 1.0
+      },
+      {
+        "recall_v2": 0.896551724137931,
+        "total": 58,
+        "context_precision": 0.5928571428571429,
+        "faithfulness_content": 0.8837209302325582,
+        "answer_relevancy": 1.0
+      }
+    ],
+    "on_runs": [
+      {
+        "recall_v2": 0.9137931034482759,
+        "total": 58,
+        "context_precision": 0.6906474820143885,
+        "faithfulness_content": 0.8947368421052632,
+        "answer_relevancy": 0.9666666666666667
+      },
+      {
+        "recall_v2": 0.9137931034482759,
+        "total": 58,
+        "context_precision": 0.6258503401360545,
+        "faithfulness_content": 0.8620689655172413,
+        "answer_relevancy": 0.9666666666666667
+      },
+      {
+        "recall_v2": 0.9310344827586207,
+        "total": 58,
+        "context_precision": 0.6619718309859155,
+        "faithfulness_content": 0.9112149532710281,
+        "answer_relevancy": 1.0
+      },
+      {
+        "recall_v2": 0.8793103448275862,
+        "total": 58,
+        "context_precision": 0.6054421768707483,
+        "faithfulness_content": 0.8646288209606987,
+        "answer_relevancy": 0.9333333333333333
+      }
+    ],
+    "means": {
+      "off": {
+        "recall_v2": 0.8922,
+        "context_precision": 0.6121,
+        "faithfulness_content": 0.9018,
+        "answer_relevancy": 0.9917
+      },
+      "on": {
+        "recall_v2": 0.9095,
+        "context_precision": 0.646,
+        "faithfulness_content": 0.8832,
+        "answer_relevancy": 0.9667
+      }
+    },
+    "delta_pp": {
+      "recall_v2": 1.73,
+      "context_precision": 3.39,
+      "faithfulness_content": -1.86,
+      "answer_relevancy": -2.5
+    }
+  },
+  "new_meeting": {
+    "n_off": 3,
+    "n_on": 4,
+    "off_runs": [
+      {
+        "recall_v2": 0.782608695652174,
+        "total": 23,
+        "context_precision": 0.5492957746478874,
+        "faithfulness_content": 0.8533333333333334,
+        "answer_relevancy": 0.9333333333333333
+      },
+      {
+        "recall_v2": 0.782608695652174,
+        "total": 23,
+        "context_precision": 0.5675675675675675,
+        "faithfulness_content": 0.7922077922077922,
+        "answer_relevancy": 1.0
+      },
+      {
+        "recall_v2": 0.782608695652174,
+        "total": 23,
+        "context_precision": 0.5135135135135135,
+        "faithfulness_content": 0.868421052631579,
+        "answer_relevancy": 1.0
+      }
+    ],
+    "on_runs": [
+      {
+        "recall_v2": 0.782608695652174,
+        "total": 23,
+        "context_precision": 0.5714285714285714,
+        "faithfulness_content": 0.7808219178082192,
+        "answer_relevancy": 0.9333333333333333
+      },
+      {
+        "recall_v2": 0.782608695652174,
+        "total": 23,
+        "context_precision": 0.5352112676056338,
+        "faithfulness_content": 0.8169014084507042,
+        "answer_relevancy": 0.9333333333333333
+      },
+      {
+        "recall_v2": 0.782608695652174,
+        "total": 23,
+        "context_precision": 0.5147058823529411,
+        "faithfulness_content": 0.7682926829268293,
+        "answer_relevancy": 0.9333333333333333
+      },
+      {
+        "recall_v2": 0.782608695652174,
+        "total": 23,
+        "context_precision": 0.5352112676056338,
+        "faithfulness_content": 0.8493150684931506,
+        "answer_relevancy": 0.9333333333333333
+      }
+    ],
+    "means": {
+      "off": {
+        "recall_v2": 0.7826,
+        "context_precision": 0.5435,
+        "faithfulness_content": 0.838,
+        "answer_relevancy": 0.9778
+      },
+      "on": {
+        "recall_v2": 0.7826,
+        "context_precision": 0.5391,
+        "faithfulness_content": 0.8038,
+        "answer_relevancy": 0.9333
+      }
+    },
+    "delta_pp": {
+      "recall_v2": 0.0,
+      "context_precision": -0.44,
+      "faithfulness_content": -3.42,
+      "answer_relevancy": -4.45
+    }
+  },
+  "mixed20": {
+    "n_off": 1,
+    "n_on": 2,
+    "off_runs": [
+      {
+        "recall_v2": 0.9,
+        "total": 30,
+        "context_precision": 0.6161616161616161,
+        "faithfulness_content": 0.8742138364779874,
+        "answer_relevancy": 1.0
+      }
+    ],
+    "on_runs": [
+      {
+        "recall_v2": 0.9666666666666667,
+        "total": 30,
+        "context_precision": 0.5959595959595959,
+        "faithfulness_content": 0.8741721854304636,
+        "answer_relevancy": 1.0
+      },
+      {
+        "recall_v2": 1.0,
+        "total": 30,
+        "context_precision": 0.6176470588235294,
+        "faithfulness_content": 0.8734177215189873,
+        "answer_relevancy": 1.0
+      }
+    ],
+    "means": {
+      "off": {
+        "recall_v2": 0.9,
+        "context_precision": 0.6162,
+        "faithfulness_content": 0.8742,
+        "answer_relevancy": 1.0
+      },
+      "on": {
+        "recall_v2": 0.9833,
+        "context_precision": 0.6068,
+        "faithfulness_content": 0.8738,
+        "answer_relevancy": 1.0
+      }
+    },
+    "delta_pp": {
+      "recall_v2": 8.33,
+      "context_precision": -0.94,
+      "faithfulness_content": -0.04,
+      "answer_relevancy": 0.0
+    }
+  },
+  "policy": "LEDGER §58：多时间点/时间线问题 top_k 3→5；主集 recall-v2 +3pp，precision/faith 非劣 2pp；泛化集同向或中性",
+  "checks": {
+    "recall_v2_ge_3pp": false,
+    "precision_non_inferior_2pp": true,
+    "faithfulness_non_inferior_2pp": true,
+    "denominator_consistent": true
+  },
+  "cross30_pass": false,
+  "generalization": {
+    "new_meeting": {
+      "neutral_or_better": false
+    },
+    "mixed20": {
+      "neutral_or_better": true
+    }
+  },
+  "pass": false
+}

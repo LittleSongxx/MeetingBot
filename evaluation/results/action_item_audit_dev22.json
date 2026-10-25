@@ -1,0 +1,150 @@
+{
+  "source": "benchmarks/results/vcsum-dev22-20260925",
+  "manifest": "benchmarks/manifest_all_dev.json",
+  "items": 74,
+  "owner": {
+    "with_owner": 61,
+    "fabricated": 45,
+    "fabricated_rate": 0.7377,
+    "located": 16
+  },
+  "deadline": {
+    "with_deadline": 65,
+    "misuse": 19,
+    "unlocated": 46,
+    "misuse_rate": 0.2923,
+    "located": 0
+  },
+  "evidence": {
+    "located": 0,
+    "unlocated": 0,
+    "missing": 74,
+    "unlocated_rate": 0.0
+  },
+  "validator_downgrades": {
+    "owner": 45,
+    "deadline": 65,
+    "evidence": 0
+  },
+  "by_case": {
+    "vcsum_102": {
+      "items": 2,
+      "owner_fabricated": 2,
+      "deadline_misuse": 0,
+      "evidence_unlocated": 0
+    },
+    "vcsum_13": {
+      "items": 1,
+      "owner_fabricated": 0,
+      "deadline_misuse": 0,
+      "evidence_unlocated": 0
+    },
+    "vcsum_153": {
+      "items": 9,
+      "owner_fabricated": 8,
+      "deadline_misuse": 0,
+      "evidence_unlocated": 0
+    },
+    "vcsum_154": {
+      "items": 3,
+      "owner_fabricated": 0,
+      "deadline_misuse": 0,
+      "evidence_unlocated": 0
+    },
+    "vcsum_166": {
+      "items": 5,
+      "owner_fabricated": 3,
+      "deadline_misuse": 4,
+      "evidence_unlocated": 0
+    },
+    "vcsum_177": {
+      "items": 2,
+      "owner_fabricated": 2,
+      "deadline_misuse": 0,
+      "evidence_unlocated": 0
+    },
+    "vcsum_188": {
+      "items": 2,
+      "owner_fabricated": 1,
+      "deadline_misuse": 1,
+      "evidence_unlocated": 0
+    },
+    "vcsum_20": {
+      "items": 2,
+      "owner_fabricated": 0,
+      "deadline_misuse": 0,
+      "evidence_unlocated": 0
+    },
+    "vcsum_217": {
+      "items": 7,
+      "owner_fabricated": 5,
+      "deadline_misuse": 1,
+      "evidence_unlocated": 0
+    },
+    "vcsum_218": {
+      "items": 2,
+      "owner_fabricated": 1,
+      "deadline_misuse": 1,
+      "evidence_unlocated": 0
+    },
+    "vcsum_22": {
+      "items": 11,
+      "owner_fabricated": 8,
+      "deadline_misuse": 0,
+      "evidence_unlocated": 0
+    },
+    "vcsum_224": {
+      "items": 3,
+      "owner_fabricated": 3,
+      "deadline_misuse": 3,
+      "evidence_unlocated": 0
+    },
+    "vcsum_32": {
+      "items": 5,
+      "owner_fabricated": 0,
+      "deadline_misuse": 0,
+      "evidence_unlocated": 0
+    },
+    "vcsum_42": {
+      "items": 1,
+      "owner_fabricated": 0,
+      "deadline_misuse": 1,
+      "evidence_unlocated": 0
+    },
+    "vcsum_51": {
+      "items": 7,
+      "owner_fabricated": 7,
+      "deadline_misuse": 7,
+      "evidence_unlocated": 0
+    },
+    "vcsum_60": {
+      "items": 4,
+      "owner_fabricated": 0,
+      "deadline_misuse": 1,
+      "evidence_unlocated": 0
+    },
+    "vcsum_65": {
+      "items": 5,
+      "owner_fabricated": 4,
+      "deadline_misuse": 0,
+      "evidence_unlocated": 0
+    },
+    "vcsum_80": {
+      "items": 2,
+      "owner_fabricated": 1,
+      "deadline_misuse": 0,
+      "evidence_unlocated": 0
+    },
+    "vcsum_96": {
+      "items": 1,
+      "owner_fabricated": 0,
+      "deadline_misuse": 0,
+      "evidence_unlocated": 0
+    }
+  },
+  "limitations": [
+    "转写来自 VCSum 官方 test26（人工整理转写），不是产品 ASR；owner/deadline 是规则代理，不是人工金标",
+    "只审计 pending_items/decisions 的槽位，不评行动项抽取召回（无 gold 行动项集）",
+    "校验器降级 ≠ 指标提升：它保证的是'不把无依据槽位当事实写进待办'"
+  ]
+}
