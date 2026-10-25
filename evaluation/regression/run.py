@@ -1155,6 +1155,10 @@ def main(argv: Iterable[str] | None = None) -> int:
         "--results-root", type=Path, default=PUBLIC_RESULTS,
         help="可靠性与开销指标扫描的运行目录根（默认 benchmarks/results）",
     )
+    parser.add_argument(
+        "--allow-empty", action="store_true",
+        help="没有可复算的本地结果集时跳过（CI 用）；本地默认仍以缺数据为失败",
+    )
     args = parser.parse_args(list(argv) if argv is not None else None)
 
     requested = args.sets or ["vcsum-test26-v2"]
@@ -1206,6 +1210,9 @@ def main(argv: Iterable[str] | None = None) -> int:
                 raise
 
     if not sets:
+        if args.allow_empty:
+            print("no stored result sets found for the requested selection（--allow-empty，跳过数值复算）", file=sys.stderr)
+            return 0
         print("no stored result sets found for the requested selection", file=sys.stderr)
         return 1
 

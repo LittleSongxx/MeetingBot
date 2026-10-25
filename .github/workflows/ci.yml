@@ -72,7 +72,9 @@ jobs:
         working-directory: evaluation
 
       - name: L0 零调用回归（契约不变量/可定位率/问答引用不变量/可靠性复算）
-        run: make smoke PY=python
+        # 评测产物与语料不入库：CI 没有本地结果集时数值复算跳过（--allow-empty），
+        # 其余零调用不变量照常跑；本地 `make smoke` 仍以缺数据为失败。
+        run: make smoke PY=python SMOKE_ARGS=--allow-empty
         working-directory: evaluation
 
   # ParadeDB 实库：BM25 的 DDL/分词/过滤与 PG checkpoint 只在真实扩展上才成立。

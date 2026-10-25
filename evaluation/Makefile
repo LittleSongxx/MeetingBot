@@ -1,11 +1,12 @@
 # MeetingBot 评测入口（四层，见 README.md 的评测宪法）
 PY ?= ../meetingbot/fastapi-app/.venv/bin/python
+SMOKE_ARGS ?=
 
 .PHONY: smoke deep gate gold rag test trajectory recall quality-gate
 
 # L0 零调用回归：契约不变量、证据可定位率、可靠性复算。每次改动必跑。
 smoke:
-	$(PY) regression/run.py --set all --output-dir results
+	$(PY) regression/run.py --set all --output-dir results $(SMOKE_ARGS)
 
 # L1 深度评测（需授权与凭据，先读脚本顶部预注册说明再跑）：
 #   judges/meeting_level.py    会议级忠实度（HHEM 同单位）
