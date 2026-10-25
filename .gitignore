@@ -43,3 +43,15 @@ evaluation/results/metrics.json
 evaluation/results/METRICS_REPORT.md
 
 .DS_Store
+
+# --- 个人求职材料（简历/JD 调研/面经/复审，不入公开仓库）---
+docs/resume/
+
+# --- 根目录误重定向残留与本地备份 ---
+/asr-sidecar
+ai_meeting/
+
+# --- 编辑器 / 日志 ---
+.idea/
+.vscode/
+*.log

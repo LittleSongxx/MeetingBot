@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MeetingBot 质量仪表盘</title>
+<style>
+body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; margin: 0;
+        background: #f5f7fb; color: #1f2937; }
+main { max-width: 1200px; margin: 0 auto; padding: 28px 20px 60px; }
+h1 { margin: 0 0 6px; font-size: 28px; }
+.sub { color: #6b7280; margin: 0 0 22px; }
+h2 { font-size: 18px; margin: 0 0 10px; }
+section { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+           padding: 18px 20px; margin: 16px 0; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eef0f4; vertical-align: top; }
+th { color: #4b5563; background: #f9fafb; }
+td:nth-child(2) { font-variant-numeric: tabular-nums; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+.pass { background: #dcfce7; color: #166534; }
+.fail { background: #fee2e2; color: #991b1b; }
+.neutral { background: #e0e7ff; color: #3730a3; }
+.note { color: #6b7280; font-size: 12px; margin: 0 0 10px; }
+a { color: #2563eb; text-decoration: none; }
+a:hover { text-decoration: underline; }
+.footer { color: #9ca3af; font-size: 12px; margin-top: 28px; text-align: center; }
+</style></head><body><main>
+<h1>MeetingBot 质量仪表盘</h1>
+<p class="sub">会议智能 Agent：MOSS ASR → 审查/修订纪要 → 行动项 → 跨会议 RAG；本页由
+<code>scripts/quality_dashboard.py</code> 从评测产物生成（零模型调用）。</p>
+<section><h2>五轴质量记分卡</h2><p class="note">数字均带口径；单裁判/代理金标只作方向信号（详见主报告与 LEDGER）。</p><table><thead><tr><th>指标</th><th>读数</th><th>状态</th><th>证据</th></tr></thead><tbody><tr><td>轴1 ASR（MOSS 8 场）</td><td>cpCER 13.47%（CER 17.74%，Δcp −4.28pp，覆盖率 99.83%）</td><td><span class="badge neutral">已采用</span></td><td>../evaluation/reports/2026-10-22_moss_own_metrics.md</td></tr><tr><td>轴2 纪要 faithfulness（单裁判）</td><td>cross30 94.2% / 内容级 97.2%</td><td><span class="badge neutral">方向信号</span></td><td>LEDGER §40</td></tr><tr><td>轴3 完整性（FineSurE core）</td><td>0.781（26 场，deepseek）</td><td><span class="badge neutral">分阶段</span></td><td>../evaluation/reports/2026-10-22_generalization_audit_v2.md</td></tr><tr><td>轴3 行动项槽位</td><td>owner fabricated 0/6；deadline unlocated 2</td><td><span class="badge pass">守卫已接入</span></td><td>../evaluation/reports/2026-10-23_action_item_guard.md</td></tr><tr><td>轴4 RAG 四指标（mixed100 三次均值）</td><td>precision 71.83% / recall 90.02% / faith 88.34% / AR 99.00%</td><td><span class="badge neutral">单裁判</span></td><td>../evaluation/reports/2026-10-23_eval100_fresh_repeat.md</td></tr><tr><td>轴5 工具轨迹</td><td>F1 macro 0.706；first strict 14/27；pass^3 85.2%</td><td><span class="badge pass">pass^k 可评</span></td><td>../evaluation/reports/2026-10-23_trajectory_passk.md</td></tr><tr><td>检索指标（27 题）</td><td>recall@k 98.1% / MRR 0.9166666666666666 / nDCG 0.9264992443754172</td><td><span class="badge neutral">诊断</span></td><td>../evaluation/results/metrics.json</td></tr><tr><td>意图识别（AI 复核标签）</td><td>macro F1 88.2%</td><td><span class="badge neutral">非人工</span></td><td>../evaluation/results/metrics.json</td></tr><tr><td>可靠性</td><td>端到端 —；调用级 —</td><td><span class="badge neutral">诊断</span></td><td>../evaluation/results/metrics.json</td></tr></tbody></table></section><section><h2>Agent 机制 A/B / 守卫</h2><p class="note">S2 状态提示为负结果（默认关）；S2 工具契约扩展与 S1 引用绑定为默认开的通用机制；S3 槽位守卫已接入闭环。</p><table><thead><tr><th>机制</th><th>主指标</th><th>Δ</th><th>判定</th><th>报告</th></tr></thead><tbody><tr><td>S1 生成后引用绑定（默认开）</td><td>cited-gap 15.9% → 7.6%</td><td>-8.35pp</td><td><span class="badge pass">PASS</span></td><td>../evaluation/reports/2026-10-23_evidence_binding.md</td></tr><tr><td>S2 状态提示（负结果，默认关）</td><td>recall-v2 85.3% → 80.2%</td><td>-5.17pp</td><td><span class="badge fail">FAIL</span></td><td>../evaluation/reports/2026-10-23_state_coverage.md</td></tr><tr><td>S2 工具契约扩展（默认开）</td><td>recall-v2 83.6% → 89.2%</td><td>5.6pp</td><td><span class="badge pass">PASS</span></td><td>../evaluation/reports/2026-10-23_tool_enrichment.md</td></tr><tr><td>S3 行动项槽位守卫</td><td>owner fabricated 0/6；deadline 降级 2 条</td><td>—</td><td><span class="badge pass">已接入</span></td><td>../evaluation/reports/2026-10-23_action_item_guard.md</td></tr></tbody></table></section><section><h2>质量闸</h2><p class="note">旧口径+recall-v2 双行、CP 95% CI、7 个产物 + 分类清单 sha256；清单变了未重冻即 FAIL。</p><table><thead><tr><th>门禁</th><th>口径</th><th>状态</th><th>入口</th></tr></thead><tbody><tr><td>quality_gate（旧口径 + recall-v2 + claim）</td><td>recall-v2 floors: p0 0.95 / cross30 0.85 / new_meeting 0.82 / mixed100 0.92</td><td><span class="badge pass">PASS</span></td><td>../evaluation/quality_gate.py</td></tr></tbody></table></section><section><h2>运行时 / 成本 / 可观测性（非质量口径）</h2><p class="note">运行时指标与质量指标分开记账；不与 cpCER/faithfulness/recall 混算。</p><table><thead><tr><th>量</th><th>读数</th><th>口径/状态</th><th>来源</th></tr></thead><tbody><tr><td>TTFT / 首 token（10 题现行链路）</td><td>p50 3.16s / p95 5.83s；首个 SSE 事件 21ms</td><td>检索仅 ~0.6–0.8s，其余是 Agent 模型回合</td><td>../evaluation/reports/2026-10-23_ttft_latency.md</td></tr><tr><td>轮级模型+检索（3,333 轮，累计账本）</td><td>p50 7.19s / p95 14.01s / max 24.73s</td><td>不含工具/图调度/SSE</td><td>../docs/可观测性与延迟成本现状.md</td></tr><tr><td>CHAT_SUMMARY（最大延迟项）</td><td>p50 16.18s / p95 51.78s</td><td>416 次调用</td><td>同上</td></tr><tr><td>成本（新调用，估算单价）</td><td>单轮 4 次 CHAT ≈ ¥0.23</td><td>历史调用仍 unpriced</td><td>同上</td></tr><tr><td>阶段耗时落库</td><td>total/nodes/tools → moderation_json.timing</td><td>实测一轮 total 8571ms</td><td>同上</td></tr><tr><td>Trace 后端</td><td>Jaeger 服务已配置，profile=observability</td><td>镜像拉取失败，未激活</td><td>同上</td></tr></tbody></table></section><section><h2>文档索引</h2><ul><li><a href="质量指标全面分析与通用优化方案.md">质量指标全面分析与通用优化方案（主报告）</a></li><li><a href="../docs/可观测性与延迟成本现状.md">延迟/成本/可观测性现状</a></li><li><a href="../docs/指标现状与优化决策.md">指标现状与优化决策</a></li><li><a href="../evaluation/reports/2026-10-23_rag_closeout.md">RAG 收口报告（冻结读数/机制/缺口）</a></li><li><a href="质量指标全景与缺口分析.md">质量指标全景与缺口分析</a></li><li><a href="项目推进-深度分析与路线图.md">项目后续推进路线（作品集视角）</a></li><li><a href="MOSS-ASR启用.md">MOSS 启用手册</a></li><li><a href="../evaluation/LEDGER.md">评测账本（预注册/结果）</a></li></ul></section>
+<p class="footer">生成时间：2026-10-25 19:18；数字以仓库产物为准。</p>
+</main></body></html>
