@@ -397,6 +397,17 @@ class MemoryTest(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(await chat_service.maybe_summarize(session))
         logged.assert_called_once()
 
+    async def test_summary_lease_is_exclusive_and_releasable(self):
+        """跨进程摘要租约：同一会话同一时间只允许一个后台任务持有。"""
+        from services import chat_memory
+
+        session = await chat_service.create_session(self.user)
+        self.assertTrue(await chat_memory._acquire_summary_lease(session.id))
+        self.assertFalse(await chat_memory._acquire_summary_lease(session.id))
+        await chat_memory._release_summary_lease(session.id)
+        self.assertTrue(await chat_memory._acquire_summary_lease(session.id))
+        await chat_memory._release_summary_lease(session.id)
+
     async def test_async_summary_runs_after_answer_and_records_timing(self):
         """CHAT_SUMMARY_ASYNC=1 时摘要由后台任务执行，不阻塞本轮。"""
         from services.chat_memory import schedule_summary, wait_summary_tasks

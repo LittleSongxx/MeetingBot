@@ -466,6 +466,7 @@ CREATE TABLE `chat_session`  (
   `scope_series_ids` json NOT NULL COMMENT '本次对话限定的系列ID数组；每轮按当前可见会议展开，权限仍实时判定',
   `summary` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '滑窗之外历史的滚动摘要',
   `summary_upto_message_id` int NOT NULL DEFAULT 0 COMMENT '摘要已覆盖到的消息ID（水位线）',
+  `summary_lock_until` datetime(6) NULL DEFAULT NULL COMMENT '跨进程摘要租约到期时间；空/已过期可抢占',
   `status` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ACTIVE' COMMENT '状态：ACTIVE、DELETED',
   `message_count` int NOT NULL DEFAULT 0 COMMENT '消息条数（会话列表直接读，不做聚合）',
   `last_active_time` datetime(6) NULL DEFAULT NULL COMMENT '最后活跃时间',
