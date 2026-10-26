@@ -81,7 +81,9 @@
           <!-- 成功率加百分号，Token 加千分位 -->
           <el-table-column prop="average_elapsed_ms" label="平均耗时ms" width="110" />
           <el-table-column label="TTFT p50/p95 ms" width="150">
-            <template #default="scope">{{ scope.row.p50_ttft_ms || 0 }} / {{ scope.row.p95_ttft_ms || 0 }}</template>
+            <template #default="scope"
+              >{{ scope.row.p50_ttft_ms || 0 }} / {{ scope.row.p95_ttft_ms || 0 }}</template
+            >
           </el-table-column>
           <el-table-column prop="total_tokens" label="Token" width="110">
             <template #default="scope">{{ formatNumber(scope.row.total_tokens) }}</template>
