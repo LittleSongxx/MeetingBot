@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
+import time
 from typing import Any
 
 from common import access
@@ -33,6 +35,16 @@ MIN_SUMMARY_BATCH = 4
 
 
 logger = logging.getLogger("meetingbot.chat")
+
+# 滚动摘要默认同步执行；置 CHAT_SUMMARY_ASYNC=1 后改为回答完成后的后台任务，
+# 避免长会话每 5 轮把 16s+ 的摘要调用挡在首 token 之前。
+_SUMMARY_TASKS: set[asyncio.Task] = set()
+_SUMMARY_LOCKS: dict[int, asyncio.Lock] = {}
+
+
+def summary_async_enabled() -> bool:
+    value = (os.getenv("CHAT_SUMMARY_ASYNC") or "0").strip().lower()
+    return value in {"1", "true", "yes", "on"}
 
 def history_window() -> int:
     return _positive_env("CHAT_HISTORY_WINDOW", DEFAULT_HISTORY_WINDOW)
@@ -208,4 +220,55 @@ async def maybe_summarize(session: ChatSession, *, biz_id: int | None = None) ->
     session.summary = result
     session.summary_upto_message_id = batch[-1].id
     return True
+
+
+def _summary_lock(session_id: int) -> asyncio.Lock:
+    """同一会话的摘要串行化：两个请求同时触发时，后一个只会在水位线后重算。"""
+    lock = _SUMMARY_LOCKS.get(session_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _SUMMARY_LOCKS[session_id] = lock
+    return lock
+
+
+async def _record_summary_timing(message_id: int, elapsed_ms: int) -> None:
+    """把后台摘要耗时合并进本轮 timing；消息已被删除/还未落库时静默跳过。"""
+    row = await ChatMessage.get_or_none(id=int(message_id))
+    if row is None:
+        return
+    moderation = dict(row.moderation_json or {})
+    timing = dict(moderation.get("timing") or {})
+    timing["summary_ms"] = int(elapsed_ms)
+    moderation["timing"] = timing
+    await ChatMessage.filter(id=row.id).update(moderation_json=moderation)
+
+
+async def _summarize_in_background(session_id: int, biz_id: int) -> None:
+    started = time.perf_counter()
+    try:
+        async with _summary_lock(session_id):
+            session = await ChatSession.get_or_none(id=int(session_id))
+            if session is None:
+                return
+            await maybe_summarize(session, biz_id=biz_id)
+    except Exception:  # noqa: BLE001 - 后台摘要失败不能影响问答
+        logger.exception("会话 %s 的后台滚动摘要失败", session_id)
+    finally:
+        await _record_summary_timing(biz_id, int((time.perf_counter() - started) * 1000))
+
+
+def schedule_summary(session_id: int, biz_id: int) -> None:
+    """把滚动摘要放到回答完成后的后台任务里；关闭异步时由调用方走同步路径。"""
+    if not summary_async_enabled():
+        return
+    task = asyncio.create_task(_summarize_in_background(int(session_id), int(biz_id)))
+    _SUMMARY_TASKS.add(task)
+    task.add_done_callback(_SUMMARY_TASKS.discard)
+
+
+async def wait_summary_tasks() -> None:
+    """测试/优雅退出用：等待已排队的后台摘要全部结束。"""
+    tasks = list(_SUMMARY_TASKS)
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
 

@@ -239,6 +239,8 @@ class ChatStreamTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(logs[0].call_type, model_factory.CHAT_CALL_TYPE)
         self.assertEqual(logs[0].biz_id, 7)
         self.assertEqual(logs[0].usage_json.get("total_tokens"), 30)
+        # 流式调用必须落首 token 延迟；非流式/未测到的调用保持 0
+        self.assertGreaterEqual(int(logs[0].ttft_ms or 0), 0)
 
     async def test_transient_failure_before_first_token_is_retried(self):
         chunks = [timeout_error(), "重试成功"]
@@ -379,6 +381,29 @@ class FirstRoundToolChoiceTest(unittest.IsolatedAsyncioTestCase):
             await caller([HumanMessage("问"),
                           ToolMessage(content='{"ok": true}', tool_call_id="c1")])
         self.assertEqual(seen, ["required", "required", "auto"])
+
+    async def test_first_hop_uses_cheap_config_then_main_config(self):
+        """首轮工具决策走 first_hop_config；已有工具结果后回到主模型。"""
+        from types import SimpleNamespace
+        seen: list[tuple[int, object]] = []
+
+        async def fake_stream_chat(config, messages, **kwargs):
+            seen.append((config.id, kwargs.get("tool_choice")))
+            yield ("message", AIMessage(content="ok"))
+
+        main = SimpleNamespace(id=1, base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+                               model_name="main")
+        cheap = SimpleNamespace(id=2, base_url="https://api.deepseek.com",
+                                model_name="cheap")
+        caller = model_factory.make_model_caller(
+            main, tools=[], first_round_tool_choice=model_factory.TOOL_CHOICE_REQUIRED,
+            first_hop_config=cheap)
+        with mock.patch.object(model_factory, "stream_chat", fake_stream_chat):
+            await caller([HumanMessage("问")])
+            await caller([HumanMessage("问"),
+                          ToolMessage(content='{"ok": true}', tool_call_id="c1")])
+        self.assertEqual([item[0] for item in seen], [2, 1])
+        self.assertEqual([item[1] for item in seen], ["required", "auto"])
 
     def test_has_tool_result_reads_message_types(self):
         self.assertFalse(model_factory.has_tool_result([HumanMessage("问"), AIMessage("答")]))

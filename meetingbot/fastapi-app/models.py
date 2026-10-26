@@ -341,6 +341,8 @@ class AiCallLog(Model):
     status = fields.CharField(max_length=30)
     # 对应 ai_call_log.elapsed_ms
     elapsed_ms = fields.BigIntField(default=0)
+    # 对应 ai_call_log.ttft_ms：首 token 延迟毫秒；非流式或未测到为 0
+    ttft_ms = fields.BigIntField(default=0)
     # 对应 ai_call_log.usage_json
     usage_json = fields.JSONField(null=True)
     # 对应 ai_call_log.cost_micro：这次调用的成本（微元），由调用时所在配置的单价
