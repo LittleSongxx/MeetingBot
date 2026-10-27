@@ -127,7 +127,7 @@ FIRST_HOP_ENV = "CHAT_FIRST_HOP_ENABLED"
 
 
 def first_hop_enabled() -> bool:
-    value = (os.getenv(FIRST_HOP_ENV) or "1").strip().lower()
+    value = (os.getenv(FIRST_HOP_ENV) or "0").strip().lower()
     return value not in {"0", "false", "no", "off"}
 
 
