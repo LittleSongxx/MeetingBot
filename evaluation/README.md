@@ -88,3 +88,5 @@ cd evaluation && ../meetingbot/fastapi-app/.venv/bin/python -m unittest discover
 
 付费/判定类运行（deep/gate）凭据只从环境读，先读各脚本顶部 docstring 的
 预注册说明，再申请调用授权。
+
+**RAGAS 官方口径（r1，2026-10-27）**：独立 venv `evaluation/.venv-ragas` + `ragas==0.4.3`，对同一 mixed100 packet 离线重判，产出第二台仪器读数（与自研口径**不可相减**）。入口 `make ragas-pilot` / `make ragas` / `make ragas-aggregate`；报告 `reports/2026-10-27_ragas_official.md`，基线 `baselines/ragas_official_baseline.json`。

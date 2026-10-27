@@ -1,8 +1,9 @@
 # MeetingBot 评测入口（四层，见 README.md 的评测宪法）
 PY ?= ../meetingbot/fastapi-app/.venv/bin/python
+PY_RAGAS ?= .venv-ragas/bin/python
 SMOKE_ARGS ?=
 
-.PHONY: smoke deep gate gold rag test trajectory recall quality-gate
+.PHONY: smoke deep gate gold rag test trajectory recall quality-gate ragas ragas-pilot ragas-aggregate
 
 # L0 零调用回归：契约不变量、证据可定位率、可靠性复算。每次改动必跑。
 smoke:
@@ -69,3 +70,15 @@ quality-gate:
 # 评测代码自身单测（零调用）
 test:
 	cd . && $(PY) -m unittest discover -s tests -p 'test_*.py'
+
+# RAGAS 官方口径重测（r1；独立 venv，预注册见 LEDGER.md §RAGAS-1）
+ragas-pilot:
+	$(PY_RAGAS) judges/ragas_official.py --limit 20 --run-label pilot --out results/ragas_official_pilot.json --authorized-llm-calls 400 --concurrency 12
+
+ragas:
+	$(PY_RAGAS) judges/ragas_official.py --run-label run1 --out results/ragas_official_run1.json --authorized-llm-calls 1200 --concurrency 12
+	$(PY_RAGAS) judges/ragas_official.py --run-label run2 --out results/ragas_official_run2.json --authorized-llm-calls 1200 --concurrency 12
+	$(PY_RAGAS) judges/ragas_official.py --run-label run3 --out results/ragas_official_run3.json --authorized-llm-calls 1200 --concurrency 12
+
+ragas-aggregate:
+	$(PY_RAGAS) judges/ragas_aggregate.py --runs results/ragas_official_run1.json results/ragas_official_run2.json results/ragas_official_run3.json --out results/ragas_official_aggregate.json --report reports/2026-10-27_ragas_official.md --baseline baselines/ragas_official_baseline.json
