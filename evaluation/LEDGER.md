@@ -3548,3 +3548,11 @@ r1 基线（100 题×3）：faithfulness **66.87%**、context_precision **69.73%
 - 候选 prompt：`results/prompt_CHAT_ANSWER_hybrid_20261028.json`（Docker 恢复后用 `evaluation/tools/restore_prompt.py` 应用）。
 - N=1 筛选：faith/AR/CR 均 ≥90 且 CP 非劣（≥69.2）→ 补跑 N=2 确认（合计 3 次）；否则回滚 P1b 并登记负结果。
 - 预算：抓取 5–10 分钟；r1 一次约 20 分钟、<$1。
+
+### OPT-4 结果（Hybrid 条件回答风格，N=3，2026-10-28，当前生效）
+
+- prompt：`results/prompt_CHAT_ANSWER_hybrid_20261028.json`（DB 现行版；sha256 `46fc16e1…ac0f`）；100 题 × 3 次 r1（`results/hybrid1_ragas_run{1,2,3}.json`）。
+- 读数：faithfulness **89.57%**、answer_relevancy **91.72%**、context_precision **69.45%**、context_recall **90.57%**；3 个 null metric values（3/1200）。
+- 相对 M1b：faith +1.32pp、AR +2.09pp、CR +0.87pp、CP −1.91pp（非劣 −2pp 内）；相对 P1b：faith +1.99pp、AR +1.72pp、CR +0.34pp、CP −1.76pp。
+- 判定：AR/CR 已达 90，faith 89.57 为"接近"；继续 prompt 调优收益递减、且规则在同批题上选有过拟合风险 → **收口，不再继续 P1 试错**；冻结 `baselines/ragas_official_hybrid_baseline.json`，报告 `reports/2026-10-28_hybrid_final.md`。
+- 备注：P2 的 supersedes/scope context 修复已提交 `2b96023`，但当前容器镜像未重建，尚未 live 验证；作为后续独立项。
