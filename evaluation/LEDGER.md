@@ -3521,3 +3521,30 @@ r1 基线（100 题×3）：faithfulness **66.87%**、context_precision **69.73%
 - 结论：**没有单条 prompt 在 overall 同时让 faith/AR/CR ≥90**；P1b（AR/CR 达标）与 P1c（faith/CR 达标）各差一项，差距都集中在 cross30（P1b cross30：faith 0.825/AR 0.809/CR 0.744；非 cross30：0.909/0.939/0.971）。
 - 下一步候选：**按问题类型/意图分派回答风格**（cross30/否定式用 P1b，简单事实/多事实列举用 P1c），或 P2 结构化覆盖；需新预注册。CP 仍走"官方目标 75–80 或自定义 fact-aligned"路线，不硬刷官方 90。
 - 当前产品状态（重要）：Docker Desktop/WSL daemon 已停（`docker ps` 无法连接），**DB 中最后应用的 prompt 是 P1d（AR 差），不是 P1b/P1c**。Docker 恢复后应先从备份恢复 P1b 或 M1b；恢复脚本见 `evaluation/tools/restore_prompt.py`。
+
+---
+
+## context_precision 口径决策（2026-10-28，冻结）
+
+- 官方 CP：M1b 71.35 / P1b 71.21 / P1c 70.14；非 cross30 89–97%，cross30 25–29%。judge 要求单 context 支持完整 reference；多事实答案分散在多个切片时结构性为 0（m001 单事实 ref 0.25–0.37、多事实 0.33/0.0 重跑）。
+- 自定义 `r1-fact`（每 expected_fact 单独跑官方 CP 再平均）在 cross30 前 20 题 mean 0.3008 / median 0.2083（`results/fact_cp_m1d_pilot20.json`）——fact 拆细也救不了，CP 不是纯检索信号。
+- **决定：路线 A**——官方 CP 目标 75–80、分层报告；`r1-fact` 仅诊断，不冒充官方、不宣称 CP≥90；后续不再用 floor/top_k/压缩硬刷官方 CP。
+- 文档：`analysis/optimization/cp_instrument_decision-2026-10-28.md`。
+
+---
+
+## 预注册：2026-10-28 优化实验 OPT-4（混合回答风格，待 Docker 恢复）
+
+> 状态：prompt 候选与规则先写死；尚未抓取/判定（当前 Docker/WSL daemon 不可用）。
+
+### 假设
+单条条件 prompt 按问题类型选风格——**系列/跨会议/否定确认题 → P1b 风格（完整回应 + 必要依据）；其余 → P1c 风格（只写有引用支持的事实、尽量短）**——可使 faith/AR/CR 同时 ≥90%，CP 非劣（−2pp）。
+
+### 依据（仅为模拟，不是证据）
+用现有 P1b（N=3 均值）与 P1c（N=1）per-case 分数按规则挑臂：faith 91.4 / AR 90.0 / CP 71.0 / CR 90.7（`analysis/optimization/hybrid-simulation-2026-10-28.md`）。AR 贴线且规则在同批题上选，需 live 确认。
+
+### 数据/仪器/判定
+- 100 题 per-case 重新抓取；r1 仪器；基线 P1b N=3（`results/m1d_aggregate.json`）。
+- 候选 prompt：`results/prompt_CHAT_ANSWER_hybrid_20261028.json`（Docker 恢复后用 `evaluation/tools/restore_prompt.py` 应用）。
+- N=1 筛选：faith/AR/CR 均 ≥90 且 CP 非劣（≥69.2）→ 补跑 N=2 确认（合计 3 次）；否则回滚 P1b 并登记负结果。
+- 预算：抓取 5–10 分钟；r1 一次约 20 分钟、<$1。
