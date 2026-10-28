@@ -379,6 +379,9 @@ def _from_state(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation]]
                     break
         content = str(item.get("content") or "").strip()
         notice = str(result.get("notice") or "").strip()
+        # 生产路径的条目用 `kind`；测试/旧数据可能用 `state_type`。两者都认，
+        # 否则真实 query_meeting_state 结果永远进不了 supersedes 分支（m017 类 CR 低）。
+        state_kind = str(item.get("state_type") or item.get("kind") or "").upper()
         pairs.append((item, Citation(
             ref=0, kind=KIND_STATE,
             meeting_id=int(item.get("source_meeting_id") or item.get("meeting_id") or 0),
@@ -404,11 +407,14 @@ def _from_state(result: dict[str, Any]) -> list[tuple[dict[str, Any], Citation]]
                 f"负责人：{item.get('owner_name')}" if item.get("owner_name") else "",
                 f"截止：{item.get('deadline_text')}" if item.get("deadline_text") else "",
                 f"状态：{item.get('status')}" if item.get("status") else "",
+                # 用户偏好要能回答"这条偏好属于谁"：scope 是身份，owner_name 只是显示名。
+                (f"范围：用户 {item.get('scope_id')}"
+                 if item.get("scope_type") == "USER" and item.get("scope_id") else ""),
                 f"来源纪要状态：{item.get('minutes_status')}" if item.get("minutes_status") else "",
                 ("替代关系：无（supersedes_id 为空）" if item.get("supersedes_id") is None
                  else f"替代关系：supersedes_id={item.get('supersedes_id')}")
                 if ("supersedes_id" in item
-                    and item.get("state_type") in {"DECISION", "CONCLUSION"}) else "",
+                    and state_kind in {"DECISION", "CONCLUSION"}) else "",
                 (f"系列：{item.get('series_name')}（系列内会议 "
                  f"{item.get('series_meeting_count')} 场："
                  + "、".join(item.get("series_meeting_titles") or []) + "）")

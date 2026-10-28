@@ -38,3 +38,10 @@
 - 主指标：cross30 的 CR（目标 +5pp 以上）与整体 CR；护栏：faith/AR/CP 非劣、引用可定位率不降。
 - 只改工具结果/渲染层（source_text 字段），不改检索参数、不改 prompt 长度；100 题 per-case，r1 N=1 筛 → N=3 确认。
 - 与 OPT-4（混合回答风格）分开实验，避免同时改 prompt 与工具契约。
+
+## 5. 已实施（离线单元测试，2026-10-28）
+
+- 修复 `citations._from_state` 的 supersedes 分支：生产 `query_meeting_state` 条目用 `kind`，旧代码只认 `state_type`，导致 m017 类"无替代关系"永远进不了 context。现兼容两者。
+- `state_service._memory_state` 增加 `scope_type/scope_id`；`_from_state` 对 USER 偏好输出"范围：用户 {id}"，对齐 m014 类 reference 的 scope=USER。
+- 测试：`tests/test_tool_enrichment.py` 新增 2 条；`test_citations.py + test_tool_enrichment.py` 共 **10 passed**（仅单测，未 live）。
+- Docker 恢复后用 P2 A/B 验证 cross30 CR 是否随 context 字段可见性提升。

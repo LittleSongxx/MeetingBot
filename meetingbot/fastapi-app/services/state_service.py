@@ -60,6 +60,8 @@ def _memory_state(memory: MeetingMemory, *, kind: str, meeting_title: str | None
         "owner_name": owner_name,
         "deadline_text": None,
         "deadline": None,
+        "scope_type": memory.scope_type,
+        "scope_id": memory.scope_id,
         "series_id": memory.scope_id if memory.scope_type == "SERIES" else None,
         "series_name": series_name,
         "state_id": memory.id,
