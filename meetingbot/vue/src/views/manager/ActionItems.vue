@@ -71,7 +71,7 @@
     <el-dialog :title="data.form.id ? '编辑待办' : '新增待办'" v-model="data.formVisible" width="min(92vw, 520px)" destroy-on-close>
       <el-form label-width="80px" style="padding: 0 10px">
         <el-form-item label="会议" required>
-          <el-select v-model="data.form.meeting_id" filterable style="width: 100%" placeholder="请选择会议">
+          <el-select v-model="data.form.meeting_id" filterable :disabled="!!data.form.id" style="width: 100%" placeholder="请选择会议">
             <el-option v-for="item in data.meetings" :key="item.id" :label="meetingLabel(item)" :value="item.id" />
           </el-select>
         </el-form-item>
