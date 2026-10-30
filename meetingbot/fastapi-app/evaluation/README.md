@@ -1,0 +1,46 @@
+# 离线质量评测
+
+`evaluation/` 里的脚本用于在没有人工标注平台的情况下，量化纪要生成质量。**不调用外部模型**，只读数据库里的纪要、证据、行动项和 AI 草稿。
+
+## 运行
+
+```bash
+# 在运行中的 backend 容器里执行（仓库根目录）
+docker compose exec -T backend python -m evaluation.run_eval
+# 只评测某场会议 / 限制数量
+docker compose exec -T backend python -m evaluation.run_eval --meeting-id 1 --limit 50
+```
+
+## 指标
+
+| 指标 | 含义 |
+|---|---|
+| 六字段覆盖率 | summary/topics/viewpoints/decisions/pending_items/risks 非空比例 |
+| 有证据的条目占比 | 数组条目里带 evidence 的比例 |
+| 证据引用合法率 | evidence.quote 能在对应转写片段里逐字找到的比例 |
+| 人工修改率 | `ai_draft_json`（AI 原稿）与当前终稿比较：条目改动/新增/删除占比 |
+| Golden actions 召回 | 与 `golden/*.json` 里人工标注的行动项按文本相似度贪心匹配 |
+
+## Golden 数据格式
+
+`golden/*.json`：
+
+```json
+{
+  "cases": [
+    {
+      "title": "产品发布评审会",
+      "meeting_id": 1,
+      "expected_decisions": ["..."],
+      "expected_action_items": ["..."],
+      "expected_evidence_segment_nos": [3, 7, 9]
+    }
+  ]
+}
+```
+
+`meeting_id` 可选；没有时按会议标题匹配。新增用例直接放 JSON 文件即可，不需要改代码。
+
+## 定位
+
+这是“质量闸”的起点，不是完整实验平台：先证明指标可计算、可对比（改 Prompt/模型前后跑同一套数），再考虑接入 LLM-as-judge 或更大标注集。修改率本身来自用户的人工确认行为，数据会随使用自然积累。

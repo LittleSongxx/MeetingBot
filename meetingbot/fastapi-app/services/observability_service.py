@@ -72,7 +72,7 @@ def employee_can_see_log(log: AiCallLog, owned: dict[str, set[int]]) -> bool:
     """按调用类型选对应的 ID 集合，判断这条日志是不是员工本人业务产生的。"""
     if log.call_type == "TRANSCRIPTION":
         return log.biz_id in owned["TRANSCRIPTION"]
-    if log.call_type in {"MINUTES_CHUNK", "MINUTES_MERGE"}:
+    if log.call_type in {"MINUTES_CHUNK", "MINUTES_MERGE", "MINUTES_QA"}:
         return log.biz_id in owned["MINUTES"]
     if log.call_type in {"AGENT_REVIEW", "AGENT_REFINE"}:
         return log.biz_id in owned["AGENT"]

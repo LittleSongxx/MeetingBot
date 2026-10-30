@@ -11,6 +11,7 @@ from common.times import format_datetime, now
 from docx import Document
 from fastapi import APIRouter, Depends, Query
 from models import (
+    ActionItem,
     AgentRun,
     AgentStep,
     AiModelConfig,
@@ -21,6 +22,7 @@ from models import (
     TranscriptionTask,
     User,
 )
+from pydantic import BaseModel, Field
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
@@ -29,6 +31,8 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from services.evidence_service import merge_evidence
+from services.minutes_qa_service import ask as ask_minutes
 from services.minutes_service import MinutesResult, material_name_of_minutes, schedule_minutes
 from starlette.responses import StreamingResponse
 from tortoise.exceptions import IntegrityError
@@ -43,6 +47,16 @@ class EditPayload(MinutesResult):
     # MinutesResult 已经定义了六块内容的结构，这里只补一个要更新哪条记录
     # 页面提交的内容和模型产出走同一套 Pydantic 校验，例如风险级别只能是 LOW、MEDIUM、HIGH
     id: int
+
+
+class AskMessage(BaseModel):
+    role: str
+    content: str
+
+
+class AskPayload(BaseModel):
+    question: str = Field(min_length=1, max_length=500)
+    history: list[AskMessage] = Field(default_factory=list)
 
 
 async def get_accessible_minutes(minutes_id: int, current_user: User) -> MeetingMinutes:
@@ -135,7 +149,9 @@ async def generate(task_id: int, current_user: User = Depends(get_current_user))
             # 两个请求同时首次生成时唯一索引只放行一个，另一个提示刷新即可
             raise CustomException("该转写任务已有纪要，请刷新页面后重试") from None
     else:
-        # 旧内容整体作废，旧自检运行与步骤一并清掉（ai_call_log 保留用于审计）
+        # 旧内容整体作废：删掉未确认的草稿行动项；已生效/已完成的承诺保留
+        await ActionItem.filter(minutes_id=minutes.id, status="DRAFT").delete()
+        # 旧自检运行与步骤一并清掉（ai_call_log 保留用于审计）
         run_ids = await AgentRun.filter(minutes_id=minutes.id).values_list("id", flat=True)
         if run_ids:
             await AgentStep.filter(run_id__in=run_ids).delete()
@@ -161,7 +177,8 @@ async def delete_minutes(minutes: MeetingMinutes, current_user: User):
     # 自检正在跑时删纪要会让后台任务写到不存在的行上，先拦住
     if await AgentRun.filter(minutes_id=minutes.id, status="RUNNING").exists():
         raise CustomException("该纪要的自检正在运行，请先中断后再删除")
-    # 纪要直接关联的自检运行与步骤一并删除；ai_call_log 保留作为审计记录
+    # 纪要直接关联的行动项一并删除；自检运行与步骤也删，ai_call_log 保留作为审计记录
+    await ActionItem.filter(minutes_id=minutes.id).delete()
     run_ids = await AgentRun.filter(minutes_id=minutes.id).values_list("id", flat=True)
     if run_ids:
         await AgentStep.filter(run_id__in=run_ids).delete()
@@ -254,6 +271,16 @@ async def update(payload: EditPayload, current_user: User = Depends(get_current_
         raise CustomException("只有管理员或纪要创建人可以编辑", "403")
     # exclude id 之后剩下的就是六块内容，字段名和表里的六列一一对应
     data = payload.model_dump(exclude={"id"})
+    # 兼容旧前端：某条没带 evidence 但内容没变时，继承数据库里已有的引用
+    old_data = {
+        "summary": minutes.summary or "",
+        "topics": minutes.topics_json or [],
+        "viewpoints": minutes.viewpoints_json or [],
+        "decisions": minutes.decisions_json or [],
+        "pending_items": minutes.pending_items_json or [],
+        "risks": minutes.risks_json or [],
+    }
+    data = merge_evidence(old_data, data)
     await MeetingMinutes.filter(id=minutes.id).update(
         summary=data["summary"], topics_json=data["topics"], viewpoints_json=data["viewpoints"],
         decisions_json=data["decisions"], pending_items_json=data["pending_items"], risks_json=data["risks"],
@@ -382,6 +409,28 @@ def build_pdf(data: dict) -> BytesIO:
     doc.build(story)
     output.seek(0)
     return output
+
+
+@router.post("/ask/{minutes_id}")
+async def ask(
+    minutes_id: int,
+    payload: AskPayload,
+    current_user: User = Depends(get_current_user),
+):
+    """单场会议问答：只读检索本场转写 + 纪要，返回带引用的答案。"""
+    minutes = await get_accessible_minutes(minutes_id, current_user)
+    if minutes.status not in {"DRAFT", "CONFIRMED"}:
+        raise CustomException("纪要尚未生成，不能问答")
+    ensure_interval(f"minutes-ask:{current_user.id}", 3.0)
+    prompt = await PromptTemplate.get_or_none(code="MINUTES_QA", enabled=True)
+    if prompt is None:
+        raise CustomException("问答 Prompt 未启用，请检查 MINUTES_QA 模板")
+    config = await AiModelConfig.filter(model_type="MINUTES", enabled=True).order_by("-id").first()
+    if config is None or not config.api_key:
+        raise CustomException("请先由管理员启用会议纪要模型配置")
+    history = [message.model_dump() for message in payload.history[-6:]]
+    result = await ask_minutes(minutes, config, prompt, payload.question.strip(), history)
+    return Result.success(result)
 
 
 @router.get("/export/{minutes_id}/{file_type}")

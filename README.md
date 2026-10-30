@@ -1,6 +1,6 @@
 # MeetingBot · AI 智能会议纪要辅助系统
 
-把一场会议的录音、视频或资料变成一份**可确认、可导出**的结构化纪要：
+把一场会议的录音、视频或资料变成一份**可核对、可执行、可追问、可导出**的结构化纪要：
 
 ```mermaid
 flowchart LR
@@ -33,8 +33,12 @@ flowchart LR
 | ![Agent自检](docs/screenshots/10-agent.png) | ![自检详情](docs/screenshots/11-agent-detail.png) |
 | **运行观测（调用/Token/失败）** | **AI 模型配置** |
 | ![运行观测](docs/screenshots/12-observability.png) | ![AI模型配置](docs/screenshots/13-ai-model.png) |
+| **原文证据（纪要条目可核对）** | **行动项（提取 / 确认 / 跟踪 / 导出）** |
+| ![原文证据](docs/screenshots/19-minutes-evidence.png) | ![行动项](docs/screenshots/18-action-items.png) |
+| **单场问答（答案带原文引用）** | **Prompt 模板配置** |
+| ![单场问答](docs/screenshots/20-minutes-qa.png) | ![Prompt模板](docs/screenshots/14-prompt-template.png) |
 
-组织与员工、个人资料、Prompt 模板配置页面截图同样收录在
+组织与员工、个人资料页面截图同样收录在
 [`docs/screenshots/`](docs/screenshots/) 目录。
 
 ## 这个项目是什么
@@ -80,6 +84,18 @@ LangGraph 反思环：`review`（对照转写原文审查）→ `refine`（按�
 人决定「应用修订稿 / 放弃」；纪要确认归档后导出 Word / PDF；
 运行观测页可复盘每次模型调用的状态、耗时与失败原因。
 
+## 可核对、可执行、可追问（4 项 Agent 能力）
+
+- **原文证据**：议题/观点/决策/待确认/风险条目可带 `evidence`（转写片段号、时间、说话人、逐字 quote）；
+  模型只负责给出逐字引用，后端在转写里做确定性匹配，匹配不上就不展示；详情可点「原文」核对，
+  Agent 自检改为对照证据审查（`UNSUPPORTED`）。
+- **行动项**：已确认纪要可一键提取 DRAFT 行动项，人工确认后生效（OPEN），支持负责人/截止/完成/取消、
+  筛选与 CSV 导出；不自动同步外部系统，也不自动改纪要。
+- **单场会议问答**：只读检索本场转写片段 + 纪要内容，答案必须带 `segment_no/时间/说话人/quote` 引用；
+  材料不足时明确返回“未找到足够依据”，不编造；会话不落库、不跨会议。
+- **质量评测**：生成时保留 AI 草稿 `ai_draft_json`，可对比人工终稿算修改率；内置离线评测脚本
+  （覆盖六字段覆盖率、证据合法率、修改率、golden set 行动项/决策召回），零模型调用。
+
 ## 功能与接口概览
 
 统一约定：
@@ -101,7 +117,8 @@ LangGraph 反思环：`review`（对照转写原文审查）→ `refine`（按�
 | AI 模型配置 | `/aiModel` | 4 种用途（转写/纪要/自检/说话人匹配），Key 掩码回显，同用途只允许一条启用 |
 | Prompt 模板 | `/promptTemplate` | 预置模板可编辑、必需变量校验 |
 | 转写任务 | `/transcription` | 发起/重试/删除/列表/详情、片段修订、说话人匹配与建议 |
-| AI 会议纪要 | `/meetingMinutes` | 异步生成、重试、在线修订、确认/取消确认、导出 Word/PDF、删除 |
+| AI 会议纪要 | `/meetingMinutes` | 异步生成、重试、在线修订、确认/取消确认、导出 Word/PDF、删除、单场问答 `/ask/{id}` |
+| 行动项 | `/actionItem` | 从已确认纪要生成、确认生效、负责人/截止编辑、状态流转、批量删除、CSV 导出 |
 | 纪要自检 | `/agent` | 发起反思环、SSE 进度、中断/恢复、时间线、应用/放弃修订稿 |
 | 运行观测 | `/observability` | 指标卡与图表、模型调用排行、步骤排行、最近失败 |
 
@@ -125,13 +142,14 @@ LangGraph 反思环：`review`（对照转写原文审查）→ `refine`（按�
 ├── DEPLOYMENT.md                 # 部署 / 变量 / 排查 / 回滚
 ├── db/
 │   ├── Dockerfile                # mysql:8.4.11 + 初始化 SQL
-│   ├── 01-schema.sql             # 13 张表 DDL（无数据、无密钥）
-│   └── 02-seed.sql               # 2 个部门 + prompt 模板种子数据
+│   ├── 01-schema.sql             # 14 张表 DDL（无数据、无密钥）
+│   ├── 02-seed.sql               # 2 个部门 + 6 条 prompt 模板种子数据
+│   └── migrations/               # 已有库升级 SQL（新库不需要）
 ├── scripts/
 │   ├── compose.sh                # Linux / macOS / WSL 下的 compose 封装
 │   └── compose.ps1               # Windows PowerShell 下的 compose 封装
 ├── meetingbot/
-│   ├── fastapi-app/              # 后端（models.py / api / services / tests）
+│   ├── fastapi-app/              # 后端（models.py / api / services / tests / evaluation）
 │   └── vue/                      # 前端（Vue 3 管理端）
 ├── 架构图/                       # 架构与工作流分析文档、调研附录
 ├── docs/screenshots/             # 真实运行页面截图（README 界面预览引用）
@@ -173,7 +191,8 @@ docker compose up -d --build
 **演示数据默认关闭**（`.env.example` 里 `SEED_DEMO=0`）；需要 README 截图里的演示
 数据时把它改成 `1` 再重启 backend，会幂等写入一场「产品发布评审会」、6 份会议
 资料，以及一条转写 → 纪要 → Agent 自检链路（说话人匹配、六块纪要内容、反思环
-步骤与调用日志）。重复执行不会重复插入；即使演示数据被删除，重启也会补齐。
+步骤与调用日志），并补齐可核对证据与 3 条演示行动项，方便直接演示四项能力。
+重复执行不会重复插入；即使演示数据被删除，重启也会补齐。
 生产环境请保持 `SEED_DEMO=0`。
 
 ## 验证
@@ -221,7 +240,7 @@ npm run dev          # 本地开发（连 http://localhost:9090 后端）
   backend 必须 `--workers 1` 且只能有一个副本；要横向扩展必须先外置任务编排。
   进程崩溃/重启时，进行中的任务会**从头重跑**（分段结果不落库），可能重复调用模型；
   运维上请避免频繁重启，并把这类重复计入成本预期。
-- **零外键**：13 张表之间没有外键约束，关系与级联由应用层维护；
+- **零外键**：14 张表之间没有外键约束，关系与级联由应用层维护；
   业务幂等约束放在唯一索引里（如同一资料只转一次、同一转写任务只有一份纪要）。
 - **密钥不入仓库**：`.env` 被 gitignore，镜像与示例文件不含真实 Key；
   模型配置在**首次部署**时由 `.env` 初始化，之后以「AI 模型配置」页面为准，
@@ -231,6 +250,8 @@ npm run dev          # 本地开发（连 http://localhost:9090 后端）
 - **登录与调用防护**：同一账号/来源连续 5 次密码错误锁定 5 分钟；
   写操作（重试转写、重新生成纪要、发起自检等）要求管理员或对应业务创建人，
   昂贵操作有 3~5 秒的连点冷却；列表分页 `page_size` 上限 100。
+- **AI 输出边界**：证据只接受转写里逐字存在的 quote；单场问答只读、答案必须带引用，
+  找不到依据时明确拒答；行动项不自动同步外部系统，必须人工确认后才生效。
 - **端口只绑定回环**：只有 `127.0.0.1:19092`（后端）和 `127.0.0.1:18083`（网页）
   对外暴露，MySQL 不映射宿主端口。
 - **数据持久化**：MySQL 数据在命名卷 `meetingbot-aim-local_mysql_data`，
@@ -241,7 +262,9 @@ npm run dev          # 本地开发（连 http://localhost:9090 后端）
 ## 文档入口
 
 - [DEPLOYMENT.md](DEPLOYMENT.md)：本地 Docker 部署、`.env` 变量表、启动/停止/日志、
-  验证清单、单进程限制、故障排查、回滚。
+  验证清单、单进程限制、故障排查、回滚、已有库升级。
+- [`meetingbot/fastapi-app/evaluation/README.md`](meetingbot/fastapi-app/evaluation/README.md)：
+  离线质量评测指标与 golden set 说明。
 - [`架构图/AI会议纪要助手-架构与工作流分析.md`](架构图/AI会议纪要助手-架构与工作流分析.md)：
   项目架构、完整工作流、模块设计取舍与完善度评估。
 - [`架构图/调研/`](架构图/调研/)：后端接口与数据模型、前端、AI 链路、质量与成熟度的

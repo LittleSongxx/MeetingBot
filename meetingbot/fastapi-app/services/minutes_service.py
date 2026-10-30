@@ -16,6 +16,7 @@ from models import (
 from pydantic import BaseModel, Field
 from settings import MAX_CHUNK_CHARS
 
+from services.evidence_service import bind_evidence, load_task_evidence_context
 from services.model_factory import invoke_json
 
 logger = logging.getLogger(__name__)
@@ -28,16 +29,27 @@ _running_minutes: dict[int, asyncio.Task] = {}
 _minutes_semaphore: asyncio.Semaphore | None = None
 
 
+class EvidenceItem(BaseModel):
+    # 证据必须是转写原文里的逐字引用；segment_no/时间/说话人由后端回填
+    quote: str
+    segment_no: int | None = None
+    start_ms: int | None = None
+    end_ms: int | None = None
+    speaker: str | None = None
+
+
 class TopicItem(BaseModel):
     # 议题标题和这个议题的小结
     title: str
     summary: str
+    evidence: list[EvidenceItem] = Field(default_factory=list)
 
 
 class ViewpointItem(BaseModel):
     # 说话人姓名来自第 9 章匹配好的 speaker_user_id，没匹配时是说话人标签
     speaker: str
     viewpoint: str
+    evidence: list[EvidenceItem] = Field(default_factory=list)
 
 
 class DecisionItem(BaseModel):
@@ -48,12 +60,14 @@ class DecisionItem(BaseModel):
     # 建议负责人和建议完成时间，模型返回的人名和时间字符串，分别用于决策与待确认事项的负责人和期限展示
     owner_suggestion: str
     deadline_suggestion: str
+    evidence: list[EvidenceItem] = Field(default_factory=list)
 
 
 class PendingItem(BaseModel):
     content: str
     owner_suggestion: str
     deadline_suggestion: str
+    evidence: list[EvidenceItem] = Field(default_factory=list)
 
 
 class RiskItem(BaseModel):
@@ -61,6 +75,7 @@ class RiskItem(BaseModel):
     # 风险等级三选一，页面上按它显示不同颜色的标签
     level: Literal["LOW", "MEDIUM", "HIGH"]
     suggestion: str
+    evidence: list[EvidenceItem] = Field(default_factory=list)
 
 
 class MinutesResult(BaseModel):
@@ -73,16 +88,40 @@ class MinutesResult(BaseModel):
     risks: list[RiskItem] = Field(default_factory=list)
 
 
+EVIDENCE_SCHEMA = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "quote": {"type": "string"},
+            "segment_no": {"type": "integer"},
+        },
+        "required": ["quote"],
+    },
+}
+
+
+def _item_schema(properties: dict, required: list[str]) -> dict:
+    """数组条目的 schema：在业务字段之外统一加可选的 evidence。"""
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {**properties, "evidence": EVIDENCE_SCHEMA},
+        "required": required,
+    }
+
+
 MINUTES_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
     "properties": {
         "summary": {"type": "string"},
-        "topics": {"type": "array", "items": {"type": "object", "additionalProperties": False, "properties": {"title": {"type": "string"}, "summary": {"type": "string"}}, "required": ["title", "summary"]}},
-        "viewpoints": {"type": "array", "items": {"type": "object", "additionalProperties": False, "properties": {"speaker": {"type": "string"}, "viewpoint": {"type": "string"}}, "required": ["speaker", "viewpoint"]}},
-        "decisions": {"type": "array", "items": {"type": "object", "additionalProperties": False, "properties": {"content": {"type": "string"}, "basis": {"type": "string"}, "owner_suggestion": {"type": "string"}, "deadline_suggestion": {"type": "string"}}, "required": ["content", "basis", "owner_suggestion", "deadline_suggestion"]}},
-        "pending_items": {"type": "array", "items": {"type": "object", "additionalProperties": False, "properties": {"content": {"type": "string"}, "owner_suggestion": {"type": "string"}, "deadline_suggestion": {"type": "string"}}, "required": ["content", "owner_suggestion", "deadline_suggestion"]}},
-        "risks": {"type": "array", "items": {"type": "object", "additionalProperties": False, "properties": {"content": {"type": "string"}, "level": {"type": "string", "enum": ["LOW", "MEDIUM", "HIGH"]}, "suggestion": {"type": "string"}}, "required": ["content", "level", "suggestion"]}},
+        "topics": {"type": "array", "items": _item_schema({"title": {"type": "string"}, "summary": {"type": "string"}}, ["title", "summary"])},
+        "viewpoints": {"type": "array", "items": _item_schema({"speaker": {"type": "string"}, "viewpoint": {"type": "string"}}, ["speaker", "viewpoint"])},
+        "decisions": {"type": "array", "items": _item_schema({"content": {"type": "string"}, "basis": {"type": "string"}, "owner_suggestion": {"type": "string"}, "deadline_suggestion": {"type": "string"}}, ["content", "basis", "owner_suggestion", "deadline_suggestion"])},
+        "pending_items": {"type": "array", "items": _item_schema({"content": {"type": "string"}, "owner_suggestion": {"type": "string"}, "deadline_suggestion": {"type": "string"}}, ["content", "owner_suggestion", "deadline_suggestion"])},
+        "risks": {"type": "array", "items": _item_schema({"content": {"type": "string"}, "level": {"type": "string", "enum": ["LOW", "MEDIUM", "HIGH"]}, "suggestion": {"type": "string"}}, ["content", "level", "suggestion"])},
     },
     "required": ["summary", "topics", "viewpoints", "decisions", "pending_items", "risks"],
 }
@@ -182,12 +221,19 @@ async def execute_minutes(minutes_id: int):
                 "MINUTES_MERGE",
             )
         data = result.model_dump()
+        # 把模型给出的逐字引用绑定到转写片段；匹配失败只是没有证据，不影响纪要生成本身
+        try:
+            segments = await load_task_evidence_context(minutes.source_task_id)
+            data = bind_evidence(data, segments)
+        except Exception:
+            logger.exception("纪要证据绑定失败，跳过证据", extra={"minutes_id": minutes.id})
         logger.info("纪要生成完成", extra={"minutes_id": minutes.id, "chunks": len(chunks)})
         # 六块内容一次性写回，状态转成 DRAFT，第 12 章从这里接手修订和确认
         await MeetingMinutes.filter(id=minutes.id).update(
             status="DRAFT", stage="纪要已生成", progress=100, summary=data["summary"],
             topics_json=data["topics"], viewpoints_json=data["viewpoints"], decisions_json=data["decisions"],
             pending_items_json=data["pending_items"], risks_json=data["risks"], error_message=None,
+            ai_draft_json=data,
         )
     except Exception as error:
         logger.exception("纪要生成失败", extra={"minutes_id": minutes_id})

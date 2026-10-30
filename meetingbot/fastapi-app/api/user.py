@@ -8,6 +8,7 @@ from common.times import format_datetime
 from common.urls import to_relative_url
 from fastapi import APIRouter, Body, Depends, Query
 from models import (
+    ActionItem,
     AgentRun,
     Department,
     Meeting,
@@ -108,6 +109,10 @@ async def has_business_reference(user_id: int) -> bool:
         # 第 13、15 章：他发起的纪要自检运行、他确认过的修订稿
         AgentRun.filter(user_id=user_id).exists(),
         AgentRun.filter(applied_by=user_id).exists(),
+        # 行动项：他创建、确认或负责的条目
+        ActionItem.filter(created_by=user_id).exists(),
+        ActionItem.filter(confirmed_by=user_id).exists(),
+        ActionItem.filter(owner_user_id=user_id).exists(),
     ]
     # 逐个执行，命中任意一项就说明有引用，后面的查询不必再跑
     for check in checks:

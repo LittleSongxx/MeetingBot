@@ -34,8 +34,8 @@ docker compose up -d --build
 
 首次启动会依次完成：
 
-1. `db` 容器初始化空数据卷，执行 `db/01-schema.sql`（13 张表）→
-   `db/02-seed.sql`（2 个部门 + prompt 模板），健康检查通过后启动 `backend`；
+1. `db` 容器初始化空数据卷，执行 `db/01-schema.sql`（14 张表）→
+   `db/02-seed.sql`（2 个部门 + 6 条 prompt 模板），健康检查通过后启动 `backend`；
 2. `backend` 启动脚本 `bootstrap.py`：创建管理员账号（`APP_ADMIN_USERNAME` /
    `APP_ADMIN_PASSWORD`）、把历史明文口令迁移为哈希、按环境变量写入 4 条模型配置
    （转写 / 纪要 / 自检 / 说话人匹配）；`SEED_DEMO=1` 时生成一份演示会议数据；
@@ -52,6 +52,29 @@ docker compose up -d --build
 `.env` 把该管理员账号的口令、角色、状态重设一遍（幂等执行）：在页面改过管理员
 口令后，如果 `.env` 里还是旧值，下次重启会被改回去——要么同步更新 `.env`，
 要么固定用 `.env` 作为管理员口令的来源。
+
+## 已有库升级（schema 变更）
+
+全新部署不需要这一步：`01-schema.sql` / `02-seed.sql` 已包含全部结构与模板。
+从旧版本升级时，先备份数据库，再执行一次迁移脚本（执行前确认 `ai_draft_json` 列不存在，
+否则跳过 `ALTER` 部分）：
+
+```bash
+# 备份
+docker compose exec -T db sh -c \
+  'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --databases "$MYSQL_DATABASE"' \
+  > backup-before-agent-capabilities.sql
+
+# 执行迁移（只执行一次）
+docker compose exec -T db sh -c \
+  'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -uroot "$MYSQL_DATABASE"' \
+  < db/migrations/2026-10-30_agent_capabilities.sql
+```
+
+迁移内容：`meeting_minutes.ai_draft_json` 列、`action_item` 表、`MINUTES_QA` 模板，
+以及给四条旧模板追加【证据要求】（只追加一次，不覆盖管理员已有修改）。
+完成后重启 backend：`./scripts/compose.sh up -d --force-recreate backend`；
+`SEED_DEMO=1` 时启动会把演示纪要补齐证据/行动项。
 
 ## 端口与访问地址
 
@@ -189,7 +212,7 @@ curl -s -X POST http://127.0.0.1:18083/api/login \
 curl -s http://127.0.0.1:18083/api/department/selectAll \
   -H 'token: <上一步返回的 token>'
 
-# 6. 数据库：13 张表、5 条 prompt 模板、2 个部门
+# 6. 数据库：14 张表、6 条 prompt 模板、2 个部门
 docker compose exec -T db sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -Nse \
   "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE();
    SELECT COUNT(*) FROM prompt_template; SELECT COUNT(*) FROM department;"'
@@ -220,6 +243,16 @@ cd meetingbot/vue
 npm ci
 npm run build
 ```
+
+质量评测（零模型调用，读运行中的数据库）：
+
+```bash
+docker compose exec -T backend python -m evaluation.run_eval
+# 或只评测某场会议 / 限制数量
+docker compose exec -T backend python -m evaluation.run_eval --meeting-id 1 --limit 50
+```
+
+指标定义与 golden set 格式见 `meetingbot/fastapi-app/evaluation/README.md`。
 
 ## 单进程限制（重要）
 

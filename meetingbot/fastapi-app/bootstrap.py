@@ -154,9 +154,9 @@ async def upsert_model_configs() -> int:
 
 
 async def ensure_prompts() -> None:
-    """初始化 SQL 已灌入 5 条模板；这里只做缺失告警，避免模板被误删后静默不可用。"""
+    """初始化 SQL 已灌入 6 条模板；这里只做缺失告警，避免模板被误删后静默不可用。"""
     rows = await PromptTemplate.all().values_list("code", flat=True)
-    missing = {"MEETING_MINUTES_CHUNK", "MEETING_MINUTES_MERGE", "MINUTES_REVIEW", "MINUTES_REFINE", "SPEAKER_MATCH"} - set(rows)
+    missing = {"MEETING_MINUTES_CHUNK", "MEETING_MINUTES_MERGE", "MINUTES_REVIEW", "MINUTES_REFINE", "MINUTES_QA", "SPEAKER_MATCH"} - set(rows)
     if missing:
         logger.warning("Prompt 模板缺失，请检查 db/02-seed.sql", extra={"missing": sorted(missing)})
     elif not rows:

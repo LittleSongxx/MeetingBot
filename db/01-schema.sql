@@ -5,7 +5,7 @@
 --       docker-entrypoint-initdb.d 自动执行一次（先 01-schema 再 02-seed）。
 --
 -- 表结构真源是 `meetingbot/fastapi-app/models.py`（Tortoise ORM 模型），
--- 本文件必须与它保持一致；改表时两边同时改。13 张表与模型类的对应关系：
+-- 本文件必须与它保持一致；改表时两边同时改。14 张表与模型类的对应关系：
 --
 --   department          -> Department
 --   user                -> User
@@ -18,6 +18,7 @@
 --   ai_call_log         -> AiCallLog
 --   prompt_template     -> PromptTemplate
 --   meeting_minutes     -> MeetingMinutes
+--   action_item         -> ActionItem
 --   agent_run           -> AgentRun
 --   agent_step          -> AgentStep
 --
@@ -229,6 +230,7 @@ CREATE TABLE `meeting_minutes` (
   `decisions_json` json NOT NULL COMMENT '会议决策数组',
   `pending_items_json` json NOT NULL COMMENT '待确认事项数组',
   `risks_json` json NOT NULL COMMENT '风险与争议点数组',
+  `ai_draft_json` json DEFAULT NULL COMMENT 'AI首次生成原稿（六字段+evidence），用于评测人工修改率',
   `created_by` int NOT NULL COMMENT '生成发起人ID',
   `confirmed_by` int DEFAULT NULL COMMENT '确认人ID',
   `confirmed_time` datetime DEFAULT NULL COMMENT '确认时间',
@@ -240,6 +242,30 @@ CREATE TABLE `meeting_minutes` (
   KEY `idx_minutes_meeting_status` (`meeting_id`, `status`),
   KEY `idx_minutes_source_task_id` (`source_task_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI会议纪要表';
+
+CREATE TABLE `action_item` (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '行动项ID',
+  `meeting_id` int NOT NULL COMMENT '会议ID',
+  `minutes_id` int DEFAULT NULL COMMENT '来源会议纪要ID；人工新增为空',
+  `content` varchar(1000) NOT NULL COMMENT '待办内容',
+  `owner_user_id` int DEFAULT NULL COMMENT '匹配到的负责人用户ID',
+  `owner_name` varchar(100) DEFAULT NULL COMMENT '负责人姓名文本',
+  `due_date` date DEFAULT NULL COMMENT '解析出的截止日期',
+  `due_text` varchar(100) DEFAULT NULL COMMENT '截止时间原文',
+  `status` varchar(20) NOT NULL DEFAULT 'DRAFT' COMMENT 'DRAFT、OPEN、DONE、CANCELLED',
+  `source_field` varchar(30) DEFAULT NULL COMMENT 'pending_items、decisions、MANUAL',
+  `source_index` int DEFAULT NULL COMMENT '来源字段里的数组下标',
+  `created_by` int NOT NULL COMMENT '创建人用户ID',
+  `confirmed_by` int DEFAULT NULL COMMENT '确认生效人用户ID',
+  `confirmed_time` datetime DEFAULT NULL COMMENT '确认生效时间',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_action_source` (`minutes_id`, `source_field`, `source_index`),
+  KEY `idx_action_meeting_status` (`meeting_id`, `status`),
+  KEY `idx_action_owner_status` (`owner_user_id`, `status`),
+  KEY `idx_action_due_date` (`due_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会议行动项表';
 
 CREATE TABLE `agent_run` (
   `id` int NOT NULL AUTO_INCREMENT COMMENT '自检运行ID',

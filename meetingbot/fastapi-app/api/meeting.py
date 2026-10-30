@@ -9,6 +9,7 @@ from common.result import PageInfo, Result
 from common.times import format_datetime, now, to_local
 from fastapi import APIRouter, Depends, Query
 from models import (
+    ActionItem,
     AgentRun,
     AgentStep,
     Department,
@@ -380,6 +381,7 @@ async def delete(meeting_id: int, _: User = Depends(require_admin)):
         await AgentStep.filter(run_id__in=run_ids).delete()
 
     # 其余表都直接带 meeting_id，按会议删一遍
+    await ActionItem.filter(meeting_id=meeting_id).delete()
     await AgentRun.filter(meeting_id=meeting_id).delete()
     await MeetingMinutes.filter(meeting_id=meeting_id).delete()
     await TranscriptSegment.filter(meeting_id=meeting_id).delete()

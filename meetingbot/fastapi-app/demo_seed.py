@@ -10,10 +10,12 @@
 """
 
 import logging
-from datetime import timedelta
+from contextlib import suppress
+from datetime import date, timedelta
 
 from common.times import now
 from models import (
+    ActionItem,
     AgentRun,
     AgentStep,
     AiCallLog,
@@ -138,6 +140,91 @@ REVISED = {
 }
 
 
+def _demo_evidence(segment_no: int, quote: str) -> dict:
+    """从演示转写里构造一条可核对的 evidence（segment_no 从 1 开始）。"""
+    label, _text, start_ms, end_ms = SEGMENTS[segment_no - 1]
+    speaker = {"employee": "张晨", "operator": "李悦"}.get(SPEAKER_MAP.get(label))
+    return {
+        "segment_no": segment_no,
+        "start_ms": start_ms,
+        "end_ms": end_ms,
+        "speaker": speaker or label,
+        "quote": quote,
+    }
+
+
+def _attach_demo_evidence() -> None:
+    """给演示纪要的数组条目挂上原文证据，供详情“查看原文”和评测使用。"""
+    mapping = {
+        "topics": [(3, "17 个需求已经验收通过 15 个"), (10, "报表导出改为异步导出"), (11, "10%、30%、100% 三阶段放量")],
+        "viewpoints": [(3, "17 个需求已经验收通过 15 个"), (7, "两个方案：一是加缓存"), (9, "前端要加一个导出任务列表")],
+        "decisions": [(10, "报表导出改为异步导出"), (11, "10%、30%、100% 三阶段放量"), (12, "对外通稿 9 月 12 日定稿")],
+        "pending_items": [(14, "队列和限流方案"), (9, "前端要加一个导出任务列表")],
+        "risks": [(13, "任务堆积，需要有限流和失败重试"), (11, "每阶段观察一天")],
+    }
+    for field, entries in mapping.items():
+        for index, (segment_no, quote) in enumerate(entries):
+            MINUTES[field][index]["evidence"] = [_demo_evidence(segment_no, quote)]
+
+
+def demo_minutes_payload() -> dict:
+    """演示纪要的完整六字段（含 evidence），用于 ai_draft_json 与新库播种。"""
+    return {
+        "summary": MINUTES["summary"],
+        "topics": MINUTES["topics"],
+        "viewpoints": MINUTES["viewpoints"],
+        "decisions": MINUTES["decisions"],
+        "pending_items": MINUTES["pending_items"],
+        "risks": MINUTES["risks"],
+    }
+
+
+_attach_demo_evidence()
+
+
+# 修订稿里新建的条目沿用原条目的证据；其余条目引用 MINUTES 里的同一对象，已带 evidence
+REVISED["decisions"][0]["evidence"] = MINUTES["decisions"][0]["evidence"]
+REVISED["pending_items"][0]["evidence"] = MINUTES["pending_items"][0]["evidence"]
+REVISED["pending_items"][1]["evidence"] = MINUTES["pending_items"][1]["evidence"]
+REVISED["risks"][0]["evidence"] = MINUTES["risks"][0]["evidence"]
+REVISED["risks"][1]["evidence"] = MINUTES["risks"][1]["evidence"]
+
+
+async def _seed_demo_action_items(minutes: MeetingMinutes, host: User, operator: User) -> None:
+    """幂等补 3 条演示行动项：待确认 / 进行中 / 已完成各一条。"""
+    owner_ids = {"张晨": host.id, "李悦": operator.id}
+    specs = [
+        # source_field, source_index, content, owner_name, due_text, status
+        ("pending_items", 0, "评估异步导出的队列与限流方案", "张涛", "2026-09-05", "OPEN"),
+        ("pending_items", 1, "前端导出任务列表联调", "李悦", "2026-09-10", "DRAFT"),
+        ("decisions", 0, "报表导出改为异步导出，前端增加导出任务列表", "张涛、李悦", "2026-09-10", "DONE"),
+    ]
+    for source_field, source_index, content, owner_name, due_text, status in specs:
+        exists = await ActionItem.filter(
+            minutes_id=minutes.id, source_field=source_field, source_index=source_index
+        ).exists()
+        if exists:
+            continue
+        due_date = None
+        with suppress(ValueError):
+            due_date = date.fromisoformat(due_text)
+        await ActionItem.create(
+            meeting_id=minutes.meeting_id,
+            minutes_id=minutes.id,
+            content=content,
+            owner_user_id=owner_ids.get(owner_name),
+            owner_name=owner_name,
+            due_date=due_date,
+            due_text=due_text,
+            status=status,
+            source_field=source_field,
+            source_index=source_index,
+            created_by=host.id,
+            confirmed_by=None if status == "DRAFT" else host.id,
+            confirmed_time=None if status == "DRAFT" else now(),
+        )
+
+
 async def _create_call_logs(task: TranscriptionTask, minutes: MeetingMinutes, run: AgentRun) -> None:
     """观测页演示日志：三种链路、成功与失败、跨多天分布。"""
     specs = [
@@ -259,9 +346,24 @@ async def seed_ai_demo(meeting: Meeting, host: User, operator: User) -> None:
             decisions_json=MINUTES["decisions"],
             pending_items_json=MINUTES["pending_items"],
             risks_json=MINUTES["risks"],
+            ai_draft_json=demo_minutes_payload(),
             created_by=host.id,
         )
         logger.info("演示纪要已创建", extra={"minutes_id": minutes.id})
+    else:
+        # 旧版本演示数据没有 evidence / ai_draft_json：只在仍是草稿时补齐，不覆盖人工改过的内容
+        if minutes.status == "DRAFT":
+            fields = {
+                "summary": MINUTES["summary"],
+                "topics_json": MINUTES["topics"],
+                "viewpoints_json": MINUTES["viewpoints"],
+                "decisions_json": MINUTES["decisions"],
+                "pending_items_json": MINUTES["pending_items"],
+                "risks_json": MINUTES["risks"],
+                "ai_draft_json": demo_minutes_payload(),
+            }
+            await MeetingMinutes.filter(id=minutes.id).update(**fields)
+            minutes = await MeetingMinutes.get(id=minutes.id)
 
     run = await AgentRun.filter(run_no=DEMO_RUN_NO).first()
     if run is None:
@@ -326,4 +428,5 @@ async def seed_ai_demo(meeting: Meeting, host: User, operator: User) -> None:
         )
 
     await _create_call_logs(task, minutes, run)
+    await _seed_demo_action_items(minutes, host, operator)
     logger.info("AI 演示数据已就绪", extra={"task_id": task.id, "minutes_id": minutes.id, "run_id": run.id})

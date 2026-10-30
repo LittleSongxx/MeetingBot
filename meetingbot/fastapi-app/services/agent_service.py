@@ -17,6 +17,7 @@ from models import (
 from settings import AGENT_REVIEW_MAX_TRANSCRIPT_CHARS
 
 from services.agent_graph import build_review_graph, recursion_limit
+from services.evidence_service import load_task_evidence_context, merge_evidence
 from services.minutes_service import MINUTES_SCHEMA, MinutesResult, render_prompt
 from services.model_factory import invoke_json
 
@@ -119,6 +120,8 @@ class ReviewContext:
     # 提示词里除了当前内容之外的固定变量，例如会议主题、转写原文、参会名单
     review_variables: dict
     refine_variables: dict
+    # 来源转写任务 ID，重写后用它加载片段做 evidence 重绑定
+    task_id: int
 
 
 def minutes_content(minutes: MeetingMinutes) -> dict:
@@ -235,6 +238,7 @@ async def build_minutes_context(run: AgentRun, minutes: MeetingMinutes, meeting:
         review_variables={"meeting_title": meeting.title, "transcript": transcript},
         # 重写模板还有 {meeting_title}，{issues} 在重写步骤里单独传
         refine_variables={"meeting_title": meeting.title},
+        task_id=minutes.source_task_id,
     )
 
 
@@ -312,6 +316,12 @@ async def refine_round(
         )
         # 复用纪要生成时的校验模型，字段缺失或者类型不对会在这里直接抛出来
         revised = MinutesResult.model_validate(result).model_dump()
+        # 改稿时保留/重绑定证据：内容没变继承旧引用，改动条目只接受能在转写里逐字找到的引用
+        try:
+            segments = await load_task_evidence_context(context.task_id)
+            revised = merge_evidence(working, revised, segments)
+        except Exception:
+            logger.exception("自检修订的证据合并失败，保留修订稿原样", extra={"run_id": run.id})
         # payload 存改完的整份纪要
         await close_step(step, started, f"已按 {len(issues)} 条问题重写", revised)
         return revised

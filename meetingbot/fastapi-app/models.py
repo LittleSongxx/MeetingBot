@@ -322,6 +322,8 @@ class MeetingMinutes(Model):
     decisions_json = fields.JSONField(default=list)
     pending_items_json = fields.JSONField(default=list)
     risks_json = fields.JSONField(default=list)
+    # AI 首次生成的原稿（六字段 + evidence），用于评测人工修改率；老数据为空
+    ai_draft_json = fields.JSONField(null=True)
     # 对应 meeting_minutes.created_by
     created_by = fields.IntField()
     # 对应 meeting_minutes.confirmed_by 和 confirmed_time，确认前为空
@@ -337,6 +339,36 @@ class MeetingMinutes(Model):
         table = "meeting_minutes"
         # 一个转写任务只保留一份纪要，重新生成时覆盖原来那条
         unique_together = (("source_task_id",),)
+
+
+class ActionItem(Model):
+    # 一条可跟踪的会议行动项，来自已确认纪要（AI 提取）或人工新增
+    id = fields.IntField(pk=True)
+    meeting_id = fields.IntField()
+    # 由 AI 从纪要生成时记录来源纪要；人工新增为空
+    minutes_id = fields.IntField(null=True)
+    content = fields.CharField(max_length=1000)
+    # 负责人可以是系统用户（匹配到姓名时写入），也可以只有文本
+    owner_user_id = fields.IntField(null=True)
+    owner_name = fields.CharField(max_length=100, null=True)
+    # 截止日期能解析出来时写 date，解析不了就保留原文 due_text
+    due_date = fields.DateField(null=True)
+    due_text = fields.CharField(max_length=100, null=True)
+    # DRAFT 待确认、OPEN 进行中、DONE 已完成、CANCELLED 已取消
+    status = fields.CharField(max_length=20, default="DRAFT")
+    # pending_items / decisions / MANUAL
+    source_field = fields.CharField(max_length=30, null=True)
+    source_index = fields.IntField(null=True)
+    created_by = fields.IntField()
+    confirmed_by = fields.IntField(null=True)
+    confirmed_time = fields.DatetimeField(null=True)
+    create_time = fields.DatetimeField(auto_now_add=True)
+    update_time = fields.DatetimeField(auto_now=True)
+
+    class Meta:
+        table = "action_item"
+        # 同一条纪要的同一来源条目只生成一次，重新生成不会重复
+        unique_together = (("minutes_id", "source_field", "source_index"),)
 
 
 class AgentRun(Model):

@@ -9,6 +9,7 @@ import unittest
 
 from demo_seed import DEMO_RUN_NO, seed_ai_demo
 from models import (
+    ActionItem,
     AgentRun,
     AgentStep,
     AiCallLog,
@@ -94,10 +95,18 @@ class DemoSeedIdempotentTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(first, (1, 14, 1, 1, 4, 10))
         demo_run = await AgentRun.get(run_no=DEMO_RUN_NO)
         self.assertEqual(demo_run.status, "WAITING_CONFIRMATION")
+        # 演示纪要带 evidence 和 AI 草稿；同时补 3 条演示行动项
+        demo_minutes = await MeetingMinutes.get()
+        self.assertIsNotNone(demo_minutes.ai_draft_json)
+        self.assertTrue(demo_minutes.decisions_json[0].get("evidence"))
+        self.assertEqual(await ActionItem.all().count(), 3)
+        self.assertEqual(await ActionItem.filter(status="OPEN").count(), 1)
+        self.assertEqual(await ActionItem.filter(status="DONE").count(), 1)
 
     async def test_reseed_after_demo_rows_deleted(self):
         await self._seed()
         # 模拟管理员在页面删除演示转写任务（级联删纪要/自检），调用日志按设计保留
+        await ActionItem.all().delete()
         await AgentStep.all().delete()
         await AgentRun.all().delete()
         await MeetingMinutes.all().delete()
@@ -115,6 +124,7 @@ class DemoSeedIdempotentTest(unittest.IsolatedAsyncioTestCase):
         # 固定 request_id 的日志会被原地更新到新业务行，不会产生指向已删数据的孤儿
         log = await AiCallLog.get(request_id="AICDEMO0001")
         self.assertEqual(log.biz_id, task.id)
+        self.assertEqual(await ActionItem.all().count(), 3)
 
 
 if __name__ == "__main__":

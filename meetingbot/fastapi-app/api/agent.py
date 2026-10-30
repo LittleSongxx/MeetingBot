@@ -18,7 +18,8 @@ from models import (
     User,
 )
 from pydantic import BaseModel
-from services.agent_service import cancel_agent_run, schedule_agent_run
+from services.agent_service import cancel_agent_run, minutes_content, schedule_agent_run
+from services.evidence_service import load_task_evidence_context, merge_evidence
 from services.minutes_service import material_name_of_minutes
 from starlette.responses import StreamingResponse
 
@@ -251,6 +252,12 @@ async def apply(run_id: int, payload: ApplyPayload, current_user: User = Depends
     if run.finished_at and minutes.update_time and minutes.update_time > run.finished_at:
         raise CustomException("纪要内容在自检结束后已被修改，请重新发起自检", "409")
     revision = run.revised_json
+    # 应用前把旧稿 evidence 合并进修订稿，避免自检后引用全部丢失
+    try:
+        segments = await load_task_evidence_context(minutes.source_task_id)
+        revision = merge_evidence(minutes_content(minutes), revision, segments)
+    except Exception:
+        pass
     # 先把运行抢占成 SUCCEEDED，抢占成功才写纪要，避免同一份修订稿被写两次
     claimed = await AgentRun.filter(id=run.id, status="WAITING_CONFIRMATION").update(
         status="SUCCEEDED", applied_by=current_user.id, applied_time=now()
