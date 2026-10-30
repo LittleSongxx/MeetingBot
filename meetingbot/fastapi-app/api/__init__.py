@@ -2,15 +2,14 @@ import importlib
 import logging
 import pkgutil
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
-
 from common.auth import create_token, get_current_user
 from common.exception_handler import CustomException
 from common.result import Result
 from common.security import hash_password, is_hashed, verify_password
 from common.urls import to_relative_url
+from fastapi import APIRouter, Depends
 from models import Department, User
+from pydantic import BaseModel
 from settings import REGISTER_ENABLED
 
 logger = logging.getLogger(__name__)

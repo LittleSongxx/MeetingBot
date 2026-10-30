@@ -20,14 +20,13 @@ from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
 
-from tortoise import Tortoise
-
 from common.logging_conf import setup_logging
 from common.security import hash_password, migrate_if_plaintext
 from common.times import now
 from demo_seed import seed_ai_demo
 from models import AiModelConfig, Department, Meeting, MeetingMaterial, MeetingParticipant, PromptTemplate, User
 from settings import TORTOISE_ORM
+from tortoise import Tortoise
 
 setup_logging()
 logger = logging.getLogger(__name__)

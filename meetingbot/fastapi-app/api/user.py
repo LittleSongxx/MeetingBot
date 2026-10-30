@@ -1,14 +1,12 @@
 from typing import List
 
-from fastapi import APIRouter, Body, Depends
-from pydantic import BaseModel, ConfigDict
-
 from common.auth import get_current_user, require_admin
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.security import hash_password
 from common.times import format_datetime
 from common.urls import to_relative_url
+from fastapi import APIRouter, Body, Depends
 from models import (
     AgentRun,
     Department,
@@ -20,6 +18,7 @@ from models import (
     TranscriptSegment,
     User,
 )
+from pydantic import BaseModel, ConfigDict
 
 router = APIRouter(prefix="/user")
 

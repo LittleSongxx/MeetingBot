@@ -1,15 +1,9 @@
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
-from tortoise.exceptions import IntegrityError
-from tortoise.expressions import Q
-
-from api.meeting import get_accessible_meeting
-from api.meeting_material import get_accessible_material
 from common.auth import get_current_user
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime, now
+from fastapi import APIRouter, Depends
 from models import (
     AiModelConfig,
     Department,
@@ -21,8 +15,14 @@ from models import (
     TranscriptSegment,
     User,
 )
+from pydantic import BaseModel
 from services.speaker_service import suggest_speakers
 from services.transcription_service import schedule_transcription
+from tortoise.exceptions import IntegrityError
+from tortoise.expressions import Q
+
+from api.meeting import get_accessible_meeting
+from api.meeting_material import get_accessible_material
 
 router = APIRouter(prefix="/transcription")
 

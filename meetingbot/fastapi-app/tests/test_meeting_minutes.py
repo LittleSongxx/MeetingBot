@@ -1,9 +1,6 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from pydantic import ValidationError
-from tortoise import Tortoise
-
 from api.meeting_minutes import (
     EditPayload,
     build_docx,
@@ -27,7 +24,9 @@ from models import (
     TranscriptSegment,
     User,
 )
+from pydantic import ValidationError
 from services.minutes_service import MinutesResult, execute_minutes
+from tortoise import Tortoise
 
 
 class MeetingMinutesTest(unittest.IsolatedAsyncioTestCase):

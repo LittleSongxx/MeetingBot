@@ -4,17 +4,17 @@ from contextlib import suppress
 from pathlib import Path
 from uuid import uuid4
 
-from docx import Document
-from fastapi import APIRouter, Body, Depends, File, UploadFile
-from starlette.responses import FileResponse
-from tortoise.exceptions import IntegrityError
-
-from api.meeting import get_accessible_meeting
 from common.auth import get_current_user
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime
+from docx import Document
+from fastapi import APIRouter, Body, Depends, File, UploadFile
 from models import MeetingMaterial, TranscriptionTask, User
+from starlette.responses import FileResponse
+from tortoise.exceptions import IntegrityError
+
+from api.meeting import get_accessible_meeting
 
 router = APIRouter(prefix="/meetingMaterial")
 

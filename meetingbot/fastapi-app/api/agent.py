@@ -2,15 +2,11 @@ import asyncio
 import json
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
-from starlette.responses import StreamingResponse
-
-from api.meeting_minutes import get_accessible_minutes
 from common.auth import get_current_user
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime, now
+from fastapi import APIRouter, Depends
 from models import (
     AgentRun,
     AgentStep,
@@ -20,8 +16,12 @@ from models import (
     PromptTemplate,
     User,
 )
+from pydantic import BaseModel
 from services.agent_service import cancel_agent_run, schedule_agent_run
 from services.minutes_service import material_name_of_minutes
+from starlette.responses import StreamingResponse
+
+from api.meeting_minutes import get_accessible_minutes
 
 router = APIRouter(prefix="/agent")
 

@@ -1,12 +1,11 @@
 import unittest
 
-from tortoise import Tortoise
-
 from api import Account, login, register, update_password
 from common.auth import create_token, get_current_user
 from common.exception_handler import CustomException
 from common.security import hash_password, is_hashed, migrate_if_plaintext, password_fingerprint, verify_password
 from models import User
+from tortoise import Tortoise
 
 
 class SecurityAuthTest(unittest.IsolatedAsyncioTestCase):

@@ -2,8 +2,6 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from tortoise import Tortoise
-
 from api.agent import ApplyPayload, RunPayload, apply, interrupt, resume
 from common.exception_handler import CustomException
 from common.model_json import parse_model_json
@@ -24,6 +22,7 @@ from services.agent_service import (
     issue_line,
     transcript_excerpt,
 )
+from tortoise import Tortoise
 
 
 class AgentTest(unittest.IsolatedAsyncioTestCase):

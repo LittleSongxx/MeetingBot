@@ -2,10 +2,9 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 import jwt
-from fastapi import Header
-
 from common.exception_handler import CustomException
 from common.security import password_fingerprint
+from fastapi import Header
 from models import User
 from settings import JWT_ALGORITHM, JWT_EXPIRE_HOURS, JWT_SECRET
 

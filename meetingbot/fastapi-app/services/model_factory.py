@@ -15,11 +15,10 @@ from time import perf_counter
 from typing import Any, Callable
 from uuid import uuid4
 
+from common.model_json import build_schema_instruction, parse_model_json
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import Runnable
 from langchain_openai import ChatOpenAI
-
-from common.model_json import build_schema_instruction, parse_model_json
 from models import AiCallLog, AiModelConfig
 
 logger = logging.getLogger(__name__)

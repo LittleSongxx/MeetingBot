@@ -14,10 +14,11 @@ from models import (
     PromptTemplate,
     TranscriptionTask,
 )
+from settings import AGENT_REVIEW_MAX_TRANSCRIPT_CHARS
+
 from services.agent_graph import build_review_graph, recursion_limit
 from services.minutes_service import MINUTES_SCHEMA, MinutesResult, render_prompt
 from services.model_factory import invoke_json
-from settings import AGENT_REVIEW_MAX_TRANSCRIPT_CHARS
 
 logger = logging.getLogger(__name__)
 

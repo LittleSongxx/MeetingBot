@@ -1,4 +1,5 @@
 from models import AiModelConfig, Meeting, MeetingParticipant, PromptTemplate, TranscriptSegment, User
+
 from services.model_factory import invoke_json
 
 # 喂给模型的转写片段上限。判断谁是谁靠的是点名句和自我介绍，

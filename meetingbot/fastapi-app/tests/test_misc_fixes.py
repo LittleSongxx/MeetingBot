@@ -3,9 +3,6 @@ import unittest
 from pathlib import Path
 from uuid import uuid4
 
-from starlette.datastructures import UploadFile
-from tortoise import Tortoise
-
 from api import account_dict
 from api.department import delete_batch as department_delete_batch
 from api.files import UPLOAD_DIR, upload_file
@@ -22,6 +19,8 @@ from models import (
     MeetingMinutes,
     User,
 )
+from starlette.datastructures import UploadFile
+from tortoise import Tortoise
 
 
 class MiscFixTest(unittest.IsolatedAsyncioTestCase):

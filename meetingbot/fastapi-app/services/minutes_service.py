@@ -3,8 +3,6 @@ import json
 import logging
 from typing import Literal
 
-from pydantic import BaseModel, Field
-
 from models import (
     AiModelConfig,
     Meeting,
@@ -15,8 +13,10 @@ from models import (
     TranscriptSegment,
     User,
 )
-from services.model_factory import invoke_json
+from pydantic import BaseModel, Field
 from settings import MAX_CHUNK_CHARS
+
+from services.model_factory import invoke_json
 
 logger = logging.getLogger(__name__)
 

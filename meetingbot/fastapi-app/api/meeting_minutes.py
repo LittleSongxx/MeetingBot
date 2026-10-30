@@ -3,24 +3,12 @@ from io import BytesIO
 from pathlib import Path
 from urllib.parse import quote
 
-from docx import Document
-from fastapi import APIRouter, Depends
-from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import mm
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-from starlette.responses import StreamingResponse
-from tortoise.expressions import Q
-
-from api.meeting import get_accessible_meeting
 from common.auth import get_current_user
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime, now
+from docx import Document
+from fastapi import APIRouter, Depends
 from models import (
     AgentRun,
     AgentStep,
@@ -32,7 +20,19 @@ from models import (
     TranscriptionTask,
     User,
 )
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from services.minutes_service import MinutesResult, material_name_of_minutes, schedule_minutes
+from starlette.responses import StreamingResponse
+from tortoise.expressions import Q
+
+from api.meeting import get_accessible_meeting
 
 router = APIRouter(prefix="/meetingMinutes")
 

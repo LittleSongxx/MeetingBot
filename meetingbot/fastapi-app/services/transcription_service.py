@@ -8,7 +8,6 @@ from time import perf_counter
 from uuid import uuid4
 
 import httpx
-
 from api.meeting_material import MATERIAL_DIR
 from common.times import now
 from models import (

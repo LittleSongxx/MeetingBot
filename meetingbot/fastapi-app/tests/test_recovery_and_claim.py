@@ -1,8 +1,6 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from tortoise import Tortoise
-
 from models import (
     AgentRun,
     AgentStep,
@@ -16,6 +14,7 @@ from models import (
 )
 from services.agent_service import execute_agent_run, finalize_run
 from services.minutes_service import execute_minutes
+from tortoise import Tortoise
 
 
 class RecoveryAndClaimTest(unittest.IsolatedAsyncioTestCase):

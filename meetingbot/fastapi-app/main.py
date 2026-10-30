@@ -2,17 +2,16 @@ import logging
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-from starlette.middleware.cors import CORSMiddleware
-from tortoise import connections
-from tortoise.contrib.fastapi import register_tortoise
-
 from api import api_router
 from common.exception_handler import setup_exceptions
 from common.logging_conf import setup_logging
 from common.result import Result
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 from settings import CORS_ALLOW_ORIGINS, TORTOISE_ORM
+from starlette.middleware.cors import CORSMiddleware
+from tortoise import connections
+from tortoise.contrib.fastapi import register_tortoise
 
 # 日志在导入期装好：容器启动后的头几行就必须是结构化日志，
 # 否则排查启动问题时正好缺最需要的那一段

@@ -1,12 +1,11 @@
 import unittest
 from datetime import datetime
 
-from tortoise import Tortoise
-
 from api.meeting_minutes import minutes_dict
 from common.times import LOCAL_TZ, format_datetime, now
 from models import Meeting, MeetingMinutes, User
 from services.observability_service import parse_date_range
+from tortoise import Tortoise
 
 
 class TimezoneTest(unittest.IsolatedAsyncioTestCase):
