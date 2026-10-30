@@ -1,0 +1,27 @@
+health: (200, {'status': 'ok', 'db': 'up'}, 26.4)
+root: (200, {'code': '200', 'msg': '请求成功', 'data': None}, 15.0)
+login admin: (200, '200', 'ADMIN', '58.3ms')
+login demo employee: (200, '200', 'EMPLOYEE')
+invalid token: (200, '401', '登录状态已失效，请重新登录')
+page_size=10: (200, '200', 'items=1', '20.4ms')
+page_size=999999: (200, '200', 'items=1', '30.0ms')
+page_num=-1: (200, '500', '系统错误', '78.9ms')
+page_num=0: (200, '500', '系统错误', '26.7ms')
+register disabled: (200, '403', '注册功能未开启，请联系管理员创建账号')
+employee -> admin API: (200, '403', '没有操作权限')
+observability scope (admin): (200, '200', '企业全局观测')
+observability scope (employee): (200, '200', '个人AI与Agent观测')
+create scratch dept: (200, '200')
+find scratch dept: 3
+batch delete (json array body): (200, '200', '请求成功')
+scratch dept after delete: 0
+minutes update with level=高: (200, '500', '请求参数错误')
+backend /docs: (200, 1006)
+backend /openapi.json: (200, 54291)
+backend /redoc: (200, 888)
+avatar download without auth: (200, 118296, 'application/octet-stream')
+CORS first-party preflight: (405, None)
+login brute-force 5x: [('500', '账号或密码错误'), ('500', '账号或密码错误'), ('500', '账号或密码错误'), ('500', '账号或密码错误'), ('500', '账号或密码错误')]
+SSE agent events: (200, 'text/event-stream; charset=utf-8', ['data: {"id": 1, "run_no": "AGR-DEMO-001", "minutes_id": 1, "meeting_id": 1, "meeting_title": "产品发布评审会", "material_name":'])
+web index headers: {'status': 200, 'content-encoding': None, 'cache-control': None, 'csp': None, 'x-frame-options': None}
+web asset headers: {'path': '/assets/index-Cw_fB3Qa.js', 'status': 200, 'encoding': None, 'cache-control': None, 'length': 1890256}

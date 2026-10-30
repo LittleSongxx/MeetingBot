@@ -1,0 +1,51 @@
+=== cleanup ===
+=== mysql ===
+mysql ready
+=== backend with patched bootstrap mounted ===
+aim-repro-backend|Up 20 seconds
+aim-repro-db|Up 29 seconds
+--- first boot logs (tail) ---
+{"time": "2026-10-30T06:45:28+0000", "level": "INFO", "logger": "uvicorn.error", "message": "Started server process [1]", "extra": {"color_message": "Started server process [\u001b[36m%d\u001b[0m]"}}
+{"time": "2026-10-30T06:45:28+0000", "level": "INFO", "logger": "uvicorn.error", "message": "Waiting for application startup."}
+{"time": "2026-10-30T06:45:28+0000", "level": "INFO", "logger": "tortoise", "message": "Tortoise-ORM started, {'default': <tortoise.backends.mysql.client.MySQLClient object at 0x7c6ef393f860>}, <tortoise.apps.Apps object at 0x7c6ef33fe9c0>"}
+{"time": "2026-10-30T06:45:28+0000", "level": "INFO", "logger": "main", "message": "异步任务恢复完成", "extra": {"transcription": 0, "minutes": 0, "agent": 0}}
+{"time": "2026-10-30T06:45:28+0000", "level": "INFO", "logger": "uvicorn.error", "message": "Application startup complete."}
+{"time": "2026-10-30T06:45:28+0000", "level": "INFO", "logger": "uvicorn.error", "message": "Uvicorn running on http://0.0.0.0:9090 (Press CTRL+C to quit)", "extra": {"color_message": "Uvicorn running on \u001b[1m%s://%s:%d\u001b[0m (Press CTRL+C to quit)"}}
+--- counts after fresh seed ---
+task	1
+minutes	1
+run	1
+logs	10
+=== simulate page delete: delete demo task/minutes/run, keep ai_call_log ===
+remaining_logs
+10
+=== restart backend ===
+status=exited exit=1 restarts=0
+--- restart logs (tail) ---
+  File "/usr/local/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/app/bootstrap.py", line 262, in main
+    await seed_demo()
+  File "/app/bootstrap.py", line 251, in seed_demo
+    await seed_ai_demo(meeting, host, created_users["operator"])
+  File "/app/demo_seed.py", line 297, in seed_ai_demo
+    await _create_call_logs(task, minutes, run)
+  File "/app/demo_seed.py", line 171, in _create_call_logs
+    log = await AiCallLog.create(
+          ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/tortoise/models.py", line 1387, in create
+    await instance.save(using_db=db, force_create=True)
+  File "/usr/local/lib/python3.12/site-packages/tortoise/models.py", line 1173, in save
+    await executor.execute_insert(self)
+  File "/usr/local/lib/python3.12/site-packages/tortoise/backends/base/executor.py", line 343, in execute_insert
+    insert_result = await self.db.execute_insert(self.insert_query, values)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/tortoise/backends/mysql/client.py", line 60, in translate_exceptions_
+    raise IntegrityError(exc)
+tortoise.exceptions.IntegrityError: (1062, "Duplicate entry 'AICDEMO0001' for key 'ai_call_log.uk_ai_call_request_id'")
+=== cleanup ===
+cleaned

@@ -1,0 +1,62 @@
+{
+  "login_code": "200",
+  "route_titles": {
+    "/manager/home": "系统首页 · MeetingBot",
+    "/manager/meeting": "会议管理 · MeetingBot",
+    "/manager/meetingMaterial": "会议资料 · MeetingBot",
+    "/manager/transcription": "转写任务 · MeetingBot",
+    "/manager/meetingMinutes": "AI会议纪要 · MeetingBot",
+    "/manager/agent": "纪要自检 · MeetingBot",
+    "/manager/observability": "运行观测 · MeetingBot",
+    "/manager/aiModel": "AI模型配置 · MeetingBot",
+    "/manager/promptTemplate": "Prompt模板配置 · MeetingBot",
+    "/manager/user": "用户管理 · MeetingBot",
+    "/manager/department": "部门管理 · MeetingBot",
+    "/manager/departmentMembers": "部门成员 · MeetingBot",
+    "/manager/person": "个人资料 · MeetingBot",
+    "/manager/password": "修改密码 · MeetingBot"
+  },
+  "route_errors": {
+    "/manager/home": [],
+    "/manager/meeting": [],
+    "/manager/meetingMaterial": [],
+    "/manager/transcription": [],
+    "/manager/meetingMinutes": [],
+    "/manager/agent": [],
+    "/manager/observability": [],
+    "/manager/aiModel": [],
+    "/manager/promptTemplate": [],
+    "/manager/user": [],
+    "/manager/department": [],
+    "/manager/departmentMembers": [],
+    "/manager/person": [],
+    "/manager/password": []
+  },
+  "xss_ok": true,
+  "bad_token": {
+    "url": "http://127.0.0.1:18083/login?redirect=/manager/home",
+    "xm_user": null
+  },
+  "mobile_widths": {
+    "/manager/home": 375,
+    "/manager/meeting": 375,
+    "/manager/meetingMaterial": 375,
+    "/manager/transcription": 375,
+    "/manager/meetingMinutes": 375,
+    "/manager/agent": 375,
+    "/manager/observability": 375,
+    "/manager/aiModel": 375,
+    "/manager/promptTemplate": 375,
+    "/manager/user": 375,
+    "/manager/department": 375,
+    "/manager/departmentMembers": 375,
+    "/manager/person": 375,
+    "/manager/password": 375
+  },
+  "static_headers": {
+    "gzip": true,
+    "immutable": true,
+    "csp": true,
+    "nosniff": true
+  }
+}

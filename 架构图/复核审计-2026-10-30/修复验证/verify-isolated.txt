@@ -1,0 +1,55 @@
+=== cleanup ===
+=== fresh mysql ===
+mysql ready: True
+=== start backend (SEED_DEMO=1, fresh DB) ===
+fixv-backend|Up 18 seconds
+fixv-db|Up 27 seconds
+--- first boot log tail ---
+{"time": "2026-10-30T07:13:43+0000", "level": "INFO", "logger": "uvicorn.error", "message": "Waiting for application startup."}
+{"time": "2026-10-30T07:13:43+0000", "level": "INFO", "logger": "tortoise", "message": "Tortoise-ORM started, {'default': <tortoise.backends.mysql.client.MySQLClient object at 0x73d4db717cb0>}, <tortoise.apps.Apps object at 0x73d4db8951f0>"}
+{"time": "2026-10-30T07:13:43+0000", "level": "INFO", "logger": "main", "message": "异步任务恢复完成", "extra": {"transcription": 0, "minutes": 0, "agent": 0}}
+{"time": "2026-10-30T07:13:43+0000", "level": "INFO", "logger": "uvicorn.error", "message": "Application startup complete."}
+{"time": "2026-10-30T07:13:43+0000", "level": "INFO", "logger": "uvicorn.error", "message": "Uvicorn running on http://0.0.0.0:9090 (Press CTRL+C to quit)", "extra": {"color_message": "Uvicorn running on \u001b[1m%s://%s:%d\u001b[0m (Press CTRL+C to quit)"}}
+--- counts after fresh seed ---
+task	1
+segments	14
+minutes	1
+run	1
+steps	4
+logs	10
+materials	6
+=== trigger 1: delete one demo attachment, restart (old code would crash) ===
+status=running exit=0
+materials_after_restart	6
+--- restart1 log tail ---
+{"time": "2026-10-30T07:14:00+0000", "level": "INFO", "logger": "__main__", "message": "bootstrap 完成", "extra": {"model_configs": 4}}
+{"time": "2026-10-30T07:14:00+0000", "level": "INFO", "logger": "tortoise", "message": "Tortoise-ORM shutdown"}
+{"time": "2026-10-30T07:14:01+0000", "level": "INFO", "logger": "uvicorn.error", "message": "Started server process [1]", "extra": {"color_message": "Started server process [\u001b[36m%d\u001b[0m]"}}
+{"time": "2026-10-30T07:14:01+0000", "level": "INFO", "logger": "uvicorn.error", "message": "Waiting for application startup."}
+{"time": "2026-10-30T07:14:01+0000", "level": "INFO", "logger": "tortoise", "message": "Tortoise-ORM started, {'default': <tortoise.backends.mysql.client.MySQLClient object at 0x70d9f72245c0>}, <tortoise.apps.Apps object at 0x70d9f73c8fe0>"}
+{"time": "2026-10-30T07:14:01+0000", "level": "INFO", "logger": "main", "message": "异步任务恢复完成", "extra": {"transcription": 0, "minutes": 0, "agent": 0}}
+{"time": "2026-10-30T07:14:01+0000", "level": "INFO", "logger": "uvicorn.error", "message": "Application startup complete."}
+{"time": "2026-10-30T07:14:01+0000", "level": "INFO", "logger": "uvicorn.error", "message": "Uvicorn running on http://0.0.0.0:9090 (Press CTRL+C to quit)", "extra": {"color_message": "Uvicorn running on \u001b[1m%s://%s:%d\u001b[0m (Press CTRL+C to quit)"}}
+=== trigger 2: delete demo task/minutes/run (keep logs), restart (old code IntegrityError) ===
+logs_kept
+10
+status=running exit=0
+--- restart2 log tail ---
+{"time": "2026-10-30T07:14:16+0000", "level": "INFO", "logger": "demo_seed", "message": "AI 演示数据已就绪", "extra": {"task_id": 2, "minutes_id": 2, "run_id": 2}}
+{"time": "2026-10-30T07:14:16+0000", "level": "INFO", "logger": "__main__", "message": "演示数据已就绪", "extra": {"meeting_id": 1}}
+{"time": "2026-10-30T07:14:16+0000", "level": "INFO", "logger": "__main__", "message": "bootstrap 完成", "extra": {"model_configs": 4}}
+{"time": "2026-10-30T07:14:16+0000", "level": "INFO", "logger": "tortoise", "message": "Tortoise-ORM shutdown"}
+{"time": "2026-10-30T07:14:17+0000", "level": "INFO", "logger": "uvicorn.error", "message": "Started server process [1]", "extra": {"color_message": "Started server process [\u001b[36m%d\u001b[0m]"}}
+{"time": "2026-10-30T07:14:17+0000", "level": "INFO", "logger": "uvicorn.error", "message": "Waiting for application startup."}
+{"time": "2026-10-30T07:14:17+0000", "level": "INFO", "logger": "tortoise", "message": "Tortoise-ORM started, {'default': <tortoise.backends.mysql.client.MySQLClient object at 0x7f7ca9c0a360>}, <tortoise.apps.Apps object at 0x7f7ca9c05e20>"}
+{"time": "2026-10-30T07:14:17+0000", "level": "INFO", "logger": "main", "message": "异步任务恢复完成", "extra": {"transcription": 0, "minutes": 0, "agent": 0}}
+{"time": "2026-10-30T07:14:17+0000", "level": "INFO", "logger": "uvicorn.error", "message": "Application startup complete."}
+{"time": "2026-10-30T07:14:17+0000", "level": "INFO", "logger": "uvicorn.error", "message": "Uvicorn running on http://0.0.0.0:9090 (Press CTRL+C to quit)", "extra": {"color_message": "Uvicorn running on \u001b[1m%s://%s:%d\u001b[0m (Press CTRL+C to quit)"}}
+--- counts after repair ---
+task	1
+minutes	1
+run	1
+steps	4
+logs	10
+=== cleanup ===
+cleaned

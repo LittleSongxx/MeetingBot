@@ -1,0 +1,56 @@
+=== cleanup stale ===
+=== create network + mysql ===
+mysql container: 6eb42a36742ca12074cc174e6217138ccf6d2db48e801b83a071651dab8dc676
+=== wait mysql ready ===
+mysql ready: True
+=== start backend (SEED_DEMO=1) ===
+backend container: 34842514bffae05caa6952305e8160d0748c91f7d8a8c735a86c8b95e5156f63
+aim-repro-backend|Exited (1) 14 seconds ago
+aim-repro-db|Up 24 seconds
+--- backend logs after first boot ---
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/app/bootstrap.py", line 263, in main
+    await seed_demo()
+  File "/app/bootstrap.py", line 249, in seed_demo
+    file_type=_file_type(extension), content_type=None, file_ext=extension,
+              ^^^^^^^^^^^^^^^^^^^^^
+TypeError: 'str' object is not callable
+=== DB counts before delete ===
+task	0
+minutes	0
+run	0
+logs	0
+=== simulate page delete: remove demo task/minutes/run, keep ai_call_log ===
+remaining_logs
+0
+=== restart backend: does bootstrap crash? ===
+status=exited exit=1 restarts=0
+--- backend logs after restart ---
+TypeError: 'str' object is not callable
+{"time": "2026-10-30T06:44:27+0000", "level": "INFO", "logger": "__main__", "message": "已更新管理员账号", "extra": {"username": "admin"}}
+{"time": "2026-10-30T06:44:27+0000", "level": "WARNING", "logger": "__main__", "message": "模型未配置 Key，保持禁用", "extra": {"model_type": "TRANSCRIPTION"}}
+{"time": "2026-10-30T06:44:27+0000", "level": "WARNING", "logger": "__main__", "message": "模型未配置 Key，保持禁用", "extra": {"model_type": "MINUTES"}}
+Traceback (most recent call last):
+{"time": "2026-10-30T06:44:27+0000", "level": "WARNING", "logger": "__main__", "message": "模型未配置 Key，保持禁用", "extra": {"model_type": "AGENT"}}
+{"time": "2026-10-30T06:44:27+0000", "level": "WARNING", "logger": "__main__", "message": "模型未配置 Key，保持禁用", "extra": {"model_type": "SPEAKER"}}
+{"time": "2026-10-30T06:44:27+0000", "level": "INFO", "logger": "tortoise", "message": "Tortoise-ORM shutdown"}
+  File "/app/bootstrap.py", line 270, in <module>
+    asyncio.run(main())
+  File "/usr/local/lib/python3.12/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/asyncio/base_events.py", line 691, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/app/bootstrap.py", line 263, in main
+    await seed_demo()
+  File "/app/bootstrap.py", line 249, in seed_demo
+    file_type=_file_type(extension), content_type=None, file_ext=extension,
+              ^^^^^^^^^^^^^^^^^^^^^
+TypeError: 'str' object is not callable
+=== cleanup ===
+cleaned
