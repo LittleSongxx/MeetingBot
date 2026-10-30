@@ -12,6 +12,7 @@ from models import (
     TranscriptionTask,
     User,
 )
+from settings import AI_CALL_LOG_RETENTION_DAYS
 
 
 def parse_date_range(date_from: str | None, date_to: str | None) -> tuple[date, date, datetime, datetime]:
@@ -62,6 +63,8 @@ async def employee_ai_log_ids(user_id: int) -> dict[str, set[int]]:
         "MINUTES": set(await MeetingMinutes.filter(created_by=user_id).values_list("id", flat=True)),
         # 第 13 章的自检运行，审查和重写两类日志的 biz_id 存的都是运行ID
         "AGENT": set(await AgentRun.filter(user_id=user_id).values_list("id", flat=True)),
+        # 第 9 章的说话人匹配日志，biz_id 是转写任务ID，按任务发起人归属
+        "SPEAKER": set(await TranscriptionTask.filter(initiator_id=user_id).values_list("id", flat=True)),
     }
 
 
@@ -73,7 +76,9 @@ def employee_can_see_log(log: AiCallLog, owned: dict[str, set[int]]) -> bool:
         return log.biz_id in owned["MINUTES"]
     if log.call_type in {"AGENT_REVIEW", "AGENT_REFINE"}:
         return log.biz_id in owned["AGENT"]
-    # 其余调用类型（第 9 章的 SPEAKER_MATCH）不在员工的观测范围内
+    # 第 9 章的说话人匹配按转写任务发起人归属
+    if log.call_type == "SPEAKER_MATCH":
+        return log.biz_id in owned["SPEAKER"]
     return False
 
 
@@ -86,6 +91,9 @@ async def build_observability(current_user: User, date_from: str | None, date_to
 
     # AI 调用日志按 create_time 落在日期范围内筛选
     log_query = AiCallLog.filter(create_time__gte=start_time, create_time__lt=end_time)
+    # 范围过大时直接拒绝，避免把海量日志一次性读进内存做 Python 聚合
+    if await log_query.count() > 200_000:
+        raise CustomException("统计范围内调用日志过多，请缩小日期范围")
     if model_config_id is not None:
         log_query = log_query.filter(model_config_id=model_config_id)
     # 按时间正序取出，后面取最近失败记录时再倒过来
@@ -247,3 +255,12 @@ async def build_observability(current_user: User, date_from: str | None, date_to
         "step_ranking": step_ranking,
         "recent_failures": recent_failures,
     }
+
+
+async def cleanup_expired_logs() -> int:
+    """删除超过保留期的 AI 调用日志，返回删除条数；保留天数来自 .env。"""
+    if AI_CALL_LOG_RETENTION_DAYS <= 0:
+        return 0
+    cutoff = now() - timedelta(days=AI_CALL_LOG_RETENTION_DAYS)
+    deleted = await AiCallLog.filter(create_time__lt=cutoff).delete()
+    return int(deleted or 0)

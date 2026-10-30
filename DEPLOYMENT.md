@@ -88,17 +88,17 @@ docker compose up -d --build
 | `JWT_SECRET` | JWT 签名密钥；**无默认值**，缺失时后端拒绝启动；换值会使已签发 Token 全部失效 | `openssl rand -hex 32` 的输出 | **是** |
 | `JWT_EXPIRE_HOURS` | Token 有效期（小时） | `24` | 否（默认 `24`） |
 | `APP_ADMIN_USERNAME` | bootstrap 创建的管理员账号 | `admin` | 否（默认 `admin`） |
-| `APP_ADMIN_PASSWORD` | 管理员口令；**每次容器启动都会按它重设管理员账号**（仅在为空时跳过初始化） | 强口令 | **是**（首次启动） |
+| `APP_ADMIN_PASSWORD` | 管理员口令；**仅当库中口令与它不一致时才更新**（避免每次重启刷新 bcrypt 盐、让已登录 token 全部失效） | 强口令 | **是**（首次启动） |
 | `REGISTER_ENABLED` | 是否开放注册接口 | `false` | 否（默认 `false`） |
 | `CORS_ALLOW_ORIGINS` | 允许的跨域来源，逗号分隔；**留空=同源部署不放行跨域** | 空 / `http://localhost:5173` | 否 |
 
 ### 模型服务
 
-`bootstrap.py` 在容器启动时把这组变量写入 `ai_model_config`（4 条配置：转写 / 纪要 /
-自检 / 说话人匹配）。**每次重启都会按 `.env` 重新 upsert 这 4 条配置**，所以在
-「AI 模型配置」页面里改的 Key / 地址 / 模型名会在下次重启时被 `.env` 覆盖：
-要长期保留请直接写进 `.env`；`DASHSCOPE_API_KEY` 为空时这 4 条配置保持禁用。
-真实 Key 只存在于本机 `.env` 与数据卷，不进镜像、不进仓库。
+`bootstrap.py` 只在**首次部署**时按这组变量创建 `ai_model_config`（4 条配置：
+转写 / 纪要 / 自检 / 说话人匹配）；配置已存在时以「AI 模型配置」页面为准，
+重启不会覆盖页面里改过的 Key / 地址 / 模型名。只有库里 Key 为空、而 `.env`
+提供了 Key 时，才会用 `.env` 补齐并启用。真实 Key 只存在于本机 `.env` 与
+数据卷，不进镜像、不进仓库。
 
 | 变量 | 含义 | 示例 | 必填 |
 |---|---|---|---|
@@ -119,8 +119,10 @@ docker compose up -d --build
 | `CHUNK_SECONDS` | 转写时 FFmpeg 单个音频分片时长（秒） | `1200` | 否 |
 | `LOG_LEVEL` | 日志级别 | `INFO` | 否（默认 `INFO`） |
 | `LOG_FORMAT` | 日志格式：`text` 便于本地查看，`json` 便于采集 | `text` | 否（`.env.example` 默认 `text`） |
-| `SEED_DEMO` | `1`=首次启动生成一份演示会议数据；`0`=不生成 | `1` | 否（`.env.example` 默认 `1`） |
+| `SEED_DEMO` | `1`=启动时幂等写入演示会议/AI 链路数据；`0`=不生成（**生产保持 0**） | `0` | 否（`.env.example` 默认 `0`） |
 | `DEMO_PASSWORD` | `SEED_DEMO=1` 时演示账号使用的口令 | `change-me` | 否 |
+| `DOCS_ENABLED` | 是否暴露 `/docs`、`/redoc`、`/openapi.json` | `0` | 否（默认 `0`） |
+| `AI_CALL_LOG_RETENTION_DAYS` | AI 调用日志保留天数，启动时清理更早记录；`0`=不清理 | `365` | 否（默认 `365`） |
 | `TZ` | 容器时区（页面时间均为东八区） | `Asia/Shanghai` | 否（默认 `Asia/Shanghai`） |
 | `BACKEND_PORT` | 宿主机后端映射端口（只绑 `127.0.0.1`） | `19092` | 否（默认 `19092`） |
 | `WEB_PORT` | 宿主机网页映射端口（只绑 `127.0.0.1`） | `18083` | 否（默认 `18083`） |
@@ -237,7 +239,7 @@ npm run build
 3. 需要横向扩展时，必须先把任务编排外置（消息队列 + worker + 分布式锁），
    这不是改 compose 参数能解决的问题；
 4. 重启 backend 后，启动恢复逻辑会把中断的任务重新排队，但进程内 SSE 连接会断，
-   页面需要刷新重连。
+   页面需要刷新重连；转写/纪要任务没有分段断点，会**从头重跑**（可能重复计费）。
 
 ## 故障排查
 

@@ -129,8 +129,10 @@ class MeetingMinutesTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_employee_page_only_returns_accessible_meetings(self):
         minutes = await self.create_draft()
-        participant_result = await select_page(current_user=self.participant)
-        outsider_result = await select_page(current_user=self.outsider)
+        participant_result = await select_page(
+            pageNum=1, pageSize=10, current_user=self.participant
+        )
+        outsider_result = await select_page(pageNum=1, pageSize=10, current_user=self.outsider)
         self.assertEqual(participant_result.data["total"], 1)
         self.assertEqual(participant_result.data["list"][0]["id"], minutes.id)
         self.assertEqual(outsider_result.data["total"], 0)

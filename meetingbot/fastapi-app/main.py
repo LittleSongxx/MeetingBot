@@ -8,7 +8,7 @@ from common.logging_conf import setup_logging
 from common.result import Result
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from settings import CORS_ALLOW_ORIGINS, TORTOISE_ORM
+from settings import CORS_ALLOW_ORIGINS, DOCS_ENABLED, TORTOISE_ORM
 from starlette.middleware.cors import CORSMiddleware
 from tortoise import connections
 from tortoise.contrib.fastapi import register_tortoise
@@ -25,6 +25,7 @@ async def lifespan(app: FastAPI):
     # 三个恢复函数分别属于转写、纪要、纪要自检三个服务，在钩子函数内部导入
     from services.agent_service import recover_agent_runs
     from services.minutes_service import recover_minutes_tasks
+    from services.observability_service import cleanup_expired_logs
     from services.transcription_service import recover_transcription_tasks
 
     # 依次恢复三类异步任务，全部执行完才放行 yield，也就是服务对外提供接口之前就已经恢复完毕
@@ -35,12 +36,22 @@ async def lifespan(app: FastAPI):
         "异步任务恢复完成",
         extra={"transcription": transcription_count, "minutes": minutes_count, "agent": agent_count},
     )
+    # 清理过期的 AI 调用日志，避免 ai_call_log 无限增长（默认保留 365 天，可配）
+    cleaned = await cleanup_expired_logs()
+    if cleaned:
+        logger.info("已清理过期 AI 调用日志", extra={"count": cleaned})
     yield
     logger.info("服务已关闭")
 
 
 # 把生命周期钩子交给 FastAPI，应用实例一创建就带上启动时的恢复动作
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    # 生产默认不暴露接口文档；需要调试时在 .env 设 DOCS_ENABLED=1
+    docs_url="/docs" if DOCS_ENABLED else None,
+    redoc_url="/redoc" if DOCS_ENABLED else None,
+    openapi_url="/openapi.json" if DOCS_ENABLED else None,
+)
 
 # 跨域配置：同源部署时 CORS_ALLOW_ORIGINS 为空，不安装中间件；
 # 本地前端 dev server 跨域访问时由 .env 指定白名单，不再无脑放开 *

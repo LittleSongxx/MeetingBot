@@ -118,5 +118,5 @@ async def invoke_json(
             elapsed_ms=int((perf_counter() - started) * 1000),
             error_message=detail,
         )
-        # 统一换成带模型名称的提示，例如“说话人匹配模型调用失败：……”，接口层把它转成页面提示
-        raise RuntimeError(f"{label}调用失败：{detail[:1000]}") from error
+        # 对外只给一句可行动提示，具体上游报错只进 ai_call_log 与日志，避免把内部细节透传到页面
+        raise RuntimeError(f"{label}调用失败，请稍后重试或联系管理员") from error

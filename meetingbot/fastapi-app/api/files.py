@@ -68,6 +68,8 @@ async def download_file(filename: str):
         raise CustomException("文件不存在")
     return FileResponse(
         path=file_path,
+        # 禁止浏览器按内容嗅探 MIME，降低把上传文件当 HTML 执行的风险
+        headers={"X-Content-Type-Options": "nosniff"},
         filename=filename,
         media_type='application/octet-stream'
     )

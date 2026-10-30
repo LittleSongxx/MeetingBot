@@ -4,9 +4,9 @@ from common.auth import get_current_user, require_admin
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, Query
 from models import Department, User
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 router = APIRouter(prefix="/department")
 
@@ -18,9 +18,9 @@ class DepartmentPayload(BaseModel):
     # 编辑时由前端回填，新增时不存在，后端据此区分插入还是更新
     id: int | None = None
     # 弹窗部门名称输入框
-    name: str | None = None
+    name: str | None = Field(default=None, max_length=100)
     # 弹窗部门说明文本域
-    description: str | None = None
+    description: str | None = Field(default=None, max_length=500)
     # 弹窗状态单选框
     status: str | None = None
 
@@ -108,6 +108,8 @@ async def delete_batch(
     ids: List[int] = Body(...),
     _: User = Depends(require_admin),
 ):
+    if not ids:
+        raise CustomException("请选择要删除的部门")
     # 勾选的部门里只要有一个还挂着员工，整批都不删，页面弹出“请先调整部门下的员工”
     await validate_delete(ids)
     # 校验通过后按ID集合一次性删除 department 表里的这些记录
@@ -140,9 +142,9 @@ async def select_page(
     # status 来自页面状态下拉框，默认空串表示不限
     status: str = "",
     # page_num 来自 el-pagination 的当前页码
-    page_num: int = 1,
+    page_num: int = Query(1, ge=1),
     # page_size 来自页面固定的每页条数
-    page_size: int = 10,
+    page_size: int = Query(10, ge=1, le=100),
     # 部门管理只对管理员开放，这里用 require_admin 依赖拦住员工
     _: User = Depends(require_admin),
 ):

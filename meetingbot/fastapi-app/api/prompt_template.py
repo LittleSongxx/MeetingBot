@@ -2,7 +2,7 @@ from common.auth import require_admin
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from models import PromptTemplate, User
 from pydantic import BaseModel
 
@@ -89,7 +89,7 @@ async def update(payload: PromptPayload, _: User = Depends(require_admin)):
 
 @router.get("/selectPage")
 async def select_page(
-    name: str = "", sceneType: str = "", pageNum: int = 1, pageSize: int = 10, _: User = Depends(require_admin)
+    name: str = "", sceneType: str = "", pageNum: int = Query(1, ge=1), pageSize: int = Query(10, ge=1, le=100), _: User = Depends(require_admin)
 ):
     # require_admin 拦住员工，这个页面只有管理员能看
     # name 来自模板名称输入框，空串时相当于不加条件

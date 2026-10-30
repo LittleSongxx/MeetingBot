@@ -4,11 +4,12 @@ from pathlib import Path
 from urllib.parse import quote
 
 from common.auth import get_current_user
+from common.cooldown import ensure_interval
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime, now
 from docx import Document
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from models import (
     AgentRun,
     AgentStep,
@@ -30,6 +31,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from services.minutes_service import MinutesResult, material_name_of_minutes, schedule_minutes
 from starlette.responses import StreamingResponse
+from tortoise.exceptions import IntegrityError
 from tortoise.expressions import Q
 
 from api.meeting import get_accessible_meeting
@@ -99,23 +101,45 @@ async def generate(task_id: int, current_user: User = Depends(get_current_user))
         raise CustomException("请选择已完成的转写任务")
     # 顺着转写任务的会议判权限，没有这场会议访问权限的人发起不了
     await get_accessible_meeting(task.meeting_id, current_user)
+    ensure_interval(f"minutes-generate:{current_user.id}", 5.0)
     # 取第 7 章配好的 MINUTES 用途模型
     config = await AiModelConfig.filter(model_type="MINUTES", enabled=True).order_by("-id").first()
     if config is None or not config.api_key:
         raise CustomException("请先由管理员启用会议纪要模型配置")
     # 第 10 章的分段提取和合并两条模板必须都已启用，否则提示是哪一条
     await assert_minutes_prompts_enabled()
+    # 同一个转写任务已经生成过纪要时直接覆盖那一条，不再累积版本
+    minutes = await MeetingMinutes.get_or_none(source_task_id=task.id)
+    if minutes is not None:
+        # 覆盖已有纪要属于“写”操作：只有管理员或纪要创建人可以重新生成
+        if current_user.role != "ADMIN" and minutes.created_by != current_user.id:
+            raise CustomException("只有管理员或纪要创建人可以重新生成", "403")
+        # 已确认归档的内容不能被静默清空，先取消确认退回草稿再重生成
+        if minutes.status == "CONFIRMED":
+            raise CustomException("纪要已确认归档，请先取消确认再重新生成")
+        # 自检运行还没处理完时不允许重生成，否则旧修订稿会覆盖新内容
+        if await AgentRun.filter(
+            minutes_id=minutes.id, status__in=["RUNNING", "WAITING_CONFIRMATION"]
+        ).exists():
+            raise CustomException("该纪要有自检运行未处理，请先完成或放弃自检")
     # 同一场会议同时只允许有一份在生成
     if await MeetingMinutes.filter(meeting_id=task.meeting_id, status="GENERATING").exists():
         raise CustomException("该会议已有正在生成的纪要")
-    # 同一个转写任务已经生成过纪要时直接覆盖那一条，不再累积版本
-    minutes = await MeetingMinutes.get_or_none(source_task_id=task.id)
     if minutes is None:
-        minutes = await MeetingMinutes.create(
-            meeting_id=task.meeting_id, source_task_id=task.id, model_config_id=config.id,
-            status="GENERATING", stage="等待生成", progress=0, created_by=current_user.id,
-        )
+        try:
+            minutes = await MeetingMinutes.create(
+                meeting_id=task.meeting_id, source_task_id=task.id, model_config_id=config.id,
+                status="GENERATING", stage="等待生成", progress=0, created_by=current_user.id,
+            )
+        except IntegrityError:
+            # 两个请求同时首次生成时唯一索引只放行一个，另一个提示刷新即可
+            raise CustomException("该转写任务已有纪要，请刷新页面后重试") from None
     else:
+        # 旧内容整体作废，旧自检运行与步骤一并清掉（ai_call_log 保留用于审计）
+        run_ids = await AgentRun.filter(minutes_id=minutes.id).values_list("id", flat=True)
+        if run_ids:
+            await AgentStep.filter(run_id__in=run_ids).delete()
+            await AgentRun.filter(id__in=run_ids).delete()
         # 旧内容连同确认状态一起清空，重新生成后又是一份待修订的草稿
         await MeetingMinutes.filter(id=minutes.id).update(
             model_config_id=config.id, status="GENERATING", stage="等待生成", progress=0,
@@ -134,6 +158,9 @@ async def delete_minutes(minutes: MeetingMinutes, current_user: User):
     # 权限比查看更严：能看到这场会议不代表能删纪要，只有管理员或发起生成的人可以
     if current_user.role != "ADMIN" and minutes.created_by != current_user.id:
         raise CustomException("只有管理员或纪要创建人可以删除", "403")
+    # 自检正在跑时删纪要会让后台任务写到不存在的行上，先拦住
+    if await AgentRun.filter(minutes_id=minutes.id, status="RUNNING").exists():
+        raise CustomException("该纪要的自检正在运行，请先中断后再删除")
     # 纪要直接关联的自检运行与步骤一并删除；ai_call_log 保留作为审计记录
     run_ids = await AgentRun.filter(minutes_id=minutes.id).values_list("id", flat=True)
     if run_ids:
@@ -158,20 +185,33 @@ async def delete(minutes_id: int, current_user: User = Depends(get_current_user)
 async def retry(minutes_id: int, current_user: User = Depends(get_current_user)):
     # 按纪要所属会议校验访问权限
     minutes = await get_accessible_minutes(minutes_id, current_user)
+    ensure_interval(f"minutes-retry:{current_user.id}", 3.0)
     # 只有失败的可以重试，GENERATING 状态的纪要后台协程还在执行
     if minutes.status != "FAILED":
         raise CustomException("只有生成失败的纪要可以重试")
+    # 重试属于“写”操作：只有管理员或纪要创建人可以重试
+    if current_user.role != "ADMIN" and minutes.created_by != current_user.id:
+        raise CustomException("只有管理员或纪要创建人可以重试", "403")
     # 模板可能在失败之后被停用，重试前同样检查两条纪要模板
     await assert_minutes_prompts_enabled()
+    # 重新取一次当前启用的纪要模型，管理员失败后可能已经换过配置
+    config = await AiModelConfig.filter(model_type="MINUTES", enabled=True).order_by("-id").first()
+    if config is None or not config.api_key:
+        raise CustomException("请先由管理员启用会议纪要模型配置")
     # 状态改回 GENERATING、进度归零、清掉上次的失败原因，然后重新调度
     # 记录本身不变，重试沿用原来的 id 和来源转写任务
-    await MeetingMinutes.filter(id=minutes.id).update(status="GENERATING", stage="等待重试", progress=0, error_message=None)
+    updated = await MeetingMinutes.filter(id=minutes.id, status="FAILED").update(
+        status="GENERATING", stage="等待重试", progress=0, error_message=None,
+        model_config_id=config.id,
+    )
+    if not updated:
+        raise CustomException("纪要状态已经变化")
     schedule_minutes(minutes.id)
     return Result.success()
 
 
 @router.get("/selectPage")
-async def select_page(meetingId: int | None = None, status: str = "", pageNum: int = 1, pageSize: int = 10, current_user: User = Depends(get_current_user)):
+async def select_page(meetingId: int | None = None, status: str = "", pageNum: int = Query(1, ge=1), pageSize: int = Query(10, ge=1, le=100), current_user: User = Depends(get_current_user)):
     query = MeetingMinutes.all()
     if meetingId is not None:
         # 指定了会议就先过这场会议的权限，过不了直接抛异常
@@ -209,6 +249,9 @@ async def update(payload: EditPayload, current_user: User = Depends(get_current_
     # 只有 DRAFT 状态允许写入页面修订结果，已确认的纪要要先取消确认
     if minutes.status != "DRAFT":
         raise CustomException("只有草稿纪要可以编辑")
+    # 编辑属于“写”操作：只有管理员或纪要创建人可以改，参会人只能看
+    if current_user.role != "ADMIN" and minutes.created_by != current_user.id:
+        raise CustomException("只有管理员或纪要创建人可以编辑", "403")
     # exclude id 之后剩下的就是六块内容，字段名和表里的六列一一对应
     data = payload.model_dump(exclude={"id"})
     await MeetingMinutes.filter(id=minutes.id).update(
@@ -225,6 +268,9 @@ async def confirm(minutes_id: int, current_user: User = Depends(get_current_user
     # 只有草稿可以确认，重复点击第二次会被这条挡住
     if minutes.status != "DRAFT":
         raise CustomException("只有草稿纪要可以确认")
+    # 确认属于“写”操作：只有管理员或纪要创建人可以确认
+    if current_user.role != "ADMIN" and minutes.created_by != current_user.id:
+        raise CustomException("只有管理员或纪要创建人可以确认", "403")
     # 记下是谁在什么时候确认的，详情弹窗的“确认人”读这两个字段
     await MeetingMinutes.filter(id=minutes.id).update(status="CONFIRMED", confirmed_by=current_user.id, confirmed_time=now())
     return Result.success()

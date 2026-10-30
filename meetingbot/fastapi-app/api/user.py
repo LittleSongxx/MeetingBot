@@ -3,10 +3,10 @@ from typing import List
 from common.auth import get_current_user, require_admin
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
-from common.security import hash_password
+from common.security import hash_password, password_rule_error
 from common.times import format_datetime
 from common.urls import to_relative_url
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, Query
 from models import (
     AgentRun,
     Department,
@@ -18,7 +18,7 @@ from models import (
     TranscriptSegment,
     User,
 )
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 router = APIRouter(prefix="/user")
 
@@ -29,23 +29,23 @@ class UserPayload(BaseModel):
     # 编辑时回填，新增时不存在
     id: int | None = None
     # 弹窗账号输入框，只有新增时可编辑
-    username: str | None = None
+    username: str | None = Field(default=None, max_length=100)
     # 弹窗密码输入框，只有新增时出现
     password: str | None = None
     # 弹窗姓名输入框
-    name: str | None = None
+    name: str | None = Field(default=None, max_length=100)
     # 头像上传成功后由 handleFileUpload 写入
     avatar: str | None = None
     # 弹窗角色下拉框
     role: str | None = None
     # 弹窗电话输入框
-    phone: str | None = None
+    phone: str | None = Field(default=None, max_length=30)
     # 弹窗邮箱输入框
-    email: str | None = None
+    email: str | None = Field(default=None, max_length=100)
     # 弹窗所属部门下拉框
     department_id: int | None = None
     # 弹窗职位输入框
-    position: str | None = None
+    position: str | None = Field(default=None, max_length=100)
     # 弹窗状态单选框
     status: str | None = None
 
@@ -144,6 +144,11 @@ async def add(payload: UserPayload, _: User = Depends(require_admin)):
         raise CustomException("角色参数错误")
     # 选中的部门必须存在且处于正常状态
     await validate_department(payload.department_id)
+    # 新增用户时允许留空（用默认初始密码），但显式填了密码就必须满足最低长度
+    if payload.password:
+        password_error = password_rule_error(payload.password)
+        if password_error:
+            raise CustomException(password_error)
     await User.create(
         # 来自弹窗账号输入框
         username=payload.username,
@@ -243,6 +248,14 @@ async def select_all(name: str = "", current_user: User = Depends(get_current_us
             return Result.success([])
         query = query.filter(department_id=current_user.department_id)
     users = await query.order_by("name", "id")
+    if current_user.role != "ADMIN":
+        # 普通员工只返回下拉框需要的字段，不暴露同事的手机号/邮箱
+        return Result.success(
+            [
+                {"id": user.id, "name": user.name, "department_id": user.department_id}
+                for user in users
+            ]
+        )
     return Result.success([await user_dict(user) for user in users])
 
 
@@ -289,8 +302,8 @@ async def select_page(
     role: str = "",
     # department_id 来自页面部门下拉框，None 表示不限
     department_id: int | None = None,
-    page_num: int = 1,
-    page_size: int = 10,
+    page_num: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
     # 员工账号管理只对管理员开放
     _: User = Depends(require_admin),
 ):

@@ -21,11 +21,11 @@ from pathlib import Path
 from uuid import uuid4
 
 from common.logging_conf import setup_logging
-from common.security import hash_password, migrate_if_plaintext
+from common.security import hash_password, migrate_if_plaintext, verify_password
 from common.times import now
 from demo_seed import seed_ai_demo
 from models import AiModelConfig, Department, Meeting, MeetingMaterial, MeetingParticipant, PromptTemplate, User
-from settings import TORTOISE_ORM
+from settings import TORTOISE_ORM, _env_int
 from tortoise import Tortoise
 
 setup_logging()
@@ -41,15 +41,7 @@ DEMO_DEPARTMENTS = [
     ("市场运营部", "负责市场活动和运营增长"),
 ]
 
-# 文件类型白名单与 api/meeting_material.py 的判定保持一致
-AUDIO_EXTENSIONS = {"mp3", "wav", "m4a", "aac", "flac", "ogg", "wma"}
-VIDEO_EXTENSIONS = {"mp4", "mov", "avi", "mkv", "webm", "mpeg", "mpg"}
-ATTACHMENT_EXTENSIONS = {
-    "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "md",
-    "zip", "rar", "7z", "png", "jpg", "jpeg", "gif",
-}
-
-# 演示会议里挂的资料：源文件在 demo_files/，按顺序复制并建 meeting_material 行
+# 演示会议里挂的资料：源文件在 demo_files/，第二个元素就是资料类型
 DEMO_MATERIALS = [
     ("产品发布评审会议录音.mp3", "AUDIO"),
     ("产品发布评审会议片段.mp4", "VIDEO"),
@@ -60,23 +52,12 @@ DEMO_MATERIALS = [
 ]
 
 
-def _file_type(extension: str) -> str:
-    if extension in AUDIO_EXTENSIONS:
-        return "AUDIO"
-    if extension in VIDEO_EXTENSIONS:
-        return "VIDEO"
-    if extension in ATTACHMENT_EXTENSIONS:
-        return "ATTACHMENT"
-    raise RuntimeError(f"演示素材扩展名不在白名单内：{extension}")
-
-
 async def ensure_admin() -> None:
     username = os.getenv("APP_ADMIN_USERNAME", "admin")
     password = os.getenv("APP_ADMIN_PASSWORD", "")
     if not password:
         logger.warning("未设置 APP_ADMIN_PASSWORD，跳过管理员初始化")
         return
-    hashed = hash_password(password)
     # 演示头像：首次创建或库里还没头像时补一个，避免顶部头像裂图
     avatar = None
     try:
@@ -88,16 +69,21 @@ async def ensure_admin() -> None:
     user = await User.get_or_none(username=username)
     if user is None:
         await User.create(
-            username=username, password=hashed, name="系统管理员", role="ADMIN",
-            status="NORMAL", avatar=avatar,
+            username=username, password=hash_password(password), name="系统管理员",
+            role="ADMIN", status="NORMAL", avatar=avatar,
         )
         logger.info("已创建管理员账号", extra={"username": username})
-    else:
-        values = {"password": hashed, "role": "ADMIN", "status": "NORMAL"}
-        if avatar and not user.avatar:
-            values["avatar"] = avatar
-        await User.filter(id=user.id).update(**values)
-        logger.info("已更新管理员账号", extra={"username": username})
+        return
+    # 密码没变就不重写：bcrypt 每次加盐都会改 password 行，进而改变 JWT 的 pv 指纹，
+    # 导致每次重启都把已登录的管理员踢下线。只有 .env 里的口令真的变了才更新。
+    values = {"role": "ADMIN", "status": "NORMAL"}
+    if not verify_password(password, user.password):
+        values["password"] = hash_password(password)
+        logger.info("管理员口令已按 .env 更新", extra={"username": username})
+    if avatar and not user.avatar:
+        values["avatar"] = avatar
+    await User.filter(id=user.id).update(**values)
+    logger.info("已更新管理员账号", extra={"username": username})
 
 
 async def migrate_passwords() -> None:
@@ -112,7 +98,11 @@ async def migrate_passwords() -> None:
 
 
 async def upsert_model_configs() -> int:
-    """按 env 配置四种用途的模型；未给 Key 时保持禁用，避免建了任务直接失败。"""
+    """首次部署按 env 建四条模型配置；已存在的配置以页面/数据库为准，不覆盖。
+
+    这样管理员在「AI 模型配置」页面改的 Key、地址、模型名不会在重启后被 .env 冲掉；
+    .env 只在库里还没有配置、或配置的 Key 为空时用来“补空”。
+    """
     shared_key = os.getenv("DASHSCOPE_API_KEY", "").strip()
     asr_key = os.getenv("ASR_API_KEY", "").strip() or shared_key
     llm_key = os.getenv("LLM_API_KEY", "").strip() or shared_key
@@ -120,8 +110,8 @@ async def upsert_model_configs() -> int:
     llm_url = os.getenv("LLM_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1").rstrip("/")
     llm_model = os.getenv("LLM_MODEL", "qwen-plus")
     asr_model = os.getenv("ASR_MODEL", "paraformer-v2")
-    asr_timeout = int(os.getenv("ASR_TIMEOUT_SECONDS", "600"))
-    llm_timeout = int(os.getenv("LLM_TIMEOUT_SECONDS", "600"))
+    asr_timeout = _env_int("ASR_TIMEOUT_SECONDS", 600)
+    llm_timeout = _env_int("LLM_TIMEOUT_SECONDS", 600)
 
     specs = [
         # name, model_type, provider, base_url, key, model, timeout
@@ -133,24 +123,31 @@ async def upsert_model_configs() -> int:
     configured = 0
     for name, model_type, provider, base_url, key, model, timeout in specs:
         config = await AiModelConfig.filter(model_type=model_type).order_by("id").first()
-        enabled = bool(key)
         if config is None:
+            # 首次部署：按 env 建一条；没给 Key 时保持禁用，避免建了任务直接失败
             await AiModelConfig.create(
                 name=name, model_type=model_type, provider=provider,
                 base_url=base_url, api_key=key, model_name=model,
-                timeout_seconds=timeout, enabled=enabled,
+                timeout_seconds=timeout, enabled=bool(key),
             )
-        else:
+            if not key:
+                logger.warning("模型未配置 Key，保持禁用", extra={"model_type": model_type})
+        elif not config.api_key and key:
+            # 库里还没有 Key（页面也没填）时才用 env 补齐，不覆盖页面已有配置
             await AiModelConfig.filter(id=config.id).update(
-                name=name, provider=provider, base_url=base_url, api_key=key,
-                model_name=model, timeout_seconds=timeout, enabled=enabled,
+                api_key=key,
+                base_url=config.base_url or base_url,
+                model_name=config.model_name or model,
+                timeout_seconds=config.timeout_seconds or timeout,
+                enabled=True,
             )
+            logger.info("已用环境变量补齐模型 Key", extra={"model_type": model_type})
+        elif config.api_key and key and config.api_key != key:
+            logger.warning("模型配置已存在且与 .env 不同，保留页面配置", extra={"model_type": model_type})
         configured += 1
-        if not key:
-            logger.warning("模型未配置 Key，保持禁用", extra={"model_type": model_type})
-    # 同用途只保留一条启用配置（历史数据可能有多条）
+    # 同用途只保留 id 最小的一条启用配置（历史数据可能有多条）
     for model_type in {spec[1] for spec in specs}:
-        rows = await AiModelConfig.filter(model_type=model_type, enabled=True).order_by("-id")
+        rows = await AiModelConfig.filter(model_type=model_type, enabled=True).order_by("id")
         for stale in rows[1:]:
             await AiModelConfig.filter(id=stale.id).update(enabled=False)
     return configured
@@ -212,13 +209,17 @@ async def seed_demo() -> None:
     host = created_users["employee"]
     meeting = await Meeting.get_or_none(meeting_no="MTG-DEMO-001")
     if meeting is None:
-        start_time = now()
+        # 演示数据里已经有转写/纪要/自检，会议状态改成已结束，时间也放到过去，
+        # 避免出现“会议还没开始却有完整纪要”的语义矛盾
+        start_time = now() - timedelta(hours=2)
         meeting = await Meeting.create(
             meeting_no="MTG-DEMO-001", title="产品发布评审会", location="三楼第一会议室",
             agenda="确认 V2.0 发布范围、灰度节奏与对外通稿时间",
             start_time=start_time, end_time=start_time + timedelta(hours=1),
-            creator_id=host.id, host_id=host.id, status="SCHEDULED",
+            creator_id=host.id, host_id=host.id, status="FINISHED",
         )
+    elif meeting.status == "SCHEDULED":
+        await Meeting.filter(id=meeting.id).update(status="FINISHED")
     participants = [host, created_users["operator"]]
     if admin is not None:
         participants.append(admin)
@@ -233,7 +234,7 @@ async def seed_demo() -> None:
 
     # 演示资料：已经有同名资料时跳过
     MATERIAL_DIR.mkdir(parents=True, exist_ok=True)
-    for file_name, _file_type in DEMO_MATERIALS:
+    for file_name, material_type in DEMO_MATERIALS:
         exists = await MeetingMaterial.filter(meeting_id=meeting.id, file_name=file_name).exists()
         if exists:
             continue
@@ -245,7 +246,7 @@ async def seed_demo() -> None:
         digest = hashlib.sha256(target.read_bytes()).hexdigest()
         await MeetingMaterial.create(
             meeting_id=meeting.id, file_name=file_name, storage_name=storage_name,
-            file_type=_file_type(extension), content_type=None, file_ext=extension,
+            file_type=material_type, content_type=None, file_ext=extension,
             file_size=target.stat().st_size, file_hash=digest, uploader_id=host.id,
         )
     await seed_ai_demo(meeting, host, created_users["operator"])
@@ -259,7 +260,11 @@ async def main() -> None:
         await migrate_passwords()
         configured = await upsert_model_configs()
         await ensure_prompts()
-        await seed_demo()
+        try:
+            await seed_demo()
+        except Exception:
+            # 演示数据只是锦上添花，任何播种异常都不能阻断 uvicorn 启动
+            logger.exception("演示数据初始化失败，已跳过（不影响服务启动）")
         logger.info("bootstrap 完成", extra={"model_configs": configured})
     finally:
         await Tortoise.close_connections()

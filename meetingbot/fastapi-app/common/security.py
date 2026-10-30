@@ -15,6 +15,16 @@ import bcrypt
 _BCRYPT_PREFIX = "$2"
 
 
+PASSWORD_MIN_LENGTH = 6
+
+
+def password_rule_error(plain: str) -> str | None:
+    """返回密码规则错误提示；None 表示通过。只做最低限度长度校验，强度策略由部署方决定。"""
+    if len(plain) < PASSWORD_MIN_LENGTH:
+        return f"密码长度不能少于{PASSWORD_MIN_LENGTH}位"
+    return None
+
+
 def hash_password(plain: str) -> str:
     """明文 → bcrypt 哈希（含盐）。截断到 72 字节是 bcrypt 的算法上限。"""
     return bcrypt.hashpw(plain.encode("utf-8")[:72], bcrypt.gensalt(rounds=10)).decode("utf-8")

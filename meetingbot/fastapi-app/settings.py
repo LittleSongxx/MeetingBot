@@ -75,19 +75,20 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_HOURS = _env_int("JWT_EXPIRE_HOURS", 24)
 
 # 是否开放注册：企业内部系统默认关闭，账号由管理员创建
-REGISTER_ENABLED = _env_bool("REGISTER_ENABLED", True)
+REGISTER_ENABLED = _env_bool("REGISTER_ENABLED", False)
 
-# 允许跨域的来源，逗号分隔；显式设为空串表示同源部署、不启用 CORS 中间件。
-# 未设置时给本地前端 dev server 的默认值（Vite 默认 5173）。
+# 允许跨域的来源，逗号分隔；默认同源部署、不启用 CORS 中间件。
+# 本地前端 dev server 需要跨域时，在 .env 里显式写 CORS_ALLOW_ORIGINS=http://localhost:5173
 _cors_raw = os.getenv("CORS_ALLOW_ORIGINS")
-if _cors_raw is None:
-    CORS_ALLOW_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
-elif _cors_raw.strip() == "":
-    CORS_ALLOW_ORIGINS = []
-else:
-    CORS_ALLOW_ORIGINS = [item.strip() for item in _cors_raw.split(",") if item.strip()]
+CORS_ALLOW_ORIGINS = [item.strip() for item in (_cors_raw or "").split(",") if item.strip()]
 
 # 转写/纪要/自检的行为参数（可在 .env 里按机器预算调整）
 CHUNK_SECONDS = _env_int("CHUNK_SECONDS", 1200)
 MAX_CHUNK_CHARS = _env_int("MAX_CHUNK_CHARS", 12000)
 AGENT_REVIEW_MAX_TRANSCRIPT_CHARS = _env_int("AGENT_REVIEW_MAX_TRANSCRIPT_CHARS", 20000)
+
+# 生产默认关闭 /docs、/redoc 与 /openapi.json（本机调试可在 .env 设 DOCS_ENABLED=1）
+DOCS_ENABLED = _env_bool("DOCS_ENABLED", False)
+
+# ai_call_log 保留天数：启动时清理更早的调用日志，0 表示不清理
+AI_CALL_LOG_RETENTION_DAYS = _env_int("AI_CALL_LOG_RETENTION_DAYS", 365)

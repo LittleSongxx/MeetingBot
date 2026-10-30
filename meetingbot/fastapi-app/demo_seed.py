@@ -168,29 +168,37 @@ async def _create_call_logs(task: TranscriptionTask, minutes: MeetingMinutes, ru
         config = configs.get(model_type)
         if config is None:
             continue
-        log = await AiCallLog.create(
-            request_id=f"AICDEMO{index:04d}",
-            call_type=call_type,
-            biz_id=biz_id,
-            model_config_id=config.id,
-            model_name=config.model_name,
-            request_size=req,
-            response_size=resp,
-            status=status,
-            elapsed_ms=elapsed,
-            usage_json=usage,
-            error_message="模型返回内容为空，已触发一次重试" if status == "FAILED" else None,
-        )
+        # 固定 request_id 作为演示日志的业务幂等键：已存在就更新关联 ID，不重复插入。
+        # 这样删掉演示任务/纪要/运行后重启，日志会自动指向重建出的新业务行，且不撞唯一索引。
+        request_id = f"AICDEMO{index:04d}"
+        values = {
+            "call_type": call_type,
+            "biz_id": biz_id,
+            "model_config_id": config.id,
+            "model_name": config.model_name,
+            "request_size": req,
+            "response_size": resp,
+            "status": status,
+            "elapsed_ms": elapsed,
+            "usage_json": usage,
+            "error_message": "模型返回内容为空，已触发一次重试" if status == "FAILED" else None,
+        }
+        existed = await AiCallLog.get_or_none(request_id=request_id)
+        if existed is not None:
+            await AiCallLog.filter(id=existed.id).update(**values)
+            continue
+        log = await AiCallLog.create(request_id=request_id, **values)
         # create_time 是 auto_now_add，建完之后按天挪开，让观测页趋势图有分布
         await AiCallLog.filter(id=log.id).update(create_time=now() - timedelta(days=days_ago))
 
 
 async def seed_ai_demo(meeting: Meeting, host: User, operator: User) -> None:
-    """幂等补充转写 / 纪要 / 自检 / 调用日志演示数据（按固定业务编号判断）。"""
+    """幂等补齐转写 / 纪要 / 自检 / 调用日志演示数据。
+
+    每个子块单独判断是否存在：任何一块被删掉（或只删了一部分），下次启动都会补回来；
+    演示调用日志用固定 request_id 做 upsert，不会因为重复播种撞 ai_call_log 的唯一索引。
+    """
     material = await MeetingMaterial.filter(meeting_id=meeting.id, file_type="AUDIO").order_by("id").first()
-    if material is not None and await TranscriptionTask.filter(material_id=material.id).exists():
-        logger.info("AI 演示数据已存在，跳过")
-        return
     asr_config = await AiModelConfig.filter(model_type="TRANSCRIPTION").order_by("id").first()
     minutes_config = await AiModelConfig.filter(model_type="MINUTES").order_by("id").first()
     agent_config = await AiModelConfig.filter(model_type="AGENT").order_by("id").first()
@@ -200,72 +208,92 @@ async def seed_ai_demo(meeting: Meeting, host: User, operator: User) -> None:
 
     started = now() - timedelta(days=6, hours=2)
     finished = started + timedelta(minutes=46)
-    task = await TranscriptionTask.create(
-        meeting_id=meeting.id,
-        material_id=material.id,
-        model_config_id=asr_config.id,
-        initiator_id=host.id,
-        language="zh",
-        status="SUCCEEDED",
-        stage="转写完成",
-        progress=100,
-        total_duration_ms=SEGMENTS[-1][3],
-        full_text="\n".join(text for _, text, _, _ in SEGMENTS),
-        started_at=started,
-        finished_at=finished,
-    )
 
-    users = {"employee": host, "operator": operator}
-    for index, (label, text, start_ms, end_ms) in enumerate(SEGMENTS, 1):
-        speaker = users.get(SPEAKER_MAP.get(label, ""))
-        await TranscriptSegment.create(
-            task_id=task.id,
+    task = await TranscriptionTask.filter(material_id=material.id).first()
+    if task is None:
+        task = await TranscriptionTask.create(
             meeting_id=meeting.id,
-            segment_no=index,
-            start_ms=start_ms,
-            end_ms=end_ms,
-            speaker_label=label,
-            speaker_user_id=speaker.id if speaker else None,
-            original_text=text,
-            content=text,
+            material_id=material.id,
+            model_config_id=asr_config.id,
+            initiator_id=host.id,
+            language="zh",
+            status="SUCCEEDED",
+            stage="转写完成",
+            progress=100,
+            total_duration_ms=SEGMENTS[-1][3],
+            full_text="\n".join(text for _, text, _, _ in SEGMENTS),
+            started_at=started,
+            finished_at=finished,
         )
+        logger.info("演示转写任务已创建", extra={"task_id": task.id})
 
-    minutes = await MeetingMinutes.create(
-        meeting_id=meeting.id,
-        source_task_id=task.id,
-        model_config_id=minutes_config.id,
-        status="DRAFT",
-        stage="纪要已生成",
-        progress=100,
-        summary=MINUTES["summary"],
-        topics_json=MINUTES["topics"],
-        viewpoints_json=MINUTES["viewpoints"],
-        decisions_json=MINUTES["decisions"],
-        pending_items_json=MINUTES["pending_items"],
-        risks_json=MINUTES["risks"],
-        created_by=host.id,
-    )
+    if not await TranscriptSegment.filter(task_id=task.id).exists():
+        users = {"employee": host, "operator": operator}
+        for index, (label, text, start_ms, end_ms) in enumerate(SEGMENTS, 1):
+            speaker = users.get(SPEAKER_MAP.get(label, ""))
+            await TranscriptSegment.create(
+                task_id=task.id,
+                meeting_id=meeting.id,
+                segment_no=index,
+                start_ms=start_ms,
+                end_ms=end_ms,
+                speaker_label=label,
+                speaker_user_id=speaker.id if speaker else None,
+                original_text=text,
+                content=text,
+            )
+        logger.info("演示转写片段已创建", extra={"task_id": task.id})
 
-    run_started = finished + timedelta(minutes=3)
-    run = await AgentRun.create(
-        run_no=DEMO_RUN_NO,
-        minutes_id=minutes.id,
-        meeting_id=meeting.id,
-        user_id=host.id,
-        model_config_id=agent_config.id,
-        status="WAITING_CONFIRMATION",
-        stage="等待人工确认",
-        progress=100,
-        current_round=2,
-        max_rounds=2,
-        passed=False,
-        score=86,
-        issue_count=len(ISSUES_ROUND_2),
-        review_json=ISSUES_ROUND_2,
-        revised_json=REVISED,
-        final_result="已按审查发现的 3 条问题重写纪要，得分 86，达到 2 轮上限后没有再复审，请人工判断是否采用修订稿。",
-        started_at=run_started,
-        finished_at=run_started + timedelta(minutes=2),
+    minutes = await MeetingMinutes.filter(source_task_id=task.id).first()
+    if minutes is None:
+        minutes = await MeetingMinutes.create(
+            meeting_id=meeting.id,
+            source_task_id=task.id,
+            model_config_id=minutes_config.id,
+            status="DRAFT",
+            stage="纪要已生成",
+            progress=100,
+            summary=MINUTES["summary"],
+            topics_json=MINUTES["topics"],
+            viewpoints_json=MINUTES["viewpoints"],
+            decisions_json=MINUTES["decisions"],
+            pending_items_json=MINUTES["pending_items"],
+            risks_json=MINUTES["risks"],
+            created_by=host.id,
+        )
+        logger.info("演示纪要已创建", extra={"minutes_id": minutes.id})
+
+    run = await AgentRun.filter(run_no=DEMO_RUN_NO).first()
+    if run is None:
+        run_started = finished + timedelta(minutes=3)
+        run = await AgentRun.create(
+            run_no=DEMO_RUN_NO,
+            minutes_id=minutes.id,
+            meeting_id=meeting.id,
+            user_id=host.id,
+            model_config_id=agent_config.id,
+            status="WAITING_CONFIRMATION",
+            stage="等待人工确认",
+            progress=100,
+            current_round=2,
+            max_rounds=2,
+            passed=False,
+            score=86,
+            issue_count=len(ISSUES_ROUND_2),
+            review_json=ISSUES_ROUND_2,
+            revised_json=REVISED,
+            final_result="已按审查发现的 3 条问题重写纪要，得分 86，达到 2 轮上限后没有再复审，请人工判断是否采用修订稿。",
+            started_at=run_started,
+            finished_at=run_started + timedelta(minutes=2),
+        )
+        logger.info("演示自检运行已创建", extra={"run_id": run.id})
+    elif run.minutes_id != minutes.id:
+        # 纪要行被删过又重建：把演示运行重新挂到新纪要上
+        await AgentRun.filter(id=run.id).update(minutes_id=minutes.id, meeting_id=meeting.id)
+
+    # 已存在的运行只补缺失的步骤，不重复插入（uk_agent_run_step 唯一约束）
+    existing_step_nos = set(
+        await AgentStep.filter(run_id=run.id).values_list("step_no", flat=True)
     )
     steps = [
         # step_no, round_no, step_type, decision, observation, payload, elapsed_ms
@@ -280,7 +308,10 @@ async def seed_ai_demo(meeting: Meeting, host: User, operator: User) -> None:
          {"passed": False, "score": 86, "issues": ISSUES_ROUND_2}, 7_800),
         (4, 2, "FINAL", "汇总自检结论", run.final_result, None, 60),
     ]
+    fallback_started = (run.started_at or finished) + timedelta(minutes=3)
     for step_no, round_no, step_type, decision, observation, payload, elapsed in steps:
+        if step_no in existing_step_nos:
+            continue
         await AgentStep.create(
             run_id=run.id,
             step_no=step_no,
@@ -291,7 +322,7 @@ async def seed_ai_demo(meeting: Meeting, host: User, operator: User) -> None:
             payload_json=payload,
             status="SUCCEEDED",
             elapsed_ms=elapsed,
-            finish_time=run_started + timedelta(seconds=step_no * 30),
+            finish_time=fallback_started + timedelta(seconds=step_no * 30),
         )
 
     await _create_call_logs(task, minutes, run)

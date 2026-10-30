@@ -3,10 +3,11 @@ import json
 from uuid import uuid4
 
 from common.auth import get_current_user
+from common.cooldown import ensure_interval
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime, now
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from models import (
     AgentRun,
     AgentStep,
@@ -132,6 +133,10 @@ async def run_dict(run: AgentRun, with_steps: bool = False) -> dict:
 async def start(payload: RunPayload, current_user: User = Depends(get_current_user)):
     # 复用纪要模块的权限函数：纪要不存在会抛异常，没有这场会议的访问权限也会被挡住
     minutes = await get_accessible_minutes(payload.minutes_id, current_user)
+    ensure_interval(f"agent-start:{current_user.id}", 5.0)
+    # 自检会产生模型费用并可能产出修订稿：只有管理员或纪要创建人可以发起
+    if current_user.role != "ADMIN" and minutes.created_by != current_user.id:
+        raise CustomException("只有管理员或纪要创建人可以发起自检", "403")
     if minutes.status not in {"DRAFT", "CONFIRMED"}:
         raise CustomException("只有已生成的会议纪要可以发起自检")
     if payload.max_rounds < 1 or payload.max_rounds > 5:
@@ -171,8 +176,8 @@ async def select_page(
     status: str = "",
     # 会议主题输入框的值
     meeting_title: str = "",
-    pageNum: int = 1,
-    pageSize: int = 10,
+    pageNum: int = Query(1, ge=1),
+    pageSize: int = Query(10, ge=1, le=100),
     current_user: User = Depends(get_current_user),
 ):
     query = AgentRun.all()
@@ -198,9 +203,18 @@ async def select_by_id(run_id: int, current_user: User = Depends(get_current_use
 @router.get("/selectByMinutes/{minutes_id}")
 async def select_by_minutes(minutes_id: int, current_user: User = Depends(get_current_user)):
     """纪要页面用它查最近一次自检，用来决定按钮显示成发起还是查看。"""
-    await get_accessible_minutes(minutes_id, current_user)
+    minutes = await get_accessible_minutes(minutes_id, current_user)
     run = await AgentRun.filter(minutes_id=minutes_id).order_by("-id").first()
-    return Result.success(await run_dict(run, True) if run else None)
+    if run is None:
+        return Result.success(None)
+    # 自检详情按运行发起人或纪要创建人/管理员可见，不能顺着会议可见就拿到同事的运行详情
+    if (
+        current_user.role != "ADMIN"
+        and run.user_id != current_user.id
+        and minutes.created_by != current_user.id
+    ):
+        return Result.success(None)
+    return Result.success(await run_dict(run, True))
 
 @router.put("/apply/{run_id}")
 async def apply(run_id: int, payload: ApplyPayload, current_user: User = Depends(get_current_user)):
@@ -230,9 +244,12 @@ async def apply(run_id: int, payload: ApplyPayload, current_user: User = Depends
             raise CustomException("自检运行状态已经变化")
         # 放弃时纪要一个字都不动，修订稿留在 revised_json 里可以回看
         return Result.success()
-    # 已确认归档的纪要不允许被覆盖，要改先去纪要页取消确认退回草稿
-    if minutes.status == "CONFIRMED":
-        raise CustomException("纪要已确认归档，不能再覆盖，请先取消确认")
+    # 只有草稿能被修订稿覆盖：已确认/生成中/失败态都不接受旧修订稿
+    if minutes.status != "DRAFT":
+        raise CustomException("只有草稿纪要可以应用修订，已确认请先取消确认")
+    # 版本绑定：自检结束后纪要又被编辑/重新生成过时，旧修订稿不能覆盖新内容
+    if run.finished_at and minutes.update_time and minutes.update_time > run.finished_at:
+        raise CustomException("纪要内容在自检结束后已被修改，请重新发起自检", "409")
     revision = run.revised_json
     # 先把运行抢占成 SUCCEEDED，抢占成功才写纪要，避免同一份修订稿被写两次
     claimed = await AgentRun.filter(id=run.id, status="WAITING_CONFIRMATION").update(
@@ -269,13 +286,33 @@ async def resume(run_id: int, current_user: User = Depends(get_current_user)):
     run = await get_accessible_run(run_id, current_user)
     if run.status != "INTERRUPTED":
         raise CustomException("只有已中断的自检可以恢复")
-    # 改回 RUNNING，清掉上次的失败原因和结束时间
-    await AgentRun.filter(id=run.id).update(
+    # 带 INTERRUPTED 条件更新：并发/重复点恢复时只有一次能生效
+    updated = await AgentRun.filter(id=run.id, status="INTERRUPTED").update(
         status="RUNNING", stage="等待继续", error_message=None, finished_at=None
     )
+    if not updated:
+        raise CustomException("自检运行状态已经变化")
     # 重新调度后台任务，execute_agent_run 从 current_round 和 revised_json 接着跑
     schedule_agent_run(run.id)
     return Result.success()
+
+@router.put("/retry/{run_id}")
+async def retry(run_id: int, current_user: User = Depends(get_current_user)):
+    """失败的自检允许在原运行上重试，从已完成的轮次接着跑，不再新建运行重复计费。"""
+    run = await get_accessible_run(run_id, current_user)
+    if run.status != "FAILED":
+        raise CustomException("只有失败的自检可以重试")
+    minutes = await MeetingMinutes.get_or_none(id=run.minutes_id)
+    if minutes is None or minutes.status not in {"DRAFT", "CONFIRMED"}:
+        raise CustomException("纪要状态已变化，无法重试自检")
+    updated = await AgentRun.filter(id=run.id, status="FAILED").update(
+        status="RUNNING", stage="等待继续", error_message=None, finished_at=None
+    )
+    if not updated:
+        raise CustomException("自检运行状态已经变化")
+    schedule_agent_run(run.id)
+    return Result.success()
+
 
 @router.delete("/delete/{run_id}")
 async def delete(run_id: int, current_user: User = Depends(get_current_user)):
@@ -297,18 +334,27 @@ async def events(run_id: int, current_user: User = Depends(get_current_user)):
     async def stream():
         # 记住上一次推过去的内容，内容没变就不重复推
         last_payload = ""
+        idle_ticks = 0
         while True:
-            run = await AgentRun.get(id=run_id)
+            run = await AgentRun.get_or_none(id=run_id)
+            if run is None:
+                # 运行被删除（如管理员删了会议）时主动结束，避免流内抛 500
+                yield "event: terminated\ndata: {\"reason\": \"run_deleted\"}\n\n"
+                return
             # 每次推完整的运行数据，包含 steps 时间线，前端直接整体替换 data.detail
             payload = json.dumps(await run_dict(run, True), ensure_ascii=False)
             if payload != last_payload:
                 # SSE 报文格式：data: 开头，两个换行结尾
                 yield "data: " + payload + "\n\n"
                 last_payload = payload
+                idle_ticks = 0
             # 进入这五种状态后反思环不会再写库，结束循环，连接随之关闭
             if run.status in {"SUCCEEDED", "FAILED", "INTERRUPTED", "REJECTED", "WAITING_CONFIRMATION"}:
-                break
-            # 每秒查一次运行记录
+                return
+            # 每秒查一次运行记录；每 15 秒补一条心跳，防止代理把长连接当空闲断掉
+            idle_ticks += 1
+            if idle_ticks % 15 == 0:
+                yield ": ping\n\n"
             await asyncio.sleep(1)
 
     return StreamingResponse(

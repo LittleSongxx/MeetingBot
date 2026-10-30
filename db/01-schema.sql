@@ -196,7 +196,8 @@ CREATE TABLE `ai_call_log` (
   UNIQUE KEY `uk_ai_call_request_id` (`request_id`),
   KEY `idx_ai_call_type_time` (`call_type`, `create_time`),
   KEY `idx_ai_call_biz_id` (`biz_id`),
-  KEY `idx_ai_call_model_time_status` (`model_config_id`, `create_time`, `status`)
+  KEY `idx_ai_call_model_time_status` (`model_config_id`, `create_time`, `status`),
+  KEY `idx_ai_call_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='AI模型调用日志表';
 
 CREATE TABLE `prompt_template` (

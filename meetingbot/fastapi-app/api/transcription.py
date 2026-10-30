@@ -1,9 +1,10 @@
 
 from common.auth import get_current_user
+from common.cooldown import ensure_interval
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime, now
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from models import (
     AiModelConfig,
     Department,
@@ -189,6 +190,7 @@ async def start(
 ):
     # 复用第 6 章的资料权限入口，内部再走一次第 5 章的会议权限判断
     material = await get_accessible_material(material_id, current_user)
+    ensure_interval(f"transcription-start:{current_user.id}", 5.0)
     # 只有录音和视频能转写，和页面上按钮的显示条件一致
     if material.file_type not in {"AUDIO", "VIDEO"}:
         raise CustomException("只有录音和视频资料可以发起转写")
@@ -240,6 +242,10 @@ async def start(
 async def retry(task_id: int, current_user: User = Depends(get_current_user)):
     # 按任务ID取任务，内部走会议权限判断
     task = await get_accessible_task(task_id, current_user)
+    ensure_interval(f"transcription-retry:{current_user.id}", 3.0)
+    # 重试属于“写”操作并会产生模型费用：只有管理员或任务发起人可以重试
+    if current_user.role != "ADMIN" and task.initiator_id != current_user.id:
+        raise CustomException("只有管理员或转写发起人可以重试", "403")
     # 只有失败任务能重试，和页面按钮的显示条件一致
     if task.status != "FAILED":
         raise CustomException("只有失败的转写任务可以重试")
@@ -253,7 +259,7 @@ async def retry(task_id: int, current_user: User = Depends(get_current_user)):
     if config is None or not config.api_key:
         raise CustomException("请先由管理员启用转写模型配置")
     # 带 status="FAILED" 条件更新，防止两个人同时点重试时重复累加次数
-    await TranscriptionTask.filter(id=task.id, status="FAILED").update(
+    updated = await TranscriptionTask.filter(id=task.id, status="FAILED").update(
         # 换成当前启用的配置
         model_config_id=config.id,
         # 回到等待执行状态，重新排队
@@ -267,6 +273,8 @@ async def retry(task_id: int, current_user: User = Depends(get_current_user)):
         started_at=None,
         finished_at=None,
     )
+    if not updated:
+        raise CustomException("转写任务状态已经变化")
     schedule_transcription(task.id)
     return Result.success()
 
@@ -309,8 +317,8 @@ async def select_page(
     status: str = "",
     # fileName 来自资料文件名输入框
     fileName: str = "",
-    pageNum: int = 1,
-    pageSize: int = 10,
+    pageNum: int = Query(1, ge=1),
+    pageSize: int = Query(10, ge=1, le=100),
     current_user: User = Depends(get_current_user),
 ):
     query = TranscriptionTask.all()

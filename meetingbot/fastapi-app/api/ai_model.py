@@ -2,7 +2,7 @@ from common.auth import require_admin
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from models import AgentRun, AiModelConfig, MeetingMinutes, TranscriptionTask, User
 from pydantic import BaseModel, ConfigDict
 
@@ -181,8 +181,8 @@ async def select_page(
     name: str = "",
     # model_type 来自页面模型用途下拉框
     model_type: str = "",
-    page_num: int = 1,
-    page_size: int = 10,
+    page_num: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
     # 模型配置只对管理员开放
     _: User = Depends(require_admin),
 ):

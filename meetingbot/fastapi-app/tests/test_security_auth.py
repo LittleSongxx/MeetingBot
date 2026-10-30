@@ -5,7 +5,14 @@ from common.auth import create_token, get_current_user
 from common.exception_handler import CustomException
 from common.security import hash_password, is_hashed, migrate_if_plaintext, password_fingerprint, verify_password
 from models import User
+from starlette.requests import Request
 from tortoise import Tortoise
+
+
+def fake_request() -> Request:
+    """登录接口需要 Request 拿客户端 IP 做失败限流；直调时给一个最小 scope。"""
+    return Request({"type": "http", "method": "POST", "path": "/login", "headers": [],
+                    "client": ("127.0.0.1", 12345)})
 
 
 class SecurityAuthTest(unittest.IsolatedAsyncioTestCase):
@@ -47,7 +54,7 @@ class SecurityAuthTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_login_upgrades_plaintext_and_returns_token(self):
         await User.create(username="legacy_login", password="123456", name="旧账号", status="NORMAL")
-        result = await login(Account(username="legacy_login", password="123456"))
+        result = await login(Account(username="legacy_login", password="123456"), fake_request())
         self.assertEqual(result.code, "200")
         self.assertIn("token", result.data)
         user = await User.get(username="legacy_login")
@@ -57,10 +64,10 @@ class SecurityAuthTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_login_rejects_wrong_password_and_disabled_account(self):
         with self.assertRaises(CustomException):
-            await login(Account(username="sec_admin", password="wrong"))
+            await login(Account(username="sec_admin", password="wrong"), fake_request())
         await User.create(username="disabled", password=hash_password("123456"), name="停用", status="DISABLED")
         with self.assertRaises(CustomException) as context:
-            await login(Account(username="disabled", password="123456"))
+            await login(Account(username="disabled", password="123456"), fake_request())
         self.assertIn("停用", context.exception.message)
 
     async def test_change_password_invalidates_old_token(self):
@@ -75,9 +82,11 @@ class SecurityAuthTest(unittest.IsolatedAsyncioTestCase):
             await get_current_user(token)
         self.assertEqual(context.exception.code, "401")
         # 新密码可登录，旧密码不行
-        self.assertEqual((await login(Account(username="sec_admin", password="admin-pass-2"))).code, "200")
+        self.assertEqual(
+            (await login(Account(username="sec_admin", password="admin-pass-2"), fake_request())).code, "200"
+        )
         with self.assertRaises(CustomException):
-            await login(Account(username="sec_admin", password="admin-pass"))
+            await login(Account(username="sec_admin", password="admin-pass"), fake_request())
 
     async def test_register_respects_switch_and_hashes(self):
         import api
@@ -86,10 +95,10 @@ class SecurityAuthTest(unittest.IsolatedAsyncioTestCase):
         try:
             api.REGISTER_ENABLED = False
             with self.assertRaises(CustomException) as context:
-                await register(Account(username="newbie", password="p1", confirmPassword="p1"))
+                await register(Account(username="newbie", password="pass01", confirmPassword="pass01"))
             self.assertEqual(context.exception.code, "403")
             api.REGISTER_ENABLED = True
-            result = await register(Account(username="newbie", password="p1", confirmPassword="p1"))
+            result = await register(Account(username="newbie", password="pass01", confirmPassword="pass01"))
             self.assertEqual(result.code, "200")
             user = await User.get(username="newbie")
             self.assertTrue(is_hashed(user.password))
@@ -99,7 +108,7 @@ class SecurityAuthTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_register_validates_confirm_password(self):
         with self.assertRaises(CustomException):
-            await register(Account(username="dup", password="p1", confirmPassword="p2"))
+            await register(Account(username="dup", password="pass01", confirmPassword="pass02"))
 
 
 if __name__ == "__main__":

@@ -4,10 +4,12 @@ import pkgutil
 
 from common.auth import create_token, get_current_user
 from common.exception_handler import CustomException
+from common.login_guard import check_locked, record_failure
+from common.login_guard import clear as clear_login_failures
 from common.result import Result
-from common.security import hash_password, is_hashed, verify_password
+from common.security import hash_password, is_hashed, password_rule_error, verify_password
 from common.urls import to_relative_url
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from models import Department, User
 from pydantic import BaseModel
 from settings import REGISTER_ENABLED
@@ -60,12 +62,19 @@ async def account_dict(user: User, token: str | None = None) -> dict:
 
 
 @api_router.post("/login")
-async def login(account: Account):
+async def login(account: Account, request: Request):
+    # 同一账号/来源连续失败 5 次锁 5 分钟，避免被无限次试密码
+    client_host = request.client.host if request is not None and request.client else None
+    locked = check_locked(account.username, client_host)
+    if locked:
+        raise CustomException(f"登录失败次数过多，请{locked}秒后再试")
     # 按页面输入的账号查询 user 表，账号不存在时 user 为 None
     user = await User.get_or_none(username=account.username)
     # 账号不存在或密码不匹配时返回同一句提示，页面上看不出是账号错还是密码错
     if user is None or not verify_password(account.password or "", user.password):
+        record_failure(account.username, client_host)
         raise CustomException("账号或密码错误")
+    clear_login_failures(account.username, client_host)
     # 迁移窗口：历史明文密码校验通过后立即原位升级为 bcrypt
     if not is_hashed(user.password):
         upgraded = hash_password(account.password or "")
@@ -90,6 +99,9 @@ async def register(account: Account):
     # 两次密码不一致时不建账号，和前端 validatePass 的判断保持同一个口径
     if account.password != account.confirmPassword:
         raise CustomException("两次输入的密码不一致")
+    password_error = password_rule_error(account.password)
+    if password_error:
+        raise CustomException(password_error)
     # 按账号查一次 user 表，已存在同名账号时直接拒绝，避免触发数据库唯一索引报错
     if await User.get_or_none(username=account.username):
         raise CustomException("账号重复")
@@ -118,6 +130,9 @@ async def update_password(account: Account, current_user: User = Depends(get_cur
     # 新密码不能为空。前端有非空校验，后端独立再校验一次
     if not account.newPassword:
         raise CustomException("请输入新密码")
+    password_error = password_rule_error(account.newPassword)
+    if password_error:
+        raise CustomException(password_error)
     # 新旧密码相同时没有修改意义，直接拦住
     if verify_password(account.newPassword, current_user.password):
         raise CustomException("新密码不能与原密码相同")

@@ -9,8 +9,8 @@ from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime
 from docx import Document
-from fastapi import APIRouter, Body, Depends, File, UploadFile
-from models import MeetingMaterial, TranscriptionTask, User
+from fastapi import APIRouter, Body, Depends, File, Query, UploadFile
+from models import Meeting, MeetingMaterial, TranscriptionTask, User
 from starlette.responses import FileResponse
 from tortoise.exceptions import IntegrityError
 
@@ -179,8 +179,8 @@ async def select_page(
     fileName: str = "",
     # fileType 来自资料类型下拉框
     fileType: str = "",
-    pageNum: int = 1,
-    pageSize: int = 10,
+    pageNum: int = Query(1, ge=1),
+    pageSize: int = Query(10, ge=1, le=100),
     current_user: User = Depends(get_current_user),
 ):
     # 分页查询与上传、下载共用同一会议数据权限校验。
@@ -302,6 +302,16 @@ async def download(material_id: int, current_user: User = Depends(get_current_us
     )
 
 
+async def ensure_material_delete_permission(material: MeetingMaterial, current_user: User) -> None:
+    """资料删除权限：管理员、上传人、或所属会议的创建人。"""
+    if current_user.role == "ADMIN" or material.uploader_id == current_user.id:
+        return
+    meeting = await Meeting.get_or_none(id=material.meeting_id)
+    if meeting is not None and meeting.creator_id == current_user.id:
+        return
+    raise CustomException("只有管理员、上传人或会议创建人可以删除资料", "403")
+
+
 async def delete_material(material: MeetingMaterial):
     # 第 8 章的转写任务记着 material_id，资料被删会让转写记录指向不存在的文件
     if await TranscriptionTask.filter(material_id=material.id).exists():
@@ -317,6 +327,8 @@ async def delete_material(material: MeetingMaterial):
 async def delete(material_id: int, current_user: User = Depends(get_current_user)):
     # 先按权限取资料，看不到的资料删不了
     material = await get_accessible_material(material_id, current_user)
+    # 再看是否具备“写/删”权限：参会人不能删别人上传的资料
+    await ensure_material_delete_permission(material, current_user)
     await delete_material(material)
     return Result.success()
 
@@ -333,7 +345,9 @@ async def delete_batch(
     materials = []
     # set 去重后逐个做权限校验，勾选里混进无权访问的资料时整批拒绝
     for material_id in set(ids):
-        materials.append(await get_accessible_material(material_id, current_user))
+        material = await get_accessible_material(material_id, current_user)
+        await ensure_material_delete_permission(material, current_user)
+        materials.append(material)
     # 整批一次性检查转写关联，只要有一份被关联就全部不删，避免删一半停下来
     if await TranscriptionTask.filter(material_id__in=[item.id for item in materials]).exists():
         raise CustomException("勾选资料中存在已关联转写任务的文件，不能删除")

@@ -51,9 +51,5 @@ def setup_exceptions(app: FastAPI):
             status_code=status.HTTP_200_OK,
             content={"code": "500", "msg": "系统错误"}
         )
-        # 允许所有源（与你的 CORS 配置一致）
-        # 兜底处理器不经过 CORS 中间件，这里手工补上跨域响应头，否则浏览器读不到响应体
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "*"
-        response.headers["Access-Control-Allow-Headers"] = "*"
+        # 跨域响应头由 CORS 中间件统一负责，这里不再手写 *（同源部署时不应出现 ACAO）
         return response
