@@ -265,6 +265,9 @@ npm run dev          # 本地开发（连 http://localhost:9090 后端）
   验证清单、单进程限制、故障排查、回滚、已有库升级。
 - [`meetingbot/fastapi-app/evaluation/README.md`](meetingbot/fastapi-app/evaluation/README.md)：
   离线质量评测指标与 golden set 说明。
+- [`eval/README.md`](eval/README.md)：与演示栈隔离的评测环境、必填 Key、模型选型与 A/B 方法。
+- [`meetingbot/fastapi-app/evaluation/reports/2026-10-30-local.md`](meetingbot/fastapi-app/evaluation/reports/2026-10-30-local.md)：
+  首次真实链路评测报告（基线/生成后指标、问答与发现的问题）。
 - [`架构图/AI会议纪要助手-架构与工作流分析.md`](架构图/AI会议纪要助手-架构与工作流分析.md)：
   项目架构、完整工作流、模块设计取舍与完善度评估。
 - [`架构图/调研/`](架构图/调研/)：后端接口与数据模型、前端、AI 链路、质量与成熟度的

@@ -1,0 +1,82 @@
+name: meetingbot-aim-eval
+
+# =============================================================================
+# 评测 / 实验环境（与演示栈 meetingbot-aim-local 完全隔离）
+#
+# 特点：
+#   - 独立项目名、数据卷、宿主机端口（19192 / 18182）；
+#   - 独立 eval/.env（密钥/模型可以单独配置，方便 A/B 对比）；
+#   - backend/web 默认复用本地已构建好的镜像，避免评测时重复构建；
+#     db 从当前仓库 db/ 构建，保证表结构与评测代码一致。
+#
+# 用法（在仓库根目录）：
+#   docker compose --project-directory eval --env-file eval/.env \
+#     -f eval/compose.eval.yaml up -d
+# =============================================================================
+
+services:
+  db:
+    build: ../db
+    image: meetingbot-aim-eval-db:latest
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ai_meeting_eval}
+      MYSQL_USER: ${MYSQL_USER:-meetingbot_eval}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?请在 eval/.env 设置 MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?请在 eval/.env 设置 MYSQL_ROOT_PASSWORD}
+      TZ: ${TZ:-Asia/Shanghai}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - eval_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  backend:
+    # 默认复用仓库根 compose 构建出的镜像；换代码后先重建该镜像，
+    # 或把 EVAL_BACKEND_IMAGE 指向自己构建的评测镜像。
+    image: ${EVAL_BACKEND_IMAGE:-meetingbot-aim-local-backend:latest}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MYSQL_HOST: db
+      MYSQL_PORT: "3306"
+      SQL_ECHO: "false"
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - "127.0.0.1:${EVAL_BACKEND_PORT:-19192}:9090"
+    volumes:
+      - eval_files:/app/files
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9090/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  web:
+    image: ${EVAL_WEB_IMAGE:-meetingbot-aim-local-web:latest}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${EVAL_WEB_PORT:-18182}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  eval_mysql_data:
+  eval_files:
