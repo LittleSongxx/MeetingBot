@@ -1,0 +1,67 @@
+{
+  "route_titles": {
+    "/manager/home": "系统首页 · MeetingBot",
+    "/manager/meeting": "会议管理 · MeetingBot",
+    "/manager/meetingMaterial": "会议资料 · MeetingBot",
+    "/manager/transcription": "转写任务 · MeetingBot",
+    "/manager/meetingMinutes": "AI会议纪要 · MeetingBot",
+    "/manager/actionItems": "行动项 · MeetingBot",
+    "/manager/agent": "纪要自检 · MeetingBot",
+    "/manager/observability": "运行观测 · MeetingBot",
+    "/manager/aiModel": "AI模型配置 · MeetingBot",
+    "/manager/promptTemplate": "Prompt模板配置 · MeetingBot",
+    "/manager/user": "用户管理 · MeetingBot",
+    "/manager/department": "部门管理 · MeetingBot",
+    "/manager/departmentMembers": "部门成员 · MeetingBot",
+    "/manager/person": "个人资料 · MeetingBot",
+    "/manager/password": "修改密码 · MeetingBot"
+  },
+  "route_errors": {
+    "/manager/home": [],
+    "/manager/meeting": [],
+    "/manager/meetingMaterial": [],
+    "/manager/transcription": [],
+    "/manager/meetingMinutes": [],
+    "/manager/actionItems": [],
+    "/manager/agent": [],
+    "/manager/observability": [],
+    "/manager/aiModel": [],
+    "/manager/promptTemplate": [],
+    "/manager/user": [],
+    "/manager/department": [],
+    "/manager/departmentMembers": [],
+    "/manager/person": [],
+    "/manager/password": []
+  },
+  "action_item_rows": 6,
+  "detail": {
+    "evidence_buttons": 13,
+    "evidence_text": "原文出处\n[00:12-00:21]李悦：17 个需求已经验收通过 15 个\n知道了",
+    "has_action_section": true,
+    "has_qa_button": true
+  },
+  "action_lifecycle": {
+    "add": "200"
+  },
+  "mobile_widths": {
+    "/manager/home": 375,
+    "/manager/meeting": 375,
+    "/manager/meetingMaterial": 375,
+    "/manager/transcription": 375,
+    "/manager/meetingMinutes": 375,
+    "/manager/actionItems": 375,
+    "/manager/agent": 375,
+    "/manager/observability": 375,
+    "/manager/aiModel": 375,
+    "/manager/promptTemplate": 375,
+    "/manager/user": 375,
+    "/manager/department": 375,
+    "/manager/departmentMembers": 375,
+    "/manager/person": 375,
+    "/manager/password": 375
+  },
+  "headers": {
+    "docs": 200,
+    "asset": 404
+  }
+}
