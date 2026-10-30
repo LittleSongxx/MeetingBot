@@ -5,7 +5,7 @@
 ## 评测环境
 
 隔离评测栈（独立端口/数据卷/`.env`）见仓库根 [`eval/README.md`](../../../eval/README.md)。
-首次真实评测报告：[`reports/2026-10-30-local.md`](reports/2026-10-30-local.md)。
+DeepSeek Flash 真实评测报告：[`reports/2026-10-30-deepseek-flash.md`](reports/2026-10-30-deepseek-flash.md)。
 
 ## 运行
 

@@ -16,7 +16,7 @@
 cp eval/.env.example eval/.env
 ```
 
-本机已生成一份可直接使用的 `eval/.env`（包含随机数据库口令/JWT/管理员口令，并复用了主 `.env` 的 DASHSCOPE Key）。**不要提交 eval/.env**。
+本机已生成一份可直接使用的 `eval/.env`（随机数据库口令/JWT/管理员口令；ASR 复用主 `.env` 的百炼 Key，LLM 使用 DeepSeek Key）。**不要提交 eval/.env**。
 
 需要填写的项：
 
@@ -25,8 +25,10 @@ cp eval/.env.example eval/.env
 | `MYSQL_PASSWORD` / `MYSQL_ROOT_PASSWORD` | 是 | 评测库口令，与演示栈不同即可 |
 | `JWT_SECRET` | 是 | `openssl rand -hex 32` 的输出 |
 | `APP_ADMIN_USERNAME` / `APP_ADMIN_PASSWORD` | 是 | 评测环境管理员账号 |
-| `DASHSCOPE_API_KEY` | 使用 AI 时必填 | 百炼 Key；ASR 与 LLM 可共用 |
-| `ASR_API_KEY` / `LLM_API_KEY` | 否 | 分开计费/限流时填写，留空共用上面的 Key |
+| `DASHSCOPE_API_KEY` | ASR 必填 | 百炼 Key（转写用） |
+| `LLM_API_KEY` | LLM 必填 | LLM Key（本评测默认 DeepSeek） |
+| `ASR_API_KEY` | 否 | ASR 想用独立 Key 时填，留空共用 `DASHSCOPE_API_KEY` |
+| `LLM_JSON_MODE` | 是（按供应商） | DeepSeek 填 `json_object`；百炼等支持 strict schema 的填 `json_schema` |
 | `DEMO_PASSWORD` | 否 | `SEED_DEMO=1` 时演示账号口令 |
 | `EVAL_BACKEND_PORT` / `EVAL_WEB_PORT` | 否 | 默认 19192 / 18182 |
 
@@ -34,9 +36,10 @@ cp eval/.env.example eval/.env
 
 | 用途 | 默认 | 可选/建议 |
 |---|---|---|
-| 转写（含说话人分离） | `ASR_MODEL=paraformer-v2` | 这是当前链路实际验证过的模型，评测时建议固定 |
-| 纪要/自检/说话人匹配 | `LLM_MODEL=qwen3.8-max-0902` | 与演示栈一致的**质量基线**；`qwen-plus` 可做低成本回归；正式对比时一次只改一个变量 |
-| 模型接口 | OpenAI 兼容 `LLM_BASE_URL` | 必须支持 strict `json_schema`（纪要生成强依赖） |
+| 转写（含说话人分离） | `ASR_MODEL=paraformer-v2` | 百炼录音文件识别；当前链路实际验证可用 |
+| 纪要/自检/说话人匹配 | `LLM_MODEL=deepseek-flash` | 本轮评测模型，`LLM_BASE_URL=https://api.deepseek.com`，`LLM_JSON_MODE=json_object` |
+| DeepSeek 质量上限/A-B | `LLM_MODEL=deepseek-v4-pro` | 同一个 Key 可用；仍用 `json_object` |
+| 模型接口 | OpenAI 兼容 `LLM_BASE_URL` | 支持 `json_schema` 的供应商用 `json_schema`；DeepSeek 用 `json_object` + 提示词/校验兜底 |
 
 ## 3. 启动评测栈
 
@@ -89,14 +92,14 @@ pwsh ./eval/run_eval.ps1
 5. 可选：`POST /meetingMinutes/ask/{id}` 问一个关键问题，检查引用；
 6. 再跑 4.1 的评测命令，记录本次模型/参数与指标。
 
-首次真实评测报告：[`meetingbot/fastapi-app/evaluation/reports/2026-10-30-local.md`](../meetingbot/fastapi-app/evaluation/reports/2026-10-30-local.md)（含基线/生成后指标、问答结果、行动项重复问题与后续计划）。
+DeepSeek Flash 真实评测报告：[`meetingbot/fastapi-app/evaluation/reports/2026-10-30-deepseek-flash.md`](../meetingbot/fastapi-app/evaluation/reports/2026-10-30-deepseek-flash.md)（含基线/生成后指标、问答结果、证据覆盖与行动项问题、后续计划）。
 
 ### 4.3 A/B 模型对比
 
 固定其他变量，只改 `LLM_MODEL`（或 Key/温度/分块参数），重启 backend 后重复 4.2：
 
 ```bash
-# 编辑 eval/.env 里的 LLM_MODEL=qwen-plus（或换回 qwen3.8-max-0902）
+# 编辑 eval/.env：LLM_MODEL=deepseek-v4-pro（保持 LLM_JSON_MODE=json_object）
 docker compose --project-directory eval --env-file eval/.env \
   -f eval/compose.eval.yaml up -d --force-recreate backend
 ```
