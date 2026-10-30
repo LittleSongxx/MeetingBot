@@ -187,9 +187,19 @@ async def update(payload: ActionUpdatePayload, current_user: User = Depends(get_
         raise CustomException("行动项不存在")
     await _ensure_action_write_permission(item, current_user)
     values = payload.model_dump(exclude_unset=True, exclude={"id"})
-    owner_name = await _validate_owner(values.get("owner_user_id"))
-    if owner_name and not values.get("owner_name"):
-        values["owner_name"] = owner_name
+    if "content" in values:
+        content = str(values["content"] or "").strip()
+        if not content:
+            raise CustomException("请输入待办内容")
+        values["content"] = content
+    if "owner_user_id" in values:
+        owner_user_id = values["owner_user_id"]
+        if owner_user_id is None:
+            # 清空负责人时同时清掉姓名文本，否则列表会出现“无用户但有名字”
+            if "owner_name" not in values:
+                values["owner_name"] = None
+        else:
+            values["owner_name"] = await _validate_owner(owner_user_id)
     if not values:
         raise CustomException("没有需要更新的内容")
     await ActionItem.filter(id=item.id).update(**values)
@@ -207,8 +217,8 @@ async def update_status(
     item = await ActionItem.get_or_none(id=item_id)
     if item is None:
         raise CustomException("行动项不存在")
-    if item.status not in {"OPEN", "DONE", "CANCELLED"}:
-        raise CustomException("只有已生效的行动项可以修改状态，请先确认生效")
+    if item.status == "DRAFT" and payload.status != "CANCELLED":
+        raise CustomException("草稿行动项只能撤回，请先确认生效")
     # 负责人可以把自己名下的行动项标记完成/重新打开
     allowed = (
         current_user.role == "ADMIN"
@@ -229,11 +239,14 @@ async def add(payload: ActionAddPayload, current_user: User = Depends(get_curren
     meeting = await get_accessible_meeting(payload.meeting_id, current_user)
     if current_user.role != "ADMIN" and meeting.creator_id != current_user.id:
         raise CustomException("只有管理员或会议创建人可以新增行动项", "403")
+    content = payload.content.strip()
+    if not content:
+        raise CustomException("请输入待办内容")
     owner_name = await _validate_owner(payload.owner_user_id)
     await ActionItem.create(
         meeting_id=meeting.id,
         minutes_id=None,
-        content=payload.content.strip(),
+        content=content,
         owner_user_id=payload.owner_user_id,
         owner_name=payload.owner_name or owner_name,
         due_date=payload.due_date,

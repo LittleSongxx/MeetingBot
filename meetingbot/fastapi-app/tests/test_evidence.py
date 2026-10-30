@@ -66,9 +66,10 @@ class EvidenceTest(unittest.TestCase):
 
     def test_merge_without_segments_preserves_payload_evidence(self):
         old = {"topics": [], "viewpoints": [], "decisions": [], "pending_items": [], "risks": []}
-        new = {"summary": "", "topics": [{"title": "t", "summary": "s", "evidence": [{"quote": "手动回传"}]}]}
+        evidence = {"quote": "手动回传", "segment_no": 3, "start_ms": 1000, "end_ms": 2000, "speaker": "张三"}
+        new = {"summary": "", "topics": [{"title": "t", "summary": "s", "evidence": [evidence]}]}
         merged = merge_evidence(old, new)
-        self.assertEqual(merged["topics"][0]["evidence"][0]["quote"], "手动回传")
+        self.assertEqual(merged["topics"][0]["evidence"][0], evidence)
 
     def test_minutes_result_accepts_evidence(self):
         result = MinutesResult.model_validate(

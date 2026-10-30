@@ -67,13 +67,23 @@ def _match_owner(text: str | None, owner_index: dict[str, int]) -> int | None:
 
 def _collect_specs(minutes: MeetingMinutes) -> list[dict]:
     specs = []
+    seen_content: set[str] = set()
+
+    def add_spec(spec: dict) -> None:
+        from services.evidence_service import normalize
+
+        key = normalize(spec["content"])
+        if not key or key in seen_content:
+            return
+        seen_content.add(key)
+        specs.append(spec)
     for index, item in enumerate(minutes.pending_items_json or []):
         if not isinstance(item, dict):
             continue
         content = str(item.get("content") or "").strip()
         if not content:
             continue
-        specs.append(
+        add_spec(
             {
                 "source_field": "pending_items",
                 "source_index": index,
@@ -91,7 +101,7 @@ def _collect_specs(minutes: MeetingMinutes) -> list[dict]:
         # 决策不一定都是任务：只有带负责人/期限的决策才转成行动项
         if not content or not (owner_text or due_text):
             continue
-        specs.append(
+        add_spec(
             {
                 "source_field": "decisions",
                 "source_index": index,

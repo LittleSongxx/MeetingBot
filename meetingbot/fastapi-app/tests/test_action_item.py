@@ -1,8 +1,10 @@
 import unittest
 
 from api.action_item import (
+    ActionAddPayload,
     ActionStatusPayload,
     ActionUpdatePayload,
+    add,
     confirm_batch,
     generate,
     update,
@@ -25,6 +27,7 @@ class ActionItemTest(unittest.IsolatedAsyncioTestCase):
         await Tortoise.generate_schemas()
         self.owner = await User.create(username="action_owner", password="123456", name="张三", role="EMPLOYEE")
         self.outsider = await User.create(username="action_outsider", password="123456", name="李四", role="EMPLOYEE")
+        self.admin = await User.create(username="action_admin", password="123456", name="管理员", role="ADMIN")
         self.meeting = await Meeting.create(
             meeting_no="MTG-ACTION-001",
             title="行动项验证会",
@@ -89,6 +92,59 @@ class ActionItemTest(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(updated.code, "200")
         self.assertEqual((await ActionItem.get(id=item.id)).content, "改过的行动项")
+
+    async def test_owner_clear_and_draft_cancel(self):
+        await generate(self.minutes.id, self.owner)
+        item = await ActionItem.get(source_field="pending_items", source_index=0)
+        await update(ActionUpdatePayload(id=item.id, owner_user_id=self.owner.id), self.owner)
+        self.assertEqual((await ActionItem.get(id=item.id)).owner_name, "张三")
+        await update(ActionUpdatePayload(id=item.id, owner_user_id=None), self.owner)
+        reloaded = await ActionItem.get(id=item.id)
+        self.assertIsNone(reloaded.owner_user_id)
+        self.assertIsNone(reloaded.owner_name)
+        await update_status(item.id, ActionStatusPayload(status="CANCELLED"), self.owner)
+        self.assertEqual((await ActionItem.get(id=item.id)).status, "CANCELLED")
+
+    async def test_duplicate_pending_and_decision_only_create_once(self):
+        minutes = await MeetingMinutes.create(
+            meeting_id=self.meeting.id,
+            source_task_id=2,
+            model_config_id=1,
+            status="CONFIRMED",
+            summary="重复条目验证",
+            created_by=self.owner.id,
+            pending_items_json=[
+                {"content": "导出改为异步导出", "owner_suggestion": "张三", "deadline_suggestion": ""},
+            ],
+            decisions_json=[
+                {"content": "导出改为异步导出", "basis": "压测", "owner_suggestion": "张三", "deadline_suggestion": ""},
+            ],
+        )
+        result = await generate(minutes.id, self.owner)
+        self.assertEqual(result.data, {"created": 1, "skipped": 0})
+        self.assertEqual(await ActionItem.filter(minutes_id=minutes.id).count(), 1)
+
+    async def test_generate_requires_confirmed_and_meeting_delete_cascades(self):
+        self.minutes.status = "DRAFT"
+        await self.minutes.save()
+        with self.assertRaises(CustomException):
+            await generate(self.minutes.id, self.owner)
+        self.minutes.status = "CONFIRMED"
+        await self.minutes.save()
+        await generate(self.minutes.id, self.owner)
+        self.assertEqual(await ActionItem.all().count(), 3)
+        from api.meeting import delete as delete_meeting
+        await delete_meeting(self.meeting.id, self.admin)
+        self.assertEqual(await ActionItem.all().count(), 0)
+
+    async def test_whitespace_content_is_rejected(self):
+        with self.assertRaises(CustomException):
+            await add(ActionAddPayload(meeting_id=self.meeting.id, content="   "), self.owner)
+        await generate(self.minutes.id, self.owner)
+        item = await ActionItem.get(source_field="pending_items", source_index=0)
+        with self.assertRaises(CustomException):
+            await update(ActionUpdatePayload(id=item.id, content="  "), self.owner)
+        self.assertNotEqual((await ActionItem.get(id=item.id)).content, "")
 
     async def test_delete_cascade_with_minutes(self):
         from api.meeting_minutes import delete_minutes

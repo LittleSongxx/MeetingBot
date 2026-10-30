@@ -96,6 +96,20 @@ def _raw_quotes(item: dict) -> list[str]:
     return quotes
 
 
+def _raw_entries(item: dict) -> list[dict]:
+    """原样返回 evidence 条目（保留 segment_no/时间/说话人），用于页面编辑保存。"""
+    evidence = item.get("evidence")
+    if not isinstance(evidence, list):
+        return []
+    entries = []
+    for entry in evidence:
+        if isinstance(entry, str) and entry.strip():
+            entries.append({"quote": entry.strip()})
+        elif isinstance(entry, dict) and isinstance(entry.get("quote"), str):
+            entries.append(dict(entry))
+    return entries
+
+
 def bind_evidence(result: dict, segments: list[dict]) -> dict:
     """校验模型返回的 evidence：只保留能在转写里逐字匹配上的引用。"""
     if not isinstance(result, dict) or not segments:
@@ -140,13 +154,15 @@ def merge_evidence(old_result: dict, new_result: dict, segments: list[dict] | No
             if not isinstance(item, dict):
                 continue
             canonical = []
-            for quote in _raw_quotes(item):
-                if segments:
+            if segments:
+                # 生成/自检场景：必须能在转写里逐字匹配，并回填时间/说话人
+                for quote in _raw_quotes(item):
                     evidence = _canonical_evidence(quote, segments)
                     if evidence is not None:
                         canonical.append(evidence)
-                else:
-                    canonical.append({"quote": str(quote).strip()})
+            else:
+                # 页面编辑场景：保留前端回传的完整 evidence（quote + 时间/说话人/片段号）
+                canonical = _raw_entries(item)
             if not canonical and index < len(old_items) and isinstance(old_items[index], dict):
                 old_item = old_items[index]
                 old_evidence = old_item.get("evidence") if isinstance(old_item.get("evidence"), list) else []

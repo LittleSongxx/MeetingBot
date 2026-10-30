@@ -103,6 +103,13 @@ class DemoSeedIdempotentTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await ActionItem.filter(status="OPEN").count(), 1)
         self.assertEqual(await ActionItem.filter(status="DONE").count(), 1)
 
+    async def test_manual_edit_is_not_overwritten_on_reseed(self):
+        await self._seed()
+        minutes = await MeetingMinutes.get()
+        await MeetingMinutes.filter(id=minutes.id).update(summary="人工改过的摘要")
+        await self._seed()
+        self.assertEqual((await MeetingMinutes.get(id=minutes.id)).summary, "人工改过的摘要")
+
     async def test_reseed_after_demo_rows_deleted(self):
         await self._seed()
         # 模拟管理员在页面删除演示转写任务（级联删纪要/自检），调用日志按设计保留

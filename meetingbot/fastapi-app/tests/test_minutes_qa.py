@@ -119,6 +119,11 @@ class MinutesQaTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("第0轮", text)
         self.assertIn("第4轮", text)
 
+    async def test_whitespace_question_rejected(self):
+        with self.assertRaises(CustomException) as context:
+            await ask_api(self.minutes.id, AskPayload(question="   "), self.owner)
+        self.assertIn("请输入问题", context.exception.message)
+
     async def test_api_permission(self):
         with patch("api.meeting_minutes.ask_minutes", new=AsyncMock(return_value={"found": False, "answer": "无", "citations": []})):
             with self.assertRaises(CustomException) as context:

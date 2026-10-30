@@ -351,8 +351,15 @@ async def seed_ai_demo(meeting: Meeting, host: User, operator: User) -> None:
         )
         logger.info("演示纪要已创建", extra={"minutes_id": minutes.id})
     else:
-        # 旧版本演示数据没有 evidence / ai_draft_json：只在仍是草稿时补齐，不覆盖人工改过的内容
-        if minutes.status == "DRAFT":
+        # 旧版本演示数据没有 evidence / ai_draft_json：只在仍是草稿且确实缺失时补齐，
+        # 不能每次重启都把人工改过的演示纪要覆盖回去
+        has_evidence = any(
+            item.get("evidence")
+            for field in ("topics", "viewpoints", "decisions", "pending_items", "risks")
+            for item in (getattr(minutes, field + "_json") or [])
+            if isinstance(item, dict)
+        )
+        if minutes.status == "DRAFT" and (minutes.ai_draft_json is None or not has_evidence):
             fields = {
                 "summary": MINUTES["summary"],
                 "topics_json": MINUTES["topics"],

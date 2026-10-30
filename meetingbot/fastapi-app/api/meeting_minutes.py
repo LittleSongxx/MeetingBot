@@ -421,6 +421,9 @@ async def ask(
     minutes = await get_accessible_minutes(minutes_id, current_user)
     if minutes.status not in {"DRAFT", "CONFIRMED"}:
         raise CustomException("纪要尚未生成，不能问答")
+    question = payload.question.strip()
+    if not question:
+        raise CustomException("请输入问题")
     ensure_interval(f"minutes-ask:{current_user.id}", 3.0)
     prompt = await PromptTemplate.get_or_none(code="MINUTES_QA", enabled=True)
     if prompt is None:
@@ -429,7 +432,7 @@ async def ask(
     if config is None or not config.api_key:
         raise CustomException("请先由管理员启用会议纪要模型配置")
     history = [message.model_dump() for message in payload.history[-6:]]
-    result = await ask_minutes(minutes, config, prompt, payload.question.strip(), history)
+    result = await ask_minutes(minutes, config, prompt, question, history)
     return Result.success(result)
 
 
