@@ -26,7 +26,7 @@
         <el-table-column prop="username" label="账号" />
         <el-table-column prop="avatar" label="头像" width="80">
           <template #default="scope">
-            <!-- 没有上传头像的用户这一格留空；后端返回的可能是 /files/... 相对路径，统一拼成完整地址 -->
+            <!-- 有头像时显示图片；没有上传头像的用户用姓名首字兜底，不留空 -->
             <el-image
                 v-if="scope.row.avatar"
                 style="width: 40px; height: 40px; border-radius: 50%; display: block"
@@ -34,6 +34,7 @@
                 :preview-src-list="[resolveAssetUrl(scope.row.avatar)]"
                 preview-teleported
             ></el-image>
+            <el-avatar v-else :size="40" class="user-avatar-fallback">{{ (scope.row.name || scope.row.username || '?').slice(0, 1).toUpperCase() }}</el-avatar>
           </template>
         </el-table-column>
         <el-table-column prop="name" label="姓名" />
@@ -58,8 +59,8 @@
         </el-table-column>
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="scope">
-            <el-button type="primary" circle :icon="Edit" @click="handleEdit(scope.row)"></el-button>
-            <el-button type="danger" circle :icon="Delete" @click="del(scope.row.id)"></el-button>
+            <el-button type="primary" circle :icon="Edit" aria-label="编辑用户" title="编辑用户" @click="handleEdit(scope.row)"></el-button>
+            <el-button type="danger" circle :icon="Delete" aria-label="删除用户" title="删除用户" @click="del(scope.row.id)"></el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -147,12 +148,13 @@ import { Delete, Edit } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request.js'
 import { resolveAssetUrl } from '@/utils/url.js'
+import { readUser } from '@/utils/storage.js'
 
 const baseUrl = import.meta.env.VITE_BASE_URL
 
 const data = reactive({
   // 从第 1 章登录时写入的 xm-user 缓存里读当前登录用户，头像上传要用里面的 token
-  user: JSON.parse(localStorage.getItem('xm-user') || '{}'),
+  user: readUser(),
   // 控制用户弹窗显示
   formVisible: false,
   // 弹窗表单对象，新增和编辑共用；有 id 表示编辑
@@ -313,3 +315,13 @@ const reset = () => {
 loadDepartments()
 load()
 </script>
+
+<style scoped>
+/* 没有头像的用户用姓名首字兜底显示 */
+.user-avatar-fallback {
+  flex-shrink: 0;
+  background-color: var(--mb-brand);
+  color: #fff;
+  font-size: 15px;
+}
+</style>

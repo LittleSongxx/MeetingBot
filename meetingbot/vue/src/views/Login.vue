@@ -54,9 +54,13 @@
 <script setup>
 import { reactive, ref } from "vue";
 import { User, Lock } from "@element-plus/icons-vue";
+import { useRoute } from "vue-router";
 import request from "@/utils/request.js";
 import {ElMessage} from "element-plus";
 import router from "@/router/index.js";
+import { writeUser } from "@/utils/storage.js";
+
+const route = useRoute()
 
 // 左侧展示的会议处理链路，每一步都对应管理端的一个菜单
 const steps = [
@@ -103,10 +107,13 @@ const login = () => {
         // code 为 '200' 说明后端 login 已校验通过，res.data 是 account_dict 组装的用户信息和 token
         if (res.code === '200') {
           ElMessage.success('登录成功')
-          // 存储用户信息到浏览器的缓存
-          localStorage.setItem('xm-user', JSON.stringify(res.data))
-          // 进入管理端首页，Manager.vue 从 xm-user 读取 role 渲染菜单
-          router.push('/manager/home')
+          // 存储用户信息到浏览器的缓存（统一走 storage.js，写入失败不会阻塞登录）
+          writeUser(res.data)
+          // 被 401 踢到登录页时带回了 redirect，登录后回到原来要访问的页面
+          const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/manager')
+            ? route.query.redirect
+            : '/manager/home'
+          router.push(redirect)
         } else {
           // 例如“账号或密码错误”“账号已被停用”，直接弹出后端给的提示
           ElMessage.error(res.msg)

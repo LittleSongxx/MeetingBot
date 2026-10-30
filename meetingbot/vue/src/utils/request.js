@@ -1,6 +1,7 @@
 import axios from "axios";
 import {ElMessage} from "element-plus";
 import router from "@/router/index.js";
+import {clearUser, getToken} from "@/utils/storage.js";
 
 const request = axios.create({
     // 后端地址来自 ai_meeting/vue/.env.development 里的 VITE_BASE_URL
@@ -8,6 +9,46 @@ const request = axios.create({
     // 普通后台接口超时时间
     timeout: 30000
 })
+
+// 最近一条错误提示，用来合并并发请求的同一句提示，避免一次断网弹出十几条 toast
+let lastError = {message: '', time: 0}
+const showError = message => {
+    const now = Date.now()
+    if (message === lastError.message && now - lastError.time < 1500) {
+        return
+    }
+    lastError = {message, time: now}
+    ElMessage.error(message)
+}
+
+// 给"已经在拦截器里提示过"的错误打标记，页面不写 catch 时 main.js 会忽略它的
+// unhandledrejection，避免浏览器控制台再报一条 Uncaught (in promise)
+const markHandled = error => {
+    const result = error instanceof Error ? error : new Error(String(error || '请求失败'))
+    result.isHandled = true
+    return result
+}
+
+// 401 是全局登录态问题：并发请求同时失效时只提示、只跳转一次，并清掉本地登录缓存
+let handlingUnauthorized = false
+const handleUnauthorized = msg => {
+    // 无论是否已经处理过，都先把失效的登录态清掉，避免路由守卫继续放行
+    clearUser()
+    if (handlingUnauthorized) {
+        return
+    }
+    handlingUnauthorized = true
+    ElMessage.error(msg || '登录状态已失效，请重新登录')
+    const current = router.currentRoute.value
+    const redirect = current.path && current.path.startsWith('/manager') ? current.fullPath : undefined
+    if (current.path !== '/login') {
+        router.push(redirect ? {path: '/login', query: {redirect}} : {path: '/login'}).catch(() => {})
+    }
+    // 留出一小段时间窗口，把同一批并发请求的重复 401 合并掉
+    window.setTimeout(() => {
+        handlingUnauthorized = false
+    }, 1500)
+}
 
 // request 拦截器
 // 可以自请求发送前对请求做一些处理
@@ -18,10 +59,8 @@ request.interceptors.request.use(config => {
     } else {
         config.headers['Content-Type'] = 'application/json;charset=utf-8';
     }
-    // 从登录时写入的 xm-user 缓存里取出当前登录用户
-    let user = JSON.parse(localStorage.getItem("xm-user") || '{}')
     // 把 Token 放进名为 token 的请求头，后端 get_current_user 就是从这个头读取的
-    config.headers['token'] = user.token || ''
+    config.headers['token'] = getToken()
     return config
 }, error => {
     return Promise.reject(error)
@@ -58,19 +97,21 @@ request.interceptors.response.use(
             // 避免调用方把一个错误提示当成文件保存下来
             return readBlobError(res).then(result => {
                 const msg = result.msg || '文件处理失败'
-                ElMessage.error(msg)
-                // 401 说明 Token 缺失、过期或账号已停用，回到登录页重新登录
+                // 401 说明 Token 缺失、过期或账号已停用，清缓存并回到登录页重新登录
                 if (result.code === '401') {
-                    router.push('/login')
+                    handleUnauthorized(msg)
+                    return Promise.reject(markHandled(new Error(msg)))
                 }
-                return Promise.reject(new Error(msg))
+                ElMessage.error(msg)
+                return Promise.reject(markHandled(new Error(msg)))
             })
         }
         // 当权限验证不通过的时候给出提示
         // 401 由 get_current_user 抛出，说明 Token 缺失、过期或账号已停用
-        if (res.code === '401') {
-            ElMessage.error(res.msg)
-            router.push('/login')
+        if (res && res.code === '401') {
+            handleUnauthorized(res.msg)
+            // 拒绝这次请求，页面 .then 里的 else 分支不会重复弹同一句提示
+            return Promise.reject(markHandled(new Error(res.msg || '登录状态已失效，请重新登录')))
         }
         // 兼容服务端返回的字符串数据
         if (typeof res === 'string') {
@@ -80,15 +121,25 @@ request.interceptors.response.use(
         return res;
     },
     error => {
-        // 走到这里说明 HTTP 状态码本身不是 2xx，后端的统一异常处理没有生效
-        if (error.response.status === 404) {
-            ElMessage.error('未找到请求接口')
-        } else if (error.response.status === 500) {
-            ElMessage.error('系统异常，请查看后端控制台报错')
-        } else {
-            console.error(error.message)
+        // 主动取消的请求（路由切换/组件卸载）不提示
+        if (axios.isCancel?.(error) || error.code === 'ERR_CANCELED') {
+            return Promise.reject(error)
         }
-        return Promise.reject(error)
+        // 走到这里说明 HTTP 状态码本身不是 2xx，后端的统一异常处理没有生效；
+        // error.response 为空代表网络中断、DNS 失败或请求超时，不能再直接读 .status
+        const status = error.response?.status
+        let message = '网络异常，请检查网络连接'
+        if (status === 404) {
+            message = '未找到请求接口'
+        } else if (status === 500) {
+            message = '系统异常，请查看后端控制台报错'
+        } else if (status) {
+            message = `请求失败（${status}）`
+        } else if (error.code === 'ECONNABORTED' || /timeout/i.test(error.message || '')) {
+            message = '请求超时，请稍后重试'
+        }
+        showError(message)
+        return Promise.reject(markHandled(error))
     }
 )
 

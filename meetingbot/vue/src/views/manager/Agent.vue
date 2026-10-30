@@ -184,6 +184,8 @@
 import { onUnmounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request.js'
+import router from '@/router/index.js'
+import { clearUser, getToken } from '@/utils/storage.js'
 
 // 事件流用 fetch 直接请求，需要自己拼后端地址，取值来自 .env.development 的 VITE_BASE_URL
 const baseUrl = import.meta.env.VITE_BASE_URL
@@ -293,16 +295,34 @@ const startStream = async id => {
   const controller = new AbortController()
   data.streamController = controller
   // token 存在 localStorage 的 xm-user 里，EventSource 不能带自定义请求头，所以用 fetch
-  const user = JSON.parse(localStorage.getItem('xm-user') || '{}')
   try {
     const response = await fetch(`${baseUrl}/agent/events/${id}`, {
-      headers: { token: user.token || '' },
+      headers: { token: getToken() },
       // 挂上中断信号，stopStream 调 abort 就能断开
       signal: controller.signal
     })
-    // 权限不足等业务错误返回的是普通 JSON，不是事件流，这里当作连接失败处理
-    if (!response.ok || !response.body || !response.headers.get('content-type')?.includes('text/event-stream'))
-      throw new Error('SSE unavailable')
+    // 权限不足/Token 失效等业务错误返回的是 HTTP 200 + JSON，不是事件流；
+    // 先把 body 解析出来识别 401，走和 request.js 一致的清缓存 + 跳登录，而不是只提示"连接已断开"
+    if (!response.ok || !response.body || !response.headers.get('content-type')?.includes('text/event-stream')) {
+      let handled = false
+      try {
+        const result = await response.json()
+        if (result?.code === '401') {
+          clearUser()
+          ElMessage.error(result.msg || '登录状态已失效，请重新登录')
+          router.push('/login')
+          handled = true
+        } else if (result?.msg) {
+          ElMessage.error(result.msg)
+          handled = true
+        }
+      } catch (ignored) {
+        // 响应不是 JSON 时留给下面的通用提示
+      }
+      const error = new Error('SSE unavailable')
+      error.isHandled = handled
+      throw error
+    }
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     // 一次读到的数据块可能只有半条报文，用 buffer 暂存到下一块到达
@@ -326,8 +346,12 @@ const startStream = async id => {
       }
     }
   } catch (error) {
-    // 关弹窗、离开页面时主动 abort 也会进 catch，这种情况不提示
-    if (error.name !== 'AbortError') ElMessage.error('自检实时连接已断开')
+    // 关弹窗、离开页面时主动 abort 也会进 catch，这种情况不提示；
+    // 其它异常先主动断开底层连接，避免 reader 退出后 fetch 流还悬挂着
+    if (error.name !== 'AbortError') {
+      controller.abort()
+      if (!error.isHandled) ElMessage.error('自检实时连接已断开')
+    }
   } finally {
     // 只清理自己这条连接的控制器，不误清后面新建的连接
     if (data.streamController === controller) data.streamController = null
@@ -496,9 +520,5 @@ onUnmounted(() => {
 }
 .revision-line {
   color: #606266;
-}
-.revision-title {
-  margin-left: 8px;
-  font-weight: bold;
 }
 </style>

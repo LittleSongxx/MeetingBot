@@ -2,6 +2,10 @@
   <div class="manager-container">
     <div class="manager-header">
       <div class="manager-header-left">
+        <!-- 小屏幕下用这个按钮展开/收起侧栏抽屉，桌面端隐藏 -->
+        <el-button class="manager-menu-toggle" text :aria-label="data.sidebarOpen ? '收起菜单' : '展开菜单'" @click="toggleSidebar">
+          <el-icon :size="20"><Menu /></el-icon>
+        </el-button>
         <img src="@/assets/imgs/logo.png" alt="">
         <div class="title">MeetingBot</div>
       </div>
@@ -14,10 +18,10 @@
       <div class="manager-header-right">
         <el-dropdown style="cursor: pointer">
           <div style="padding-right: 20px; display: flex; align-items: center">
-            <!-- 头像地址取自 data.user.avatar，也就是 user 表的 avatar 字段，可能是 /files/... 相对路径 -->
-            <img style="width: 32px; height: 32px; border-radius: 50%;" :src="resolveAssetUrl(data.user.avatar)" alt="">
-            <!-- 姓名取自 data.user.name -->
-            <span style="margin-left: 8px; color: #1f2d3d">{{ data.user.name }}</span><el-icon color="#8a94a6" style="margin-left: 4px"><arrow-down /></el-icon>
+            <!-- 头像地址取自 data.user.avatar；没有头像时 el-avatar 用姓名首字兜底显示 -->
+            <el-avatar :size="32" :src="resolveAssetUrl(data.user.avatar)" class="manager-avatar">{{ avatarText }}</el-avatar>
+            <!-- 姓名取自 data.user.name，小屏幕下隐藏 -->
+            <span class="manager-user-name">{{ data.user.name }}</span><el-icon color="#8a94a6" style="margin-left: 4px"><arrow-down /></el-icon>
           </div>
           <template #dropdown>
             <el-dropdown-menu>
@@ -33,11 +37,12 @@
       </div>
     </div>
     <!-- 下面部分开始 -->
-    <div style="display: flex">
-      <div class="manager-main-left">
+    <div class="manager-body">
+      <div class="manager-main-left" :class="{ 'is-open': data.sidebarOpen }">
         <el-menu :default-active="router.currentRoute.value.path"
                  :default-openeds="['1', '2', '3', '4', '5', '6']"
                  router
+                 @select="closeSidebar"
         >
           <el-menu-item index="/manager/home">
             <el-icon><HomeFilled /></el-icon>
@@ -85,37 +90,51 @@
           </el-sub-menu>
         </el-menu>
       </div>
+      <!-- 抽屉打开时的遮罩，点击关闭 -->
+      <div v-if="data.sidebarOpen" class="manager-mask" @click="closeSidebar"></div>
       <div class="manager-main-right">
         <!-- 子页面通过 emit('updateUser') 通知框架页重新读缓存 -->
         <RouterView @updateUser="updateUser" />
       </div>
     </div>
     <!-- 下面部分结束 -->
-
-
   </div>
 </template>
 
 <script setup>
-import { reactive } from "vue";
+import { computed, reactive } from "vue";
 import router from "@/router/index.js";
-import {ElMessage} from "element-plus";
+import { ElMessage } from "element-plus";
 import { resolveAssetUrl } from "@/utils/url.js";
+import { clearUser, readUser } from "@/utils/storage.js";
 
 const data = reactive({
-  // 第 1 章登录时写入的 xm-user 缓存，顶部头像、姓名和左侧菜单的角色判断都读它
-  user: JSON.parse(localStorage.getItem('xm-user') || '{}')
+  // 登录时写入的 xm-user 缓存，顶部头像、姓名和左侧菜单的角色判断都读它
+  user: readUser(),
+  // 小屏幕下侧栏抽屉是否展开
+  sidebarOpen: false
 })
+
+// 没有头像时 el-avatar 用姓名首字兜底
+const avatarText = computed(() => (data.user.name || data.user.username || '?').slice(0, 1).toUpperCase())
+
+const toggleSidebar = () => {
+  data.sidebarOpen = !data.sidebarOpen
+}
+
+const closeSidebar = () => {
+  data.sidebarOpen = false
+}
 
 const logout = () => {
   // 清掉登录缓存，请求拦截器之后取到的 token 就是空串
-  localStorage.removeItem('xm-user')
+  clearUser()
   router.push('/login')
 }
 
 const updateUser = () => {
-  // 重新从 localStorage 读一次，顶部头像和姓名随之重新渲染
-  data.user =  JSON.parse(localStorage.getItem('xm-user') || '{}')
+  // 重新从缓存读一次，顶部头像和姓名随之重新渲染
+  data.user = readUser()
 }
 
 if (!data.user.id) {

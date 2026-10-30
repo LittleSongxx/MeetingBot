@@ -40,9 +40,9 @@
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="scope">
             <!-- 编辑图标，把当前行整行数据带进弹窗 -->
-            <el-button type="primary" circle :icon="Edit" @click="handleEdit(scope.row)"></el-button>
+            <el-button type="primary" circle :icon="Edit" aria-label="编辑部门" title="编辑部门" @click="handleEdit(scope.row)"></el-button>
             <!-- 删除图标，只需要当前行的ID -->
-            <el-button type="danger" circle :icon="Delete" @click="del(scope.row.id)"></el-button>
+            <el-button type="danger" circle :icon="Delete" aria-label="删除部门" title="删除部门" @click="del(scope.row.id)"></el-button>
           </template>
         </el-table-column>
       </el-table>

@@ -152,14 +152,15 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { h, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request.js'
 import router from '@/router/index.js'
+import { readUser } from '@/utils/storage.js'
 
 const formRef = ref()
 // 第 1 章登录时写入的缓存，页面用它判断按钮是否显示、默认视图取哪个
-const user = JSON.parse(localStorage.getItem('xm-user') || '{}')
+const user = readUser()
 
 const data = reactive({
   // 当前登录用户，模板里用 data.user.role 做判断
@@ -357,17 +358,23 @@ const del = (row) => {
       ['会议纪要', preview.minutes_count, '份'],
       ['Agent运行记录', preview.agent_run_count, '次（含每一步的审查和重写记录）']
     ].filter(item => item[1] > 0)
-    // 有关联数据时把每一项拼成 <li>，一条关联数据都没有时显示一句说明
+    // 有关联数据时用 VNode 渲染一段说明 + 统计列表，标题和数字都只作为纯文本节点插入，
+    // 不再拼 HTML 字符串，会议主题里即使带 <img onerror> 也不会被执行
     const detail = items.length
-        ? '<div style="margin-top: 8px">以下数据会一并删除，删除后无法恢复：</div><ul style="margin: 6px 0 0 0; padding-left: 20px">'
-            + items.map(item => `<li>${item[0]} ${item[1]} ${item[2]}</li>`).join('')
-            + '</ul>'
-        : '<div style="margin-top: 8px">这场会议下还没有产生资料、转写和纪要数据。</div>'
-    // dangerouslyUseHTMLString 让确认框按 HTML 渲染上面拼出的列表
+        ? h('div', { style: 'margin-top: 8px' }, [
+            h('div', null, '以下数据会一并删除，删除后无法恢复：'),
+            h('ul', { style: 'margin: 6px 0 0 0; padding-left: 20px' },
+                items.map(item => h('li', null, `${item[0]} ${item[1]} ${item[2]}`)))
+          ])
+        : h('div', { style: 'margin-top: 8px' }, '这场会议下还没有产生资料、转写和纪要数据。')
+    // message 传 VNode（h 渲染），ElMessageBox 直接挂载组件，不做 HTML 解析
     ElMessageBox.confirm(
-        `<div>确定删除会议“${preview.title}”吗？</div>${detail}`,
+        h('div', null, [
+          h('div', null, `确定删除会议“${preview.title}”吗？`),
+          detail
+        ]),
         '删除会议',
-        { type: 'warning', dangerouslyUseHTMLString: true, confirmButtonText: '确定删除', cancelButtonText: '取消' }
+        { type: 'warning', confirmButtonText: '确定删除', cancelButtonText: '取消' }
     ).then(() => {
       // 点“确定删除”后才发 DELETE /meeting/delete/{meeting_id}；点“取消”时 Promise 不进入 then，不发请求
       request.delete('/meeting/delete/' + row.id).then(result => {
@@ -379,6 +386,8 @@ const del = (row) => {
           ElMessage.error(result.msg)
         }
       })
+    }).catch(() => {
+      // 点“取消”时 Promise 以 'cancel' 拒绝，吞掉避免控制台出现未处理 rejection
     })
   })
 }

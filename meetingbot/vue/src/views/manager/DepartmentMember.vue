@@ -28,10 +28,11 @@ import { reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/request.js'
 import { resolveAssetUrl } from '@/utils/url.js'
+import { readUser } from '@/utils/storage.js'
 
 const data = reactive({
   // 从第 1 章登录时写入的 xm-user 缓存里读当前登录用户，用于显示部门名称
-  user: JSON.parse(localStorage.getItem('xm-user') || '{}'),
+  user: readUser(),
   // 同部门在职员工列表
   tableData: []
 })

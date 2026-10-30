@@ -53,12 +53,13 @@ import { reactive } from "vue";
 import request from "@/utils/request.js";
 import {ElMessage} from "element-plus";
 import { resolveAssetUrl } from "@/utils/url.js";
+import { readUser, writeUser } from "@/utils/storage.js";
 
 const baseUrl = import.meta.env.VITE_BASE_URL
 
 const data = reactive({
   // 直接把登录缓存整份拿来当表单模型，页面上的输入框改的就是这份对象
-  user: JSON.parse(localStorage.getItem('xm-user') || '{}')
+  user: readUser()
 })
 
 const handleFileUpload = (res) => {
@@ -85,7 +86,7 @@ const update = () => {
     if (res.code === '200') {
       ElMessage.success('保存成功')
       // 后端只回 code，不回数据，所以直接把页面上这份对象写回缓存
-      localStorage.setItem('xm-user', JSON.stringify(data.user))
+      writeUser(data.user)
       // 通知框架页重新读缓存，顶部头像和姓名立即刷新
       emit('updateUser')
     } else {

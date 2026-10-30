@@ -554,12 +554,9 @@ const retry = row =>
   )
 const download = (row, type) =>
   // responseType 设成 blob，否则二进制文件会被当成文本处理坏掉
-  request.get(`/meetingMinutes/export/${row.id}/${type}`, { responseType: 'blob' }).then(async blob => {
-    // 后端抛业务异常时返回的是 JSON 而不是文件，这里识别出来转成错误提示
-    if (blob.type?.includes('application/json')) {
-      const result = JSON.parse(await blob.text())
-      return ElMessage.error(result.msg || '纪要导出失败')
-    }
+  request.get(`/meetingMinutes/export/${row.id}/${type}`, { responseType: 'blob' }).then(blob => {
+    // 后端业务异常返回的 JSON 已经由 request.js 的 blob 分支识别并拒绝，
+    // 能走到这里的 blob 一定就是文件本身，不再重复判断 JSON
     // 给 blob 造一个临时地址，用一个隐藏的 a 标签触发浏览器下载
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -567,8 +564,8 @@ const download = (row, type) =>
     // 文件名用页面上已有的会议主题拼，后缀按导出类型区分
     link.download = `${row.meeting_title}-会议纪要.${type === 'word' ? 'docx' : 'pdf'}`
     link.click()
-    // 临时地址用完立刻释放，不然会一直占着内存
-    URL.revokeObjectURL(url)
+    // 等浏览器开始下载后再释放临时地址，避免个别浏览器在点击同步返回前就取消下载
+    setTimeout(() => URL.revokeObjectURL(url), 0)
   })
 const search = () => {
   data.pageNum = 1

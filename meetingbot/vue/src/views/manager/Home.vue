@@ -64,10 +64,11 @@
 import { computed, reactive } from 'vue'
 import request from '@/utils/request.js'
 import router from '@/router/index.js'
+import { readUser } from '@/utils/storage.js'
 
 const data = reactive({
   // 登录时存进 localStorage 的用户信息，欢迎语显示其中的 name
-  user: JSON.parse(localStorage.getItem('xm-user') || '{}'),
+  user: readUser(),
   // 四张卡片的数字，confirmedMinutes 用在「会议纪要」卡片的说明文字里
   counts: { meeting: 0, transcription: 0, minutes: 0, confirmedMinutes: 0, agentRun: 0 },
   // 「最近会议」和「最近纪要」两个面板的列表

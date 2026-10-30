@@ -26,6 +26,7 @@ import {reactive, ref} from "vue";
 import request from "@/utils/request.js";
 import {ElMessage} from "element-plus";
 import router from "@/router/index.js";
+import { clearUser, readUser } from "@/utils/storage.js";
 
 const formRef = ref()
 
@@ -43,7 +44,7 @@ const validatePass = (rule, value, callback) => {
 }
 const data = reactive({
   // 从登录缓存拿当前用户，三个密码输入框的值也写进这个对象
-  user: JSON.parse(localStorage.getItem('xm-user') || '{}'),
+  user: readUser(),
   rules: {
     // 原密码非空校验，失焦时触发
     password: [
@@ -81,7 +82,7 @@ const updatePassword = () => {
 
 const logout = () => {
   // 清掉登录缓存并回到第 1 章的登录页
-  localStorage.removeItem('xm-user')
+  clearUser()
   router.push('/login')
 }
 </script>

@@ -45,47 +45,6 @@ a {
 }
 
 
-.line1 {
-    word-break: break-all;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1; /* 超出几行省略 */
-    overflow: hidden;
-}
- .line2 {
-     word-break: break-all;
-     text-overflow: ellipsis;
-     display: -webkit-box;
-     -webkit-box-orient: vertical;
-     -webkit-line-clamp: 2; /* 超出几行省略 */
-     overflow: hidden;
- }
-.line3 {
-    word-break: break-all;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3; /* 超出几行省略 */
-    overflow: hidden;
-}
-
-.line4 {
-    word-break: break-all;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4; /* 超出几行省略 */
-    overflow: hidden;
-}
-
-
-.dark1{
-    width: 20%;
-    text-align: center;
-}
-
-
 /* 表格：浅灰表头 + 细分隔线，和白色卡片、白色菜单保持同一套克制的配色 */
 .el-table th.el-table__cell {
     background-color: #f8fafc !important;
@@ -114,4 +73,48 @@ a {
 /* 分页靠右，和表格右边缘对齐 */
 .el-pagination {
     justify-content: flex-end;
+}
+
+/* 窄屏（手机/小屏平板）：管理端里的固定像素宽度控件一律改成自适应，
+   避免 230-360px 的筛选框把整页撑出文档级横向滚动条；弹窗也收进视口 */
+@media (max-width: 900px) {
+    .manager-main-right {
+        min-width: 0;
+    }
+
+    .manager-main-right .card {
+        min-width: 0;
+    }
+
+    .manager-main-right .card .el-input,
+    .manager-main-right .card .el-select,
+    .manager-main-right .card .el-date-editor,
+    .manager-main-right .card .el-input-number {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-right: 0 !important;
+    }
+
+    /* 筛选卡里的按钮允许换行，不再靠 margin-left 挤成一行 */
+    .manager-main-right .card .el-button {
+        margin-left: 0 !important;
+    }
+
+    /* 观测页筛选行等 flex 卡片允许换行 */
+    .manager-main-right .filter-card {
+        flex-wrap: wrap;
+        align-items: stretch;
+    }
+
+    /* 弹窗与消息框宽度收进视口，固定 460px 的弹窗不再被截断 */
+    .el-dialog {
+        width: 92vw !important;
+        max-width: 92vw;
+        margin: 5vh auto !important;
+    }
+
+    .el-message-box {
+        width: 88vw !important;
+        max-width: 88vw;
+    }
 }

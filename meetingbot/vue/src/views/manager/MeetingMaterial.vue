@@ -75,8 +75,8 @@
       />
     </div>
 
-    <!-- 发起转写弹窗，语言选项对应转写接口的 language 参数 -->
-    <el-dialog v-model="data.transcriptionVisible" title="发起转写" width="460px">
+    <!-- 发起转写弹窗，语言选项对应转写接口的 language 参数；窄屏下最多占 92vw -->
+    <el-dialog v-model="data.transcriptionVisible" title="发起转写" width="min(92vw, 460px)">
       <el-form label-width="90px" style="padding: 6px 10px 0">
         <!-- 只读展示要转写的资料文件名，值由 startTranscription 写进 transcriptionForm.fileName -->
         <el-form-item label="资料">
@@ -424,8 +424,8 @@ const download = (row) => {
     link.href = url
     link.download = row.file_name
     link.click()
-    // 用完立刻释放临时地址
-    URL.revokeObjectURL(url)
+    // 等浏览器开始下载后再释放临时地址，避免个别浏览器在点击同步返回前就取消下载
+    setTimeout(() => URL.revokeObjectURL(url), 0)
   })
 }
 

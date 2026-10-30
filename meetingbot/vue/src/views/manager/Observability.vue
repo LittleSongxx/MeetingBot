@@ -27,6 +27,22 @@
       <el-tag type="info">{{ data.result.scope || '观测范围' }}</el-tag>
     </div>
 
+    <!-- 请求失败：显示错误态和重试入口，避免用户面对一片空白 -->
+    <div v-if="data.error" class="card state-card">
+      <el-empty :description="data.error">
+        <el-button type="primary" @click="load">重新加载</el-button>
+      </el-empty>
+    </div>
+    <!-- 请求成功但所选范围内没有数据：显示空状态而不是四张空白图表 -->
+    <div v-else-if="data.loaded && !hasData" class="card state-card">
+      <el-empty description="所选时间范围内还没有观测数据">
+        <el-button @click="reset">查看最近 30 天</el-button>
+      </el-empty>
+    </div>
+    <!-- 首次加载中 -->
+    <div v-else-if="!data.loaded" class="card state-card" v-loading="data.loading" element-loading-text="正在加载观测数据"></div>
+    <template v-else>
+
     <!-- 八张卡片由 summaryCards 计算属性生成，数据来自 data.result.summary -->
     <div class="summary-grid">
       <div v-for="item in summaryCards" :key="item.key" class="card summary-card">
@@ -92,6 +108,7 @@
         <el-table-column prop="create_time" label="发生时间" width="175" />
       </el-table>
     </div>
+    </template>
   </div>
 </template>
 
@@ -134,6 +151,10 @@ const data = reactive({
   modelOptions: [],
   // 查询按钮的加载状态
   loading: false,
+  // 是否已经成功拿到过一次数据，用来区分“首次加载中”和“确实没有数据”
+  loaded: false,
+  // 请求失败时的错误文案，非空时页面显示错误态和重试按钮
+  error: '',
   // 接口返回的全部统计数据，模板和图表都从这里读
   result: {
     summary: {},
@@ -148,6 +169,20 @@ const data = reactive({
 
 // Token 数加千分位
 const formatNumber = value => Number(value || 0).toLocaleString('zh-CN')
+// 判断这次查询结果里有没有任何可展示的数据，全部为空时页面显示空状态
+const hasData = computed(() => {
+  const result = data.result || {}
+  const summary = result.summary || {}
+  const countKeys = ['call_count', 'agent_run_count', 'step_count', 'revision_count', 'failed_call_count']
+  const hasCount = countKeys.some(key => Number(summary[key] || 0) > 0)
+  const groups = ['daily_trend', 'call_types', 'model_ranking', 'agent_status', 'step_ranking', 'recent_failures']
+  return hasCount || groups.some(key => (result[key] || []).length > 0)
+})
+// 数据从“有”变成“没有”/请求失败时回收图表实例，给空状态或错误态让位
+const clearCharts = () => {
+  charts.forEach(item => item.dispose())
+  charts.length = 0
+}
 // 把 summary 里的字段组装成八张卡片的标题、数值、单位和说明
 const summaryCards = computed(() => {
   const summary = data.result.summary || {}
@@ -339,6 +374,7 @@ const renderCharts = () => {
 const load = () => {
   if (!data.dateRange?.length) return ElMessage.warning('请选择观测日期范围')
   data.loading = true
+  data.error = ''
   request
     .get('/observability/overview', {
       params: {
@@ -351,14 +387,27 @@ const load = () => {
     .then(res => {
       if (res.code === '200') {
         // 整体替换统计结果，卡片和两张表格随之重新渲染
-        data.result = res.data
+        data.result = res.data || {}
         // 不限定模型时，模型排行里就是有调用记录的全部模型，用它填下拉选项
-        if (!data.modelConfigId) data.modelOptions = res.data.model_ranking || []
-        // 等 DOM 更新完再绘制四张图
-        nextTick(renderCharts)
+        if (!data.modelConfigId) data.modelOptions = data.result.model_ranking || []
+        data.loaded = true
+        if (hasData.value) {
+          // 等 DOM 更新完再绘制四张图
+          nextTick(renderCharts)
+        } else {
+          // 没有数据时不渲染四张空白图，模板会展示空状态
+          clearCharts()
+        }
       } else {
-        ElMessage.error(res.msg)
+        data.error = res.msg || '观测数据加载失败'
+        clearCharts()
+        ElMessage.error(data.error)
       }
+    })
+    .catch(() => {
+      // 网络异常已经由 request.js 统一弹过提示，这里只记录错误态，页面展示重试入口
+      data.error = '观测数据加载失败，请检查网络后重试'
+      clearCharts()
     })
     // 请求成功或失败都关闭加载状态
     .finally(() => (data.loading = false))
@@ -445,9 +494,31 @@ onUnmounted(() => {
 .failure-card {
   margin-top: 10px;
 }
+/* 空状态/错误态卡片：给 el-empty 留出上下留白 */
+.state-card {
+  padding: 30px 0;
+}
 @media (max-width: 1200px) {
   .chart-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+/* 窄屏：统计卡两列、图表单列，四张图不再被压成细条 */
+@media (max-width: 900px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+  .chart-card.wide {
+    grid-column: auto;
+  }
+  .chart {
+    height: 260px;
+  }
+  .chart.tall {
+    height: 300px;
   }
 }
 </style>
