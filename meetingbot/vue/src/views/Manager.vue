@@ -57,6 +57,7 @@
             <el-menu-item index="/manager/meetingMaterial">会议资料</el-menu-item>
             <el-menu-item index="/manager/transcription">转写任务</el-menu-item>
             <el-menu-item index="/manager/meetingMinutes">AI会议纪要</el-menu-item>
+            <el-menu-item index="/manager/actionItems">行动项</el-menu-item>
           </el-sub-menu>
           <el-sub-menu index="2">
             <template #title>

@@ -285,6 +285,7 @@ const renderCharts = () => {
     AGENT_REVIEW: '自检审查',
     AGENT_REFINE: '自检重写',
     SPEAKER_MATCH: '说话人匹配',
+    MINUTES_QA: '纪要问答',
   }
   const callTypes = data.result.call_types || []
   chart(callTypeRef.value).setOption(

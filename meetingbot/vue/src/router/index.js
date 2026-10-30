@@ -22,6 +22,7 @@ const routes = [
       { path: 'meetingMaterial', meta: { name: '会议资料' }, component: () => import('@/views/manager/MeetingMaterial.vue') },
       { path: 'transcription', meta: { name: '转写任务' }, component: () => import('@/views/manager/Transcription.vue') },
       { path: 'meetingMinutes', meta: { name: 'AI会议纪要' }, component: () => import('@/views/manager/MeetingMinutes.vue') },
+      { path: 'actionItems', meta: { name: '行动项' }, component: () => import('@/views/manager/ActionItems.vue') },
       { path: 'agent', meta: { name: '纪要自检' }, component: () => import('@/views/manager/Agent.vue') },
       { path: 'observability', meta: { name: '运行观测' }, component: () => import('@/views/manager/Observability.vue') },
       { path: 'aiModel', meta: { name: 'AI模型配置', requiresAdmin: true }, component: () => import('@/views/manager/AiModel.vue') },

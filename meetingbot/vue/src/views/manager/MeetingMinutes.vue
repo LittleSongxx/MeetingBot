@@ -78,6 +78,10 @@
             <el-button v-if="scope.row.status === 'CONFIRMED'" link type="warning" @click="unconfirmMinutes(scope.row)"
               >取消确认</el-button
             >
+            <!-- 已确认纪要可以直接把待确认事项转成行动项草稿 -->
+            <el-button v-if="scope.row.status === 'CONFIRMED'" link type="primary" @click="generateFromRow(scope.row)"
+              >生成待办</el-button
+            >
             <!-- 草稿和已确认都有内容可导，生成中和失败的没有 -->
             <template v-if="['DRAFT', 'CONFIRMED'].includes(scope.row.status)">
               <el-button link type="primary" @click="download(scope.row, 'word')">Word</el-button>
@@ -109,6 +113,11 @@
       width="76%"
       top="3vh"
     >
+      <!-- 顶部工具栏：问答入口，只有草稿/已确认纪要有内容可问 -->
+      <div v-if="['DRAFT', 'CONFIRMED'].includes(data.detail.status)" class="minutes-toolbar">
+        <el-button type="primary" plain size="small" @click="openQa">问答</el-button>
+        <span class="minutes-toolbar-tip">基于转写原文回答，答案会附原文引用</span>
+      </div>
       <el-descriptions v-if="data.detail.id" :column="3" border>
         <el-descriptions-item label="状态"
           ><el-tag :type="statusTag(data.detail.status)">{{
@@ -176,6 +185,48 @@
           ]"
         />
       </div>
+      <!-- 详情底部行动项区块：草稿可确认生效、待办可完成；已确认纪要可一键生成待办 -->
+      <div v-if="['DRAFT', 'CONFIRMED'].includes(data.detail.status)" class="minutes-actions">
+        <div class="minutes-actions-head">
+          <h3>行动项</h3>
+          <div class="minutes-actions-tools">
+            <el-button
+              v-if="data.detail.status === 'CONFIRMED'"
+              link
+              type="primary"
+              :loading="data.generatingActions"
+              @click="generateActions"
+              >生成待办</el-button
+            >
+            <a class="minutes-actions-link" @click="router.push('/manager/actionItems')">前往行动项</a>
+          </div>
+        </div>
+        <el-empty v-if="!data.actionItems.length" description="还没有行动项" :image-size="60" />
+        <div v-else class="minutes-action-list">
+          <div v-for="item in data.actionItems" :key="item.id" class="minutes-action">
+            <div class="minutes-action-main">
+              <div class="minutes-action-content">{{ item.content }}</div>
+              <div class="minutes-action-meta">
+                <el-tag size="small" :type="actionStatusTag(item.status)">{{ actionStatusText(item.status) }}</el-tag>
+                <span v-if="sourceOfAction(item) === 'AI'" class="minutes-action-ai">AI</span>
+                <span>负责人：{{ actionOwner(item) }}</span>
+                <span>截止：{{ actionDue(item) }}</span>
+              </div>
+            </div>
+            <div class="minutes-action-ops">
+              <el-button
+                v-if="item.status === 'DRAFT'"
+                link
+                type="primary"
+                :loading="data.confirmingActionId === item.id"
+                @click="confirmActionItem(item)"
+                >确认生效</el-button
+              >
+              <el-button v-if="item.status === 'OPEN'" link type="success" @click="completeActionItem(item)">完成</el-button>
+            </div>
+          </div>
+        </div>
+      </div>
     </el-dialog>
 
     <el-dialog title="修订会议纪要" v-model="data.editVisible" width="62%" top="4vh" destroy-on-close>
@@ -235,11 +286,51 @@
         ><el-button type="primary" @click="save">保存修订</el-button></template
       >
     </el-dialog>
+
+    <!-- 纪要问答弹窗：只上传问题和最近 3 轮历史，回答里的引用可点开看原文 -->
+    <el-dialog title="纪要问答" v-model="data.qaVisible" width="min(92vw, 640px)" top="5vh" @closed="resetQa">
+      <div ref="qaBodyRef" class="qa-body">
+        <el-empty
+          v-if="!data.qaMessages.length"
+          description="可以问：谁负责什么？有哪些风险？最终结论是什么？"
+          :image-size="60"
+        />
+        <div
+          v-for="(msg, idx) in data.qaMessages"
+          :key="idx"
+          class="qa-message"
+          :class="msg.role === 'user' ? 'qa-user' : 'qa-assistant'"
+        >
+          <div class="qa-role">{{ msg.role === 'user' ? '我' : '助手' }}</div>
+          <div class="qa-content">{{ msg.content }}</div>
+          <!-- 引用标签：点开可以看到时间、说话人和原文 -->
+          <div v-if="msg.citations && msg.citations.length" class="qa-citations">
+            <el-tag v-for="(c, ci) in msg.citations" :key="ci" class="qa-citation" @click="showCitation(c)">
+              {{ citationLabel(c) }}
+            </el-tag>
+          </div>
+        </div>
+      </div>
+      <div class="qa-input">
+        <el-input
+          v-model="data.qaInput"
+          type="textarea"
+          :rows="2"
+          maxlength="500"
+          placeholder="请输入问题（Enter 发送，Shift+Enter 换行）"
+          @keydown.enter.exact.prevent="sendQa"
+        />
+        <div class="qa-actions">
+          <el-button :disabled="!data.qaMessages.length" @click="clearQa">清空</el-button>
+          <el-button type="primary" :loading="data.qaLoading" @click="sendQa">发送</el-button>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { defineComponent, h, onUnmounted, reactive } from 'vue'
+import { defineComponent, h, nextTick, onUnmounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import router from '@/router/index.js'
 import { ElButton, ElInput, ElMessage, ElMessageBox, ElOption, ElSelect } from 'element-plus'
@@ -265,6 +356,38 @@ const normalizeLevel = level => {
   return { '低': 'LOW', '中': 'MEDIUM', '高': 'HIGH' }[level] || 'MEDIUM'
 }
 
+// 把毫秒时间戳格式化成 mm:ss，用于证据/引用的时间标签
+const formatMs = ms => {
+  const value = Number(ms)
+  if (!Number.isFinite(value) || value < 0) {
+    return '00:00'
+  }
+  const total = Math.floor(value / 1000)
+  const mm = String(Math.floor(total / 60)).padStart(2, '0')
+  const ss = String(total % 60).padStart(2, '0')
+  return `${mm}:${ss}`
+}
+// 点“原文”：把这条纪要的 evidence 数组渲染成「[mm:ss] 说话人：原文」的只读弹窗。
+// 用 h() 生成 VNode，纯文本节点，不会把转写原文里的内容当 HTML 执行。
+const showEvidence = item => {
+  const list = Array.isArray(item?.evidence) ? item.evidence : []
+  if (!list.length) {
+    return
+  }
+  ElMessageBox.alert(
+    h('div', null, list.map((citation, index) =>
+      h('div', { key: index, style: 'line-height: 1.8; margin-bottom: 8px' }, [
+        h('span', { style: 'color: #2563eb; margin-right: 4px' },
+          `[${formatMs(citation.start_ms)}${citation.end_ms ? '-' + formatMs(citation.end_ms) : ''}]`),
+        h('span', { style: 'color: #4a5568' }, `${citation.speaker || '未知说话人'}：`),
+        h('span', null, citation.quote || '')
+      ])
+    )),
+    '原文出处',
+    { confirmButtonText: '知道了' }
+  ).catch(() => {})
+}
+
 const MinutesSection = defineComponent({
   // title 是这一块的标题，items 是数组内容，fields 决定取哪些字段、显示成什么中文
   props: { title: String, items: Array, fields: Array },
@@ -280,7 +403,18 @@ const MinutesSection = defineComponent({
                 // 每个字段一行「中文标题：值」，值为空时显示短横线，风险级别显示中文
                 ...props.fields.map(field =>
                   h('p', { key: field[0] }, `${field[1]}：${fieldText(field[0], item[field[0]])}`)
-                )
+                ),
+                // 后端为这一条绑定了转写原文时，展示“原文”入口；没有 evidence 则不渲染
+                ...(Array.isArray(item.evidence) && item.evidence.length
+                  ? [h('div', { class: 'minutes-evidence', style: 'margin-top: 6px' }, [
+                      h(ElButton, {
+                        link: true,
+                        type: 'primary',
+                        size: 'small',
+                        onClick: () => showEvidence(item)
+                      }, () => `原文（${item.evidence.length}）`)
+                    ])]
+                  : [])
               ])
             )
           : [h('p', '无')])
@@ -396,8 +530,22 @@ const data = reactive({
   // 详情弹窗展示的纪要，第 12 章的 showDetail 写入
   detail: {},
   // 修订弹窗的表单，第 12 章的 openEdit 写入
-  form: {}
+  form: {},
+  // 详情底部行动项：showDetail 打开时按纪要ID加载
+  actionItems: [],
+  // 详情里“生成待办”按钮的 loading
+  generatingActions: false,
+  // “确认生效”中的行动项ID，只让被点的那一条转圈
+  confirmingActionId: null,
+  // 问答弹窗状态：消息列表只保留当前会话，关闭时清空
+  qaVisible: false,
+  qaMinutesId: null,
+  qaMessages: [],
+  qaInput: '',
+  qaLoading: false
 })
+// 问答消息区容器，发送后滚到最新一条
+const qaBodyRef = ref()
 const statusOptions = [
   { label: '生成中', value: 'GENERATING' },
   { label: '待确认', value: 'DRAFT' },
@@ -409,6 +557,165 @@ const statusText = status => statusOptions.find(item => item.value === status)?.
 // 每种状态对应的标签颜色：生成中橙色、待确认灰色、已确认绿色、失败红色
 const statusTag = status =>
   ({ GENERATING: 'warning', DRAFT: 'info', CONFIRMED: 'success', FAILED: 'danger' })[status] || ''
+
+// ===== 详情底部行动项的展示辅助（与行动项页保持同一套中文/颜色口径） =====
+const actionStatusText = status =>
+  ({ DRAFT: '草稿', OPEN: '待办', DONE: '已完成', CANCELLED: '已撤回' })[status] || status || '-'
+const actionStatusTag = status => ({ DRAFT: 'info', OPEN: 'warning', DONE: 'success', CANCELLED: 'info' })[status] || ''
+const sourceOfAction = item => item?.source || item?.source_field || ''
+const actionOwner = item =>
+  item?.owner_name || item?.owner_text || (item?.owner_user_id ? `#${item.owner_user_id}` : '未指定')
+const actionDue = item => item?.due_date || item?.due_text || '-'
+
+// ===== 问答弹窗辅助 =====
+// 引用标签文字：[mm:ss] 说话人
+const citationLabel = citation => `[${formatMs(citation.start_ms)}] ${citation.speaker || '说话人'}`
+// 点引用标签：弹窗展示时间范围、说话人和完整原文
+const showCitation = citation => {
+  ElMessageBox.alert(
+    h('div', { style: 'line-height: 1.9' }, [
+      h('p', { style: 'margin: 0 0 6px' },
+        `时间：${formatMs(citation.start_ms)}${citation.end_ms ? ' - ' + formatMs(citation.end_ms) : ''}`),
+      h('p', { style: 'margin: 0 0 6px' }, `说话人：${citation.speaker || '未知说话人'}`),
+      h('p', { style: 'margin: 0' }, `原文：${citation.quote || ''}`)
+    ]),
+    '引用原文',
+    { confirmButtonText: '知道了' }
+  ).catch(() => {})
+}
+
+// 打开详情时顺带加载这份纪要下的行动项；接口失败时保持空列表，页面提供“前往行动项”入口
+const loadActionItems = minutesId => {
+  data.actionItems = []
+  if (!minutesId) {
+    return
+  }
+  request.get('/actionItem/selectByMinutes/' + minutesId).then(res => {
+    if (res.code === '200') {
+      const payload = res.data
+      data.actionItems = Array.isArray(payload) ? payload : (payload?.list || [])
+    } else {
+      ElMessage.error(res.msg || '加载行动项失败')
+    }
+  }).catch(() => {})
+}
+
+// 详情底部“生成待办”：把已确认纪要的待确认事项转成行动项草稿
+const generateActions = () => {
+  if (!data.detail.id) {
+    return
+  }
+  data.generatingActions = true
+  request.post('/actionItem/generate/' + data.detail.id).then(res => {
+    if (res.code === '200') {
+      const created = res.data?.created ?? res.data?.created_count ?? 0
+      const skipped = res.data?.skipped ?? res.data?.skipped_count ?? 0
+      ElMessage.success(`生成完成：新增 ${created} 条${skipped ? `，跳过 ${skipped} 条` : ''}`)
+      loadActionItems(data.detail.id)
+    } else {
+      ElMessage.error(res.msg || '生成待办失败')
+    }
+  }).catch(() => {}).finally(() => {
+    data.generatingActions = false
+  })
+}
+
+// 表格行上的“生成待办”，和详情里的按钮走同一个接口
+const generateFromRow = row => {
+  request.post('/actionItem/generate/' + row.id).then(res => {
+    if (res.code === '200') {
+      const created = res.data?.created ?? res.data?.created_count ?? 0
+      const skipped = res.data?.skipped ?? res.data?.skipped_count ?? 0
+      ElMessage.success(`生成完成：新增 ${created} 条${skipped ? `，跳过 ${skipped} 条` : ''}`)
+    } else {
+      ElMessage.error(res.msg || '生成待办失败')
+    }
+  }).catch(() => {})
+}
+
+// 草稿行动项“确认生效”：复用批量确认接口，只传一个 ID
+const confirmActionItem = item => {
+  data.confirmingActionId = item.id
+  request.put('/actionItem/confirmBatch', [item.id]).then(res => {
+    if (res.code === '200') {
+      ElMessage.success('已确认生效')
+      loadActionItems(data.detail.id)
+    } else {
+      ElMessage.error(res.msg || '确认失败')
+    }
+  }).catch(() => {}).finally(() => {
+    data.confirmingActionId = null
+  })
+}
+
+// 待办行动项“完成”
+const completeActionItem = item => {
+  request.put('/actionItem/status/' + item.id, { status: 'DONE' }).then(res => {
+    if (res.code === '200') {
+      ElMessage.success('待办已完成')
+      loadActionItems(data.detail.id)
+    } else {
+      ElMessage.error(res.msg || '操作失败')
+    }
+  }).catch(() => {})
+}
+
+// ===== 问答弹窗 =====
+const resetQa = () => {
+  data.qaMessages = []
+  data.qaInput = ''
+  data.qaLoading = false
+  data.qaMinutesId = null
+}
+const openQa = () => {
+  if (!data.detail.id) {
+    return
+  }
+  data.qaMinutesId = data.detail.id
+  data.qaMessages = []
+  data.qaInput = ''
+  data.qaVisible = true
+}
+const scrollQaToBottom = () => {
+  nextTick(() => {
+    if (qaBodyRef.value) {
+      qaBodyRef.value.scrollTop = qaBodyRef.value.scrollHeight
+    }
+  })
+}
+const clearQa = () => {
+  data.qaMessages = []
+  data.qaInput = ''
+}
+const sendQa = () => {
+  const question = (data.qaInput || '').trim()
+  if (!question || data.qaLoading || !data.qaMinutesId) {
+    return
+  }
+  // 只带最近 3 轮历史（一问一答算 2 条，最多 6 条），且只保留 role/content 两个字段
+  const history = data.qaMessages.slice(-6).map(message => ({ role: message.role, content: message.content }))
+  data.qaMessages.push({ role: 'user', content: question })
+  data.qaInput = ''
+  data.qaLoading = true
+  scrollQaToBottom()
+  request.post('/meetingMinutes/ask/' + data.qaMinutesId, { question, history }).then(res => {
+    if (res.code === '200') {
+      const answer = res.data || {}
+      data.qaMessages.push({
+        role: 'assistant',
+        content: answer.answer || (answer.found === false ? '纪要中没有提到相关信息' : '暂无回答'),
+        citations: Array.isArray(answer.citations) ? answer.citations : []
+      })
+    } else {
+      data.qaMessages.push({ role: 'assistant', content: res.msg || '问答失败，请稍后重试' })
+    }
+  }).catch(() => {
+    data.qaMessages.push({ role: 'assistant', content: '问答请求失败，请稍后重试' })
+  }).finally(() => {
+    data.qaLoading = false
+    scrollQaToBottom()
+  })
+}
 
 const load = () =>
   request
@@ -443,25 +750,29 @@ const loadMeetings = () =>
 const showDetail = id =>
   request.get('/meetingMinutes/selectById/' + id).then(res => {
     if (res.code === '200') {
-      // 详情接口返回的字段和列表接口完全一样，六块内容都在里面
+      // 详情接口返回的字段和列表接口完全一样，六块内容（含每条 evidence）都在里面
       data.detail = res.data
       data.detailVisible = true
+      // 底部行动项区块单独拉一次：接口失败时保持空列表，不影响纪要正文展示
+      loadActionItems(res.data?.id)
     } else ElMessage.error(res.msg)
-  })
+  }).catch(() => {})
 const openEdit = id =>
   request.get('/meetingMinutes/selectById/' + id).then(res => {
     if (res.code === '200') {
-      // 深拷贝一份进 data.form，弹窗里改到一半点取消不会污染表格数据
+      // 深拷贝一份进 data.form，弹窗里改到一半点取消不会污染表格数据；
+      // evidence 数组随深拷贝原样保留，修订只改业务字段，保存时 payload 带回原 evidence
       data.form = JSON.parse(JSON.stringify(res.data))
       // 风险级别归一化成 LOW/MEDIUM/HIGH，修订弹窗的下拉框才能正确回显
       data.form.risks = (data.form.risks || []).map(item => ({ ...item, level: normalizeLevel(item.level) }))
       data.editVisible = true
     } else ElMessage.error(res.msg)
-  })
+  }).catch(() => {})
 const save = () => {
   // 会议摘要为空或只有空白时直接提示，不发请求
   if (!data.form.summary?.trim()) return ElMessage.warning('会议摘要不能为空')
-  // 整个 data.form 提交上去，后端只取 id 和六块内容，其余字段忽略
+  // 整个 data.form 提交上去，后端只取 id 和六块内容；
+  // 六块里每条的 evidence 是 openEdit 深拷贝时保留下来的原值，只编辑业务字段不会丢证据
   request.put('/meetingMinutes/update', data.form).then(res => {
     if (res.code === '200') {
       ElMessage.success('纪要修订已保存')
@@ -470,7 +781,7 @@ const save = () => {
       // 重新拉列表，更新时间跟着刷新
       load()
     } else ElMessage.error(res.msg)
-  })
+  }).catch(() => {})
 }
 const confirmMinutes = row =>
   // 确认之后修订入口就消失了，所以先弹一次确认框说明这一点
@@ -670,6 +981,171 @@ loadMeetings()
   margin-bottom: 4px;
   font-size: 12px;
   color: #8a94a6;
+}
+
+/* 详情顶部工具栏：问答入口 */
+.minutes-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.minutes-toolbar-tip {
+  color: #8a94a6;
+  font-size: 12px;
+}
+
+/* 详情底部行动项区块 */
+.minutes-actions {
+  margin-top: 18px;
+  padding: 14px;
+  background: #fafbfc;
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+}
+
+.minutes-actions-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.minutes-actions-head h3 {
+  margin: 0;
+  margin-top: 0 !important;
+}
+
+.minutes-actions-tools {
+  display: flex;
+  align-items: center;
+}
+
+.minutes-actions-link {
+  color: var(--mb-brand);
+  cursor: pointer;
+  font-size: 13px;
+  margin-left: 12px;
+}
+
+.minutes-action {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid #eef0f4;
+}
+
+.minutes-action:first-child {
+  border-top: none;
+}
+
+.minutes-action-main {
+  min-width: 0;
+}
+
+.minutes-action-content {
+  color: #1f2d3d;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.minutes-action-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  font-size: 12px;
+  color: #8a94a6;
+}
+
+.minutes-action-ai {
+  color: #10b981;
+}
+
+.minutes-action-ops {
+  flex-shrink: 0;
+}
+
+/* 问答弹窗 */
+.qa-body {
+  max-height: 50vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.qa-message {
+  margin-bottom: 12px;
+}
+
+.qa-role {
+  font-size: 12px;
+  color: #8a94a6;
+  margin-bottom: 4px;
+}
+
+.qa-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.7;
+  color: #1f2d3d;
+}
+
+.qa-user .qa-content {
+  background: #eff6ff;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.qa-assistant .qa-content {
+  background: #f7f8fa;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.qa-citations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.qa-citation {
+  cursor: pointer;
+}
+
+.qa-input {
+  margin-top: 12px;
+}
+
+.qa-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* 窄屏：工具栏换行、行动项上下堆叠 */
+@media (max-width: 900px) {
+  .minutes-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .minutes-actions-head {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .minutes-action {
+    flex-direction: column;
+  }
+
+  .qa-body {
+    max-height: 44vh;
+  }
 }
 
 </style>
