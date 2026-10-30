@@ -20,6 +20,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import Runnable
 from langchain_openai import ChatOpenAI
 from models import AiCallLog, AiModelConfig
+from settings import LLM_JSON_MODE
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,11 @@ def build_chat_model(config: AiModelConfig, schema: dict, schema_name: str) -> R
         # 不自动重试，ai_call_log 里的一行对应模型服务的一次真实调用
         max_retries=0,
     )
-    # 严格结构化输出：模型返回的 JSON 必须符合 schema，必填字段一个都不能少
+    # 严格结构化输出：模型返回的 JSON 必须符合 schema，必填字段一个都不能少。
+    # 少数提供商（如 DeepSeek）暂不支持 json_schema，此时用 json_object + 提示词里
+    # 的 schema 说明 + 调用方 validator 兜底；是否启用由 LLM_JSON_MODE 控制。
+    if LLM_JSON_MODE == "json_object":
+        return model.bind(response_format={"type": "json_object"})
     return model.bind(
         response_format={
             "type": "json_schema",

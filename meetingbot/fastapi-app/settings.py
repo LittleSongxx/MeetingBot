@@ -92,3 +92,8 @@ DOCS_ENABLED = _env_bool("DOCS_ENABLED", False)
 
 # ai_call_log 保留天数：启动时清理更早的调用日志，0 表示不清理
 AI_CALL_LOG_RETENTION_DAYS = _env_int("AI_CALL_LOG_RETENTION_DAYS", 365)
+
+# LLM 结构化输出方式：
+#   json_schema  OpenAI 兼容接口支持严格 json_schema（百炼等，默认）
+#   json_object  只支持 json_object 的提供商（例如 DeepSeek），schema 约束由提示词 + 后端校验兜底
+LLM_JSON_MODE = os.getenv("LLM_JSON_MODE", "json_schema").strip().lower()

@@ -125,10 +125,13 @@ docker compose exec -T db sh -c \
 
 | 变量 | 含义 | 示例 | 必填 |
 |---|---|---|---|
-| `DASHSCOPE_API_KEY` | 百炼 API Key；留空时服务能启动、页面能浏览，但 AI 调用失败 | `sk-...` | 使用 AI 功能时必填 |
+| `DASHSCOPE_API_KEY` | 百炼 API Key（ASR 使用；LLM 也用百炼时共用） | `sk-...` | ASR 必填 |
+| `ASR_API_KEY` | 可选，ASR 独立 Key；留空共用 `DASHSCOPE_API_KEY` | 空 | 否 |
+| `LLM_API_KEY` | 可选，LLM 独立 Key（例如 DeepSeek）；留空共用 `DASHSCOPE_API_KEY` | 空 | LLM 用其他厂商时必填 |
 | `DASHSCOPE_BASE_URL` | 录音文件识别（ASR）服务地址 | `https://dashscope.aliyuncs.com/api/v1` | 否 |
 | `LLM_BASE_URL` | 文本模型 OpenAI 兼容地址 | `https://dashscope.aliyuncs.com/compatible-mode/v1` | 否 |
 | `LLM_MODEL` | 文本任务默认模型（纪要 / 自检 / 说话人匹配） | `qwen-plus` | 否 |
+| `LLM_JSON_MODE` | 结构化输出方式：`json_schema`（默认）或 `json_object`（DeepSeek 等） | `json_schema` | 否 |
 | `ASR_MODEL` | 录音文件转写模型 | `paraformer-v2` | 否 |
 | `LLM_TIMEOUT_SECONDS` | 文本模型单次请求超时（秒） | `600` | 否 |
 | `ASR_TIMEOUT_SECONDS` | ASR 请求超时（秒） | `600` | 否 |
