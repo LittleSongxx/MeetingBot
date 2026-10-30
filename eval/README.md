@@ -118,7 +118,11 @@ docker compose --project-directory eval --env-file eval/.env -f eval/compose.eva
 
 ## 6. golden set 与数据积累
 
-当前 `meetingbot/fastapi-app/evaluation/golden/demo_case.json` 只有演示会议一个用例，适合验证评测管线是否跑通，不足以支撑模型结论。要得到可信评测：
+当前 `meetingbot/fastapi-app/evaluation/golden/demo_case.json` 只有演示会议一个用例，适合验证评测管线是否跑通，不足以支撑模型结论。
+公开可复用的评测集/标准（MUG、VCSUM、QMSum、ELITR-Bench、AutoMin、MeetingBank 等）与适配建议见
+[`evaluation/public-datasets-2026-10-31.md`](../meetingbot/fastapi-app/evaluation/public-datasets-2026-10-31.md)。
+
+要得到可信评测：
 
 1. 收集 10~20 场真实会议（不同时长、不同会议类型）；
 2. 人工标注每场的：决策、行动项（内容/负责人/截止）、关键结论对应的转写片段号；

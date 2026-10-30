@@ -268,6 +268,8 @@ npm run dev          # 本地开发（连 http://localhost:9090 后端）
 - [`eval/README.md`](eval/README.md)：与演示栈隔离的评测环境、必填 Key、模型选型与 A/B 方法。
 - [`meetingbot/fastapi-app/evaluation/reports/2026-10-30-deepseek-flash.md`](meetingbot/fastapi-app/evaluation/reports/2026-10-30-deepseek-flash.md)：
   DeepSeek Flash 真实链路评测报告（基线/生成后指标、问答、证据覆盖与发现的问题）。
+- [`meetingbot/fastapi-app/evaluation/public-datasets-2026-10-31.md`](meetingbot/fastapi-app/evaluation/public-datasets-2026-10-31.md)：
+  公开会议评测集调研（MUG/VCSUM/QMSum/ELITR/AutoMin/MeetingBank 等）与可复用性结论。
 - [`架构图/AI会议纪要助手-架构与工作流分析.md`](架构图/AI会议纪要助手-架构与工作流分析.md)：
   项目架构、完整工作流、模块设计取舍与完善度评估。
 - [`架构图/调研/`](架构图/调研/)：后端接口与数据模型、前端、AI 链路、质量与成熟度的

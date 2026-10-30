@@ -6,6 +6,7 @@
 
 隔离评测栈（独立端口/数据卷/`.env`）见仓库根 [`eval/README.md`](../../../eval/README.md)。
 DeepSeek Flash 真实评测报告：[`reports/2026-10-30-deepseek-flash.md`](reports/2026-10-30-deepseek-flash.md)。
+公开评测集调研：[`public-datasets-2026-10-31.md`](public-datasets-2026-10-31.md)。
 
 ## 运行
 
