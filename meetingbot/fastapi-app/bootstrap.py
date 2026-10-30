@@ -25,6 +25,7 @@ from tortoise import Tortoise
 from common.logging_conf import setup_logging
 from common.security import hash_password, migrate_if_plaintext
 from common.times import now
+from demo_seed import seed_ai_demo
 from models import AiModelConfig, Department, Meeting, MeetingMaterial, MeetingParticipant, PromptTemplate, User
 from settings import TORTOISE_ORM
 
@@ -77,14 +78,26 @@ async def ensure_admin() -> None:
         logger.warning("未设置 APP_ADMIN_PASSWORD，跳过管理员初始化")
         return
     hashed = hash_password(password)
+    # 演示头像：首次创建或库里还没头像时补一个，避免顶部头像裂图
+    avatar = None
+    try:
+        avatar_path = _copy_demo_asset("1.png")
+        avatar = f"/files/download/{avatar_path.name}"
+    except Exception:  # 素材缺失时不影响管理员创建
+        logger.warning("管理员演示头像素材缺失，跳过头像初始化")
+
     user = await User.get_or_none(username=username)
     if user is None:
         await User.create(
-            username=username, password=hashed, name="系统管理员", role="ADMIN", status="NORMAL"
+            username=username, password=hashed, name="系统管理员", role="ADMIN",
+            status="NORMAL", avatar=avatar,
         )
         logger.info("已创建管理员账号", extra={"username": username})
     else:
-        await User.filter(id=user.id).update(password=hashed, role="ADMIN", status="NORMAL")
+        values = {"password": hashed, "role": "ADMIN", "status": "NORMAL"}
+        if avatar and not user.avatar:
+            values["avatar"] = avatar
+        await User.filter(id=user.id).update(**values)
         logger.info("已更新管理员账号", extra={"username": username})
 
 
@@ -236,6 +249,7 @@ async def seed_demo() -> None:
             file_type=_file_type(extension), content_type=None, file_ext=extension,
             file_size=target.stat().st_size, file_hash=digest, uploader_id=host.id,
         )
+    await seed_ai_demo(meeting, host, created_users["operator"])
     logger.info("演示数据已就绪", extra={"meeting_id": meeting.id})
 
 

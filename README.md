@@ -1,4 +1,4 @@
-# AI 会议纪要助手（MeetingBot 主线）
+# MeetingBot · AI 智能会议纪要辅助系统
 
 把一场会议的录音、视频或资料变成一份**可确认、可导出**的结构化纪要：
 
@@ -11,8 +11,31 @@ flowchart LR
 ```
 
 > 本仓库是 AIMeeting 的工程化重建主线：保留原项目的业务链路与设计取舍，
-> 补齐部署、鉴权、日志与测试。部署与运维细节见 [DEPLOYMENT.md](DEPLOYMENT.md)，
-> 架构与工作流分析见 [`架构图/`](架构图/AI会议纪要助手-架构与工作流分析.md)。
+> 补齐部署、鉴权、日志与测试。界面与 MeetingBot 主分支共用同一套设计语言
+> （浅灰底 + 白色卡片 + 品牌蓝 `#2563eb` + 圆角胶囊菜单，logo / favicon 同源）。
+> 部署与运维细节见 [DEPLOYMENT.md](DEPLOYMENT.md)，架构与工作流分析见
+> [`架构图/`](架构图/AI会议纪要助手-架构与工作流分析.md)。
+
+## 界面预览
+
+> 下面全部是本机真实部署的截图（`meetingbot-aim-local`，1600×1000，真实演示数据，非设计稿）。
+
+| 登录 | 系统首页 |
+| --- | --- |
+| ![登录](docs/screenshots/01-login.png) | ![系统首页](docs/screenshots/02-home.png) |
+| **会议管理** | **会议资料（上传 / 去重 / 预览）** |
+| ![会议管理](docs/screenshots/03-meeting.png) | ![会议资料](docs/screenshots/05-material.png) |
+| **转写任务** | **转写详情（时间轴 + 说话人匹配）** |
+| ![转写任务](docs/screenshots/06-transcription.png) | ![转写详情](docs/screenshots/07-transcription-detail.png) |
+| **AI 会议纪要** | **纪要详情（六块结构化内容）** |
+| ![AI会议纪要](docs/screenshots/08-minutes.png) | ![纪要详情](docs/screenshots/09-minutes-detail.png) |
+| **Agent 自检** | **自检详情（反思环时间线 + 人工确认）** |
+| ![Agent自检](docs/screenshots/10-agent.png) | ![自检详情](docs/screenshots/11-agent-detail.png) |
+| **运行观测（调用/Token/失败）** | **AI 模型配置** |
+| ![运行观测](docs/screenshots/12-observability.png) | ![AI模型配置](docs/screenshots/13-ai-model.png) |
+
+组织与员工、个人资料、Prompt 模板配置页面截图同样收录在
+[`docs/screenshots/`](docs/screenshots/) 目录。
 
 ## 这个项目是什么
 
@@ -91,6 +114,7 @@ LangGraph 反思环：`review`（对照转写原文审查）→ `refine`（按�
 | 导出 | python-docx（Word）· reportlab（PDF）· FFmpeg（音视频切片） |
 | 前端 | Vue 3 · Vite · Element Plus · ECharts · axios |
 | 部署 | Docker Compose · nginx · 命名卷持久化（MySQL 数据 + 上传文件） |
+| 视觉 | MeetingBot 设计体系：`--mb-*` 设计令牌 · 品牌蓝 `#2563eb` · 12px 圆角卡片 · 胶囊选中菜单 · Element Plus 主题覆盖（`index.scss`） |
 
 ## 目录结构
 
@@ -110,6 +134,7 @@ LangGraph 反思环：`review`（对照转写原文审查）→ `refine`（按�
 │   ├── fastapi-app/              # 后端（models.py / api / services / tests）
 │   └── vue/                      # 前端（Vue 3 管理端）
 ├── 架构图/                       # 架构与工作流分析文档、调研附录
+├── docs/screenshots/             # 真实运行页面截图（README 界面预览引用）
 ├── .github/workflows/ci.yml      # CI：后端 lint+单测、前端构建
 ├── ruff.toml                     # 后端 lint 规则
 └── LICENSE                       # MIT
@@ -145,7 +170,10 @@ docker compose up -d --build
 
 首次启动时 MySQL 空数据卷会自动执行 `01-schema.sql` → `02-seed.sql`，
 后端启动脚本 `bootstrap.py` 会创建管理员、迁移历史明文口令、按环境变量写入
-4 条模型配置，并在 `SEED_DEMO=1` 时生成一份演示会议数据。
+4 条模型配置，并在 `SEED_DEMO=1` 时写入一套完整演示数据：一场「产品发布评审会」、
+6 份会议资料，以及一条转写 → 纪要 → Agent 自检链路（说话人匹配、六块纪要内容、
+反思环步骤与调用日志）。README 里的界面截图就是基于这份数据截的；不需要时把
+`.env` 里的 `SEED_DEMO` 改为 `0` 即可。
 
 ## 验证
 
