@@ -4,7 +4,7 @@
     <div class="auth-intro">
       <div class="auth-brand">
         <img src="@/assets/imgs/logo.png" alt="">
-        <span>AI Agent 智能会议纪要辅助系统</span>
+        <span>MeetingBot · 智能会议纪要辅助系统</span>
       </div>
       <div>
         <div class="auth-headline">把一场会议，变成一份能用的纪要</div>

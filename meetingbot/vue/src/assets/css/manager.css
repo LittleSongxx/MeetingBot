@@ -1,19 +1,21 @@
+/* 管理端框架样式：对齐 NewsClaw 的浅色卡片语言
+   （浅灰底 + 白色顶栏/侧栏 + 细边框 + 品牌蓝高亮，菜单用圆角药丸选中态） */
 .manager-container {
-    background-color: #f5f7fa;
+    background-color: var(--mb-bg);
     min-height: 100vh;
 }
 
-/* 顶栏：白底细边框，靠留白和字重区分层级，不再用大块深色 */
+/* 顶栏：白底细边框，靠留白和字重区分层级 */
 .manager-header {
     height: 60px;
-    background-color: #eef1f6;
+    background-color: var(--mb-card);
     display: flex;
     align-items: center;
-    border-bottom: 1px solid #dfe4ec;
+    border-bottom: 1px solid var(--mb-border);
 }
 
 .manager-header-left {
-    width: 200px;
+    width: 220px;
     height: 100%;
     padding-left: 20px;
     display: flex;
@@ -23,14 +25,15 @@
 .manager-header-left img {
     width: 28px;
     height: 28px;
+    border-radius: 8px;
 }
 
 .manager-header-left .title {
     font-weight: 600;
-    font-size: 17px;
+    font-size: 16px;
     margin-left: 10px;
-    color: #1f2d3d;
-    letter-spacing: .5px;
+    color: var(--mb-text);
+    letter-spacing: .3px;
 }
 
 .manager-header-center {
@@ -38,108 +41,111 @@
     padding-left: 4px;
 }
 
+/* 侧栏：白底细边框，与右侧浅灰内容区形成层次 */
 .manager-main-left {
-    width: 200px;
+    width: 220px;
     min-height: calc(100vh - 60px);
-    background-color: #eef1f6;
-    border-right: 1px solid #dfe4ec;
+    background-color: var(--mb-card);
+    border-right: 1px solid var(--mb-border);
 }
 
 .manager-main-right {
     flex: 1;
     width: 0;
-    background-color: #f5f7fa;
+    background-color: var(--mb-bg);
     padding: 12px;
 }
 
 
 /* Element-Plus 样式覆盖 */
-/* 侧边菜单：白底浅字，只有选中项用主题蓝，配合左侧竖条定位当前页面 */
+/* 侧边菜单：白底浅字，选中项为淡蓝底圆角药丸（NewsClaw 的选中样式） */
 .el-menu {
-    width: 200px;
+    width: 220px;
     height: 100%;
     border: none;
-    background-color: #eef1f6;
+    background-color: transparent;
+    padding: 10px 8px;
 }
 
 :deep(.el-sub-menu__title) {
-    color: #4a5568 !important;
-    height: 48px;
-    line-height: 48px;
+    color: var(--mb-text-2) !important;
+    height: 42px;
+    line-height: 42px;
     font-size: 14px;
-    background-color: #eef1f6 !important;
+    border-radius: 8px;
+    margin: 2px 0;
+    background-color: transparent !important;
 }
 
 :deep(.el-sub-menu__title:hover) {
-    color: #0066bc !important;
-    background-color: #e4e9f2 !important;
+    color: var(--mb-text) !important;
+    background-color: var(--mb-subtle) !important;
 }
 
 .el-menu-item {
-    color: #5a6779;
-    height: 44px;
-    line-height: 44px;
+    color: var(--mb-text-2);
+    height: 40px;
+    line-height: 40px;
     font-size: 14px;
-    background-color: #eef1f6 !important;
-    border-left: 3px solid transparent;
+    border-radius: 8px;
+    margin: 2px 0;
+    background-color: transparent !important;
 }
 
 .el-menu--inline .el-menu-item {
-    padding-left: 48px !important;
+    padding-left: 40px !important;
 }
 
 /* 只有被点中的那个二级菜单项高亮，限定 .el-menu-item，避免命中分组标题 */
 .el-menu-item.is-active {
-    color: #0066bc !important;
+    color: var(--mb-brand) !important;
     font-weight: 600;
-    background-color: #dfe8f5 !important;
-    border-left: 3px solid #0066bc;
+    background-color: #eff6ff !important;
 }
 
 /* 子项选中时 Element Plus 会给分组标题也加 is-active，这里把它复位成未选中的样子 */
 :deep(.el-sub-menu.is-active > .el-sub-menu__title),
 :deep(.el-sub-menu__title.is-active) {
-    color: #4a5568 !important;
+    color: var(--mb-text-2) !important;
     font-weight: normal !important;
-    background-color: #eef1f6 !important;
-    border-left: none !important;
+    background-color: transparent !important;
 }
 
 /* 复位之后鼠标划过分组标题仍要有反馈 */
 :deep(.el-sub-menu.is-active > .el-sub-menu__title:hover) {
-    color: #0066bc !important;
-    background-color: #e4e9f2 !important;
+    color: var(--mb-text) !important;
+    background-color: var(--mb-subtle) !important;
 }
 
-/* 展开后的二级菜单容器跟随侧栏底色，不额外描边 */
+/* 展开后的二级菜单容器跟随白底，不额外描边 */
 :deep(.el-menu--inline) {
-    background-color: #eef1f6 !important;
+    background-color: transparent !important;
     border: none !important;
 }
 
 .el-menu-item:not(.is-active):hover {
-    color: #0066bc !important;
-    background-color: #e4e9f2 !important;
+    color: var(--mb-text) !important;
+    background-color: var(--mb-subtle) !important;
 }
 
 .el-tooltip__trigger {
     outline: none;
 }
 
-/* 面包屑跟随顶栏改成深色文字 */
+/* 面包屑：常规层级用次级文字色，当前页用主文字色 */
 :deep(.el-breadcrumb__inner) {
-    color: #8a94a6 !important;
+    color: var(--mb-text-2) !important;
     font-weight: normal !important;
 }
 
 :deep(.el-breadcrumb__inner:hover) {
-    color: #0066bc !important;
+    color: var(--mb-brand) !important;
 }
 
 :deep(.el-breadcrumb__item:last-child .el-breadcrumb__inner) {
-    color: #1f2d3d !important;
+    color: var(--mb-text) !important;
 }
 
 :deep(.el-breadcrumb__separator) {
-    color: #c3cad6 !important;
+    color: rgba(17, 24, 39, .3) !important;
 }

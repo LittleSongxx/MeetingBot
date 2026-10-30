@@ -3,7 +3,7 @@
     <div class="manager-header">
       <div class="manager-header-left">
         <img src="@/assets/imgs/logo.png" alt="">
-        <div class="title">AI智能会议纪要</div>
+        <div class="title">MeetingBot</div>
       </div>
       <div class="manager-header-center">
         <el-breadcrumb separator="/">
