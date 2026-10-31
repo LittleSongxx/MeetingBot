@@ -22,8 +22,9 @@ logger = logging.getLogger(__name__)
 MAX_HISTORY_TURNS = 3
 MAX_HISTORY_CHARS = 500
 MAX_QUESTION_CHARS = 500
-# 除检索命中的片段外，额外把纪要证据涉及的片段带进上下文，保证答案可引用
-MAX_CONTEXT_SEGMENTS = 8
+# 除检索命中的片段外，额外把纪要证据涉及的片段带进上下文，保证答案可引用。
+# 8 条会在 14 段演示会议上截掉 segment 12/14，导致可回答题被误拒答或漏引。
+MAX_CONTEXT_SEGMENTS = 16
 # 引用上限按问题复杂度动态决定：单点问题 1 条，多点问题 2~3 条。
 MAX_QA_CITATIONS = 3
 # 模型有时会在回答里自己写“材料没有提到”，却仍把 found=true；这种自相矛盾直接按拒答处理
@@ -154,7 +155,7 @@ async def ask(
     meeting = await Meeting.get_or_none(id=minutes.meeting_id)
     segments = await load_task_evidence_context(minutes.source_task_id)
     ranked = rank_segments(question, segments)
-    chosen = list(ranked)
+    chosen = list(ranked)[:MAX_CONTEXT_SEGMENTS]
     chosen_nos = {segment["segment_no"] for segment in chosen}
     evidence_nos = collect_evidence_segment_nos(minutes_payload(minutes))
     for segment in segments:
