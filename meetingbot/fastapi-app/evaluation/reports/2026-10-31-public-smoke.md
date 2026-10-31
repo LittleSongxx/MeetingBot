@@ -68,17 +68,31 @@
 
 `public_eval` 已新增 `--tokenizer jieba`；jieba 为可选依赖，未安装时自动回退 char。VCSUM 论文的 BART/Pegasus 分段摘要 R-1 约 53~60，**当前 lead baseline 仍远低于模型基线**，这里只证明分词口径可切换。
 
-### 2.6 DeepSeek Flash 在 MUG 真实样本上的直接基线
+### 2.6 DeepSeek Flash 在 MUG 全部 action 会议上的直接基线
 
-用 DeepSeek Flash（`deepseek-flash`，json_object，16384 max tokens）在 MUG Test1 前 6 场有 gold action 的会议上做句级行动项识别：
+用 DeepSeek Flash（`deepseek-flash`，json_object，`reasoning_effort=low`）在 MUG Test1 **全部 50 场有 gold action 的会议**上做句级行动项识别（并发 5，原提示词 vs 更严格提示词）：
 
 | 模型/设置 | 样本数 | action precision | action recall | action F1 |
 |---|---|---|---|---|
-| DeepSeek Flash（直接提示，6 场） | 6 | 0.0850 | 0.4897 | 0.1394 |
-| keyword 规则（82 场） | 82 | 0.0802 | 0.0909 | 0.0740 |
+| DeepSeek Flash · 宽松提示（最多 20 句） | 50 | 0.0770 | 0.3454 | 0.1153 |
+| **DeepSeek Flash · 严格提示（最多 10 句，要求负责人/期限）** | 50 | **0.1804** | **0.4117** | **0.2243** |
+| keyword 规则（同 50 场） | 50 | 0.0802 | 0.0909 | 0.0740 |
 | MUG 论文 Longformer baseline | 82 | 60.18 | 66.89 | 63.14 |
 
-说明：6 场样本很小，且是“直接让 LLM 标句子”，不是项目 action item 生成链路；DeepSeek 明显偏召回（预测句多），precision 低。它说明**模型基线可以接进来**，但不能当作最终质量结论。
+说明：严格提示把 F1 从 0.1153 提到 **0.2243**，但仍远低于有监督的 Longformer baseline；这是零样本 LLM 直接标句，不是项目 action item 生成链路。样本仍只有 50 场、单次运行，不能作为最终质量结论。
+
+### 2.7 DeepSeek Flash 在 VCSUM 真实样本上的摘要基线
+
+取 VCSUM `long_test` 前 5 场（转写 4k~18k 字符），让 DeepSeek Flash 生成 150~250 字中文摘要，分别用 char/jieba 分词计算 ROUGE：
+
+| 设置 | 样本数 | char R1 | char R2 | char RL | jieba R1 | jieba R2 | jieba RL |
+|---|---|---|---|---|---|---|---|
+| DeepSeek Flash | 5 | 0.2984 | 0.0940 | 0.1293 | 0.2014 | 0.0209 | 0.1309 |
+| lead baseline（同 5 场） | 5 | 0.2056 | 0.0363 | 0.1020 | - | - | - |
+| VCSUM 论文分段摘要 baseline | - | 53~60（R1） | 20~26 | 23~34 | - | - | - |
+
+说明：DeepSeek 零样本摘要明显优于 lead，但 VCSUM 论文是分段摘要任务、token 级 ROUGE；整体摘要与分段摘要、char 与 token 均不完全可比，不能直接说“差 20 分”。当前只能判断：**模型基线已明显高于 lead，但仍需在同任务/同分词下继续对齐**。
+
 
 ## 3. 本轮新增/验证内容
 
@@ -90,14 +104,15 @@
 - `evaluation/adapters/qmsum.py`：QMSum meeting JSON → 句子级 transcript、query/answer、`relevant_text_span` gold；
 - `evaluation/adapters/vcsum.py`：VCSUM `overall_context`/`overall_highlights`/`long|short_test` → 展平 transcript、摘要 gold、字符级 highlight → 句级 evidence gold；
 - `evaluation/public_metrics.py`：span P/R/F1、字符级 ROUGE-1/2/L、token 重叠检索、答案相似度；
-- `evaluation/public_eval.py`：CLI（`lead`/`keyword`/`lexical`/`oracle` baseline）和 Markdown/JSON 输出；
-- 单测覆盖 adapter 归一化与指标，现共 **98 个测试**通过。
+- `evaluation/public_eval.py`：CLI（`lead`/`keyword`/`lexical`/`oracle`/`--predictions`）和 Markdown/JSON 输出；
+- **MUG 50 场 + VCSUM 5 场 DeepSeek Flash 模型基线已跑通**（见 2.6/2.7）；
+- 单测覆盖 adapter 归一化与指标，现共 **99 个测试**通过。
 
 ## 4. 局限与下一步
 
-1. **MUG 已有真实基线**：keyword 规则在真实 test1/dev 上 action F1 只有 0.0544/0.0650，下一步用项目/LLM 行动项输出替换规则 baseline；真实 MUG 音频未下载（本任务只需标注）。
+1. **MUG 已有规则 + LLM 真实基线**：keyword 规则在真实 Test1/Dev 上 action F1 0.0740/0.0654；DeepSeek Flash 在 Test1 50 场 action 会议上严格提示 F1 **0.2243**，仍远低于论文 Longformer 63.14；下一步扩大重复次数并尝试更强约束/模型。
 2. **baseline 不是模型**：QMSum lexical、VCSUM lead、MUG keyword 只用于验证管线；`--predictions` 入口已就绪，下一步把项目真实输出/LLM 预测接进来。
-   DeepSeek Flash 已在 MUG 6 场样本上试跑（F1 0.1394），但样本太小、prompt 也偏宽松，需扩大样本并收紧输出。
+   DeepSeek Flash 已在 MUG 50 场 action 会议和 VCSUM 5 场上试跑；下一步固定 prompt/抽样做 3 次重复，并报告方差。
 3. **QMSum span 口径**：当前把 `relevant_text_span` 当闭区间；若后续发现官方评测按半开区间，只需改 adapter 一行。
 4. **VCSUM highlight 是字符级**：adapter 转成“句子是否被标亮”的句级 evidence，精度低于原字符级 span；用于冒烟足够，正式评测建议保留 char-level span F1。
 5. **不能替代内部 golden set**：公开集没有中文企业会议六字段 + owner/due/status + 引用问答；仍需 10~20 场内部标注。
