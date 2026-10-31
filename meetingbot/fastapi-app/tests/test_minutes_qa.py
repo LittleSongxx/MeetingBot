@@ -96,6 +96,20 @@ class MinutesQaTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["citations"][0]["speaker"], "张晨")
         self.assertEqual(result["citations"][0]["start_ms"], 0)
 
+    async def test_invoke_failure_is_retried_once(self):
+        mocked = AsyncMock(side_effect=[
+            RuntimeError("纪要问答模型调用失败"),
+            {
+                "found": True,
+                "answer": "报表导出改为异步导出。",
+                "citations": [{"segment_no": 1, "quote": "报表导出改成异步导出，张涛负责后端。"}],
+            },
+        ])
+        with patch("services.minutes_qa_service.invoke_json", new=mocked):
+            result = await ask(self.minutes, self.config, self.prompt, "报表导出改成什么？")
+        self.assertEqual(mocked.await_count, 2)
+        self.assertTrue(result["found"])
+
     async def test_invalid_citation_is_dropped_and_downgraded(self):
         mocked = AsyncMock(
             return_value={

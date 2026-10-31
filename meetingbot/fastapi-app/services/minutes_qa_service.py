@@ -173,15 +173,23 @@ async def ask(
         history=format_history(history),
         question=question[:MAX_QUESTION_CHARS],
     )
-    result = await invoke_json(
-        config,
-        prompt.system_prompt,
-        user_prompt,
-        QA_SCHEMA,
-        "MINUTES_QA",
-        minutes.id,
-        "纪要问答模型",
-    )
+    result = None
+    for attempt in range(2):
+        try:
+            result = await invoke_json(
+                config,
+                prompt.system_prompt,
+                user_prompt,
+                QA_SCHEMA,
+                "MINUTES_QA",
+                minutes.id,
+                "纪要问答模型",
+            )
+            break
+        except RuntimeError:
+            # 空文本/坏 JSON 属于偶发上游问题，补一次重试；第二次仍失败才向调用方抛错
+            if attempt == 1:
+                raise
     answer = str(result.get("answer") or "").strip()
     citations = _validate_citations(result.get("citations") or [], by_no, question, answer)
     found = bool(result.get("found"))
