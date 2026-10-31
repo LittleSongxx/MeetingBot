@@ -84,7 +84,7 @@ def _bigrams(text: str) -> set[str]:
 def _citation_limit(question: str) -> int:
     """单点问题 1 条；包含“分别/各/以及/多个顿号/和”的多点问题放宽到 2~3 条。"""
     text = question or ""
-    if any(marker in text for marker in ("分别", "各", "以及", "、", "；", ";")):
+    if any(marker in text for marker in ("分别", "各", "以及", "哪些", "如何", "、", "；", ";")):
         return 3
     if "和" in text:
         return 2

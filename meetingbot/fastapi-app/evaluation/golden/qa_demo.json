@@ -127,6 +127,59 @@
         13,
         14
       ]
+    },
+    {
+      "id": "q15",
+      "question": "会上确定的消息推送和报表导出状态分别是什么？",
+      "answer": "消息推送已修复并回归通过；报表导出仍有压测性能问题。",
+      "answerable": true,
+      "expected_segments": [
+        4,
+        5
+      ]
+    },
+    {
+      "id": "q16",
+      "question": "灰度放量的阶段、每阶段观察时长和起始日期分别是什么？",
+      "answer": "按 10%、30%、100% 三阶段放量，每阶段观察一天，9 月 1 日先放 10%。",
+      "answerable": true,
+      "expected_segments": [
+        11,
+        12
+      ]
+    },
+    {
+      "id": "q17",
+      "question": "报表导出压测的并发规模、失败率和网关超时分别是什么？",
+      "answer": "500 并发时失败率 12%，超过网关 30 秒超时，单用户导出三个月数据要四十多秒。",
+      "answerable": true,
+      "expected_segments": [
+        5
+      ]
+    },
+    {
+      "id": "q18",
+      "question": "异步导出需要哪些配套机制来避免影响其他接口？",
+      "answer": "需要限流和失败重试；张涛评估队列和限流方案，下次评审同步。",
+      "answerable": true,
+      "expected_segments": [
+        13,
+        14
+      ]
+    },
+    {
+      "id": "q19",
+      "question": "会上有没有讨论海外市场发布计划？",
+      "answer": "没有找到相关依据。",
+      "answerable": false,
+      "expected_segments": []
+    },
+    {
+      "id": "q20",
+      "question": "有没有确定把 V2.0 推迟到 10 月发布？",
+      "answer": "没有找到相关依据。",
+      "answerable": false,
+      "expected_segments": []
     }
   ]
 }
