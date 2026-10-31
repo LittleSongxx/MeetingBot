@@ -64,10 +64,9 @@ def main() -> None:
     headers = {"token": token}
 
     rows = []
-    for index, item in enumerate(golden["questions"]):
-        # QA 接口同一用户有 3 秒冷却；评测脚本必须模拟真人间隔，否则会被误判成“未找到依据”
-        if index:
-            time.sleep(3.2)
+    for item in golden["questions"]:
+        # QA 接口同一用户有 3 秒冷却；每次请求前都等待，包括新一次评测的第一题
+        time.sleep(3.2)
         response = requests.post(
             f"{base}/meetingMinutes/ask/{golden['minutes_id']}",
             headers=headers,
@@ -75,6 +74,16 @@ def main() -> None:
             timeout=180,
         )
         payload = response.json()
+        # 连续运行评测时首题可能仍撞冷却；遇到非 200 再等一次重试
+        if payload.get("code") != "200":
+            time.sleep(3.2)
+            response = requests.post(
+                f"{base}/meetingMinutes/ask/{golden['minutes_id']}",
+                headers=headers,
+                json={"question": item["question"], "history": []},
+                timeout=180,
+            )
+            payload = response.json()
         data = payload.get("data") or {}
         citations = data.get("citations") or []
         cited_segments = {citation.get("segment_no") for citation in citations if citation.get("segment_no") is not None}
