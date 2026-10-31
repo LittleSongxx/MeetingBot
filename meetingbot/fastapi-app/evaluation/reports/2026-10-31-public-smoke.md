@@ -83,15 +83,15 @@
 
 ### 2.7 DeepSeek Flash 在 VCSUM 真实样本上的摘要基线
 
-取 VCSUM `long_test` 前 5 场（转写 4k~18k 字符），让 DeepSeek Flash 生成 150~250 字中文摘要，分别用 char/jieba 分词计算 ROUGE：
+取 VCSUM `long_test` **全部 26 场**（转写 4k~44k 字符），让 DeepSeek Flash 生成 150~250 字中文摘要，分别用 char/jieba 分词计算 ROUGE：
 
 | 设置 | 样本数 | char R1 | char R2 | char RL | jieba R1 | jieba R2 | jieba RL |
 |---|---|---|---|---|---|---|---|
-| DeepSeek Flash | 5 | 0.2984 | 0.0940 | 0.1293 | 0.2014 | 0.0209 | 0.1309 |
-| lead baseline（同 5 场） | 5 | 0.2056 | 0.0363 | 0.1020 | - | - | - |
+| DeepSeek Flash | 26 | 0.3641 | 0.1336 | 0.1575 | 0.2588 | 0.0342 | 0.1495 |
+| lead baseline（同 26 场） | 26 | 0.1976 | 0.0466 | 0.1022 | - | - | - |
 | VCSUM 论文分段摘要 baseline | - | 53~60（R1） | 20~26 | 23~34 | - | - | - |
 
-说明：DeepSeek 零样本摘要明显优于 lead，但 VCSUM 论文是分段摘要任务、token 级 ROUGE；整体摘要与分段摘要、char 与 token 均不完全可比，不能直接说“差 20 分”。当前只能判断：**模型基线已明显高于 lead，但仍需在同任务/同分词下继续对齐**。
+说明：DeepSeek 零样本摘要相对 lead 明显提升（char R1 +0.166），但仍低于 VCSUM 论文的分段摘要 baseline；论文是分段摘要、token 级 ROUGE，整体摘要/char 口径不能直接等同。样本从 5 场扩到 26 场后，趋势更可信，但仍不是论文同任务复现。
 
 
 ## 3. 本轮新增/验证内容

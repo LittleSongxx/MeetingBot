@@ -9,6 +9,18 @@ DeepSeek Flash 真实评测报告：[`reports/2026-10-30-deepseek-flash.md`](rep
 公开评测集调研：[`public-datasets-2026-10-31.md`](public-datasets-2026-10-31.md)。
 内部 golden set 标注规范：[`golden/SCHEMA.md`](golden/SCHEMA.md)。
 
+## QA 测试集
+
+`golden/qa_demo.json` + `qa_eval.py`：对演示会议跑 8 道可回答 + 2 道不可回答 QA，统计引用 precision/recall/F1、拒答和答案相似度：
+
+```bash
+# 在评测栈 backend 容器内（base URL 注意不要带 /api）
+python -m evaluation.qa_eval --base-url http://127.0.0.1:9090 \
+  --golden evaluation/golden/qa_demo.json
+```
+
+> QA 接口同一用户有 3 秒冷却，评测脚本内置 3.2s 间隔；不要连续快速请求，否则会被误判为拒答。
+
 ## Agent 产品指标 Scorecard
 
 不跑论文 benchmark，直接统计 Agent 行为：
