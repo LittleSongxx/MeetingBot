@@ -185,11 +185,14 @@ async def ask(
                 minutes.id,
                 "纪要问答模型",
             )
-            break
         except RuntimeError:
             # 空文本/坏 JSON 属于偶发上游问题，补一次重试；第二次仍失败才向调用方抛错
             if attempt == 1:
                 raise
+            continue
+        # 模型偶发返回 {}（answer 为空）也不应直接变成拒答；只对空 answer 补一次重试
+        if str(result.get("answer") or "").strip():
+            break
     answer = str(result.get("answer") or "").strip()
     citations = _validate_citations(result.get("citations") or [], by_no, question, answer)
     found = bool(result.get("found"))
