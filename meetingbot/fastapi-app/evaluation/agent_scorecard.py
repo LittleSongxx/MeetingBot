@@ -83,7 +83,7 @@ def duration_seconds(started: datetime | None, finished: datetime | None) -> flo
     return max(0.0, (finished - started).total_seconds())
 
 
-async def build_scorecard(meeting_id: int | None = None) -> dict:
+async def build_scorecard(meeting_id: int | None = None, include_demo: bool = False) -> dict:
     minutes_query = MeetingMinutes.all()
     if meeting_id is not None:
         minutes_query = minutes_query.filter(meeting_id=meeting_id)
@@ -95,14 +95,18 @@ async def build_scorecard(meeting_id: int | None = None) -> dict:
     run_query = AgentRun.all()
     if meeting_id is not None:
         run_query = run_query.filter(meeting_id=meeting_id)
-    runs = await run_query.order_by("id")
+    all_runs = await run_query.order_by("id")
+    demo_runs = [run for run in all_runs if (run.run_no or "").startswith("AGR-DEMO")]
+    runs = all_runs if include_demo else [run for run in all_runs if run.id not in {item.id for item in demo_runs}]
     log_query = AiCallLog.all()
     if meeting_id is not None:
         minute_ids = {row.id for row in minutes_rows}
         run_ids = {run.id for run in runs}
         log_query = log_query.filter(biz_id__in=list(minute_ids | run_ids))
 
-    logs = await log_query
+    all_logs = await log_query
+    demo_logs = [log for log in all_logs if (log.request_id or "").startswith("AICDEMO")]
+    logs = all_logs if include_demo else [log for log in all_logs if log.id not in {item.id for item in demo_logs}]
     steps = await AgentStep.all()
     if meeting_id is not None:
         run_ids = {run.id for run in runs}
@@ -217,7 +221,8 @@ async def build_scorecard(meeting_id: int | None = None) -> dict:
     step_success = sum(1 for step in steps if step.status == "SUCCEEDED")
 
     return {
-        "filters": {"meeting_id": meeting_id},
+        "filters": {"meeting_id": meeting_id, "include_demo": include_demo},
+        "demo_excluded": {"logs": len(demo_logs), "agent_runs": len(demo_runs)},
         "tasks": {
             "meetings": len({row.meeting_id for row in minutes_rows}),
             "minutes": len(minutes_rows),
@@ -299,7 +304,8 @@ def render_markdown(card: dict) -> str:
     lines = [
         "# Agent 产品指标 Scorecard",
         "",
-        f"- 过滤: meeting_id={card['filters']['meeting_id']}",
+        f"- 过滤: meeting_id={card['filters']['meeting_id']}, include_demo={card['filters']['include_demo']}",
+        f"- 已排除演示日志/运行: {card['demo_excluded']['logs']} 条 / {card['demo_excluded']['agent_runs']} 个",
         f"- 会议/纪要: {tasks['meetings']} / {tasks['minutes']}（{tasks['minutes_status']}）",
         "",
         "## 任务与自主性",
@@ -360,13 +366,14 @@ async def main() -> None:
     parser = argparse.ArgumentParser(description="Agent 产品指标 scorecard")
     parser.add_argument("--meeting-id", type=int, default=None)
     parser.add_argument("--output", default=None)
+    parser.add_argument("--include-demo", action="store_true", help="把演示种子数据也计入（默认排除，避免把假失败当真实可靠性）")
     args = parser.parse_args()
     from settings import TORTOISE_ORM
     from tortoise import Tortoise
 
     await Tortoise.init(config=TORTOISE_ORM)
     try:
-        card = await build_scorecard(args.meeting_id)
+        card = await build_scorecard(args.meeting_id, args.include_demo)
     finally:
         await Tortoise.close_connections()
     print(render_markdown(card))

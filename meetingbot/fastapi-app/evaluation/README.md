@@ -29,6 +29,7 @@ python -m evaluation.qa_eval --base-url http://127.0.0.1:9090 \
 ```bash
 # 在评测栈 backend 容器内
 python -m evaluation.agent_scorecard --meeting-id 1
+# 默认排除演示种子日志/运行；要看全部加 --include-demo
 ```
 
 指标包括：Agent 运行终态完成率、人工确认率/决策延迟、步骤成功率、模型调用成功率、调用延迟、Token、证据覆盖/合法率、行动项确认/负责人/截止/重复率、QA 调用可靠性。
