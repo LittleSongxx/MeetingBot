@@ -23,9 +23,8 @@ MAX_HISTORY_CHARS = 500
 MAX_QUESTION_CHARS = 500
 # 除检索命中的片段外，额外把纪要证据涉及的片段带进上下文，保证答案可引用
 MAX_CONTEXT_SEGMENTS = 8
-# 当前 10 题 QA 都是单证据问题：只展示最直接支持的 1 条引用，优先保证 precision。
-# 多证据问题扩展评测集后再调大；后端仍会按答案相关性排序。
-MAX_QA_CITATIONS = 1
+# 引用上限按问题复杂度动态决定：单点问题 1 条，多点问题 2~3 条。
+MAX_QA_CITATIONS = 3
 
 QA_SCHEMA = {
     "type": "object",
@@ -82,6 +81,16 @@ def _bigrams(text: str) -> set[str]:
     return {normalized[index:index + 2] for index in range(max(0, len(normalized) - 1))}
 
 
+def _citation_limit(question: str) -> int:
+    """单点问题 1 条；包含“分别/各/以及/多个顿号/和”的多点问题放宽到 2~3 条。"""
+    text = question or ""
+    if any(marker in text for marker in ("分别", "各", "以及", "、", "；", ";")):
+        return 3
+    if "和" in text:
+        return 2
+    return 1
+
+
 def _citation_relevance(citation: dict, question: str, answer: str) -> float:
     """引用与“问题 + 答案”的字符二元重叠，用来在多引用里选最直接支持答案的。"""
     target = _bigrams(f"{question} {answer}")
@@ -120,7 +129,7 @@ def _validate_citations(
             }
         )
     citations.sort(key=lambda item: _citation_relevance(item, question, answer), reverse=True)
-    return citations[:MAX_QA_CITATIONS]
+    return citations[:min(MAX_QA_CITATIONS, _citation_limit(question))]
 
 
 async def ask(

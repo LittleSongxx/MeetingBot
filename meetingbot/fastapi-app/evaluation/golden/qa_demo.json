@@ -7,56 +7,72 @@
       "question": "报表导出最终决定改成什么方案？",
       "answer": "改为异步导出，张涛负责后端，李悦跟进前端任务列表，9 月 10 日前联调完。",
       "answerable": true,
-      "expected_segments": [10]
+      "expected_segments": [
+        10
+      ]
     },
     {
       "id": "q2",
       "question": "灰度放量分成哪几个阶段？",
       "answer": "按 10%、30%、100% 三个阶段放量，每阶段观察一天。",
       "answerable": true,
-      "expected_segments": [11]
+      "expected_segments": [
+        11
+      ]
     },
     {
       "id": "q3",
       "question": "对外通稿什么时候定稿，由谁负责？",
       "answer": "9 月 12 日定稿，李悦负责。",
       "answerable": true,
-      "expected_segments": [12]
+      "expected_segments": [
+        12
+      ]
     },
     {
       "id": "q4",
       "question": "V2.0 计划内的需求验收通过多少？",
       "answer": "17 个需求通过 15 个。",
       "answerable": true,
-      "expected_segments": [3]
+      "expected_segments": [
+        3
+      ]
     },
     {
       "id": "q5",
       "question": "消息推送免打扰设置现在是什么状态？",
       "answer": "已经修完，昨天回归通过。",
       "answerable": true,
-      "expected_segments": [4]
+      "expected_segments": [
+        4
+      ]
     },
     {
       "id": "q6",
       "question": "报表导出压测暴露了哪些问题？",
       "answer": "单个用户导出三个月数据要四十多秒，超过网关 30 秒超时；500 并发失败率 12%。",
       "answerable": true,
-      "expected_segments": [5]
+      "expected_segments": [
+        5
+      ]
     },
     {
       "id": "q7",
       "question": "报表导出后端由谁负责？",
       "answer": "张涛负责后端。",
       "answerable": true,
-      "expected_segments": [10]
+      "expected_segments": [
+        10
+      ]
     },
     {
       "id": "q8",
       "question": "异步导出上线后有什么风险？",
       "answer": "任务堆积，需要限流和失败重试，否则会影响其他接口。",
       "answerable": true,
-      "expected_segments": [13]
+      "expected_segments": [
+        13
+      ]
     },
     {
       "id": "q9",
@@ -71,6 +87,46 @@
       "answer": "没有找到相关依据。",
       "answerable": false,
       "expected_segments": []
+    },
+    {
+      "id": "q11",
+      "question": "会上确定的灰度节奏和对外通稿安排分别是什么？",
+      "answer": "灰度按 10%、30%、100% 三阶段放量，每阶段观察一天；对外通稿 9 月 12 日定稿，李悦负责。",
+      "answerable": true,
+      "expected_segments": [
+        11,
+        12
+      ]
+    },
+    {
+      "id": "q12",
+      "question": "V2.0 验收情况、消息推送和报表导出分别是什么状态？",
+      "answer": "17 个需求验收通过 15 个；消息推送已修复并回归通过；报表导出仍有压测性能问题。",
+      "answerable": true,
+      "expected_segments": [
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "q13",
+      "question": "报表导出改造后，后端和前端分别由谁负责、什么时候完成？",
+      "answer": "张涛负责后端，李悦跟进前端任务列表，9 月 10 日前联调完。",
+      "answerable": true,
+      "expected_segments": [
+        10
+      ]
+    },
+    {
+      "id": "q14",
+      "question": "报表导出上线后可能带来什么风险，如何跟进？",
+      "answer": "可能出现任务堆积，需要限流和失败重试；张涛评估队列和限流方案，下次评审同步。",
+      "answerable": true,
+      "expected_segments": [
+        13,
+        14
+      ]
     }
   ]
 }
