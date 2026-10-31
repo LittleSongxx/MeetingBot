@@ -180,6 +180,96 @@
       "answer": "没有找到相关依据。",
       "answerable": false,
       "expected_segments": []
+    },
+    {
+      "id": "q21",
+      "question": "报表导出有哪些问题，准备怎么解决？",
+      "answer": "单用户导出三个月要四十多秒，超过网关 30 秒超时，500 并发失败率 12%；决定改为异步导出，前端加任务列表。",
+      "answerable": true,
+      "expected_segments": [
+        5,
+        7,
+        10
+      ]
+    },
+    {
+      "id": "q22",
+      "question": "缓存方案和异步导出方案分别有什么特点？",
+      "answer": "缓存无法覆盖任意时间范围；异步导出先落任务再下载文件，但前端要加导出任务列表。",
+      "answerable": true,
+      "expected_segments": [
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "id": "q23",
+      "question": "灰度每个阶段观察多久？",
+      "answer": "每个阶段观察一天。",
+      "answerable": true,
+      "expected_segments": [
+        11
+      ]
+    },
+    {
+      "id": "q24",
+      "question": "对外通稿由谁负责？",
+      "answer": "李悦负责。",
+      "answerable": true,
+      "expected_segments": [
+        12
+      ]
+    },
+    {
+      "id": "q25",
+      "question": "会上有没有讨论裁员或组织调整？",
+      "answer": "没有找到相关依据。",
+      "answerable": false,
+      "expected_segments": []
+    },
+    {
+      "id": "q26",
+      "question": "有没有决定把发布会提前到 8 月？",
+      "answer": "没有找到相关依据。",
+      "answerable": false,
+      "expected_segments": []
+    },
+    {
+      "id": "q27",
+      "question": "异步导出的风险由谁跟进？",
+      "answer": "张涛评估队列和限流方案，下次评审同步。",
+      "answerable": true,
+      "expected_segments": [
+        14
+      ]
+    },
+    {
+      "id": "q28",
+      "question": "9 月 1 日先放多少比例？",
+      "answer": "先放 10%。",
+      "answerable": true,
+      "expected_segments": [
+        12
+      ]
+    },
+    {
+      "id": "q29",
+      "question": "消息推送免打扰设置修复后有没有回归通过？",
+      "answer": "已经回归通过。",
+      "answerable": true,
+      "expected_segments": [
+        4
+      ]
+    },
+    {
+      "id": "q30",
+      "question": "导出任务列表的前端负责人是谁？",
+      "answer": "李悦。",
+      "answerable": true,
+      "expected_segments": [
+        10
+      ]
     }
   ]
 }
