@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 
 from models import Meeting, MeetingMinutes
 
@@ -26,7 +27,9 @@ MAX_CONTEXT_SEGMENTS = 8
 # 引用上限按问题复杂度动态决定：单点问题 1 条，多点问题 2~3 条。
 MAX_QA_CITATIONS = 3
 # 模型有时会在回答里自己写“材料没有提到”，却仍把 found=true；这种自相矛盾直接按拒答处理
-REFUSAL_MARKERS = ("未找到", "没有找到", "未提及", "没有提及", "未提到", "没有提到", "没有相关", "无法回答", "材料中未")
+REFUSAL_PATTERN = re.compile(
+    r"(未找到|没有找到|未提及|没有提及|未提到|没有提到|没有相关|无法回答|材料中未|没有[^。！？\n]{0,30}(找到|提及|提到|明确|决定|安排|相关|依据))"
+)
 
 QA_SCHEMA = {
     "type": "object",
@@ -84,7 +87,9 @@ def _bigrams(text: str) -> set[str]:
 
 
 def _looks_like_refusal(answer: str) -> bool:
-    return any(marker in (answer or "") for marker in REFUSAL_MARKERS)
+    # 只检查第一句：后文的“材料未提及……”是补充说明，不应把前面的有效回答误杀
+    first_sentence = re.split(r"[。！？\n]", answer or "", maxsplit=1)[0]
+    return bool(REFUSAL_PATTERN.search(first_sentence))
 
 
 def _citation_limit(question: str) -> int:

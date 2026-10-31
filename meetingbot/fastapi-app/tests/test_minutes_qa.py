@@ -122,7 +122,10 @@ class MinutesQaTest(unittest.IsolatedAsyncioTestCase):
     def test_refusal_marker_detection(self):
         self.assertTrue(_looks_like_refusal("材料中未找到足够依据来回答这个问题。"))
         self.assertTrue(_looks_like_refusal("转写中没有提及预算安排。"))
+        self.assertTrue(_looks_like_refusal("会上没有把 V2.0 推迟到 10 月发布的决定。"))
         self.assertFalse(_looks_like_refusal("报表导出改为异步导出，张涛负责后端。"))
+        # 有效回答后附带“材料未提及”的补充说明，不能被误判成拒答
+        self.assertFalse(_looks_like_refusal("消息推送已经修复并回归通过。另外材料未提及预算。"))
 
     async def test_citations_are_capped_and_ranked_by_answer_relevance(self):
         by_no = {
