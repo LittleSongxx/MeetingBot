@@ -5,7 +5,7 @@ from api.meeting_minutes import AskPayload
 from api.meeting_minutes import ask as ask_api
 from common.exception_handler import CustomException
 from models import AiModelConfig, Meeting, MeetingMinutes, PromptTemplate, TranscriptSegment, User
-from services.minutes_qa_service import _validate_citations, ask, format_history
+from services.minutes_qa_service import _looks_like_refusal, _validate_citations, ask, format_history
 from tortoise import Tortoise
 
 
@@ -118,6 +118,11 @@ class MinutesQaTest(unittest.IsolatedAsyncioTestCase):
         text = format_history(history)
         self.assertNotIn("第0轮", text)
         self.assertIn("第4轮", text)
+
+    def test_refusal_marker_detection(self):
+        self.assertTrue(_looks_like_refusal("材料中未找到足够依据来回答这个问题。"))
+        self.assertTrue(_looks_like_refusal("转写中没有提及预算安排。"))
+        self.assertFalse(_looks_like_refusal("报表导出改为异步导出，张涛负责后端。"))
 
     async def test_citations_are_capped_and_ranked_by_answer_relevance(self):
         by_no = {

@@ -25,6 +25,8 @@ MAX_QUESTION_CHARS = 500
 MAX_CONTEXT_SEGMENTS = 8
 # 引用上限按问题复杂度动态决定：单点问题 1 条，多点问题 2~3 条。
 MAX_QA_CITATIONS = 3
+# 模型有时会在回答里自己写“材料没有提到”，却仍把 found=true；这种自相矛盾直接按拒答处理
+REFUSAL_MARKERS = ("未找到", "没有找到", "未提及", "没有提及", "未提到", "没有提到", "没有相关", "无法回答", "材料中未")
 
 QA_SCHEMA = {
     "type": "object",
@@ -79,6 +81,10 @@ def format_history(history: list[dict] | None) -> str:
 def _bigrams(text: str) -> set[str]:
     normalized = normalize(text)
     return {normalized[index:index + 2] for index in range(max(0, len(normalized) - 1))}
+
+
+def _looks_like_refusal(answer: str) -> bool:
+    return any(marker in (answer or "") for marker in REFUSAL_MARKERS)
 
 
 def _citation_limit(question: str) -> int:
@@ -178,6 +184,10 @@ async def ask(
         # 声称找到了但给不出可核对的引用，按“没有依据”处理，避免无出处回答
         found = False
         answer = "材料中未找到足够依据来回答这个问题。"
+    if found and _looks_like_refusal(answer):
+        # 回答正文已经说“没提到/未找到”，却返回 found=true：以正文为准改成拒答
+        found = False
+        citations = []
     if not found:
         citations = []
         answer = answer or "材料中未找到足够依据来回答这个问题。"
