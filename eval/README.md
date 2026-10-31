@@ -25,6 +25,7 @@ cp eval/.env.example eval/.env
 | `MYSQL_PASSWORD` / `MYSQL_ROOT_PASSWORD` | 是 | 评测库口令，与演示栈不同即可 |
 | `JWT_SECRET` | 是 | `openssl rand -hex 32` 的输出 |
 | `APP_ADMIN_USERNAME` / `APP_ADMIN_PASSWORD` | 是 | 评测环境管理员账号 |
+| `MODELSCOPE_TOKEN` | 下载 MUG 时必填 | ModelScope 只读访问令牌；只写 `eval/.env`，不提交 |
 | `DASHSCOPE_API_KEY` | ASR 必填 | 百炼 Key（转写用） |
 | `LLM_API_KEY` | LLM 必填 | LLM Key（本评测默认 DeepSeek） |
 | `ASR_API_KEY` | 否 | ASR 想用独立 Key 时填，留空共用 `DASHSCOPE_API_KEY` |
