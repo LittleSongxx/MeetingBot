@@ -72,6 +72,9 @@ curl -fsS http://127.0.0.1:19192/health
 ```bash
 docker compose --project-directory eval --env-file eval/.env \
   -f eval/compose.eval.yaml exec -T backend python -m evaluation.run_eval
+# Agent 产品指标 scorecard
+python -m evaluation.agent_scorecard --meeting-id 1
+
 # 或 Windows PowerShell 包装脚本（在仓库根目录）
 pwsh ./eval/run_eval.ps1
 ```

@@ -9,6 +9,18 @@ DeepSeek Flash 真实评测报告：[`reports/2026-10-30-deepseek-flash.md`](rep
 公开评测集调研：[`public-datasets-2026-10-31.md`](public-datasets-2026-10-31.md)。
 内部 golden set 标注规范：[`golden/SCHEMA.md`](golden/SCHEMA.md)。
 
+## Agent 产品指标 Scorecard
+
+不跑论文 benchmark，直接统计 Agent 行为：
+
+```bash
+# 在评测栈 backend 容器内
+python -m evaluation.agent_scorecard --meeting-id 1
+```
+
+指标包括：Agent 运行终态完成率、人工确认率/决策延迟、步骤成功率、模型调用成功率、调用延迟、Token、证据覆盖/合法率、行动项确认/负责人/截止/重复率、QA 调用可靠性。
+首份报告：[`reports/2026-10-31-agent-scorecard.md`](reports/2026-10-31-agent-scorecard.md)。
+
 ## 公开集 adapter（MUG / VCSUM / QMSum）
 
 公开集不提交到仓库，按各自许可下载后用 adapter 转成统一 case，再跑确定性 baseline：
