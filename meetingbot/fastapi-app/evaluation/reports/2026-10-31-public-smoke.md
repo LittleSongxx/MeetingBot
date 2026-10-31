@@ -94,6 +94,17 @@
 说明：DeepSeek 零样本摘要相对 lead 明显提升（char R1 +0.166），但仍低于 VCSUM 论文的分段摘要 baseline；论文是分段摘要、token 级 ROUGE，整体摘要/char 口径不能直接等同。样本从 5 场扩到 26 场后，趋势更可信，但仍不是论文同任务复现。
 
 
+### 2.8 QMSum 模型级证据检索（替换 lexical baseline）
+
+用 DeepSeek Flash 对 QMSum 2 个 test 文件的 18 个 specific query 直接预测 evidence segment IDs：
+
+| 设置 | query 数 | evidence P | evidence R | evidence F1 |
+|---|---|---|---|---|
+| DeepSeek Flash | 18 | **0.4731** | **0.3024** | **0.3273** |
+| lexical top-10 baseline | 18 | 0.1944 | 0.1272 | 0.1230 |
+
+模型检索 F1 比 lexical baseline 高约 2.7 倍；但只有 2 场会议/18 query，且是“让模型选句子”而不是完整 RAG/回答链路，样本仍小。
+
 ## 3. 本轮新增/验证内容
 
 - MUG 真实标注已下载（ModelScope CC-BY-4.0，仅 Dev/Test1 CSV，无音频），`evaluation/adapters/fetch_mug.py` 可复现下载；

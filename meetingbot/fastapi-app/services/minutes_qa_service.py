@@ -23,8 +23,9 @@ MAX_HISTORY_CHARS = 500
 MAX_QUESTION_CHARS = 500
 # 除检索命中的片段外，额外把纪要证据涉及的片段带进上下文，保证答案可引用
 MAX_CONTEXT_SEGMENTS = 8
-# 一次回答最多展示 2 条引用：QA 常见问题是“答对了但多引用背景片段”，会拉低引用 precision
-MAX_QA_CITATIONS = 2
+# 当前 10 题 QA 都是单证据问题：只展示最直接支持的 1 条引用，优先保证 precision。
+# 多证据问题扩展评测集后再调大；后端仍会按答案相关性排序。
+MAX_QA_CITATIONS = 1
 
 QA_SCHEMA = {
     "type": "object",

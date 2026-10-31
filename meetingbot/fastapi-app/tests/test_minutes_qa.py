@@ -131,7 +131,7 @@ class MinutesQaTest(unittest.IsolatedAsyncioTestCase):
             {"segment_no": 1, "quote": "决定改为异步导出"},
         ]
         citations = _validate_citations(raw, by_no, "导出怎么改", "决定改为异步导出，张涛负责后端")
-        self.assertEqual(len(citations), 2)
+        self.assertEqual(len(citations), 1)
         self.assertEqual(citations[0]["segment_no"], 1)
 
     async def test_whitespace_question_rejected(self):
