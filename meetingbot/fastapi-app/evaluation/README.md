@@ -8,6 +8,27 @@
 DeepSeek Flash 真实评测报告：[`reports/2026-10-30-deepseek-flash.md`](reports/2026-10-30-deepseek-flash.md)。
 公开评测集调研：[`public-datasets-2026-10-31.md`](public-datasets-2026-10-31.md)。
 
+## 公开集 adapter（MUG / VCSUM / QMSum）
+
+公开集不提交到仓库，按各自许可下载后用 adapter 转成统一 case，再跑确定性 baseline：
+
+```bash
+# QMSum（英文 QA/证据 span）
+python -m evaluation.public_eval --dataset qmsum \
+  --data /path/QMSum/data/ALL/test/Bed003.json --baseline lexical
+# VCSUM（中文摘要/highlight）
+python -m evaluation.public_eval --dataset vcsum \
+  --data /path/VCSum/vcsum_data --baseline lead --kind long --limit 26
+# MUG（中文 action item / 关键句）
+python -m evaluation.public_eval --dataset mug \
+  --data /path/mug-sample.json --baseline keyword
+```
+
+adapter 目录见 [`adapters/README.md`](adapters/README.md)，公开集选型见
+[`public-datasets-2026-10-31.md`](public-datasets-2026-10-31.md)，首轮冒烟结果见
+[`reports/2026-10-31-public-smoke.md`](reports/2026-10-31-public-smoke.md)。`baseline` 仅用于验证管线，
+`oracle` 是管线自检（不是模型成绩）。
+
 ## 运行
 
 ```bash

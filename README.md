@@ -270,6 +270,8 @@ npm run dev          # 本地开发（连 http://localhost:9090 后端）
   DeepSeek Flash 真实链路评测报告（基线/生成后指标、问答、证据覆盖与发现的问题）。
 - [`meetingbot/fastapi-app/evaluation/public-datasets-2026-10-31.md`](meetingbot/fastapi-app/evaluation/public-datasets-2026-10-31.md)：
   公开会议评测集调研（MUG/VCSUM/QMSum/ELITR/AutoMin/MeetingBank 等）与可复用性结论。
+- [`meetingbot/fastapi-app/evaluation/adapters/README.md`](meetingbot/fastapi-app/evaluation/adapters/README.md)：
+  MUG / VCSUM / QMSum adapter、数据获取与公开集 baseline 冒烟跑分。
 - [`架构图/AI会议纪要助手-架构与工作流分析.md`](架构图/AI会议纪要助手-架构与工作流分析.md)：
   项目架构、完整工作流、模块设计取舍与完善度评估。
 - [`架构图/调研/`](架构图/调研/)：后端接口与数据模型、前端、AI 链路、质量与成熟度的
