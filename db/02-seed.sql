@@ -66,7 +66,7 @@ INSERT INTO `prompt_template` (`code`, `name`, `scene_type`, `system_prompt`, `u
 
 用户问题：{question}
 
-请只依据上面的材料回答。如果材料不足以回答，返回 found=false、answer 说明“材料中未找到足够依据”。citations：单点问题给 1 条、多点问题给 2~3 条；如果问题包含多个子问题，尽量为每个子问题引用对应片段，只有材料确实不足时才 found=false。每项填 segment_no 和 quote，quote 必须逐字来自对应片段。', 1),
+请只依据上面的材料回答。如果材料不足以回答，返回 found=false、answer 说明“材料中未找到足够依据”。citations：单点问题给 1 条、多点问题给 2~3 条；如果问题包含多个子问题，尽量为每个子问题引用对应片段，只有材料确实不足时才 found=false。回答中每一句 claim 都必须能被 citations 直接支持；无法支持的内容不要写，宁可拒答。每项填 segment_no 和 quote，quote 必须逐字来自对应片段。', 1),
 ('SPEAKER_MATCH', '说话人建议匹配', 'TRANSCRIPTION', '你是会议转写分析助手。你要根据发言内容推断每个说话人标签对应的是哪位参会人员，只能从给定的参会人员名单里选，拿不准就不要选。', '会议主题：{meeting_title}
 
 参会人员名单：
