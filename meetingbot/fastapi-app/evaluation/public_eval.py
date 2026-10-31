@@ -73,14 +73,17 @@ def evaluate_mug(cases: list[dict], baseline: str) -> dict:
             "gold_actions": len(gold_actions),
             "predicted_actions": len(predicted_actions),
         })
+    # 很多会议没有 action item，把 0 计入 macro 平均会人为压低指标；只在有 gold action 的会议上报 action 指标
+    action_rows = [row for row in rows if row["gold_actions"] > 0]
     return {
         "dataset": "mug",
         "baseline": baseline,
         "cases": len(rows),
+        "action_cases": len(action_rows),
         "metrics": {
-            "action_precision": average_metric(rows, "action_precision"),
-            "action_recall": average_metric(rows, "action_recall"),
-            "action_f1": average_metric(rows, "action_f1"),
+            "action_precision": average_metric(action_rows, "action_precision"),
+            "action_recall": average_metric(action_rows, "action_recall"),
+            "action_f1": average_metric(action_rows, "action_f1"),
             "key_sentence_f1": average_metric(rows, "key_sentence_f1"),
         },
         "details": rows,

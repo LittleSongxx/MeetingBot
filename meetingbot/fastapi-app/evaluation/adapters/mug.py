@@ -2,6 +2,8 @@
 
 数据来源与字段：
 https://www.modelscope.cn/datasets/modelscope/Alimeeting4MUG
+官方标注文件是 `idx<TAB>content` 单行 CSV（content 为一场会议的 JSON），也兼容 JSON/JSONL。
+
 样例结构（ModelScope README）：
   {
     "meeting_key": "M0115",
@@ -12,12 +14,13 @@ https://www.modelscope.cn/datasets/modelscope/Alimeeting4MUG
     ...
   }
 
-本 adapter 支持单对象、JSON 数组、JSONL；句子 `id` 作为 segment_no，action_ids 是
-句级 action item 的 gold；key_sentence 是抽取式摘要/证据的 gold。
+本 adapter 把句子 `id` 作为 segment_no，`action_ids` 是句级 action item 的 gold；
+`key_sentence` 是抽取式摘要/证据的 gold。
 """
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from evaluation.adapters import EvalCase, load_json_or_jsonl
@@ -105,10 +108,33 @@ def normalize_mug(raw: dict, source: str = "mug") -> EvalCase:
     }
 
 
+def _read_mug_rows(path: Path):
+    """兼容 JSON/JSONL 与 AliMeeting4MUG 官方 CSV（idx<TAB>content 一行一场）。"""
+    if path.is_dir():
+        for file in sorted(path.rglob("*")):
+            if file.is_file() and file.suffix.lower() in {".json", ".jsonl", ".csv"}:
+                yield from _read_mug_rows(file)
+        return
+    if path.suffix.lower() == ".csv":
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line or line.startswith("idx\tcontent"):
+                continue
+            _, separator, content = line.partition("\t")
+            if not separator:
+                continue
+            try:
+                payload = json.loads(content)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(payload, dict):
+                yield payload
+        return
+    yield from load_json_or_jsonl(path)
+
+
 def load_mug(path: Path) -> list[EvalCase]:
-    raw_rows = load_json_or_jsonl(path)
     cases = []
-    for index, raw in enumerate(raw_rows):
+    for index, raw in enumerate(_read_mug_rows(path)):
         if not isinstance(raw, dict):
             continue
         cases.append(normalize_mug(raw, source=f"{path.name}#{index}"))

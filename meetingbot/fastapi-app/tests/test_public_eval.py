@@ -64,6 +64,20 @@ class PublicAdapterTest(unittest.TestCase):
         oracle = evaluate_mug(cases, "oracle")
         self.assertEqual(oracle["metrics"]["action_f1"], 1.0)
 
+    def test_mug_csv_adapter(self):
+        raw = {
+            "meeting_key": "M2",
+            "sentences": [{"id": 1, "speaker": "no.0", "start_time": "0", "end_time": "1", "s": "张涛负责上线。"}],
+            "action_ids": [{"id": 1}],
+            "candidate": [{"key_sentence": ["1"]}],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "mug.csv"
+            path.write_text("idx\tcontent\n0\t" + json.dumps(raw, ensure_ascii=False) + "\n", encoding="utf-8")
+            cases = load_mug(path)
+        self.assertEqual(len(cases), 1)
+        self.assertEqual(cases[0]["gold"]["action_segments"], [1])
+
     def test_qmsum_adapter(self):
         raw = {
             "meeting_transcripts": [

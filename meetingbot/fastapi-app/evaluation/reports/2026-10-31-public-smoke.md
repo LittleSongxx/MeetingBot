@@ -33,18 +33,23 @@
 
 说明：lead baseline 只是取前 3 句，且不预测 evidence，所以 evidence F1=0；oracle 1.0 证明 char-level ROUGE 与 highlight 句级 evidence 计算正确。VCSUM 真实模型摘要应替换 lead baseline 后再比较。
 
-### 2.3 MUG：action item 句级检测（synthetic fixture）
+### 2.3 MUG：真实 Test1/Dev action item 句级检测
 
-| 设置 | 样本数 | action precision | action recall | action F1 | key sentence F1 |
-|---|---|---|---|---|---|
-| keyword baseline | 2 | 1.0 | 1.0 | 1.0 | 0.5357 |
-| oracle | 2 | 1.0 | 1.0 | 1.0 | 1.0 |
+通过 ModelScope 只读 token 下载官方标注（仅 CSV，不含音频）：
+`except_TS_test1.csv` 82 场会议（其中 50 场有 gold action）、`dev.csv` 65 场（55 场有 gold action）。
 
-说明：这是按 MUG README 结构构造的小样本，关键词刚好命中，**不能当作真实 MUG 指标**；下一步用 ModelScope token 下载真实 Dev/Test1 后重跑。
+| 设置 | 样本数 | 有 action 的会议 | action precision | action recall | action F1 | key sentence F1 |
+|---|---|---|---|---|---|---|
+| test1 · keyword baseline | 82 | 50 | 0.0334 | 0.2033 | 0.0544 | 0.0662 |
+| test1 · oracle | 82 | 50 | 1.0 | 1.0 | 1.0 | 1.0 |
+| dev · keyword baseline | 65 | 55 | 0.0405 | 0.3047 | 0.0650 | 0.0537 |
+
+说明：keyword baseline 只是“句子含负责/完成/前/评估/推进”等关键词的规则抽取，precision 很低符合预期，**不是模型成绩**；oracle 全 1 证明 action gold 与 span 指标口径自洽。只有有 gold action 的会议参与 action 指标平均（无 action 的会议不计入 macro），否则会被大量 0 拉低。
 
 ## 3. 本轮新增/验证内容
 
-- `evaluation/adapters/mug.py`：MUG JSON/JSONL → 句级 transcript、action gold、key_sentence gold、topic titles；
+- MUG 真实标注已下载（ModelScope CC-BY-4.0，仅 Dev/Test1 CSV，无音频），`evaluation/adapters/fetch_mug.py` 可复现下载；
+- `evaluation/adapters/mug.py`：MUG JSON/JSONL/官方 CSV → 句级 transcript、action gold、key_sentence gold、topic titles；
 - `evaluation/adapters/qmsum.py`：QMSum meeting JSON → 句子级 transcript、query/answer、`relevant_text_span` gold；
 - `evaluation/adapters/vcsum.py`：VCSUM `overall_context`/`overall_highlights`/`long|short_test` → 展平 transcript、摘要 gold、字符级 highlight → 句级 evidence gold；
 - `evaluation/public_metrics.py`：span P/R/F1、字符级 ROUGE-1/2/L、token 重叠检索、答案相似度；
@@ -53,8 +58,8 @@
 
 ## 4. 局限与下一步
 
-1. **MUG 尚未真实下载**：需要 ModelScope 登录 token；下一步下载 Dev/Test1，用真实中文会议跑 action item 句级 P/R/F1。
-2. **baseline 不是模型**：QMSum lexical 和 VCSUM lead 只用于验证管线；下一步把项目真实输出/LLM 预测接入 adapter（增加 `predictions` JSON 入口）。
+1. **MUG 已有真实基线**：keyword 规则在真实 test1/dev 上 action F1 只有 0.0544/0.0650，下一步用项目/LLM 行动项输出替换规则 baseline；真实 MUG 音频未下载（本任务只需标注）。
+2. **baseline 不是模型**：QMSum lexical、VCSUM lead、MUG keyword 只用于验证管线；下一步把项目真实输出/LLM 预测接入 adapter（增加 `predictions` JSON 入口）。
 3. **QMSum span 口径**：当前把 `relevant_text_span` 当闭区间；若后续发现官方评测按半开区间，只需改 adapter 一行。
 4. **VCSUM highlight 是字符级**：adapter 转成“句子是否被标亮”的句级 evidence，精度低于原字符级 span；用于冒烟足够，正式评测建议保留 char-level span F1。
 5. **不能替代内部 golden set**：公开集没有中文企业会议六字段 + owner/due/status + 引用问答；仍需 10~20 场内部标注。

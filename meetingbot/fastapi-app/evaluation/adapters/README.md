@@ -8,7 +8,7 @@
 |---|---|---|---|
 | QMSum | 英文 | `git clone https://github.com/Yale-LILY/QMSum` | MIT |
 | VCSUM | 中文 | `git clone https://github.com/hahahawu/VCSum` | 仓库 MIT；论文 CC BY-NC-SA 4.0（商用前复核） |
-| MUG / AliMeeting4MUG | 中文 | ModelScope：登录后取 [AliMeeting4MUG](https://www.modelscope.cn/datasets/modelscope/Alimeeting4MUG)；本地 `eval/.env` 设 `MODELSCOPE_TOKEN`（只读）后用 SDK 下载标注 | CC-BY-4.0 |
+| MUG / AliMeeting4MUG | 中文 | ModelScope：本地 `eval/.env` 设 `MODELSCOPE_TOKEN`（只读），运行 `python -m evaluation.adapters.fetch_mug --out /data/mug` 下载 Dev/Test1 标注 CSV（不含音频） | CC-BY-4.0 |
 
 ## 目录与格式
 
@@ -82,7 +82,7 @@ baseline 说明：
 
 ## 冒烟结果
 
-2026-10-31 用 QMSum 真实样本、VCSUM 真实 test 样本和 MUG 合成 fixture 跑通，结果见
+2026-10-31 已用 QMSum 真实样本、VCSUM 真实 test 样本和 MUG 官方 Test1/Dev 标注跑通，结果见
 [`../reports/2026-10-31-public-smoke.md`](../reports/2026-10-31-public-smoke.md)。
 
 ## 指标
