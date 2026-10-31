@@ -1,7 +1,7 @@
-"""公开评测集冒烟评测：adapter → 轻量 baseline → 指标。
+"""公开评测集冒烟评测：adapter → baseline 或预测文件 → 指标。
 
-这是“公开集适配”的第一层：不调用模型，用确定性 baseline 验证数据读取与指标管线。
-后续可以把 baseline 替换成项目真实输出/LLM 输出，指标层保持不变。
+这是“公开集适配”的第一层：adapter 负责读原始数据，指标层复用；baseline 用确定性规则
+验证管线，`--predictions` 可把项目/LLM 输出接进来做真实评测。
 
 用法示例（数据按各数据集许可自行下载，不入库）：
   python -m evaluation.public_eval --dataset qmsum \
@@ -9,13 +9,22 @@
   python -m evaluation.public_eval --dataset vcsum \
     --data /path/VCSum/vcsum_data --baseline lead --kind long --limit 26
   python -m evaluation.public_eval --dataset mug \
-    --data /path/alimeeting-mug-sample.json --baseline keyword
+    --data /path/mug/except_TS_test1.csv --baseline keyword
+  python -m evaluation.public_eval --dataset mug \
+    --data /path/mug/except_TS_test1.csv --predictions predictions.json
+
+predictions.json 结构（按 case id 索引）：
+  MUG/VCSUM: {"M3115": {"action_segments": [2,3], "key_sentences": [2,3]}}
+  VCSUM:    {"0": {"summary": "...", "evidence_segments": [1,2]}}
+  QMSum:    {"qmsum_Bed003.json#0": {"queries": [
+                {"query": "...", "answer": "...", "evidence_segments": [137,138]}]}}
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -30,10 +39,10 @@ from evaluation.public_metrics import (
     span_prf,
 )
 
-MUG_ACTION_KEYWORDS = (
-    "负责", "完成", "前", "评估", "跟进", "方案", "上线", "联调", "同步", "确认",
-    "推进", "安排", "准备", "输出", "评审", "截止", "交付", "整改", "排期", "落地",
-)
+# 行动项句子检测的轻量规则 baseline：强动作词或负责人/期限信号。
+# 在 MUG Dev/Test1 上比较过多种 cue 组合，这个组合 F1 最稳（约 .07），比“前”单字规则好。
+MUG_ACTION_VERBS = re.compile(r"负责|跟进|完成|联调|上线|交付|整改|排期|落地")
+MUG_OWNER_OR_TIME = re.compile(r"\d{1,2}月|\d{1,2}日|下周|本周|月底|截止|负责人|由[^，。；]{1,8}(负责|跟进)")
 
 
 def _lead_text(case: dict[str, Any], count: int = 3) -> str:
@@ -43,17 +52,38 @@ def _lead_text(case: dict[str, Any], count: int = 3) -> str:
 def _keyword_action_segments(case: dict[str, Any]) -> set[int]:
     predicted = set()
     for segment in case["transcript"]:
-        if any(keyword in segment["content"] for keyword in MUG_ACTION_KEYWORDS):
+        content = segment["content"]
+        if MUG_ACTION_VERBS.search(content) or MUG_OWNER_OR_TIME.search(content):
             predicted.add(segment["segment_no"])
     return predicted
 
 
-def evaluate_mug(cases: list[dict], baseline: str) -> dict:
+def _prediction_for(predictions: dict | None, case_id: str) -> dict:
+    if not predictions:
+        return {}
+    payload = predictions.get(case_id)
+    return payload if isinstance(payload, dict) else {}
+
+
+def load_predictions(path: Path) -> dict:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(payload, dict) and isinstance(payload.get("cases"), dict):
+        return payload["cases"]
+    if not isinstance(payload, dict):
+        raise SystemExit("predictions 必须是 JSON 对象（case id -> prediction）")
+    return payload
+
+
+def evaluate_mug(cases: list[dict], baseline: str, predictions: dict | None = None) -> dict:
     rows = []
     for case in cases:
         gold_actions = set(case["gold"]["action_segments"])
         gold_keys = set(case["gold"]["key_sentences"])
-        if baseline == "oracle":
+        if predictions is not None:
+            prediction = _prediction_for(predictions, case["id"])
+            predicted_actions = set(prediction.get("action_segments") or [])
+            predicted_keys = set(prediction.get("key_sentences") or [])
+        elif baseline == "oracle":
             predicted_actions = set(gold_actions)
             predicted_keys = set(gold_keys)
         elif baseline == "keyword":
@@ -77,7 +107,7 @@ def evaluate_mug(cases: list[dict], baseline: str) -> dict:
     action_rows = [row for row in rows if row["gold_actions"] > 0]
     return {
         "dataset": "mug",
-        "baseline": baseline,
+        "baseline": "predictions" if predictions is not None else baseline,
         "cases": len(rows),
         "action_cases": len(action_rows),
         "metrics": {
@@ -90,12 +120,16 @@ def evaluate_mug(cases: list[dict], baseline: str) -> dict:
     }
 
 
-def evaluate_vcsum(cases: list[dict], baseline: str) -> dict:
+def evaluate_vcsum(cases: list[dict], baseline: str, predictions: dict | None = None) -> dict:
     rows = []
     for case in cases:
         gold_summary = case["gold"]["summary"]
         gold_evidence = set(case["gold"]["evidence_segments"])
-        if baseline == "oracle":
+        if predictions is not None:
+            prediction = _prediction_for(predictions, case["id"])
+            predicted_summary = str(prediction.get("summary") or "")
+            predicted_evidence = set(prediction.get("evidence_segments") or [])
+        elif baseline == "oracle":
             predicted_summary = gold_summary
             predicted_evidence = set(gold_evidence)
         elif baseline == "lead":
@@ -116,7 +150,7 @@ def evaluate_vcsum(cases: list[dict], baseline: str) -> dict:
         })
     return {
         "dataset": "vcsum",
-        "baseline": baseline,
+        "baseline": "predictions" if predictions is not None else baseline,
         "cases": len(rows),
         "metrics": {
             "rouge1": average_metric(rows, "rouge1"),
@@ -128,7 +162,7 @@ def evaluate_vcsum(cases: list[dict], baseline: str) -> dict:
     }
 
 
-def _retrieve_segments(query: str, case: dict, top_k: int = 5) -> list[int]:
+def _retrieve_segments(query: str, case: dict, top_k: int = 10) -> list[int]:
     scored = [
         (lexical_overlap_score(query, segment["content"]), segment["segment_no"])
         for segment in case["transcript"]
@@ -137,16 +171,30 @@ def _retrieve_segments(query: str, case: dict, top_k: int = 5) -> list[int]:
     return [segment_no for score, segment_no in scored[:top_k] if score > 0]
 
 
-def evaluate_qmsum(cases: list[dict], baseline: str, top_k: int = 5) -> dict:
+def evaluate_qmsum(
+    cases: list[dict],
+    baseline: str,
+    top_k: int = 10,
+    predictions: dict | None = None,
+) -> dict:
     rows = []
     for case in cases:
+        prediction = _prediction_for(predictions, case["id"]) if predictions is not None else {}
+        pred_queries = prediction.get("queries") if isinstance(prediction.get("queries"), list) else []
+        pred_by_query = {
+            str(item.get("query")): item for item in pred_queries if isinstance(item, dict) and item.get("query")
+        }
         for query in case["gold"]["queries"]:
             if query["kind"] != "specific":
                 continue
             gold_evidence = set(query.get("evidence_segments") or [])
             if not gold_evidence:
                 continue
-            if baseline == "oracle":
+            if predictions is not None:
+                predicted = pred_by_query.get(query["query"], {})
+                predicted_evidence = set(predicted.get("evidence_segments") or [])
+                predicted_answer = str(predicted.get("answer") or "")
+            elif baseline == "oracle":
                 predicted_evidence = set(gold_evidence)
                 predicted_answer = query["answer"]
             elif baseline == "lexical":
@@ -170,7 +218,7 @@ def evaluate_qmsum(cases: list[dict], baseline: str, top_k: int = 5) -> dict:
             })
     return {
         "dataset": "qmsum",
-        "baseline": baseline,
+        "baseline": "predictions" if predictions is not None else baseline,
         "cases": len(rows),
         "metrics": {
             "evidence_precision": average_metric(rows, "evidence_precision"),
@@ -188,10 +236,10 @@ def render_markdown(result: dict) -> str:
         "",
         f"- baseline: `{result['baseline']}`",
         f"- cases: {result['cases']}",
-        "",
-        "| 指标 | 数值 |",
-        "|---|---|",
     ]
+    if "action_cases" in result:
+        lines.append(f"- action cases: {result['action_cases']}")
+    lines.extend(["", "| 指标 | 数值 |", "|---|---|"])
     for key, value in result["metrics"].items():
         lines.append(f"| {key} | {value} |")
     lines.append("")
@@ -199,31 +247,33 @@ def render_markdown(result: dict) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="公开会议评测集 adapter + baseline smoke test")
+    parser = argparse.ArgumentParser(description="公开会议评测集 adapter + baseline/predictions 评测")
     parser.add_argument("--dataset", choices=["mug", "vcsum", "qmsum"], required=True)
     parser.add_argument("--data", required=True, help="数据集文件或目录")
     parser.add_argument("--baseline", choices=["lead", "keyword", "lexical", "oracle"], default="lead")
+    parser.add_argument("--predictions", help="预测 JSON；提供后覆盖 baseline")
     parser.add_argument("--kind", choices=["long", "short"], default="long", help="VCSUM 长/短摘要")
     parser.add_argument("--limit", type=int, default=20)
+    parser.add_argument("--top-k", type=int, default=10, help="QMSum lexical 检索条数")
     parser.add_argument("--output", help="写入 JSON 路径")
     args = parser.parse_args()
 
     path = Path(args.data)
+    predictions = load_predictions(Path(args.predictions)) if args.predictions else None
     if args.dataset == "mug":
         cases = load_mug(path)[: max(1, args.limit)]
-        result = evaluate_mug(cases, args.baseline)
+        result = evaluate_mug(cases, args.baseline, predictions)
     elif args.dataset == "vcsum":
         missing = validate_vcsum(path)
         if missing:
             raise SystemExit(f"VCSUM 目录缺少文件: {missing}")
         cases = load_vcsum(path, split="test", kind=args.kind)[: max(1, args.limit)]
-        result = evaluate_vcsum(cases, args.baseline)
+        result = evaluate_vcsum(cases, args.baseline, predictions)
     else:
         cases = load_qmsum(path)[: max(1, args.limit)]
-        result = evaluate_qmsum(cases, args.baseline)
+        result = evaluate_qmsum(cases, args.baseline, args.top_k, predictions)
 
-    markdown = render_markdown(result)
-    print(markdown)
+    print(render_markdown(result))
     if args.output:
         output = Path(args.output)
         output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -63,6 +63,13 @@ class PublicAdapterTest(unittest.TestCase):
         self.assertGreater(keyword["metrics"]["action_f1"], 0)
         oracle = evaluate_mug(cases, "oracle")
         self.assertEqual(oracle["metrics"]["action_f1"], 1.0)
+        predictions = evaluate_mug(
+            cases,
+            "keyword",
+            {case["id"]: {"action_segments": [1], "key_sentences": [1]} for case in cases},
+        )
+        self.assertEqual(predictions["metrics"]["action_f1"], 1.0)
+        self.assertEqual(predictions["baseline"], "predictions")
 
     def test_mug_csv_adapter(self):
         raw = {
@@ -100,8 +107,18 @@ class PublicAdapterTest(unittest.TestCase):
         oracle = evaluate_qmsum(cases, "oracle")
         self.assertEqual(oracle["metrics"]["evidence_f1"], 1.0)
         # lexical baseline 至少要能跑出数值，不要求质量
-        lexical = evaluate_qmsum(cases, "lexical")
+        lexical = evaluate_qmsum(cases, "lexical", top_k=1)
         self.assertIn("evidence_f1", lexical["metrics"])
+        predictions = evaluate_qmsum(
+            cases,
+            "lexical",
+            predictions={
+                cases[0]["id"]: {"queries": [{"query": cases[0]["gold"]["queries"][1]["query"],
+                                                 "answer": cases[0]["gold"]["queries"][1]["answer"],
+                                                 "evidence_segments": [1, 2]}]}
+            },
+        )
+        self.assertEqual(predictions["metrics"]["evidence_f1"], 1.0)
 
     def test_vcsum_adapter(self):
         first = "第一句话。"
@@ -148,6 +165,13 @@ class PublicAdapterTest(unittest.TestCase):
         oracle = evaluate_vcsum(long_cases, "oracle")
         self.assertEqual(oracle["metrics"]["rouge1"], 1.0)
         self.assertEqual(oracle["metrics"]["evidence_f1"], 1.0)
+        predictions = evaluate_vcsum(
+            long_cases,
+            "lead",
+            {"1": {"summary": long_cases[0]["gold"]["summary"], "evidence_segments": [2]}},
+        )
+        self.assertEqual(predictions["metrics"]["rouge1"], 1.0)
+        self.assertEqual(predictions["metrics"]["evidence_f1"], 1.0)
 
 
 if __name__ == "__main__":

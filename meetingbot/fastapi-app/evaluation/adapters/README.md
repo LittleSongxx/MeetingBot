@@ -78,7 +78,8 @@ baseline 说明：
 - `lexical`：QMSum 用 query 与句子的轻量词重叠取 top-5；
 - `oracle`：用 gold 作为预测，**只用于验证 adapter/指标管线**，不能当模型成绩。
 
-输出为 Markdown 表格；加 `--output result.json` 保存原始指标。
+输出为 Markdown 表格；加 `--output result.json` 保存原始指标；加 `--predictions predictions.json` 可直接评测
+项目/模型输出（按 case id 索引，格式见 README 顶部）。
 
 ## 冒烟结果
 
