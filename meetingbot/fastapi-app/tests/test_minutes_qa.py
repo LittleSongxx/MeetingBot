@@ -5,7 +5,7 @@ from api.meeting_minutes import AskPayload
 from api.meeting_minutes import ask as ask_api
 from common.exception_handler import CustomException
 from models import AiModelConfig, Meeting, MeetingMinutes, PromptTemplate, TranscriptSegment, User
-from services.minutes_qa_service import ask, format_history
+from services.minutes_qa_service import _validate_citations, ask, format_history
 from tortoise import Tortoise
 
 
@@ -118,6 +118,21 @@ class MinutesQaTest(unittest.IsolatedAsyncioTestCase):
         text = format_history(history)
         self.assertNotIn("第0轮", text)
         self.assertIn("第4轮", text)
+
+    async def test_citations_are_capped_and_ranked_by_answer_relevance(self):
+        by_no = {
+            1: {"segment_no": 1, "start_ms": 0, "end_ms": 1000, "speaker": "A", "norm": "决定改为异步导出张涛负责后端"},
+            2: {"segment_no": 2, "start_ms": 1000, "end_ms": 2000, "speaker": "B", "norm": "可以加缓存"},
+            3: {"segment_no": 3, "start_ms": 2000, "end_ms": 3000, "speaker": "C", "norm": "缓存解决不了任意范围"},
+        }
+        raw = [
+            {"segment_no": 2, "quote": "可以加缓存"},
+            {"segment_no": 3, "quote": "缓存解决不了任意范围"},
+            {"segment_no": 1, "quote": "决定改为异步导出"},
+        ]
+        citations = _validate_citations(raw, by_no, "导出怎么改", "决定改为异步导出，张涛负责后端")
+        self.assertEqual(len(citations), 2)
+        self.assertEqual(citations[0]["segment_no"], 1)
 
     async def test_whitespace_question_rejected(self):
         with self.assertRaises(CustomException) as context:

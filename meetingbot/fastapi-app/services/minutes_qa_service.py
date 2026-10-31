@@ -23,6 +23,8 @@ MAX_HISTORY_CHARS = 500
 MAX_QUESTION_CHARS = 500
 # 除检索命中的片段外，额外把纪要证据涉及的片段带进上下文，保证答案可引用
 MAX_CONTEXT_SEGMENTS = 8
+# 一次回答最多展示 2 条引用：QA 常见问题是“答对了但多引用背景片段”，会拉低引用 precision
+MAX_QA_CITATIONS = 2
 
 QA_SCHEMA = {
     "type": "object",
@@ -32,6 +34,7 @@ QA_SCHEMA = {
         "answer": {"type": "string"},
         "citations": {
             "type": "array",
+            "maxItems": MAX_QA_CITATIONS,
             "items": {
                 "type": "object",
                 "additionalProperties": False,
@@ -73,7 +76,25 @@ def format_history(history: list[dict] | None) -> str:
     return "\n".join(lines) or "（无）"
 
 
-def _validate_citations(raw_citations, by_no: dict[int, dict]) -> list[dict]:
+def _bigrams(text: str) -> set[str]:
+    normalized = normalize(text)
+    return {normalized[index:index + 2] for index in range(max(0, len(normalized) - 1))}
+
+
+def _citation_relevance(citation: dict, question: str, answer: str) -> float:
+    """引用与“问题 + 答案”的字符二元重叠，用来在多引用里选最直接支持答案的。"""
+    target = _bigrams(f"{question} {answer}")
+    if not target:
+        return 0.0
+    return len(target & _bigrams(str(citation.get("quote") or ""))) / len(target)
+
+
+def _validate_citations(
+    raw_citations,
+    by_no: dict[int, dict],
+    question: str = "",
+    answer: str = "",
+) -> list[dict]:
     citations = []
     for raw in raw_citations or []:
         if not isinstance(raw, dict):
@@ -97,7 +118,8 @@ def _validate_citations(raw_citations, by_no: dict[int, dict]) -> list[dict]:
                 "quote": quote,
             }
         )
-    return citations
+    citations.sort(key=lambda item: _citation_relevance(item, question, answer), reverse=True)
+    return citations[:MAX_QA_CITATIONS]
 
 
 async def ask(
@@ -139,9 +161,9 @@ async def ask(
         minutes.id,
         "纪要问答模型",
     )
-    citations = _validate_citations(result.get("citations") or [], by_no)
-    found = bool(result.get("found"))
     answer = str(result.get("answer") or "").strip()
+    citations = _validate_citations(result.get("citations") or [], by_no, question, answer)
+    found = bool(result.get("found"))
     if found and not citations:
         # 声称找到了但给不出可核对的引用，按“没有依据”处理，避免无出处回答
         found = False
