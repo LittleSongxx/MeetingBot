@@ -22,6 +22,16 @@ python -m evaluation.qa_eval --base-url http://127.0.0.1:9090 \
 > QA 接口同一用户有 3 秒冷却，评测脚本内置 3.2s 间隔；不要连续快速请求，否则会被误判为拒答。
 > 产品侧按问题复杂度动态限制引用：单点问题 1 条、多点问题 2~3 条，并按“问题+答案”的字符二元重叠排序；20 题 QA 集已覆盖 8 道多证据 + 4 道不可回答；重复运行会出现指标波动，需 3 次平均看。模型回答第一句出现“未找到/未提及”时强制改判拒答；后文的“材料未提及……”补充说明不误杀。
 
+## QA 引用支持度
+
+`qa_support_eval.py` 对 QA 结果逐句判断 cited evidence 是否直接支持 claim：
+
+```bash
+python -m evaluation.qa_support_eval --qa-results /tmp/qa_eval.json
+```
+
+输出 claim_support_rate、fully_supported_rate 和 unsupported samples。
+
 ## Agent 产品指标 Scorecard
 
 不跑论文 benchmark，直接统计 Agent 行为：
