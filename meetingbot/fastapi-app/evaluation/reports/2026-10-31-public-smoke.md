@@ -50,10 +50,42 @@
 
 说明：优化后在 Dev/Test1 上比较了 “旧关键词 / 宽关键词 / 动作词 / 动作词+负责人期限” 等规则，选“强动作词或负责人/期限信号”，Test1 F1 从 0.0544 提到 0.0740；这只是规则 baseline，precision 仍低，**不是模型成绩**。oracle 全 1 证明 action gold 与 span 指标口径自洽。只有有 gold action 的会议参与 action 指标平均。
 
+### 2.4 MUG 关键句 ROUGE（按 MUG 论文指标补测）
+
+| 设置 | 样本数 | key sentence span F1 | key ROUGE-1 | key ROUGE-2 | key ROUGE-L |
+|---|---|---|---|---|---|
+| MUG Test1 · keyword baseline | 82 | 0.0662 | 0.3099 | 0.1639 | 0.1520 |
+| MUG 论文 Longformer session ES | - | - | 56.5 / 60.3（avg/best） | 30.3 / 35.9 | 40.8 / 48.1 |
+
+> 注意：这里仍是字符级 ROUGE（中英文混合快速近似），论文是 token 级；数值不能直接作为“差多少”的结论，但至少已补上 ROUGE 维度。
+
+### 2.5 VCSUM 分词口径对齐
+
+| 分词 | ROUGE-1 | ROUGE-2 | ROUGE-L |
+|---|---|---|---|
+| char（旧） | 0.1976 | 0.0466 | 0.1022 |
+| jieba（可选） | 0.1715 | 0.0160 | 0.1233 |
+
+`public_eval` 已新增 `--tokenizer jieba`；jieba 为可选依赖，未安装时自动回退 char。VCSUM 论文的 BART/Pegasus 分段摘要 R-1 约 53~60，**当前 lead baseline 仍远低于模型基线**，这里只证明分词口径可切换。
+
+### 2.6 DeepSeek Flash 在 MUG 真实样本上的直接基线
+
+用 DeepSeek Flash（`deepseek-flash`，json_object，16384 max tokens）在 MUG Test1 前 6 场有 gold action 的会议上做句级行动项识别：
+
+| 模型/设置 | 样本数 | action precision | action recall | action F1 |
+|---|---|---|---|---|
+| DeepSeek Flash（直接提示，6 场） | 6 | 0.0850 | 0.4897 | 0.1394 |
+| keyword 规则（82 场） | 82 | 0.0802 | 0.0909 | 0.0740 |
+| MUG 论文 Longformer baseline | 82 | 60.18 | 66.89 | 63.14 |
+
+说明：6 场样本很小，且是“直接让 LLM 标句子”，不是项目 action item 生成链路；DeepSeek 明显偏召回（预测句多），precision 低。它说明**模型基线可以接进来**，但不能当作最终质量结论。
+
 ## 3. 本轮新增/验证内容
 
 - MUG 真实标注已下载（ModelScope CC-BY-4.0，仅 Dev/Test1 CSV，无音频），`evaluation/adapters/fetch_mug.py` 可复现下载；
 - `public_eval` 新增 `--predictions`，可把项目/LLM 输出按 case id 接入，不再只能跑规则 baseline；
+- `public_eval` 新增 `--tokenizer char|jieba`（VCSUM ROUGE 分词）和 MUG 关键句 ROUGE 指标；
+- 新增内部 golden set 标注规范 [`../golden/SCHEMA.md`](../golden/SCHEMA.md)；
 - `evaluation/adapters/mug.py`：MUG JSON/JSONL/官方 CSV → 句级 transcript、action gold、key_sentence gold、topic titles；
 - `evaluation/adapters/qmsum.py`：QMSum meeting JSON → 句子级 transcript、query/answer、`relevant_text_span` gold；
 - `evaluation/adapters/vcsum.py`：VCSUM `overall_context`/`overall_highlights`/`long|short_test` → 展平 transcript、摘要 gold、字符级 highlight → 句级 evidence gold；
@@ -65,6 +97,7 @@
 
 1. **MUG 已有真实基线**：keyword 规则在真实 test1/dev 上 action F1 只有 0.0544/0.0650，下一步用项目/LLM 行动项输出替换规则 baseline；真实 MUG 音频未下载（本任务只需标注）。
 2. **baseline 不是模型**：QMSum lexical、VCSUM lead、MUG keyword 只用于验证管线；`--predictions` 入口已就绪，下一步把项目真实输出/LLM 预测接进来。
+   DeepSeek Flash 已在 MUG 6 场样本上试跑（F1 0.1394），但样本太小、prompt 也偏宽松，需扩大样本并收紧输出。
 3. **QMSum span 口径**：当前把 `relevant_text_span` 当闭区间；若后续发现官方评测按半开区间，只需改 adapter 一行。
 4. **VCSUM highlight 是字符级**：adapter 转成“句子是否被标亮”的句级 evidence，精度低于原字符级 span；用于冒烟足够，正式评测建议保留 char-level span F1。
 5. **不能替代内部 golden set**：公开集没有中文企业会议六字段 + owner/due/status + 引用问答；仍需 10~20 场内部标注。

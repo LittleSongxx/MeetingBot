@@ -35,6 +35,12 @@ def _char_ngrams(text: str, size: int) -> Counter:
     return Counter(normalized[index:index + size] for index in range(max(0, len(normalized) - size + 1)))
 
 
+def _ngrams(tokens: list[str], size: int) -> Counter:
+    if size <= 0:
+        return Counter()
+    return Counter(tuple(tokens[index:index + size]) for index in range(max(0, len(tokens) - size + 1)))
+
+
 def _f1(candidate: Counter, reference: Counter) -> float:
     overlap = sum((candidate & reference).values())
     candidate_total = sum(candidate.values())
@@ -46,14 +52,14 @@ def _f1(candidate: Counter, reference: Counter) -> float:
     return 2 * precision * recall / (precision + recall) if precision + recall else 0.0
 
 
-def _lcs_length(left: str, right: str) -> int:
+def _lcs_length(left: list[str], right: list[str]) -> int:
     if len(left) < len(right):
         left, right = right, left
     previous = [0] * (len(right) + 1)
-    for char in left:
+    for token in left:
         current = [0]
         for index, other in enumerate(right, start=1):
-            if char == other:
+            if token == other:
                 current.append(previous[index - 1] + 1)
             else:
                 current.append(max(previous[index], current[-1]))
@@ -61,19 +67,36 @@ def _lcs_length(left: str, right: str) -> int:
     return previous[-1]
 
 
-def char_rouge(candidate: str, reference: str) -> dict:
-    """字符级 ROUGE-1/2/L，适用于中英文混合会议摘要的快速近似。"""
-    candidate = normalize_text(candidate)
-    reference = normalize_text(reference)
-    if not candidate or not reference:
+def tokenize_text(text: str, tokenizer: str = "char") -> list[str]:
+    """char：字符级（快速近似）；jieba：中文词级（可选，需安装 jieba）。"""
+    if tokenizer == "jieba":
+        try:
+            import jieba
+        except ImportError:
+            tokenizer = "char"
+        else:
+            return [token.strip() for token in jieba.lcut(str(text or "")) if token.strip()]
+    return list(normalize_text(text))
+
+
+def token_rouge(candidate: str, reference: str, tokenizer: str = "char") -> dict:
+    """token 级 ROUGE-1/2/L；默认 char，jieba 模式用于与中文分词论文对齐。"""
+    candidate_tokens = tokenize_text(candidate, tokenizer)
+    reference_tokens = tokenize_text(reference, tokenizer)
+    if not candidate_tokens or not reference_tokens:
         return {"rouge1": 0.0, "rouge2": 0.0, "rougeL": 0.0}
-    unigram = _f1(_char_ngrams(candidate, 1), _char_ngrams(reference, 1))
-    bigram = _f1(_char_ngrams(candidate, 2), _char_ngrams(reference, 2))
-    lcs = _lcs_length(candidate[:3000], reference[:3000])
-    lcs_precision = lcs / len(candidate) if candidate else 0.0
-    lcs_recall = lcs / len(reference) if reference else 0.0
+    unigram = _f1(_ngrams(candidate_tokens, 1), _ngrams(reference_tokens, 1))
+    bigram = _f1(_ngrams(candidate_tokens, 2), _ngrams(reference_tokens, 2))
+    lcs = _lcs_length(candidate_tokens[:3000], reference_tokens[:3000])
+    lcs_precision = lcs / len(candidate_tokens) if candidate_tokens else 0.0
+    lcs_recall = lcs / len(reference_tokens) if reference_tokens else 0.0
     lcs_f1 = 2 * lcs_precision * lcs_recall / (lcs_precision + lcs_recall) if lcs_precision + lcs_recall else 0.0
     return {"rouge1": round(unigram, 4), "rouge2": round(bigram, 4), "rougeL": round(lcs_f1, 4)}
+
+
+def char_rouge(candidate: str, reference: str) -> dict:
+    """字符级 ROUGE-1/2/L，适用于中英文混合会议摘要的快速近似。"""
+    return token_rouge(candidate, reference, tokenizer="char")
 
 
 def tokens(text: str) -> set[str]:

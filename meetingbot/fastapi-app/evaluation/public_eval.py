@@ -37,6 +37,7 @@ from evaluation.public_metrics import (
     char_rouge,
     lexical_overlap_score,
     span_prf,
+    token_rouge,
 )
 
 # 行动项句子检测的轻量规则 baseline：强动作词或负责人/期限信号。
@@ -94,12 +95,22 @@ def evaluate_mug(cases: list[dict], baseline: str, predictions: dict | None = No
             predicted_keys = {segment["segment_no"] for segment in case["transcript"][:10]}
         action_metrics = span_prf(gold_actions, predicted_actions)
         key_metrics = span_prf(gold_keys, predicted_keys)
+        gold_text = "".join(
+            segment["content"] for segment in case["transcript"] if segment["segment_no"] in gold_keys
+        )
+        predicted_text = "".join(
+            segment["content"] for segment in case["transcript"] if segment["segment_no"] in predicted_keys
+        )
+        key_rouge = char_rouge(predicted_text, gold_text)
         rows.append({
             "id": case["id"],
             "action_f1": action_metrics["f1"],
             "action_precision": action_metrics["precision"],
             "action_recall": action_metrics["recall"],
             "key_sentence_f1": key_metrics["f1"],
+            "key_sentence_rouge1": key_rouge["rouge1"],
+            "key_sentence_rouge2": key_rouge["rouge2"],
+            "key_sentence_rougeL": key_rouge["rougeL"],
             "gold_actions": len(gold_actions),
             "predicted_actions": len(predicted_actions),
         })
@@ -115,12 +126,20 @@ def evaluate_mug(cases: list[dict], baseline: str, predictions: dict | None = No
             "action_recall": average_metric(action_rows, "action_recall"),
             "action_f1": average_metric(action_rows, "action_f1"),
             "key_sentence_f1": average_metric(rows, "key_sentence_f1"),
+            "key_sentence_rouge1": average_metric(rows, "key_sentence_rouge1"),
+            "key_sentence_rouge2": average_metric(rows, "key_sentence_rouge2"),
+            "key_sentence_rougeL": average_metric(rows, "key_sentence_rougeL"),
         },
         "details": rows,
     }
 
 
-def evaluate_vcsum(cases: list[dict], baseline: str, predictions: dict | None = None) -> dict:
+def evaluate_vcsum(
+    cases: list[dict],
+    baseline: str,
+    predictions: dict | None = None,
+    tokenizer: str = "char",
+) -> dict:
     rows = []
     for case in cases:
         gold_summary = case["gold"]["summary"]
@@ -138,7 +157,7 @@ def evaluate_vcsum(cases: list[dict], baseline: str, predictions: dict | None = 
         else:
             predicted_summary = ""
             predicted_evidence = set()
-        rouge = char_rouge(predicted_summary, gold_summary)
+        rouge = token_rouge(predicted_summary, gold_summary, tokenizer=tokenizer)
         evidence = span_prf(gold_evidence, predicted_evidence)
         rows.append({
             "id": case["id"],
@@ -158,6 +177,7 @@ def evaluate_vcsum(cases: list[dict], baseline: str, predictions: dict | None = 
             "rougeL": average_metric(rows, "rougeL"),
             "evidence_f1": average_metric(rows, "evidence_f1"),
         },
+        "tokenizer": tokenizer,
         "details": rows,
     }
 
@@ -239,6 +259,8 @@ def render_markdown(result: dict) -> str:
     ]
     if "action_cases" in result:
         lines.append(f"- action cases: {result['action_cases']}")
+    if result.get("tokenizer"):
+        lines.append(f"- tokenizer: `{result['tokenizer']}`")
     lines.extend(["", "| 指标 | 数值 |", "|---|---|"])
     for key, value in result["metrics"].items():
         lines.append(f"| {key} | {value} |")
@@ -255,6 +277,7 @@ def main() -> None:
     parser.add_argument("--kind", choices=["long", "short"], default="long", help="VCSUM 长/短摘要")
     parser.add_argument("--limit", type=int, default=20)
     parser.add_argument("--top-k", type=int, default=10, help="QMSum lexical 检索条数")
+    parser.add_argument("--tokenizer", choices=["char", "jieba"], default="char", help="VCSUM ROUGE 分词方式")
     parser.add_argument("--output", help="写入 JSON 路径")
     args = parser.parse_args()
 
@@ -268,7 +291,7 @@ def main() -> None:
         if missing:
             raise SystemExit(f"VCSUM 目录缺少文件: {missing}")
         cases = load_vcsum(path, split="test", kind=args.kind)[: max(1, args.limit)]
-        result = evaluate_vcsum(cases, args.baseline, predictions)
+        result = evaluate_vcsum(cases, args.baseline, predictions, tokenizer=args.tokenizer)
     else:
         cases = load_qmsum(path)[: max(1, args.limit)]
         result = evaluate_qmsum(cases, args.baseline, args.top_k, predictions)
