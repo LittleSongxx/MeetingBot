@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 
 from models import Meeting, MeetingMinutes
@@ -27,6 +28,27 @@ MAX_QUESTION_CHARS = 500
 MAX_CONTEXT_SEGMENTS = 16
 # 引用上限按问题复杂度动态决定：单点问题 1 条，多点问题 2~3 条。
 MAX_QA_CITATIONS = 3
+# 生成后 claim 审核：默认关闭，打开后对每条 claim 判断引用是否支持，删除无依据 claim
+QA_CLAIM_AUDIT_ENABLED = os.getenv("QA_CLAIM_AUDIT_ENABLED", "0") == "1"
+QA_AUDIT_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "claims": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "claim": {"type": "string"},
+                    "supported": {"type": "boolean"},
+                },
+                "required": ["claim", "supported"],
+            },
+        },
+    },
+    "required": ["claims"],
+}
 # 模型有时会在回答里自己写“材料没有提到”，却仍把 found=true；这种自相矛盾直接按拒答处理
 REFUSAL_PATTERN = re.compile(
     r"(未找到|没有找到|未提及|没有提及|未提到|没有提到|没有相关|无法回答|材料中未|没有[^。！？\n]{0,30}(找到|提及|提到|明确|决定|安排|相关|依据))"
@@ -208,4 +230,29 @@ async def ask(
     if not found:
         citations = []
         answer = answer or "材料中未找到足够依据来回答这个问题。"
+    if QA_CLAIM_AUDIT_ENABLED and found and answer:
+        try:
+            audit = await invoke_json(
+                config,
+                "你是严格的证据审计员，只输出 JSON。",
+                "问题：" + question + "\n回答：" + answer + "\n引用片段：\n" + "\n".join(
+                    f"[{item['segment_no']}] {item['quote']}" for item in citations
+                ) + "\n\n逐条判断回答中的 claim 是否能被引用片段直接支持。只输出 JSON：{\"claims\": [{\"claim\": \"...\", \"supported\": true}]}",
+                QA_AUDIT_SCHEMA,
+                "MINUTES_QA_AUDIT",
+                minutes.id,
+                "问答claim审核",
+            )
+            supported = [
+                str(item.get("claim") or "").strip()
+                for item in audit.get("claims") or []
+                if item.get("supported") and str(item.get("claim") or "").strip()
+            ]
+            if supported:
+                answer = "。".join(supported)
+                if not answer.endswith(("。", "！", "？")):
+                    answer += "。"
+        except Exception:
+            # 审核失败不影响主回答，保守返回原答案
+            logger.warning("QA claim 审核失败，保留原答案", exc_info=True)
     return {"found": found, "answer": answer, "citations": citations}

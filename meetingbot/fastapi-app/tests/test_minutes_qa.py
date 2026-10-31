@@ -124,6 +124,28 @@ class MinutesQaTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mocked.await_count, 2)
         self.assertTrue(result["found"])
 
+    async def test_claim_audit_removes_unsupported_claims_when_enabled(self):
+        mocked = AsyncMock(side_effect=[
+            {
+                "found": True,
+                "answer": "报表导出改为异步导出。该任务风险等级为 medium。",
+                "citations": [{"segment_no": 1, "quote": "报表导出改成异步导出，张涛负责后端。"}],
+            },
+            {
+                "claims": [
+                    {"claim": "报表导出改为异步导出", "supported": True},
+                    {"claim": "该任务风险等级为 medium", "supported": False},
+                ]
+            },
+        ])
+        with patch("services.minutes_qa_service.invoke_json", new=mocked), patch(
+            "services.minutes_qa_service.QA_CLAIM_AUDIT_ENABLED", True
+        ):
+            result = await ask(self.minutes, self.config, self.prompt, "报表导出改成什么？")
+        self.assertTrue(result["found"])
+        self.assertIn("异步导出", result["answer"])
+        self.assertNotIn("medium", result["answer"])
+
     async def test_invalid_citation_is_dropped_and_downgraded(self):
         mocked = AsyncMock(
             return_value={
