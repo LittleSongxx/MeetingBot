@@ -43,6 +43,7 @@ JUDGE_TEMPLATE = """参考回答：
 API_KEY = os.getenv("LLM_API_KEY", "")
 BASE_URL = os.getenv("LLM_BASE_URL", "https://api.deepseek.com").rstrip("/")
 MODEL = os.getenv("LLM_MODEL", "deepseek-flash")
+MAX_POINTS = int(os.getenv("QMSUM_MAX_POINTS", "8"))
 
 
 def post(payload, timeout=900):
@@ -64,7 +65,7 @@ def answer_query(case, query):
         "model": MODEL,
         "messages": [
             {"role": "system", "content": SYSTEM},
-            {"role": "user", "content": ANSWER_TEMPLATE.format(transcript=transcript, question=query["query"])},
+            {"role": "user", "content": ANSWER_TEMPLATE.replace("最多 8 条要点", f"最多 {MAX_POINTS} 条要点").format(transcript=transcript, question=query["query"])},
         ],
         "temperature": 0,
         "max_tokens": 8192,

@@ -37,7 +37,7 @@ QA_CLAIM_AUDIT_ENABLED=1
 python -m evaluation.qmsum_points_eval
 ```
 
-要求模型用最多 8 条要点回答，对比单段短答案的 keypoint coverage 与 evidence F1。
+要求模型用最多 `QMSUM_MAX_POINTS` 条要点回答（默认 8），对比单段短答案的 keypoint coverage 与 evidence F1。
 
 ## QMSum 答案要点覆盖
 
