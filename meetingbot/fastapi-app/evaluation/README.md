@@ -31,6 +31,14 @@ QA_CLAIM_AUDIT_ENABLED=1
 
 开启后每条 QA 会多一次审核模型调用，成本/延迟上升；评测栈 A/B 见 Agent scorecard。默认关闭。
 
+## QMSum 要点式回答
+
+```bash
+python -m evaluation.qmsum_points_eval
+```
+
+要求模型用最多 8 条要点回答，对比单段短答案的 keypoint coverage 与 evidence F1。
+
 ## QMSum 答案要点覆盖
 
 ```bash
