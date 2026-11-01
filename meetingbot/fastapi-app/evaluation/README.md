@@ -31,6 +31,14 @@ QA_CLAIM_AUDIT_ENABLED=1
 
 开启后每条 QA 会多一次审核模型调用，成本/延迟上升；评测栈 A/B 见 Agent scorecard。默认关闭。
 
+## QMSum 覆盖反思
+
+```bash
+python -m evaluation.qmsum_reflect_eval
+```
+
+初答 → 找遗漏 → 合并重答；用于验证多轮反思是否真的提高 coverage（当前结论：没有）。
+
 ## QMSum 方面分解回答
 
 ```bash
