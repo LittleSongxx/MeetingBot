@@ -81,6 +81,15 @@ python -m evaluation.qa_support_eval --qa-results /tmp/qa_eval.json
 
 输出 claim_support_rate、fully_supported_rate 和 unsupported samples。
 
+## 质量门禁
+
+```bash
+python -m evaluation.quality_gate --qa <qa_eval.json> --support <qa_support.json> \
+  --qmsum <qmsum_points.json> --scorecard <agent_scorecard.json>
+```
+
+把 QA citation P/R、found/拒答、claim 支持、QMSum coverage/quote、Agent 调用成功率/证据/行动项阈值固化为退出码（0=PASS, 1=FAIL）。
+
 ## Agent 产品指标 Scorecard
 
 不跑论文 benchmark，直接统计 Agent 行为：
