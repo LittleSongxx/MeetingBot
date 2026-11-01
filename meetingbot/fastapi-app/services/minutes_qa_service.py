@@ -252,6 +252,16 @@ async def ask(
                 answer = "。".join(supported)
                 if not answer.endswith(("。", "！", "？")):
                     answer += "。"
+                # 审核删了 claim 后，引用也要跟着收敛：只保留最能支撑 retained claims 的引用
+                if citations:
+                    ranked = []
+                    for citation in citations:
+                        score = max(
+                            _citation_relevance(citation, "", claim) for claim in supported
+                        )
+                        ranked.append((score, citation))
+                    ranked.sort(key=lambda item: item[0], reverse=True)
+                    citations = [item[1] for item in ranked[:min(len(citations), MAX_QA_CITATIONS)]]
         except Exception:
             # 审核失败不影响主回答，保守返回原答案
             logger.warning("QA claim 审核失败，保留原答案", exc_info=True)
