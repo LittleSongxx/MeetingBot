@@ -31,6 +31,14 @@ QA_CLAIM_AUDIT_ENABLED=1
 
 开启后每条 QA 会多一次审核模型调用，成本/延迟上升；评测栈 A/B 见 Agent scorecard。默认关闭。
 
+## QMSum 答案要点覆盖
+
+```bash
+python -m evaluation.qmsum_qa_eval
+```
+
+同时统计 answered 率、keypoint coverage、evidence F1 和 quote 合法率；脚本读取 `/tmp/qmsum`。
+
 ## QA 引用支持度
 
 `qa_support_eval.py` 对 QA 结果逐句判断 cited evidence 是否直接支持 claim：

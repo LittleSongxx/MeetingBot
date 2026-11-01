@@ -121,6 +121,22 @@
 
 解读：引用精确率约 51%，且 **98.2% 的 quote 能逐字定位**，说明“引用出处”本身较可靠；但 QMSum 的 gold evidence 往往覆盖几十句，模型只给最多 10 条，recall 天然偏低；gold answer 是抽象式长答案，字符相似度 0.072 也不能直接当答案质量结论。下一步应按“答案要点覆盖”而不是整段字符相似度评估，或把引用上限与 gold span 长度对齐。
 
+### 2.10 QMSum 答案要点覆盖（替代只看字符相似度）
+
+对 18 个 specific query 同时评：答案要点覆盖、引用证据、quote 合法性。
+
+| 指标 | 当前 |
+|---|---|
+| answered 率 | **94.44%** |
+| 平均 keypoint coverage | **0.1667** |
+| 平均 evidence F1 | **0.2272** |
+| quote 逐字合法率 | **100%** |
+
+解读：
+- quote 100% 可逐字定位，引用出处可靠；
+- evidence F1 0.2272 与之前的检索评测接近；
+- keypoint coverage 只有 0.1667，主要因为 QMSum gold answer 很长、评审严格，模型回答通常只覆盖少量要点；这说明**检索/引用不等于答全**，后续需要要点级生成评测，而不是继续看字符 ROUGE。
+
 ## 3. 本轮新增/验证内容
 
 - MUG 真实标注已下载（ModelScope CC-BY-4.0，仅 Dev/Test1 CSV，无音频），`evaluation/adapters/fetch_mug.py` 可复现下载；
