@@ -270,6 +270,76 @@
       "expected_segments": [
         10
       ]
+    },
+    {
+      "id": "q31",
+      "question": "会上有没有讨论员工招聘计划？",
+      "answer": "没有找到相关依据。",
+      "answerable": false,
+      "expected_segments": []
+    },
+    {
+      "id": "q32",
+      "question": "有没有确定 Q4 营收目标？",
+      "answer": "没有找到相关依据。",
+      "answerable": false,
+      "expected_segments": []
+    },
+    {
+      "id": "q33",
+      "question": "会上有没有讨论竞品分析？",
+      "answer": "没有找到相关依据。",
+      "answerable": false,
+      "expected_segments": []
+    },
+    {
+      "id": "q34",
+      "question": "有没有确定服务器采购预算？",
+      "answer": "没有找到相关依据。",
+      "answerable": false,
+      "expected_segments": []
+    },
+    {
+      "id": "q35",
+      "question": "有没有决定裁撤某个团队？",
+      "answer": "没有找到相关依据。",
+      "answerable": false,
+      "expected_segments": []
+    },
+    {
+      "id": "q36",
+      "question": "会上有没有提到专利申请？",
+      "answer": "没有找到相关依据。",
+      "answerable": false,
+      "expected_segments": []
+    },
+    {
+      "id": "q37",
+      "question": "有没有讨论海外市场发布？",
+      "answer": "没有找到相关依据。",
+      "answerable": false,
+      "expected_segments": []
+    },
+    {
+      "id": "q38",
+      "question": "有没有确定发布会提前到 8 月？",
+      "answer": "没有找到相关依据。",
+      "answerable": false,
+      "expected_segments": []
+    },
+    {
+      "id": "q39",
+      "question": "有没有确定用户增长指标？",
+      "answer": "没有找到相关依据。",
+      "answerable": false,
+      "expected_segments": []
+    },
+    {
+      "id": "q40",
+      "question": "会上有没有讨论供应商合同？",
+      "answer": "没有找到相关依据。",
+      "answerable": false,
+      "expected_segments": []
     }
   ]
 }
