@@ -190,7 +190,8 @@ async def ask(
     """回答一个关于本场会议的问题；找不到依据时返回 found=false。"""
     meeting = await Meeting.get_or_none(id=minutes.meeting_id)
     segments = await load_task_evidence_context(minutes.source_task_id)
-    ranked = rank_segments(_retrieval_query(question, history), segments)
+    retrieval_query = _retrieval_query(question, history)
+    ranked = rank_segments(retrieval_query, segments)
     chosen = list(ranked)[:MAX_CONTEXT_SEGMENTS]
     chosen_nos = {segment["segment_no"] for segment in chosen}
     evidence_nos = collect_evidence_segment_nos(minutes_payload(minutes))
@@ -210,6 +211,8 @@ async def ask(
         history=format_history(history),
         question=question[:MAX_QUESTION_CHARS],
     )
+    if history:
+        user_prompt += "\n\n注意：这是多轮追问。回答和引用必须结合上一轮用户问题，不能只看当前短问句。"
     result = None
     for attempt in range(2):
         try:
@@ -231,7 +234,7 @@ async def ask(
         if str(result.get("answer") or "").strip():
             break
     answer = str(result.get("answer") or "").strip()
-    citations = _validate_citations(result.get("citations") or [], by_no, question, answer)
+    citations = _validate_citations(result.get("citations") or [], by_no, retrieval_query, answer)
     found = bool(result.get("found"))
     if found and not citations:
         # 声称找到了但给不出可核对的引用，按“没有依据”处理，避免无出处回答

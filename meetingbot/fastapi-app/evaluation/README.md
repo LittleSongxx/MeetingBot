@@ -69,7 +69,7 @@ python -m evaluation.qmsum_points_eval
 python -m evaluation.qa_multiturn_eval --base-url http://127.0.0.1:9090
 ```
 
-5 组主问题 + follow-up，验证历史上下文、引用与答案相似度。
+5 组主问题 + follow-up，验证历史上下文、引用与答案相似度；检索、提示和引用排序都使用“上一轮问题 + 当前追问”。
 
 ## QMSum 答案要点覆盖
 
