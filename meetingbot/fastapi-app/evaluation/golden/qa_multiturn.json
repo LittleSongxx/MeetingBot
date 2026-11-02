@@ -1,0 +1,40 @@
+{
+  "minutes_id": 1,
+  "conversations": [
+    {
+      "id": "c1",
+      "turns": [
+        {"question": "报表导出最终决定改成什么方案？", "answer": "改为异步导出。", "expected_segments": [10]},
+        {"question": "后端由谁负责？", "answer": "张涛。", "expected_segments": [10]}
+      ]
+    },
+    {
+      "id": "c2",
+      "turns": [
+        {"question": "灰度放量分几个阶段？", "answer": "10%、30%、100% 三个阶段。", "expected_segments": [11]},
+        {"question": "每阶段观察多久？", "answer": "观察一天。", "expected_segments": [11]}
+      ]
+    },
+    {
+      "id": "c3",
+      "turns": [
+        {"question": "对外通稿什么时候定稿？", "answer": "9 月 12 日。", "expected_segments": [12]},
+        {"question": "由谁负责？", "answer": "李悦。", "expected_segments": [12]}
+      ]
+    },
+    {
+      "id": "c4",
+      "turns": [
+        {"question": "V2.0 计划内需求验收通过多少？", "answer": "17 个需求通过 15 个。", "expected_segments": [3]},
+        {"question": "剩下哪两个需求？", "answer": "报表导出和消息推送的免打扰设置。", "expected_segments": [3]}
+      ]
+    },
+    {
+      "id": "c5",
+      "turns": [
+        {"question": "异步导出的风险是什么？", "answer": "任务堆积，需要限流和失败重试。", "expected_segments": [13]},
+        {"question": "由谁跟进？", "answer": "张涛评估队列和限流方案。", "expected_segments": [14]}
+      ]
+    }
+  ]
+}

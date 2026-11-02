@@ -5,7 +5,7 @@ from api.meeting_minutes import AskPayload
 from api.meeting_minutes import ask as ask_api
 from common.exception_handler import CustomException
 from models import AiModelConfig, Meeting, MeetingMinutes, PromptTemplate, TranscriptSegment, User
-from services.minutes_qa_service import _looks_like_refusal, _validate_citations, ask, format_history
+from services.minutes_qa_service import _looks_like_refusal, _retrieval_query, _validate_citations, ask, format_history
 from tortoise import Tortoise
 
 
@@ -168,6 +168,15 @@ class MinutesQaTest(unittest.IsolatedAsyncioTestCase):
         text = format_history(history)
         self.assertNotIn("第0轮", text)
         self.assertIn("第4轮", text)
+
+    def test_retrieval_query_uses_previous_user_turn(self):
+        query = _retrieval_query("由谁跟进？", [
+            {"role": "user", "content": "异步导出的风险是什么？"},
+            {"role": "assistant", "content": "任务堆积风险。"},
+        ])
+        self.assertIn("异步导出的风险", query)
+        self.assertIn("由谁跟进", query)
+        self.assertEqual(_retrieval_query("报表导出怎么改？", []), "报表导出怎么改？")
 
     def test_refusal_marker_detection(self):
         self.assertTrue(_looks_like_refusal("材料中未找到足够依据来回答这个问题。"))

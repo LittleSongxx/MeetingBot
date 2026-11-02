@@ -89,6 +89,20 @@ def minutes_payload(minutes: MeetingMinutes) -> dict:
     }
 
 
+def _retrieval_query(question: str, history: list[dict] | None) -> str:
+    """多轮追问只拿当前问题检索会丢上下文；带上最近一轮用户问题再做片段召回。"""
+    if not history:
+        return question
+    user_turns = [
+        str(message.get("content") or "").strip()
+        for message in history
+        if isinstance(message, dict) and message.get("role") == "user" and str(message.get("content") or "").strip()
+    ]
+    if not user_turns:
+        return question
+    return user_turns[-1][:MAX_QUESTION_CHARS] + " " + question
+
+
 def format_history(history: list[dict] | None) -> str:
     """把最近几轮对话拼成提示词里的文本，限制轮数与长度，避免上下文膨胀。"""
     if not history:
@@ -176,7 +190,7 @@ async def ask(
     """回答一个关于本场会议的问题；找不到依据时返回 found=false。"""
     meeting = await Meeting.get_or_none(id=minutes.meeting_id)
     segments = await load_task_evidence_context(minutes.source_task_id)
-    ranked = rank_segments(question, segments)
+    ranked = rank_segments(_retrieval_query(question, history), segments)
     chosen = list(ranked)[:MAX_CONTEXT_SEGMENTS]
     chosen_nos = {segment["segment_no"] for segment in chosen}
     evidence_nos = collect_evidence_segment_nos(minutes_payload(minutes))

@@ -63,6 +63,14 @@ python -m evaluation.qmsum_points_eval
 
 要求模型用最多 `QMSUM_MAX_POINTS` 条要点回答（默认 8），对比单段短答案的 keypoint coverage 与 evidence F1。
 
+## 多轮追问 QA
+
+```bash
+python -m evaluation.qa_multiturn_eval --base-url http://127.0.0.1:9090
+```
+
+5 组主问题 + follow-up，验证历史上下文、引用与答案相似度。
+
 ## QMSum 答案要点覆盖
 
 ```bash
