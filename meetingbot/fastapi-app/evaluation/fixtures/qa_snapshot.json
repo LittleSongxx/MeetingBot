@@ -1,0 +1,8 @@
+{
+  "metrics": {
+    "citation_precision": 0.9143,
+    "citation_recall": 0.9143,
+    "found_rate": 1.0,
+    "refusal_accuracy": 1.0
+  }
+}

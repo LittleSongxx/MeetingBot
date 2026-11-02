@@ -89,6 +89,14 @@ python -m evaluation.qa_support_eval --qa-results /tmp/qa_eval.json
 
 输出 claim_support_rate、fully_supported_rate 和 unsupported samples。
 
+## Golden 数据校验
+
+```bash
+python -m evaluation.validate_golden
+```
+
+校验 QA/多轮 golden 的 id 唯一性、answerable 与 expected_segments 一致性，避免评测集腐化。CI 会执行该检查。
+
 ## 质量门禁
 
 ```bash

@@ -49,6 +49,16 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_*.py' -v
         working-directory: meetingbot/fastapi-app
 
+      - name: 质量门禁（离线快照）
+        # 不调模型：用固定快照验证 quality_gate 阈值和配置没有回归
+        run: |
+          python -m evaluation.quality_gate \
+            --qa evaluation/fixtures/qa_snapshot.json \
+            --support evaluation/fixtures/support_snapshot.json \
+            --qmsum evaluation/fixtures/qmsum_snapshot.json \
+            --scorecard evaluation/fixtures/scorecard_snapshot.json
+        working-directory: meetingbot/fastapi-app
+
   frontend:
     runs-on: ubuntu-22.04
     steps:
