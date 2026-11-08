@@ -44,7 +44,7 @@ docker compose up -d --build
 | `MYSQL_USER` | 否 | 默认 `meetingbot` |
 | `MYSQL_HOST` / `MYSQL_PORT` | 否 | 本机开发默认 `localhost:3306`；compose 内后端固定为 `db:3306` |
 | `SQL_ECHO` | 否 | 是否打印 SQL 日志，默认 `false` |
-| `JWT_SECRET` | 是 | JWT 签名密钥（留空则用源码默认值，生产必须覆盖） |
+| `JWT_SECRET` | 否（推荐覆盖） | JWT 签名密钥；不填时用源码默认值（生产必须覆盖） |
 | `JWT_EXPIRE_HOURS` | 否 | Token 有效期，默认 24 |
 | `TZ` | 否 | 容器时区，默认 `Asia/Shanghai` |
 | `BACKEND_PORT` / `WEB_PORT` | 否 | 宿主机端口，默认 `19092` / `18083` |
@@ -57,6 +57,8 @@ docker compose up -d --build
 
 1. `01-schema.sql`：建 13 张表；
 2. `02-seed.sql`：插入 2 个部门、3 个演示账号、1 场会议、4 条空 Key 的模型配置、5 条 Prompt 模板。
+
+种子账号的头像字段为空（管理端用姓名首字兜底显示，不会出现破图）；需要头像可在「个人资料」上传。
 
 初始化完成后，四类模型配置的 API Key 为空，需要在网页「AI模型配置」里由管理员填写并启用
 （转写 / 纪要 / 自检至少各一条，说话人匹配可选）。

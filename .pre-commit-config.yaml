@@ -1,4 +1,5 @@
-# 本地提交前钩子。CI 里跑的是同一套 ruff 配置（见 .github/workflows/ci.yml）。
+# 本地提交前钩子（可选）。CI 只跑后端单测与前端构建，不跑 ruff；
+# 这里的 ruff hook 需要先 pip install pre-commit 才会生效，详见下方命令。
 #
 # 安装（在后端 venv 里）：
 #   meetingbot/fastapi-app/.venv/bin/pre-commit install

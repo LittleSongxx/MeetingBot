@@ -1,4 +1,4 @@
-# AI 智能会议纪要辅助系统（AIMeeting）
+# MeetingBot · AI 智能会议纪要辅助系统
 
 把一场会议的录音、视频或资料变成一份**可确认、可导出**的结构化会议纪要：
 
@@ -13,6 +13,22 @@ flowchart LR
 > 本仓库是原版课程项目的整理版：后端 FastAPI + Tortoise ORM + MySQL，前端 Vue 3 + Element Plus，
 > 业务链路与课程源码保持一致；工程外壳（Docker Compose 部署、初始化 SQL、CI）在课程源码基础上补齐。
 > 部署与运维细节见 [DEPLOYMENT.md](DEPLOYMENT.md)。
+
+## 界面预览
+
+> 以下截图来自本仓库的 Docker Compose 部署（种子演示数据，账号 `admin/admin`），非设计稿。
+
+| 登录页 | 系统首页 |
+| --- | --- |
+| ![登录页](docs/screenshots/01-login.png) | ![系统首页](docs/screenshots/02-home.png) |
+
+| 会议管理 | 会议资料 |
+| --- | --- |
+| ![会议管理](docs/screenshots/03-meeting.png) | ![会议资料](docs/screenshots/04-material.png) |
+
+| AI 会议纪要 | 运行观测 |
+| --- | --- |
+| ![AI 会议纪要](docs/screenshots/05-minutes.png) | ![运行观测](docs/screenshots/06-observability.png) |
 
 ## 这个项目是什么
 
@@ -105,8 +121,17 @@ docker compose up -d --build
 
 ### 方式二：本机开发
 
-1. 本机 MySQL 8 建库 `ai_meeting`，导入 `db/01-schema.sql` 与 `db/02-seed.sql`
-   （或在 MySQL 客户端里直接执行这两个文件）；
+1. 本机 MySQL 8 建库并选中（`db/01-schema.sql` 里不含 `CREATE DATABASE`/`USE`，给容器初始化用）：
+   ```mysql
+   CREATE DATABASE IF NOT EXISTS ai_meeting DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   USE ai_meeting;
+   ```
+   再依次执行 `db/01-schema.sql`、`db/02-seed.sql`；命令行等价写法：
+   ```bash
+   mysql -uroot -p -e "CREATE DATABASE IF NOT EXISTS ai_meeting DEFAULT CHARSET utf8mb4"
+   mysql -uroot -p -D ai_meeting < db/01-schema.sql
+   mysql -uroot -p -D ai_meeting < db/02-seed.sql
+   ```
 2. 后端：
    ```bash
    cd meetingbot/fastapi-app
@@ -143,6 +168,9 @@ python -m unittest discover -s tests -p 'test_*.py'
 
 `meetingbot/fastapi-app/files/`（约 27MB 录音/视频/文档）**未提交到仓库**，仅本地运行或演示时使用；
 如需完整演示数据，可从原课程项目素材目录复制一份到该路径，或自行上传会议资料。
+
+种子账号的头像字段为空：管理端会用姓名首字兜底显示（不出现破图），需要头像可在「个人资料」上传；
+新建会议资料、转写、纪要后页面会自动展示对应文件与产物。
 
 ## 已知边界（个人/课程项目，不是生产系统）
 
