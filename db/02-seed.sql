@@ -1,15 +1,18 @@
 -- 原版 AI 会议纪要辅助系统：种子数据（2 个部门、3 个账号、1 场会议、4 条模型配置、5 条 Prompt）
 -- 账号为原版课程项目的演示账号 admin/admin、employee/123456、operator/123456（明文口令，已知缺陷）。
 
+
+SET NAMES utf8mb4;
+
 INSERT INTO `department` (`id`, `name`, `description`, `status`) VALUES
 (1, '产品研发部', '负责产品设计、研发和技术评审', 'NORMAL'),
 (2, '市场运营部', '负责市场活动和运营增长', 'NORMAL');
 
 INSERT INTO `user` (`username`, `password`, `name`, `avatar`, `role`, `phone`, `email`, `department_id`, `position`, `status`)
 VALUES
-  ('admin', 'admin', '系统管理员', '/files/download/1.png', 'ADMIN', '13800000000', 'admin@example.com', NULL, '系统管理员', 'NORMAL'),
-  ('employee', '123456', '张晨', '/files/download/3.png', 'EMPLOYEE', '13900000000', 'employee@example.com', 1, '后端开发工程师', 'NORMAL'),
-  ('operator', '123456', '李悦', '/files/download/4.png', 'EMPLOYEE', '13700000000', 'operator@example.com', 2, '运营专员', 'NORMAL');
+  ('admin', 'admin', '系统管理员', NULL, 'ADMIN', '13800000000', 'admin@example.com', NULL, '系统管理员', 'NORMAL'),
+  ('employee', '123456', '张晨', NULL, 'EMPLOYEE', '13900000000', 'employee@example.com', 1, '后端开发工程师', 'NORMAL'),
+  ('operator', '123456', '李悦', NULL, 'EMPLOYEE', '13700000000', 'operator@example.com', 2, '运营专员', 'NORMAL');
 
 INSERT INTO `meeting` (`id`, `meeting_no`, `title`, `start_time`, `end_time`, `location`, `agenda`, `creator_id`, `host_id`, `status`)
 VALUES (1, 'MTG202608270001', 'AI会议助手需求评审会', '2026-08-28 09:30:00', '2026-08-28 11:00:00', '三楼第一会议室', '确认会议管理、转写和纪要功能边界', 2, 2, 'SCHEDULED');
