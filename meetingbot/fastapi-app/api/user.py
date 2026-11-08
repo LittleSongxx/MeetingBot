@@ -1,25 +1,23 @@
 from typing import List
 
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel, ConfigDict
+
 from common.auth import get_current_user, require_admin
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
-from common.security import hash_password, password_rule_error
 from common.times import format_datetime
-from common.urls import to_relative_url
-from fastapi import APIRouter, Body, Depends, Query
 from models import (
-    ActionItem,
     AgentRun,
     Department,
     Meeting,
     MeetingMaterial,
     MeetingMinutes,
     MeetingParticipant,
-    TranscriptionTask,
     TranscriptSegment,
+    TranscriptionTask,
     User,
 )
-from pydantic import BaseModel, ConfigDict, Field
 
 router = APIRouter(prefix="/user")
 
@@ -30,23 +28,23 @@ class UserPayload(BaseModel):
     # 编辑时回填，新增时不存在
     id: int | None = None
     # 弹窗账号输入框，只有新增时可编辑
-    username: str | None = Field(default=None, max_length=100)
+    username: str | None = None
     # 弹窗密码输入框，只有新增时出现
     password: str | None = None
     # 弹窗姓名输入框
-    name: str | None = Field(default=None, max_length=100)
+    name: str | None = None
     # 头像上传成功后由 handleFileUpload 写入
     avatar: str | None = None
     # 弹窗角色下拉框
     role: str | None = None
     # 弹窗电话输入框
-    phone: str | None = Field(default=None, max_length=30)
+    phone: str | None = None
     # 弹窗邮箱输入框
-    email: str | None = Field(default=None, max_length=100)
+    email: str | None = None
     # 弹窗所属部门下拉框
     department_id: int | None = None
     # 弹窗职位输入框
-    position: str | None = Field(default=None, max_length=100)
+    position: str | None = None
     # 弹窗状态单选框
     status: str | None = None
 
@@ -61,8 +59,8 @@ async def user_dict(user: User) -> dict:
         "username": user.username,
         # 表格“姓名”列
         "name": user.name,
-        # 表格“头像”列的图片地址；历史数据里的绝对地址归一化成相对路径
-        "avatar": to_relative_url(user.avatar),
+        # 表格“头像”列的图片地址
+        "avatar": user.avatar,
         # 表格“角色”列，页面翻译成“管理员”或“员工”
         "role": user.role,
         # 表格“电话”列
@@ -109,10 +107,6 @@ async def has_business_reference(user_id: int) -> bool:
         # 第 13、15 章：他发起的纪要自检运行、他确认过的修订稿
         AgentRun.filter(user_id=user_id).exists(),
         AgentRun.filter(applied_by=user_id).exists(),
-        # 行动项：他创建、确认或负责的条目
-        ActionItem.filter(created_by=user_id).exists(),
-        ActionItem.filter(confirmed_by=user_id).exists(),
-        ActionItem.filter(owner_user_id=user_id).exists(),
     ]
     # 逐个执行，命中任意一项就说明有引用，后面的查询不必再跑
     for check in checks:
@@ -149,16 +143,11 @@ async def add(payload: UserPayload, _: User = Depends(require_admin)):
         raise CustomException("角色参数错误")
     # 选中的部门必须存在且处于正常状态
     await validate_department(payload.department_id)
-    # 新增用户时允许留空（用默认初始密码），但显式填了密码就必须满足最低长度
-    if payload.password:
-        password_error = password_rule_error(payload.password)
-        if password_error:
-            raise CustomException(password_error)
     await User.create(
         # 来自弹窗账号输入框
         username=payload.username,
-        # 密码留空时用固定初始密码，落库前先做 bcrypt 哈希
-        password=hash_password(payload.password or "123456"),
+        # 密码留空时用固定初始密码，员工登录后可在第 3 章自行修改
+        password=payload.password or "123456",
         # 姓名留空时用账号填充，保证 name 字段非空
         name=payload.name or payload.username,
         # 头像地址由上传回调写入
@@ -222,11 +211,7 @@ async def delete(user_id: int, current_user: User = Depends(require_admin)):
 
 
 @router.delete("/deleteBatch")
-async def delete_batch(
-    # ids 由前端以 JSON 数组 body 提交（axios delete 的 data 字段）
-    ids: List[int] = Body(...),
-    current_user: User = Depends(require_admin),
-):
+async def delete_batch(ids: List[int], current_user: User = Depends(require_admin)):
     # 批量勾选里含当前登录账号时同样拦住
     if current_user.id in ids:
         raise CustomException("不能删除当前登录账号")
@@ -253,14 +238,6 @@ async def select_all(name: str = "", current_user: User = Depends(get_current_us
             return Result.success([])
         query = query.filter(department_id=current_user.department_id)
     users = await query.order_by("name", "id")
-    if current_user.role != "ADMIN":
-        # 普通员工只返回下拉框需要的字段，不暴露同事的手机号/邮箱
-        return Result.success(
-            [
-                {"id": user.id, "name": user.name, "department_id": user.department_id}
-                for user in users
-            ]
-        )
     return Result.success([await user_dict(user) for user in users])
 
 
@@ -307,8 +284,8 @@ async def select_page(
     role: str = "",
     # department_id 来自页面部门下拉框，None 表示不限
     department_id: int | None = None,
-    page_num: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
+    page_num: int = 1,
+    page_size: int = 10,
     # 员工账号管理只对管理员开放
     _: User = Depends(require_admin),
 ):

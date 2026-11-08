@@ -1,6 +1,5 @@
 import asyncio
 import json
-import logging
 from dataclasses import dataclass
 from time import perf_counter
 
@@ -14,17 +13,12 @@ from models import (
     PromptTemplate,
     TranscriptionTask,
 )
-from settings import AGENT_REVIEW_MAX_TRANSCRIPT_CHARS
-
 from services.agent_graph import build_review_graph, recursion_limit
-from services.evidence_service import load_task_evidence_context, merge_evidence
 from services.minutes_service import MINUTES_SCHEMA, MinutesResult, render_prompt
 from services.model_factory import invoke_json
 
-logger = logging.getLogger(__name__)
-
-# 审查提示词最多读取转写全文的前多少个字符由 settings 决定（默认 20000）。
-MAX_TRANSCRIPT_CHARS = AGENT_REVIEW_MAX_TRANSCRIPT_CHARS
+# 审查提示词最多读取转写全文的前 20000 个字符。
+MAX_TRANSCRIPT_CHARS = 20000
 
 # 纪要里参与自检的六个字段，顺序和页面上的展示顺序一致
 MINUTES_FIELDS = ("summary", "topics", "viewpoints", "decisions", "pending_items", "risks")
@@ -120,8 +114,6 @@ class ReviewContext:
     # 提示词里除了当前内容之外的固定变量，例如会议主题、转写原文、参会名单
     review_variables: dict
     refine_variables: dict
-    # 来源转写任务 ID，重写后用它加载片段做 evidence 重绑定
-    task_id: int
 
 
 def minutes_content(minutes: MeetingMinutes) -> dict:
@@ -238,7 +230,6 @@ async def build_minutes_context(run: AgentRun, minutes: MeetingMinutes, meeting:
         review_variables={"meeting_title": meeting.title, "transcript": transcript},
         # 重写模板还有 {meeting_title}，{issues} 在重写步骤里单独传
         refine_variables={"meeting_title": meeting.title},
-        task_id=minutes.source_task_id,
     )
 
 
@@ -316,12 +307,6 @@ async def refine_round(
         )
         # 复用纪要生成时的校验模型，字段缺失或者类型不对会在这里直接抛出来
         revised = MinutesResult.model_validate(result).model_dump()
-        # 改稿时保留/重绑定证据：内容没变继承旧引用，改动条目只接受能在转写里逐字找到的引用
-        try:
-            segments = await load_task_evidence_context(context.task_id)
-            revised = merge_evidence(working, revised, segments)
-        except Exception:
-            logger.exception("自检修订的证据合并失败，保留修订稿原样", extra={"run_id": run.id})
         # payload 存改完的整份纪要
         await close_step(step, started, f"已按 {len(issues)} 条问题重写", revised)
         return revised
@@ -349,29 +334,21 @@ async def finalize_run(run_id: int):
     """汇总步：记一条 FINAL 步骤，按有没有改过稿决定运行直接结束还是等人确认。"""
     # 重新读取运行记录，拿到 do_review、do_refine 写入的最新字段
     run = await AgentRun.get(id=run_id)
-    # 已被中断/失败的运行不再收尾，避免把 INTERRUPTED 覆盖成终态
-    if run.status != "RUNNING":
-        logger.info("运行已不在 RUNNING，跳过汇总", extra={"run_id": run_id, "status": run.status})
-        return
     step = await open_step(run, run.current_round, "FINAL", "汇总自检结论")
     started = perf_counter()
     final = final_summary(run)
     await close_step(step, started, final)
     if run.revised_json is None:
         # 第一次审查就通过，内容一个字没动，运行到此结束
-        updated = await AgentRun.filter(id=run.id, status="RUNNING").update(
+        await AgentRun.filter(id=run.id).update(
             status="SUCCEEDED", stage="自检通过", progress=100, final_result=final, finished_at=now()
         )
-        if not updated:
-            logger.info("运行状态已变化，跳过收尾", extra={"run_id": run.id})
         return
     # 产出不会自己写回业务表，必须由人点确认，这是本项目 Agent 唯一的写操作确认点
-    updated = await AgentRun.filter(id=run.id, status="RUNNING").update(
+    await AgentRun.filter(id=run.id).update(
         status="WAITING_CONFIRMATION", stage="等待人工确认", progress=100,
         final_result=final, finished_at=now(),
     )
-    if not updated:
-        logger.info("运行状态已变化，跳过等待确认", extra={"run_id": run.id})
 
 
 async def execute_agent_run(run_id: int):
@@ -381,10 +358,6 @@ async def execute_agent_run(run_id: int):
     这里负责备好材料，再把审查、重写、汇总、中断检查四个动作交给状态图调度。
     """
     try:
-        # 领取式抢占：重复调度或多进程时，只有一个执行者能开始跑这次运行
-        claimed = await AgentRun.filter(id=run_id, status="RUNNING").exclude(stage="已领取").update(stage="已领取")
-        if not claimed:
-            return
         run = await AgentRun.get_or_none(id=run_id)
         # 状态不是 RUNNING 说明已经被中断或者已经跑完，直接退出，不重复执行
         if run is None or run.status != "RUNNING":
@@ -393,26 +366,6 @@ async def execute_agent_run(run_id: int):
         await AgentStep.filter(run_id=run.id, status="RUNNING").update(
             status="FAILED", error_message="上次执行被打断，本步未完成", finish_time=now()
         )
-        # 先判断“中断发生在最后一轮重写步”这种情况：此时 current_round 已经等于
-        # max_rounds，但这一版修订稿没落库，不能直接收尾，必须先补完重写。
-        resume_issues: list[dict] = []
-        last_step = await AgentStep.filter(run_id=run.id).order_by("-step_no").first()
-        if (
-            run.revised_json is None
-            and run.current_round >= 1
-            and run.review_json
-            and last_step is not None
-            and last_step.step_type == "REFINE"
-            and last_step.status == "FAILED"
-        ):
-            resume_issues = list(run.review_json)
-            logger.info("恢复时从重写步续跑", extra={"run_id": run.id, "round": run.current_round})
-        # 已到轮数上限且没有“未完成的重写”要续：不再多审一轮，直接收尾
-        if run.current_round >= run.max_rounds and not resume_issues:
-            logger.info("已达轮数上限，直接汇总", extra={"run_id": run.id})
-            await finalize_run(run.id)
-            return
-        logger.info("自检运行开始", extra={"run_id": run.id, "round": run.current_round})
         # 发起时记下的自检模型配置，整次运行都用这一条
         config = await AiModelConfig.get(id=run.model_config_id)
         meeting = await Meeting.get(id=run.meeting_id)
@@ -455,8 +408,6 @@ async def execute_agent_run(run_id: int):
                 # 中断恢复时从上一次改到的稿子和已完成的轮次接着跑
                 "working": context.working,
                 "round_no": run.current_round,
-                "issues": resume_issues,
-                "resume_issues": resume_issues,
                 "max_rounds": run.max_rounds,
                 "review": do_review,
                 "refine": do_refine,
@@ -466,7 +417,6 @@ async def execute_agent_run(run_id: int):
             {"recursion_limit": recursion_limit(run.max_rounds)},
         )
     except asyncio.CancelledError:
-        logger.info("自检运行被中断", extra={"run_id": run_id})
         # 页面点中断时会 cancel 这个任务，运行状态已经在接口里改成 INTERRUPTED。
         # 被打断的那一步停在模型调用中途，把它记成失败，时间线上就不会一直显示 RUNNING
         await AgentStep.filter(run_id=run_id, status="RUNNING").update(
@@ -474,10 +424,8 @@ async def execute_agent_run(run_id: int):
         )
         return
     except Exception as error:
-        logger.exception("自检运行失败", extra={"run_id": run_id})
-        # 模型调用失败、结构校验失败、模板被停用等异常，都把整次运行记为 FAILED。
-        # 带 RUNNING 条件，避免把用户先点“中断”产生的 INTERRUPTED 覆盖成 FAILED
-        await AgentRun.filter(id=run_id, status="RUNNING").update(
+        # 模型调用失败、结构校验失败、模板被停用等异常，都把整次运行记为 FAILED
+        await AgentRun.filter(id=run_id).update(
             status="FAILED",
             stage="自检失败",
             error_message=(str(error) or type(error).__name__)[:2000],
@@ -485,27 +433,10 @@ async def execute_agent_run(run_id: int):
         )
 
 
-def _reschedule_after_current(run_id: int) -> None:
-    """旧协程退出后再检查一次状态：仍是 RUNNING 就补一次调度。
-
-    覆盖“中断后立刻恢复、旧任务尚未处理完 cancel”的窗口，避免库里 RUNNING
-    但没有任何执行者的假运行状态。
-    """
-
-    async def _later():
-        await asyncio.sleep(0.5)
-        run = await AgentRun.get_or_none(id=run_id)
-        if run is not None and run.status == "RUNNING":
-            schedule_agent_run(run_id)
-
-    asyncio.create_task(_later())
-
-
 def schedule_agent_run(run_id: int):
-    # 同一次运行已经在跑：等旧任务退出后再补一次调度，而不是静默丢弃
+    # 同一次运行已经在跑就直接返回，发起自检、恢复运行和服务启动续跑都会走到这里
     running = _running_agents.get(run_id)
     if running and not running.done():
-        running.add_done_callback(lambda _: _reschedule_after_current(run_id))
         return
     task = asyncio.create_task(execute_agent_run(run_id))
     _running_agents[run_id] = task
@@ -521,14 +452,9 @@ def cancel_agent_run(run_id: int):
         task.cancel()
 
 
-async def recover_agent_runs() -> int:
-    # 上次进程退出时被领取但没跑完的，先退回可领取状态
-    await AgentRun.filter(status="RUNNING", stage="已领取").update(stage="等待恢复执行")
+async def recover_agent_runs():
     # 上次进程结束时状态还停在 RUNNING 的，就是被强行打断的那些
-    ids = list(await AgentRun.filter(status="RUNNING").values_list("id", flat=True))
+    ids = await AgentRun.filter(status="RUNNING").values_list("id", flat=True)
     for run_id in ids:
         # 走的还是同一个调度函数，主流程照样从 current_round 和 revised_json 接着跑
         schedule_agent_run(run_id)
-    if ids:
-        logger.info("自检运行已重新入队", extra={"count": len(ids)})
-    return len(ids)

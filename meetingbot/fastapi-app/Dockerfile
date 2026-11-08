@@ -13,9 +13,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # ffmpeg：转写前把录音/视频按 CHUNK_SECONDS 切片；
-# fonts-wqy-zenhei：导出中文 Word/PDF 时报告里要用中文字体。
+# fonts-noto-cjk：PDF 导出探测 /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc。
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg fonts-wqy-zenhei \
+    && apt-get install -y --no-install-recommends ffmpeg fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 # 依赖层单独 COPY：只改源码时不会触发重新 pip install。
@@ -27,10 +27,9 @@ COPY . .
 # 单进程是硬约束：转写/纪要/自检三类耗时任务都跑在本进程内
 # （asyncio.create_task + 内存字典去重 + 启动时 recover_*），
 # 多 worker 或多副本会把同一个任务领取多次，因此固定 --workers 1。
-# 启动时先跑 bootstrap.py：建管理员、迁移明文口令、写入 4 条模型配置、
-# 按 SEED_DEMO 生成演示数据；之后才 exec uvicorn 对外提供服务。
+# 数据库表结构与种子数据由 db 镜像负责初始化，应用启动只负责提供接口。
 EXPOSE 9090
-CMD ["sh", "-c", "python bootstrap.py && exec uvicorn main:app --host 0.0.0.0 --port 9090 --workers 1"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "9090", "--workers", "1"]
 
 # ---------------- 测试阶段：backend + 开发依赖 ----------------
 FROM backend AS test

@@ -1,9 +1,11 @@
+import unittest
 import shutil
 import subprocess
 import tempfile
-import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
+
+from tortoise import Tortoise
 
 from api.meeting_material import MATERIAL_DIR
 from api.transcription import (
@@ -22,12 +24,11 @@ from models import (
     Meeting,
     MeetingMaterial,
     MeetingParticipant,
-    TranscriptionTask,
     TranscriptSegment,
+    TranscriptionTask,
     User,
 )
 from services.transcription_service import execute_transcription, parse_segments, prepare_audio_chunks
-from tortoise import Tortoise
 
 
 class TranscriptionTest(unittest.IsolatedAsyncioTestCase):

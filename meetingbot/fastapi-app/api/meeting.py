@@ -3,13 +3,15 @@ from pathlib import Path
 from typing import List
 from uuid import uuid4
 
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel, ConfigDict, Field
+from tortoise.expressions import Q
+
 from common.auth import get_current_user, require_admin
 from common.exception_handler import CustomException
 from common.result import PageInfo, Result
 from common.times import format_datetime, now, to_local
-from fastapi import APIRouter, Depends, Query
 from models import (
-    ActionItem,
     AgentRun,
     AgentStep,
     Department,
@@ -17,12 +19,10 @@ from models import (
     MeetingMaterial,
     MeetingMinutes,
     MeetingParticipant,
-    TranscriptionTask,
     TranscriptSegment,
+    TranscriptionTask,
     User,
 )
-from pydantic import BaseModel, ConfigDict, Field
-from tortoise.expressions import Q
 
 # 会议资料的存放目录，删除会议时要把这些文件一并从磁盘上清掉
 MATERIAL_DIR = Path(__file__).resolve().parent.parent / "files" / "meeting_material"
@@ -36,15 +36,15 @@ class MeetingPayload(BaseModel):
     # 编辑时回填，新增时不存在
     id: int | None = None
     # 弹窗会议主题输入框
-    title: str | None = Field(default=None, max_length=255)
+    title: str | None = None
     # 弹窗开始时间选择器，字符串会被 Pydantic 解析成 datetime
     start_time: datetime | None = None
     # 弹窗结束时间选择器
     end_time: datetime | None = None
     # 弹窗会议地点输入框
-    location: str | None = Field(default=None, max_length=255)
+    location: str | None = None
     # 弹窗会议议程文本域
-    agenda: str | None = Field(default=None, max_length=5000)
+    agenda: str | None = None
     # 弹窗主持人下拉框
     host_id: int | None = None
     # 弹窗参会人员多选框，默认空列表，避免未传时为 None
@@ -357,16 +357,6 @@ async def delete(meeting_id: int, _: User = Depends(require_admin)):
     meeting = await Meeting.get_or_none(id=meeting_id)
     if meeting is None:
         raise CustomException("会议不存在")
-    # 会议下还有后台任务在跑时拒绝删除：否则行删了任务还在写库、继续消耗模型费用
-    has_running_task = (
-        await TranscriptionTask.filter(
-            meeting_id=meeting_id, status__in=["PENDING", "PROCESSING"]
-        ).exists()
-        or await MeetingMinutes.filter(meeting_id=meeting_id, status="GENERATING").exists()
-        or await AgentRun.filter(meeting_id=meeting_id, status="RUNNING").exists()
-    )
-    if has_running_task:
-        raise CustomException("会议下还有运行中的任务，请等待结束或先中断后再删除")
 
     # 先把磁盘上的录音、视频和附件删掉，数据库记录删完之后就找不到 storage_name 了
     materials = await MeetingMaterial.filter(meeting_id=meeting_id)
@@ -381,7 +371,6 @@ async def delete(meeting_id: int, _: User = Depends(require_admin)):
         await AgentStep.filter(run_id__in=run_ids).delete()
 
     # 其余表都直接带 meeting_id，按会议删一遍
-    await ActionItem.filter(meeting_id=meeting_id).delete()
     await AgentRun.filter(meeting_id=meeting_id).delete()
     await MeetingMinutes.filter(meeting_id=meeting_id).delete()
     await TranscriptSegment.filter(meeting_id=meeting_id).delete()
@@ -418,8 +407,8 @@ async def select_options(current_user: User = Depends(get_current_user)):
             | Q(host_id=current_user.id)
             | Q(id__in=participant_meeting_ids)
         )
-    # 开始时间倒序，最近的会议排在下拉框最上面；限制上限防止历史会议多时下拉框拖慢页面
-    meetings = await query.order_by("-start_time", "-id").limit(200)
+    # 开始时间倒序，最近的会议排在下拉框最上面；不分页，一次返回全部
+    meetings = await query.order_by("-start_time", "-id")
     return Result.success(
         [
             {
@@ -444,8 +433,8 @@ async def select_page(
     status: str = "",
     # view_type 来自页面视图下拉框，默认 MY
     view_type: str = "MY",
-    page_num: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
+    page_num: int = 1,
+    page_size: int = 10,
     # 会议列表对所有登录用户开放，数据范围在下面按当前用户收窄
     current_user: User = Depends(get_current_user),
 ):

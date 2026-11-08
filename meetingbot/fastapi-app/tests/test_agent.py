@@ -2,9 +2,10 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, patch
 
+from tortoise import Tortoise
+
 from api.agent import ApplyPayload, RunPayload, apply, interrupt, resume
 from common.exception_handler import CustomException
-from common.model_json import parse_model_json
 from models import (
     AgentRun,
     AgentStep,
@@ -16,13 +17,13 @@ from models import (
     TranscriptionTask,
     User,
 )
+from common.model_json import parse_model_json
 from services.agent_service import (
     MAX_TRANSCRIPT_CHARS,
     execute_agent_run,
     issue_line,
     transcript_excerpt,
 )
-from tortoise import Tortoise
 
 
 class AgentTest(unittest.IsolatedAsyncioTestCase):
@@ -118,9 +119,9 @@ class AgentTest(unittest.IsolatedAsyncioTestCase):
     def test_model_json_and_issue_line(self):
         # 模型把 JSON 包在代码块里时，解析器剥掉围栏；返回数组或非 JSON 文本时抛异常
         self.assertEqual(parse_model_json('```json\n{"passed": true}\n```'), {"passed": True})
-        with self.assertRaises(Exception):  # noqa: B017
+        with self.assertRaises(Exception):
             parse_model_json("[1, 2]")
-        with self.assertRaises(Exception):  # noqa: B017
+        with self.assertRaises(Exception):
             parse_model_json("这不是 JSON")
         line = issue_line({"field": "decisions", "index": 0, "issue_type": "MISSING_OWNER", "detail": "没写负责人", "suggestion": "补上张涛"})
         self.assertIn("决策第1条", line)

@@ -10,19 +10,16 @@
 音视频转写走百炼录音文件识别接口，由 transcription_service 用 httpx 直接调用，不经过这里。
 """
 
-import logging
 from time import perf_counter
 from typing import Any, Callable
 from uuid import uuid4
 
-from common.model_json import build_schema_instruction, parse_model_json
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import Runnable
 from langchain_openai import ChatOpenAI
-from models import AiCallLog, AiModelConfig
-from settings import LLM_JSON_MODE
 
-logger = logging.getLogger(__name__)
+from common.model_json import build_schema_instruction, parse_model_json
+from models import AiCallLog, AiModelConfig
 
 
 def build_chat_model(config: AiModelConfig, schema: dict, schema_name: str) -> Runnable:
@@ -38,11 +35,7 @@ def build_chat_model(config: AiModelConfig, schema: dict, schema_name: str) -> R
         # 不自动重试，ai_call_log 里的一行对应模型服务的一次真实调用
         max_retries=0,
     )
-    # 严格结构化输出：模型返回的 JSON 必须符合 schema，必填字段一个都不能少。
-    # 少数提供商（如 DeepSeek）暂不支持 json_schema，此时用 json_object + 提示词里
-    # 的 schema 说明 + 调用方 validator 兜底；是否启用由 LLM_JSON_MODE 控制。
-    if LLM_JSON_MODE == "json_object":
-        return model.bind(response_format={"type": "json_object"})
+    # 严格结构化输出：模型返回的 JSON 必须符合 schema，必填字段一个都不能少
     return model.bind(
         response_format={
             "type": "json_schema",
@@ -106,10 +99,6 @@ async def invoke_json(
     except Exception as error:
         # 有些异常 str() 出来是空字符串，这时记类型名，页面上的失败原因不会是空白
         detail = (str(error) or type(error).__name__)[:2000]
-        logger.warning(
-            "模型调用失败",
-            extra={"call_type": call_type, "biz_id": biz_id, "model": config.model_name, "error": detail},
-        )
         # 失败也留一条日志，第 17 章的观测页据此统计失败率
         await AiCallLog.create(
             request_id="AIC" + uuid4().hex.upper(),
@@ -123,5 +112,5 @@ async def invoke_json(
             elapsed_ms=int((perf_counter() - started) * 1000),
             error_message=detail,
         )
-        # 对外只给一句可行动提示，具体上游报错只进 ai_call_log 与日志，避免把内部细节透传到页面
-        raise RuntimeError(f"{label}调用失败，请稍后重试或联系管理员") from error
+        # 统一换成带模型名称的提示，例如“说话人匹配模型调用失败：……”，接口层把它转成页面提示
+        raise RuntimeError(f"{label}调用失败：{detail[:1000]}") from error

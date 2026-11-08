@@ -1,55 +1,30 @@
 import asyncio
 import json
-import logging
 from typing import Literal
 
-from models import (
-    AiModelConfig,
-    Meeting,
-    MeetingMaterial,
-    MeetingMinutes,
-    PromptTemplate,
-    TranscriptionTask,
-    TranscriptSegment,
-    User,
-)
 from pydantic import BaseModel, Field
-from settings import MAX_CHUNK_CHARS
 
-from services.evidence_service import bind_evidence, load_task_evidence_context
+from models import AiModelConfig, Meeting, MeetingMaterial, MeetingMinutes, PromptTemplate, TranscriptSegment, TranscriptionTask, User
 from services.model_factory import invoke_json
 
-logger = logging.getLogger(__name__)
-
-# 单段最多拼接多少字符由 settings.MAX_CHUNK_CHARS 决定（默认 12000），
-# transcript_chunks 按这个长度把转写切成多段分别提取
+# 单段最多拼接多少字符，transcript_chunks 按这个长度把转写切成多段分别提取
+MAX_CHUNK_CHARS = 12000
 # 纪要ID到后台协程的映射，schedule_minutes 用它判断同一份纪要是否已经在跑
 _running_minutes: dict[int, asyncio.Task] = {}
 # 纪要生成共用的信号量，第一次调用 get_semaphore 时创建
 _minutes_semaphore: asyncio.Semaphore | None = None
 
 
-class EvidenceItem(BaseModel):
-    # 证据必须是转写原文里的逐字引用；segment_no/时间/说话人由后端回填
-    quote: str
-    segment_no: int | None = None
-    start_ms: int | None = None
-    end_ms: int | None = None
-    speaker: str | None = None
-
-
 class TopicItem(BaseModel):
     # 议题标题和这个议题的小结
     title: str
     summary: str
-    evidence: list[EvidenceItem] = Field(default_factory=list)
 
 
 class ViewpointItem(BaseModel):
     # 说话人姓名来自第 9 章匹配好的 speaker_user_id，没匹配时是说话人标签
     speaker: str
     viewpoint: str
-    evidence: list[EvidenceItem] = Field(default_factory=list)
 
 
 class DecisionItem(BaseModel):
@@ -60,14 +35,12 @@ class DecisionItem(BaseModel):
     # 建议负责人和建议完成时间，模型返回的人名和时间字符串，分别用于决策与待确认事项的负责人和期限展示
     owner_suggestion: str
     deadline_suggestion: str
-    evidence: list[EvidenceItem] = Field(default_factory=list)
 
 
 class PendingItem(BaseModel):
     content: str
     owner_suggestion: str
     deadline_suggestion: str
-    evidence: list[EvidenceItem] = Field(default_factory=list)
 
 
 class RiskItem(BaseModel):
@@ -75,7 +48,6 @@ class RiskItem(BaseModel):
     # 风险等级三选一，页面上按它显示不同颜色的标签
     level: Literal["LOW", "MEDIUM", "HIGH"]
     suggestion: str
-    evidence: list[EvidenceItem] = Field(default_factory=list)
 
 
 class MinutesResult(BaseModel):
@@ -88,40 +60,16 @@ class MinutesResult(BaseModel):
     risks: list[RiskItem] = Field(default_factory=list)
 
 
-EVIDENCE_SCHEMA = {
-    "type": "array",
-    "items": {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {
-            "quote": {"type": "string"},
-            "segment_no": {"type": "integer"},
-        },
-        "required": ["quote"],
-    },
-}
-
-
-def _item_schema(properties: dict, required: list[str]) -> dict:
-    """数组条目的 schema：在业务字段之外统一加可选的 evidence。"""
-    return {
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {**properties, "evidence": EVIDENCE_SCHEMA},
-        "required": required,
-    }
-
-
 MINUTES_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
     "properties": {
         "summary": {"type": "string"},
-        "topics": {"type": "array", "items": _item_schema({"title": {"type": "string"}, "summary": {"type": "string"}}, ["title", "summary"])},
-        "viewpoints": {"type": "array", "items": _item_schema({"speaker": {"type": "string"}, "viewpoint": {"type": "string"}}, ["speaker", "viewpoint"])},
-        "decisions": {"type": "array", "items": _item_schema({"content": {"type": "string"}, "basis": {"type": "string"}, "owner_suggestion": {"type": "string"}, "deadline_suggestion": {"type": "string"}}, ["content", "basis", "owner_suggestion", "deadline_suggestion"])},
-        "pending_items": {"type": "array", "items": _item_schema({"content": {"type": "string"}, "owner_suggestion": {"type": "string"}, "deadline_suggestion": {"type": "string"}}, ["content", "owner_suggestion", "deadline_suggestion"])},
-        "risks": {"type": "array", "items": _item_schema({"content": {"type": "string"}, "level": {"type": "string", "enum": ["LOW", "MEDIUM", "HIGH"]}, "suggestion": {"type": "string"}}, ["content", "level", "suggestion"])},
+        "topics": {"type": "array", "items": {"type": "object", "additionalProperties": False, "properties": {"title": {"type": "string"}, "summary": {"type": "string"}}, "required": ["title", "summary"]}},
+        "viewpoints": {"type": "array", "items": {"type": "object", "additionalProperties": False, "properties": {"speaker": {"type": "string"}, "viewpoint": {"type": "string"}}, "required": ["speaker", "viewpoint"]}},
+        "decisions": {"type": "array", "items": {"type": "object", "additionalProperties": False, "properties": {"content": {"type": "string"}, "basis": {"type": "string"}, "owner_suggestion": {"type": "string"}, "deadline_suggestion": {"type": "string"}}, "required": ["content", "basis", "owner_suggestion", "deadline_suggestion"]}},
+        "pending_items": {"type": "array", "items": {"type": "object", "additionalProperties": False, "properties": {"content": {"type": "string"}, "owner_suggestion": {"type": "string"}, "deadline_suggestion": {"type": "string"}}, "required": ["content", "owner_suggestion", "deadline_suggestion"]}},
+        "risks": {"type": "array", "items": {"type": "object", "additionalProperties": False, "properties": {"content": {"type": "string"}, "level": {"type": "string", "enum": ["LOW", "MEDIUM", "HIGH"]}, "suggestion": {"type": "string"}}, "required": ["content", "level", "suggestion"]}},
     },
     "required": ["summary", "topics", "viewpoints", "decisions", "pending_items", "risks"],
 }
@@ -180,15 +128,10 @@ async def transcript_chunks(task_id: int) -> list[str]:
 
 
 async def execute_minutes(minutes_id: int):
-    # 领取式抢占：重复调度或多进程时，只有一个执行者能把这一行从「等待」改成「已领取」
-    claimed = await MeetingMinutes.filter(id=minutes_id, status="GENERATING").exclude(stage="已领取").update(stage="已领取")
-    if not claimed:
-        return
     # 只处理状态是 GENERATING 的记录，中途被删掉或者已经跑完的直接跳过
     minutes = await MeetingMinutes.get_or_none(id=minutes_id, status="GENERATING")
     if minutes is None:
         return
-    logger.info("纪要生成开始", extra={"minutes_id": minutes.id, "source_task_id": minutes.source_task_id})
     try:
         meeting = await Meeting.get(id=minutes.meeting_id)
         config = await AiModelConfig.get(id=minutes.model_config_id)
@@ -221,22 +164,13 @@ async def execute_minutes(minutes_id: int):
                 "MINUTES_MERGE",
             )
         data = result.model_dump()
-        # 把模型给出的逐字引用绑定到转写片段；匹配失败只是没有证据，不影响纪要生成本身
-        try:
-            segments = await load_task_evidence_context(minutes.source_task_id)
-            data = bind_evidence(data, segments)
-        except Exception:
-            logger.exception("纪要证据绑定失败，跳过证据", extra={"minutes_id": minutes.id})
-        logger.info("纪要生成完成", extra={"minutes_id": minutes.id, "chunks": len(chunks)})
         # 六块内容一次性写回，状态转成 DRAFT，第 12 章从这里接手修订和确认
         await MeetingMinutes.filter(id=minutes.id).update(
             status="DRAFT", stage="纪要已生成", progress=100, summary=data["summary"],
             topics_json=data["topics"], viewpoints_json=data["viewpoints"], decisions_json=data["decisions"],
             pending_items_json=data["pending_items"], risks_json=data["risks"], error_message=None,
-            ai_draft_json=data,
         )
     except Exception as error:
-        logger.exception("纪要生成失败", extra={"minutes_id": minutes_id})
         # 任何一步失败都落到 FAILED，原因写进 error_message，页面上可以点重试
         await MeetingMinutes.filter(id=minutes.id).update(status="FAILED", stage="纪要生成失败", error_message=str(error)[:2000])
 
@@ -259,15 +193,11 @@ def schedule_minutes(minutes_id: int):
     task.add_done_callback(lambda _: _running_minutes.pop(minutes_id, None))
 
 
-async def recover_minutes_tasks() -> int:
-    # 上次进程退出时被领取但没跑完的，先退回可领取状态，再统一重新调度
-    await MeetingMinutes.filter(status="GENERATING", stage="已领取").update(stage="等待恢复执行")
-    ids = list(await MeetingMinutes.filter(status="GENERATING").values_list("id", flat=True))
+async def recover_minutes_tasks():
+    # 服务上次被关掉时状态还停在 GENERATING 的，重新调度一遍
+    ids = await MeetingMinutes.filter(status="GENERATING").values_list("id", flat=True)
     for minutes_id in ids:
         schedule_minutes(minutes_id)
-    if ids:
-        logger.info("纪要生成任务已重新入队", extra={"count": len(ids)})
-    return len(ids)
 
 
 async def material_name_of_minutes(minutes_id: int | None) -> str | None:

@@ -1,12 +1,13 @@
 from pathlib import Path
 from uuid import uuid4
 
+from fastapi import APIRouter, Depends, File, UploadFile
+from starlette.responses import FileResponse
+
 from common.auth import get_current_user
 from common.exception_handler import CustomException
 from common.result import Result
-from fastapi import APIRouter, Depends, File, UploadFile
 from models import User
-from starlette.responses import FileResponse
 
 UPLOAD_DIR = Path(__file__).resolve().parent.parent / "files"
 AVATAR_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "webp"}
@@ -53,8 +54,8 @@ async def upload_file(
         raise
     finally:
         await file.close()
-    # 返回相对地址：换机器/换端口/上 HTTPS 都由前端按当前站点 origin 拼接
-    return Result.success("/files/download/" + storage_name)
+    # 返回可直接访问的下载地址，前端把它写进 data.user.avatar
+    return Result.success("http://127.0.0.1:9090/files/download/" + storage_name)
 
 
 # 文件下载
@@ -68,8 +69,6 @@ async def download_file(filename: str):
         raise CustomException("文件不存在")
     return FileResponse(
         path=file_path,
-        # 禁止浏览器按内容嗅探 MIME，降低把上传文件当 HTML 执行的风险
-        headers={"X-Content-Type-Options": "nosniff"},
         filename=filename,
         media_type='application/octet-stream'
     )

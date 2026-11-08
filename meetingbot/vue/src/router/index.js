@@ -2,10 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 import { readUser } from '@/utils/storage.js'
 
-// 生产环境关闭注册入口（.env.production 里 VITE_REGISTER_ENABLED=false），
-// 直接访问 /register 也由守卫打回登录页，避免露出一个注定提交失败的注册表单
-const registerEnabled = import.meta.env.VITE_REGISTER_ENABLED === 'true'
-
 // 全部页面改为路由级懒加载：首屏只下载登录/管理端框架，其余页面按访问拆成独立 chunk，
 // Observability 这类带 ECharts 的重页面不会再打进首屏包
 const routes = [
@@ -22,7 +18,6 @@ const routes = [
       { path: 'meetingMaterial', meta: { name: '会议资料' }, component: () => import('@/views/manager/MeetingMaterial.vue') },
       { path: 'transcription', meta: { name: '转写任务' }, component: () => import('@/views/manager/Transcription.vue') },
       { path: 'meetingMinutes', meta: { name: 'AI会议纪要' }, component: () => import('@/views/manager/MeetingMinutes.vue') },
-      { path: 'actionItems', meta: { name: '行动项' }, component: () => import('@/views/manager/ActionItems.vue') },
       { path: 'agent', meta: { name: '纪要自检' }, component: () => import('@/views/manager/Agent.vue') },
       { path: 'observability', meta: { name: '运行观测' }, component: () => import('@/views/manager/Observability.vue') },
       { path: 'aiModel', meta: { name: 'AI模型配置', requiresAdmin: true }, component: () => import('@/views/manager/AiModel.vue') },
@@ -54,10 +49,6 @@ router.afterEach((to) => {
 router.beforeEach((to) => {
   // 从登录缓存读当前用户；缓存损坏时 readUser 会清掉脏数据并返回空对象
   const user = readUser()
-  // 生产环境关闭注册：入口已隐藏，直接输入 /register 也重定向回登录页
-  if (to.path === '/register' && !registerEnabled) {
-    return { path: '/login', replace: true }
-  }
   // 进入管理端任何页面都要求已登录，缓存里没有 id 时打回登录页，
   // 并把原地址放进 redirect，登录成功后可以跳回
   if (to.path.startsWith('/manager') && !user.id) {

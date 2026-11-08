@@ -1,11 +1,7 @@
-import logging
-
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from starlette import status
 from starlette.responses import JSONResponse
-
-logger = logging.getLogger(__name__)
 
 
 # 自定义异常类
@@ -30,7 +26,7 @@ def setup_exceptions(app: FastAPI):
     @app.exception_handler(RequestValidationError)
     async def validate_exception_handler(request: Request, exc: RequestValidationError):
         # 参数类型或结构不对时，先在后端控制台打出明细便于排查
-        logger.warning("请求参数校验失败", extra={"errors": exc.errors()})
+        print("捕获到422错误:", exc.errors())
         """处理422异常"""
         # 返回统一格式
         # 页面上只显示一句笼统提示，不把字段级报错抛给用户
@@ -43,7 +39,7 @@ def setup_exceptions(app: FastAPI):
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
         # 没被业务代码处理的异常，控制台打出原始信息
-        logger.exception("未处理异常：%r", exc)
+        print("捕获到系统错误:", repr(exc))
         """处理所有异常"""
         # 返回统一格式
         response = JSONResponse(
@@ -51,5 +47,9 @@ def setup_exceptions(app: FastAPI):
             status_code=status.HTTP_200_OK,
             content={"code": "500", "msg": "系统错误"}
         )
-        # 跨域响应头由 CORS 中间件统一负责，这里不再手写 *（同源部署时不应出现 ACAO）
+        # 允许所有源（与你的 CORS 配置一致）
+        # 兜底处理器不经过 CORS 中间件，这里手工补上跨域响应头，否则浏览器读不到响应体
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
         return response

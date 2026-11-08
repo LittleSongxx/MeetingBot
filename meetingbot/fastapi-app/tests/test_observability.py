@@ -1,6 +1,8 @@
 import unittest
 from datetime import datetime, timedelta, timezone
 
+from tortoise import Tortoise
+
 from common.exception_handler import CustomException
 from models import (
     AgentRun,
@@ -12,7 +14,6 @@ from models import (
     User,
 )
 from services.observability_service import build_observability, token_usage
-from tortoise import Tortoise
 
 
 def date_range() -> tuple[str, str]:

@@ -1,20 +1,20 @@
 import hashlib
 import zipfile
-from contextlib import suppress
+
+from docx import Document
 from pathlib import Path
 from uuid import uuid4
 
-from common.auth import get_current_user
-from common.exception_handler import CustomException
-from common.result import PageInfo, Result
-from common.times import format_datetime
-from docx import Document
-from fastapi import APIRouter, Body, Depends, File, Query, UploadFile
-from models import Meeting, MeetingMaterial, TranscriptionTask, User
+from fastapi import APIRouter, Depends, File, UploadFile
 from starlette.responses import FileResponse
 from tortoise.exceptions import IntegrityError
 
 from api.meeting import get_accessible_meeting
+from common.auth import get_current_user
+from common.exception_handler import CustomException
+from common.result import PageInfo, Result
+from common.times import format_datetime
+from models import MeetingMaterial, TranscriptionTask, User
 
 router = APIRouter(prefix="/meetingMaterial")
 
@@ -179,8 +179,8 @@ async def select_page(
     fileName: str = "",
     # fileType 来自资料类型下拉框
     fileType: str = "",
-    pageNum: int = Query(1, ge=1),
-    pageSize: int = Query(10, ge=1, le=100),
+    pageNum: int = 1,
+    pageSize: int = 10,
     current_user: User = Depends(get_current_user),
 ):
     # 分页查询与上传、下载共用同一会议数据权限校验。
@@ -223,9 +223,11 @@ async def zip_entries(material_id: int, current_user: User = Depends(get_current
                 name = info.filename
                 # 标志位第 11 位表示文件名是 UTF-8；没置位的压缩包多半是 Windows 下打的，按 GBK 还原
                 if not info.flag_bits & 0x800:
-                    # 按 GBK 也还原不了时保留 zipfile 读出的原始名字
-                    with suppress(UnicodeDecodeError, UnicodeEncodeError):
+                    try:
                         name = name.encode("cp437").decode("gbk")
+                    except (UnicodeDecodeError, UnicodeEncodeError):
+                        # 按 GBK 也还原不了时保留 zipfile 读出的原始名字
+                        pass
                 entries.append({
                     # 清单表格“文件名”列
                     "name": name,
@@ -234,8 +236,8 @@ async def zip_entries(material_id: int, current_user: User = Depends(get_current
                     # 文件解压后的原始字节数，前端 sizeText 换算后显示在“大小”列
                     "size": info.file_size,
                 })
-    except zipfile.BadZipFile as error:
-        raise CustomException("压缩包已损坏，无法读取文件清单") from error
+    except zipfile.BadZipFile:
+        raise CustomException("压缩包已损坏，无法读取文件清单")
     # 前端把 entries 写入 preview.entries 后打开弹窗
     return Result.success({"file_name": material.file_name, "entries": entries})
 
@@ -257,8 +259,8 @@ async def docx_preview(material_id: int, current_user: User = Depends(get_curren
     try:
         # python-docx 打开文档；文件内容不是合法的 docx 时会抛异常
         document = Document(str(file_path))
-    except Exception as error:
-        raise CustomException("文档已损坏，无法读取内容") from error
+    except Exception:
+        raise CustomException("文档已损坏，无法读取内容")
 
     blocks = []
     for paragraph in document.paragraphs:
@@ -302,16 +304,6 @@ async def download(material_id: int, current_user: User = Depends(get_current_us
     )
 
 
-async def ensure_material_delete_permission(material: MeetingMaterial, current_user: User) -> None:
-    """资料删除权限：管理员、上传人、或所属会议的创建人。"""
-    if current_user.role == "ADMIN" or material.uploader_id == current_user.id:
-        return
-    meeting = await Meeting.get_or_none(id=material.meeting_id)
-    if meeting is not None and meeting.creator_id == current_user.id:
-        return
-    raise CustomException("只有管理员、上传人或会议创建人可以删除资料", "403")
-
-
 async def delete_material(material: MeetingMaterial):
     # 第 8 章的转写任务记着 material_id，资料被删会让转写记录指向不存在的文件
     if await TranscriptionTask.filter(material_id=material.id).exists():
@@ -327,27 +319,19 @@ async def delete_material(material: MeetingMaterial):
 async def delete(material_id: int, current_user: User = Depends(get_current_user)):
     # 先按权限取资料，看不到的资料删不了
     material = await get_accessible_material(material_id, current_user)
-    # 再看是否具备“写/删”权限：参会人不能删别人上传的资料
-    await ensure_material_delete_permission(material, current_user)
     await delete_material(material)
     return Result.success()
 
 
 @router.delete("/deleteBatch")
-async def delete_batch(
-    # ids 由前端以 JSON 数组 body 提交（axios delete 的 data 字段）
-    ids: list[int] = Body(...),
-    current_user: User = Depends(get_current_user),
-):
+async def delete_batch(ids: list[int], current_user: User = Depends(get_current_user)):
     # 前端已经拦了空选，后端再确认一次
     if not ids:
         raise CustomException("请选择要删除的会议资料")
     materials = []
     # set 去重后逐个做权限校验，勾选里混进无权访问的资料时整批拒绝
     for material_id in set(ids):
-        material = await get_accessible_material(material_id, current_user)
-        await ensure_material_delete_permission(material, current_user)
-        materials.append(material)
+        materials.append(await get_accessible_material(material_id, current_user))
     # 整批一次性检查转写关联，只要有一份被关联就全部不删，避免删一半停下来
     if await TranscriptionTask.filter(material_id__in=[item.id for item in materials]).exists():
         raise CustomException("勾选资料中存在已关联转写任务的文件，不能删除")
