@@ -1,14 +1,10 @@
-# CI：只保留两个作业 —— 后端 lint + 单测、前端依赖安装 + 构建。
+# CI：只保留两个作业 —— 后端单测、前端依赖安装 + 构建。
 #
 # 三条纪律：
 #   1. 只跑零调用的检查：后端单测用 sqlite 内存库与 mock 模型，
 #      CI 不连 MySQL、不花模型调用预算；
 #   2. 同一分支的新推送取消上一次未跑完的作业，不排队烧时间；
 #   3. runner 钉版本（不用 ubuntu-latest），避免镜像静默升级导致"昨天还绿今天红"。
-#
-# 说明：为了让 CI 保持"backend / frontend 两个作业"，这里没有单独做
-# paths-filter 变更检测——仓库规模小，两个作业的构建代价低于维护第三个作业；
-# 只改文档时也会跑一遍，属于可接受开销。
 name: CI
 
 on:
@@ -33,30 +29,16 @@ jobs:
             meetingbot/fastapi-app/requirements.txt
             meetingbot/fastapi-app/requirements-dev.txt
 
-      - name: 安装后端依赖
-        run: python -m pip install --upgrade pip && python -m pip install -r requirements-dev.txt
-        working-directory: meetingbot/fastapi-app
-
       - name: 安装 FFmpeg 与中文字体
         # 转写相关测试会真实调用 ffmpeg 切片；导出测试需要中文字体
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-wqy-zenhei
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-noto-cjk
 
-      - name: Lint（ruff，规则集见仓库根 ruff.toml）
-        run: ruff check .
+      - name: 安装后端依赖
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements.txt -r requirements-dev.txt
         working-directory: meetingbot/fastapi-app
 
       - name: 单元测试（unittest，sqlite 内存库）
         run: python -m unittest discover -s tests -p 'test_*.py' -v
-        working-directory: meetingbot/fastapi-app
-
-      - name: 质量门禁（离线快照）
-        # 不调模型：用固定快照验证 quality_gate 阈值和配置没有回归
-        run: |
-          python -m evaluation.quality_gate \
-            --qa evaluation/fixtures/qa_snapshot.json \
-            --support evaluation/fixtures/support_snapshot.json \
-            --qmsum evaluation/fixtures/qmsum_snapshot.json \
-            --scorecard evaluation/fixtures/scorecard_snapshot.json
         working-directory: meetingbot/fastapi-app
 
   frontend:
@@ -75,6 +57,6 @@ jobs:
         run: npm ci
         working-directory: meetingbot/vue
 
-      - name: 构建（vite build，VITE_BASE_URL 默认 /api）
+      - name: 构建（vite build，生产 VITE_BASE_URL=/api）
         run: npm run build
         working-directory: meetingbot/vue

@@ -18,7 +18,11 @@ eval/.env
 
 # ---------------- 本地运行数据与日志 ----------------
 *.log
-meetingbot/fastapi-app/files/meeting_material/
+# 上传的会议资料与演示素材（约 27MB）不入库，仅本地运行使用
+meetingbot/fastapi-app/files/
+
+# 原版演示库 dump（含真实 API Key，不入库）
+ai_meeting.sql
 
 # ---------------- 个人资料与编辑器 ----------------
 docs/resume/
