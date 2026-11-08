@@ -48,7 +48,9 @@ services:
   # 后端 API 服务（容器内 9090，宿主机只绑定回环地址）。
   # MySQL 连接地址在 compose 网络内固定为 db:3306，覆盖 .env 里的本地开发默认值。
   backend:
-    build: ./meetingbot/fastapi-app
+    build:
+      context: ./meetingbot/fastapi-app
+      target: backend
     restart: unless-stopped
     # 运行时建议在仓库根准备 .env（缺失时 db 服务的 ${...:?} 会拦下）；
     # 标 required:false 只是让 `docker compose config -q` 在仅有 .env.example 时也能做静态校验。

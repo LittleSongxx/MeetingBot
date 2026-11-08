@@ -13,9 +13,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # ffmpeg：转写前把录音/视频按 CHUNK_SECONDS 切片；
-# fonts-noto-cjk：PDF 导出探测 /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc。
+# 中文字体：reportlab 不支持 Noto CJK 的 CFF 轮廓，改装文泉驿 TrueType，
+# 并链接到源码探测的 /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc 路径。
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg fonts-noto-cjk \
+    && apt-get install -y --no-install-recommends ffmpeg fonts-wqy-zenhei \
+    && mkdir -p /usr/share/fonts/opentype/noto \
+    && ln -sf /usr/share/fonts/truetype/wqy/wqy-zenhei.ttc /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc \
     && rm -rf /var/lib/apt/lists/*
 
 # 依赖层单独 COPY：只改源码时不会触发重新 pip install。

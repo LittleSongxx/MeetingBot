@@ -1,0 +1,9 @@
+# 构建上下文排除项：演示素材走运行时 files 卷，不入镜像
+files/
+__pycache__/
+*.pyc
+.venv/
+.venv*/
+.pytest_cache/
+.ruff_cache/
+*.log

@@ -12,7 +12,7 @@
 - **Docker Desktop**（Windows/macOS）或 Docker Engine + Compose v2（Linux）；
   本项目用 Compose 的 `depends_on.condition`、profile 与 `env_file` 长语法，需要 Compose v2.24 以上；
 - 宿主机**不需要**安装 MySQL 或中文字体：数据库在 `db` 容器里，后端镜像已带 FFmpeg 与
-  `fonts-noto-cjk`（Word/PDF 导出用）；
+  `fonts-wqy-zenhei`（TrueType；镜像里链接为源码探测的 Noto 路径，Word/PDF 导出用）；
 - 首次构建需要拉取 `python:3.12-slim`、`mysql:8.4.11`、`node:22-alpine`、`nginx:1.30.5-alpine` 等基础镜像，需要网络；
 - 常用端口 `19092`（后端）与 `18083`（网页）未被占用；两者都只绑定 `127.0.0.1`。
 
@@ -105,7 +105,7 @@ curl -s -X POST http://127.0.0.1:19092/login \
 | backend 启动即退出 | 看 `docker compose logs backend`；常见为 MySQL 未 healthy 或库名/口令不匹配 |
 | 网页能开但接口 502 | backend 未 healthy；先 `docker compose ps` 看状态与日志 |
 | 数据是旧的/缺表 | `mysql_data` 卷已存在，初始化脚本不会重放；确认后 `down -v` 重建 |
-| 导出 PDF 中文乱码/失败 | 镜像已装 Noto CJK 字体；自建镜像需自行安装中文字体 |
+| 导出 PDF 中文乱码/失败 | 镜像已装文泉驿 TrueType 字体；自建镜像需自行安装中文字体 |
 | 转写报「未找到 FFmpeg」 | 非容器方式运行需本机安装 ffmpeg 并加入 PATH |
 
 ## 说明

@@ -30,8 +30,11 @@ jobs:
             meetingbot/fastapi-app/requirements-dev.txt
 
       - name: 安装 FFmpeg 与中文字体
-        # 转写相关测试会真实调用 ffmpeg 切片；导出测试需要中文字体
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-noto-cjk
+        # 转写相关测试会真实调用 ffmpeg 切片；PDF 导出测试需要中文 TrueType 字体
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-wqy-zenhei
+          sudo mkdir -p /usr/share/fonts/opentype/noto
+          sudo ln -sf /usr/share/fonts/truetype/wqy/wqy-zenhei.ttc /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
 
       - name: 安装后端依赖
         run: python -m pip install --upgrade pip && python -m pip install -r requirements.txt -r requirements-dev.txt
